@@ -15,8 +15,14 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Load environment variables
-  await dotenv.load(fileName: '.env');
+  // Load environment variables (gracefully handle if not available on web)
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (e) {
+    // .env file not available (common in web builds)
+    // Environment variables should be set through build configuration
+    debugPrint('⚠️ Could not load .env file: $e');
+  }
 
   // Initialize Firebase
   await FirebaseConfig.initialize();
