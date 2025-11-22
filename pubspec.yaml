@@ -49,6 +49,9 @@ dependencies:
   image_cropper: ^8.0.2
   photo_view: ^0.15.0
 
+  # Contacts
+  flutter_contacts: ^1.1.9
+
   # Charts & Visualization
   fl_chart: ^0.70.1
 
