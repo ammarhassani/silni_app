@@ -589,56 +589,6 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
     );
   }
 
-  Widget _buildAvatarPicker() {
-    return GlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.emoji_people, color: Colors.white.withOpacity(0.7)),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'نوع الأفاتار',
-                style: AppTypography.titleMedium.copyWith(color: Colors.white),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: AvatarType.values.map((type) {
-              final isSelected = type == _selectedAvatar;
-              return GestureDetector(
-                onTap: () => setState(() => _selectedAvatar = type),
-                child: Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    gradient: isSelected ? AppColors.primaryGradient : null,
-                    color: isSelected ? null : Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(isSelected ? 0.5 : 0.3),
-                      width: isSelected ? 2 : 1,
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      type.emoji,
-                      style: const TextStyle(fontSize: 32),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildPriorityPicker() {
     String priorityLabel = _priority == 1 ? 'عالية 🔥' : _priority == 2 ? 'متوسطة ⭐' : 'منخفضة 📌';
 
