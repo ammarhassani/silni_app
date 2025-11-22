@@ -131,8 +131,74 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
       await _relativesService.createRelative(relative);
 
       if (!mounted) return;
-      _showMessage('تمت إضافة ${relative.fullName} بنجاح! ✅');
-      context.pop();
+      setState(() => _isLoading = false);
+
+      // Show success dialog
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: AppColors.goldenGradient,
+                ),
+                child: const Icon(
+                  Icons.check_circle_rounded,
+                  size: 50,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                'تم حفظ القريب!',
+                style: AppTypography.headlineMedium.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'تمت إضافة ${relative.fullName} بنجاح',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: Colors.white.withOpacity(0.8),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  context.pop(); // Navigate back to previous screen
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.islamicGreenPrimary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                  ),
+                ),
+                child: const Text('حسناً'),
+              ),
+            ),
+          ],
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       _showMessage('خطأ: $e');
@@ -148,6 +214,30 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         backgroundColor: AppColors.islamicGreenPrimary,
       ),
     );
+  }
+
+  Gender? _getGenderFromRelationship(RelationshipType relationship) {
+    switch (relationship) {
+      case RelationshipType.father:
+      case RelationshipType.brother:
+      case RelationshipType.son:
+      case RelationshipType.grandfather:
+      case RelationshipType.uncle:
+      case RelationshipType.nephew:
+      case RelationshipType.husband:
+        return Gender.male;
+      case RelationshipType.mother:
+      case RelationshipType.sister:
+      case RelationshipType.daughter:
+      case RelationshipType.grandmother:
+      case RelationshipType.aunt:
+      case RelationshipType.niece:
+      case RelationshipType.wife:
+        return Gender.female;
+      case RelationshipType.cousin:
+      case RelationshipType.other:
+        return null; // User needs to select
+    }
   }
 
   @override
@@ -394,6 +484,8 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
           ),
           prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.7)),
           border: InputBorder.none,
+          filled: true,
+          fillColor: Colors.transparent,
         ),
       ),
     );
@@ -421,7 +513,13 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
             children: RelationshipType.values.map((type) {
               final isSelected = type == _selectedRelationship;
               return GestureDetector(
-                onTap: () => setState(() => _selectedRelationship = type),
+                onTap: () {
+                  setState(() {
+                    _selectedRelationship = type;
+                    // Auto-detect gender based on relationship
+                    _selectedGender = _getGenderFromRelationship(type);
+                  });
+                },
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.md,

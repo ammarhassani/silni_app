@@ -358,7 +358,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 icon: Icons.account_tree_rounded,
                 title: 'شجرة العائلة',
                 subtitle: 'تصور جميل لعائلتك',
-                gradient: AppColors.goldenGradient,
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.islamicGreenDark,
+                    AppColors.islamicGreenPrimary.withOpacity(0.8),
+                  ],
+                ),
                 onTap: () => context.push(AppRoutes.familyTree),
               ),
             ),
@@ -842,7 +847,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 const SizedBox(height: 4),
                 Text(
                   relative.lastContactDate == null
-                      ? 'لم تتواصل معه بعد'
+                      ? (relative.gender == Gender.female
+                          ? 'لم تتواصل معها بعد'
+                          : 'لم تتواصل معه بعد')
                       : 'آخر تواصل: منذ $daysSince يوم',
                   style: AppTypography.bodySmall.copyWith(
                     color: Colors.white.withOpacity(0.7),
@@ -934,7 +941,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
         onPressed: () {
-          _confettiController.play();
           context.push(AppRoutes.addRelative);
         },
         child: const Icon(

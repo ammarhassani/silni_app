@@ -6,7 +6,6 @@ enum ReminderFrequency {
   weekly('weekly', 'أسبوعي', '📆'),
   monthly('monthly', 'شهري', '📋'),
   friday('friday', 'جمعة', '🕌'),
-  birthday('birthday', 'عيد ميلاد', '🎂'),
   custom('custom', 'مخصص', '⚙️');
 
   final String value;
