@@ -45,15 +45,25 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
     try {
       final authService = ref.read(authServiceProvider);
+
+      print('📝 Attempting sign up...');
       await authService.signUpWithEmail(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         fullName: _nameController.text.trim(),
       );
 
+      print('✅ Sign up successful! Navigating to home...');
+
       if (!mounted) return;
-      context.go(AppRoutes.home);
+
+      // Use pushReplacement instead of go
+      context.pushReplacement(AppRoutes.home);
+
+      print('🏠 Navigation complete!');
     } catch (e) {
+      print('❌ Sign up error: $e');
+
       if (!mounted) return;
 
       String errorMessage = AuthService.getErrorMessage(
@@ -68,12 +78,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         SnackBar(
           content: Text(errorMessage),
           backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 3),
         ),
       );
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+
+      setState(() => _isLoading = false);
     }
   }
 

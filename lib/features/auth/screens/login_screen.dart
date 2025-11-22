@@ -40,20 +40,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final authService = ref.read(authServiceProvider);
+
+      print('🔐 Attempting login...');
       await authService.signInWithEmail(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
+      print('✅ Login successful! Navigating to home...');
+
       if (!mounted) return;
-      context.go(AppRoutes.home);
+
+      // Use pushReplacement instead of go to prevent back navigation
+      context.pushReplacement(AppRoutes.home);
+
+      print('🏠 Navigation complete!');
     } catch (e) {
+      print('❌ Login error: $e');
+
       if (!mounted) return;
 
       String errorMessage = AuthService.getErrorMessage(
         e.toString().contains('user-not-found')
             ? 'user-not-found'
             : e.toString().contains('wrong-password')
+                ? 'wrong-password'
+                : e.toString().contains('invalid-credential')
                 ? 'wrong-password'
                 : 'unknown',
       );
@@ -62,12 +74,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         SnackBar(
           content: Text(errorMessage),
           backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 3),
         ),
       );
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+
+      setState(() => _isLoading = false);
     }
   }
 
