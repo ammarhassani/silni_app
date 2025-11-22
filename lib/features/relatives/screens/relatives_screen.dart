@@ -8,12 +8,19 @@ import '../../../core/constants/app_typography.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
+import '../../../shared/widgets/swipeable_relative_card.dart';
 import '../../../shared/models/relative_model.dart';
+import '../../../shared/models/interaction_model.dart';
 import '../../../shared/services/relatives_service.dart';
+import '../../../shared/services/interactions_service.dart';
+import '../../../core/router/app_routes.dart';
 import '../../auth/providers/auth_provider.dart';
 
 // Provider for relatives service
 final relativesServiceProvider = Provider((ref) => RelativesService());
+
+// Provider for interactions service
+final interactionsServiceProvider = Provider((ref) => InteractionsService());
 
 // Provider for relatives stream
 final relativesStreamProvider = StreamProvider.family<List<Relative>, String>((ref, userId) {
@@ -268,152 +275,28 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
   }
 
   Widget _buildRelativeCard(Relative relative, int index) {
-    final needsAttention = relative.needsContact;
-    final daysSince = relative.daysSinceLastContact ?? 0;
+    final user = ref.watch(currentUserProvider);
+    final userId = user?.uid ?? '';
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: GlassCard(
-        onTap: () {
-          // TODO: Navigate to relative detail
-        },
-        child: Row(
-          children: [
-            // Avatar
-            Stack(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: needsAttention
-                        ? AppColors.streakFire
-                        : AppColors.primaryGradient,
-                  ),
-                  child: relative.photoUrl != null
-                      ? ClipOval(
-                          child: Image.network(
-                            relative.photoUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                _buildDefaultAvatar(relative),
-                          ),
-                        )
-                      : _buildDefaultAvatar(relative),
-                ),
-                if (relative.isFavorite)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.premiumGold,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: const Icon(
-                        Icons.star,
-                        color: Colors.white,
-                        size: 12,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(width: AppSpacing.md),
-
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          relative.fullName,
-                          style: AppTypography.titleMedium.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                        ),
-                        child: Text(
-                          relative.relationshipType.arabicName,
-                          style: AppTypography.labelSmall.copyWith(
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        relative.lastContactDate == null
-                            ? Icons.phone_disabled
-                            : Icons.phone,
-                        size: 14,
-                        color: Colors.white.withOpacity(0.7),
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          relative.lastContactDate == null
-                              ? 'لم تتواصل معه بعد'
-                              : 'آخر تواصل: منذ $daysSince يوم',
-                          style: AppTypography.bodySmall.copyWith(
-                            color: Colors.white.withOpacity(0.7),
-                          ),
-                        ),
-                      ),
-                      if (needsAttention)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.joyfulOrange,
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                          ),
-                          child: Text(
-                            'حان وقت التواصل',
-                            style: AppTypography.labelSmall.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(width: AppSpacing.sm),
-            Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: Colors.white.withOpacity(0.5),
-              size: 20,
-            ),
-          ],
-        ),
-      ),
+    return SwipeableRelativeCard(
+      relative: relative,
+      onTap: () {
+        context.push('${AppRoutes.relativeDetail}/${relative.id}');
+      },
+      onMarkContacted: () async {
+        final interactionsService = ref.read(interactionsServiceProvider);
+        await interactionsService.createInteraction(
+          Interaction(
+            id: '',
+            userId: userId,
+            relativeId: relative.id,
+            type: InteractionType.call,
+            date: DateTime.now(),
+            notes: 'تواصل سريع',
+            createdAt: DateTime.now(),
+          ).toFirestore(),
+        );
+      },
     )
         .animate(delay: Duration(milliseconds: 100 * index))
         .fadeIn()
