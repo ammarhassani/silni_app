@@ -19,21 +19,33 @@ class AuthService {
     required String fullName,
   }) async {
     try {
+      if (kDebugMode) {
+        print('📝 Starting Firebase sign up...');
+      }
+
       // Create user
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
+      if (kDebugMode) {
+        print('✅ Firebase user created: ${credential.user?.uid}');
+      }
+
       // Update display name
       await credential.user?.updateDisplayName(fullName);
 
-      // Create user document in Firestore
-      await _createUserDocument(
+      // Create user document in Firestore asynchronously (don't block signup)
+      _createUserDocument(
         uid: credential.user!.uid,
         email: email,
         fullName: fullName,
-      );
+      ).catchError((e) {
+        if (kDebugMode) {
+          print('⚠️ Failed to create user document: $e');
+        }
+      });
 
       if (kDebugMode) {
         print('✅ User created successfully: ${credential.user?.uid}');
@@ -45,6 +57,11 @@ class AuthService {
         print('❌ Sign up error: ${e.code} - ${e.message}');
       }
       rethrow;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Unexpected sign up error: $e');
+      }
+      rethrow;
     }
   }
 
@@ -54,13 +71,25 @@ class AuthService {
     required String password,
   }) async {
     try {
+      if (kDebugMode) {
+        print('🔐 Starting Firebase sign in...');
+      }
+
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // Update last login
-      await _updateLastLogin(credential.user!.uid);
+      if (kDebugMode) {
+        print('✅ Firebase auth successful: ${credential.user?.uid}');
+      }
+
+      // Update last login asynchronously (don't block login)
+      _updateLastLogin(credential.user!.uid).catchError((e) {
+        if (kDebugMode) {
+          print('⚠️ Failed to update last login: $e');
+        }
+      });
 
       if (kDebugMode) {
         print('✅ User signed in: ${credential.user?.uid}');
@@ -70,6 +99,11 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       if (kDebugMode) {
         print('❌ Sign in error: ${e.code} - ${e.message}');
+      }
+      rethrow;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Unexpected sign in error: $e');
       }
       rethrow;
     }

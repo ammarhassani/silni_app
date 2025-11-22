@@ -46,31 +46,62 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     try {
       final authService = ref.read(authServiceProvider);
 
-      print('📝 Attempting sign up...');
-      await authService.signUpWithEmail(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-        fullName: _nameController.text.trim(),
-      );
+      print('📝 [SIGNUP] Starting sign up process...');
+      print('👤 [SIGNUP] Name: ${_nameController.text.trim()}');
+      print('📧 [SIGNUP] Email: ${_emailController.text.trim()}');
 
-      print('✅ Sign up successful! Navigating to home...');
+      // Add timeout to prevent infinite hanging
+      final credential = await authService
+          .signUpWithEmail(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+            fullName: _nameController.text.trim(),
+          )
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              throw Exception('Sign up timeout - Firebase took too long to respond');
+            },
+          );
 
-      if (!mounted) return;
+      print('✅ [SIGNUP] Firebase user created successfully!');
+      print('👤 [SIGNUP] User ID: ${credential.user?.uid}');
+      print('📧 [SIGNUP] Email: ${credential.user?.email}');
 
-      // Use pushReplacement instead of go
-      context.pushReplacement(AppRoutes.home);
+      if (!mounted) {
+        print('⚠️ [SIGNUP] Widget unmounted, aborting navigation');
+        return;
+      }
 
-      print('🏠 Navigation complete!');
+      print('🚀 [SIGNUP] Navigating to home screen...');
+
+      // Navigate to home
+      context.go(AppRoutes.home);
+
+      print('✅ [SIGNUP] Navigation initiated successfully!');
+
+      // Don't reset loading state on success - let the new screen take over
     } catch (e) {
-      print('❌ Sign up error: $e');
+      print('❌ [SIGNUP] Error occurred: ${e.runtimeType}');
+      print('❌ [SIGNUP] Error message: $e');
 
-      if (!mounted) return;
+      if (!mounted) {
+        print('⚠️ [SIGNUP] Widget unmounted during error handling');
+        return;
+      }
+
+      // Reset loading state on error
+      setState(() => _isLoading = false);
 
       String errorMessage = AuthService.getErrorMessage(
         e.toString().contains('email-already-in-use')
             ? 'email-already-in-use'
             : e.toString().contains('weak-password')
                 ? 'weak-password'
+                : e.toString().contains('invalid-email')
+                ? 'invalid-email'
+                : e.toString().contains('timeout')
+                ? 'too-many-requests'
                 : 'unknown',
       );
 
@@ -81,8 +112,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           duration: const Duration(seconds: 3),
         ),
       );
-
-      setState(() => _isLoading = false);
     }
   }
 

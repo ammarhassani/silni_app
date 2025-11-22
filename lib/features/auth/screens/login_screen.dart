@@ -41,24 +41,50 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       final authService = ref.read(authServiceProvider);
 
-      print('🔐 Attempting login...');
-      await authService.signInWithEmail(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+      print('🔐 [LOGIN] Starting login process...');
+      print('📧 [LOGIN] Email: ${_emailController.text.trim()}');
 
-      print('✅ Login successful! Navigating to home...');
+      // Add timeout to prevent infinite hanging
+      final credential = await authService
+          .signInWithEmail(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          )
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              throw Exception('Login timeout - Firebase took too long to respond');
+            },
+          );
 
-      if (!mounted) return;
+      print('✅ [LOGIN] Firebase authentication successful!');
+      print('👤 [LOGIN] User ID: ${credential.user?.uid}');
+      print('📧 [LOGIN] Email verified: ${credential.user?.emailVerified}');
 
-      // Use pushReplacement instead of go to prevent back navigation
-      context.pushReplacement(AppRoutes.home);
+      if (!mounted) {
+        print('⚠️ [LOGIN] Widget unmounted, aborting navigation');
+        return;
+      }
 
-      print('🏠 Navigation complete!');
+      print('🚀 [LOGIN] Navigating to home screen...');
+
+      // Navigate to home - use go instead of pushReplacement
+      context.go(AppRoutes.home);
+
+      print('✅ [LOGIN] Navigation initiated successfully!');
+
+      // Don't reset loading state on success - let the new screen take over
     } catch (e) {
-      print('❌ Login error: $e');
+      print('❌ [LOGIN] Error occurred: ${e.runtimeType}');
+      print('❌ [LOGIN] Error message: $e');
 
-      if (!mounted) return;
+      if (!mounted) {
+        print('⚠️ [LOGIN] Widget unmounted during error handling');
+        return;
+      }
+
+      // Reset loading state on error
+      setState(() => _isLoading = false);
 
       String errorMessage = AuthService.getErrorMessage(
         e.toString().contains('user-not-found')
@@ -67,6 +93,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ? 'wrong-password'
                 : e.toString().contains('invalid-credential')
                 ? 'wrong-password'
+                : e.toString().contains('invalid-email')
+                ? 'invalid-email'
+                : e.toString().contains('timeout')
+                ? 'too-many-requests'
                 : 'unknown',
       );
 
@@ -77,8 +107,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           duration: const Duration(seconds: 3),
         ),
       );
-
-      setState(() => _isLoading = false);
     }
   }
 
