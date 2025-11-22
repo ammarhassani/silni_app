@@ -1,7 +1,7 @@
 name: silni_app
-description: "A new Flutter project."
+description: "A dramatic Islamic family connection tracker with stunning UI/UX"
 publish_to: 'none'
-version: 0.1.0
+version: 1.0.0+1
 
 environment:
   sdk: ^3.10.1
@@ -9,11 +9,97 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State Management - Riverpod
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Navigation & Routing
+  go_router: ^14.6.2
+
+  # Advanced Animations
+  rive: ^0.13.19
+  lottie: ^3.2.1
+  flutter_animate: ^4.5.0
+  confetti: ^0.8.0
+  simple_animations: ^5.0.2
+  animations: ^2.0.11
+
+  # UI & Design System
+  glassmorphism: ^3.0.0
+  shimmer: ^3.0.0
+  flutter_staggered_animations: ^1.1.1
+
+  # Firebase
+  firebase_core: ^3.11.0
+  firebase_auth: ^5.3.7
+  cloud_firestore: ^5.5.5
+  firebase_storage: ^12.4.3
+  firebase_analytics: ^11.4.3
+  firebase_messaging: ^15.1.8
+
+  # Internationalization
+  intl: ^0.20.2
+
+  # Image Processing & Media
+  cached_network_image: ^3.4.1
+  image_picker: ^1.1.2
+  image_cropper: ^8.0.2
+  photo_view: ^0.15.0
+
+  # Contacts
+  flutter_contacts: ^1.1.9
+
+  # Charts & Visualization
+  fl_chart: ^0.70.1
+
+  # Audio
+  just_audio: ^0.9.40
+
+  # Hardware Features (can add later if needed)
+  # sensors_plus: ^6.1.1
+  # camera: ^0.11.0+2
+  # geolocator: ^13.0.2
+
+  # Utilities
+  uuid: ^4.5.1
+  path_provider: ^2.1.5
+  shared_preferences: ^2.3.4
+  url_launcher: ^6.3.1
+  package_info_plus: ^8.1.2
+  flutter_dotenv: ^5.2.1
+
+  # HTTP & Networking
+  http: ^1.2.2
+  dio: ^5.7.0
+
+  # UI Helpers
+  flutter_svg: ^2.0.16
+  flutter_slidable: ^3.1.1
+  google_fonts: ^6.2.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  riverpod_generator: ^2.6.2
+  build_runner: ^2.4.14
+  riverpod_lint: ^2.6.3
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/animations/
+    - assets/images/
+    - .env
+
+  # Fonts are loaded from Google Fonts - no need for local files
+  # fonts:
+  #   - family: Cairo
+  #     fonts:
+  #       - asset: assets/fonts/Cairo-Regular.ttf
+  #       - asset: assets/fonts/Cairo-Bold.ttf
+  #         weight: 700
