@@ -1,0 +1,228 @@
+rules_version = '2';
+
+/**
+ * FIRESTORE SECURITY RULES FOR SILNI APP
+ *
+ * These rules ensure that:
+ * 1. Users can only access their own data
+ * 2. All writes are validated for required fields
+ * 3. Premium features are restricted to premium users
+ * 4. Data integrity is maintained
+ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==================== HELPER FUNCTIONS ====================
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if user is the owner of a document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if user is premium
+    function isPremium() {
+      return isAuthenticated() &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.subscriptionStatus == 'premium';
+    }
+
+    // Validate email format
+    function isValidEmail(email) {
+      return email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$');
+    }
+
+    // Validate phone format (Saudi Arabia)
+    function isValidPhone(phone) {
+      return phone == null || phone.matches('^(\\+966|00966|0)?5[0-9]{8}$');
+    }
+
+    // ==================== USERS COLLECTION ====================
+
+    match /users/{userId} {
+      // Allow read if user is the owner
+      allow read: if isOwner(userId);
+
+      // Allow create on sign up (only once)
+      allow create: if isAuthenticated() &&
+                      request.auth.uid == userId &&
+                      request.resource.data.email is string &&
+                      isValidEmail(request.resource.data.email) &&
+                      request.resource.data.fullName is string &&
+                      request.resource.data.fullName.size() >= 2 &&
+                      request.resource.data.fullName.size() <= 100 &&
+                      isValidPhone(request.resource.data.get('phoneNumber', null));
+
+      // Allow update if user is the owner
+      allow update: if isOwner(userId) &&
+                      // Prevent changing critical fields
+                      request.resource.data.id == resource.data.id &&
+                      request.resource.data.email == resource.data.email &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+
+      // Don't allow delete (use accountDeletionRequested flag instead)
+      allow delete: if false;
+    }
+
+    // ==================== RELATIVES COLLECTION ====================
+
+    match /relatives/{relativeId} {
+      // Allow read if user is the owner
+      allow read: if isAuthenticated() &&
+                    resource.data.userId == request.auth.uid;
+
+      // Allow create if user is the owner
+      allow create: if isAuthenticated() &&
+                      request.resource.data.userId == request.auth.uid &&
+                      // Validate required fields
+                      request.resource.data.fullName is string &&
+                      request.resource.data.fullName.size() >= 2 &&
+                      request.resource.data.fullName.size() <= 100 &&
+                      request.resource.data.relationshipType is string &&
+                      request.resource.data.relationshipType in [
+                        'father', 'mother', 'brother', 'sister',
+                        'son', 'daughter', 'grandfather', 'grandmother',
+                        'uncle', 'aunt', 'nephew', 'niece',
+                        'cousin', 'husband', 'wife', 'other'
+                      ] &&
+                      request.resource.data.priority is int &&
+                      request.resource.data.priority >= 1 &&
+                      request.resource.data.priority <= 3 &&
+                      // Free tier limit: 20 relatives
+                      (isPremium() ||
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.totalRelatives < 20);
+
+      // Allow update if user is the owner
+      allow update: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid &&
+                      request.resource.data.userId == resource.data.userId &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+
+      // Allow delete (soft delete) if user is the owner
+      allow delete: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid;
+    }
+
+    // ==================== INTERACTIONS COLLECTION ====================
+
+    match /interactions/{interactionId} {
+      // Allow read if user is the owner
+      allow read: if isAuthenticated() &&
+                    resource.data.userId == request.auth.uid;
+
+      // Allow create if user is the owner
+      allow create: if isAuthenticated() &&
+                      request.resource.data.userId == request.auth.uid &&
+                      // Validate required fields
+                      request.resource.data.relativeId is string &&
+                      request.resource.data.type is string &&
+                      request.resource.data.type in [
+                        'call', 'visit', 'message', 'gift', 'event', 'other'
+                      ] &&
+                      request.resource.data.date is timestamp &&
+                      // Validate photo attachments (premium feature)
+                      (request.resource.data.get('photoUrls', []).size() == 0 || isPremium());
+
+      // Allow update if user is the owner
+      allow update: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid &&
+                      request.resource.data.userId == resource.data.userId &&
+                      request.resource.data.relativeId == resource.data.relativeId &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+
+      // Allow delete if user is the owner
+      allow delete: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid;
+    }
+
+    // ==================== REMINDERS COLLECTION ====================
+
+    match /reminders/{reminderId} {
+      // Allow read if user is the owner
+      allow read: if isAuthenticated() &&
+                    resource.data.userId == request.auth.uid;
+
+      // Allow create if user is the owner
+      allow create: if isAuthenticated() &&
+                      request.resource.data.userId == request.auth.uid &&
+                      // Validate required fields
+                      request.resource.data.relativeId is string &&
+                      request.resource.data.frequency is string &&
+                      request.resource.data.frequency in [
+                        'daily', 'weekly', 'biweekly', 'monthly', 'custom'
+                      ] &&
+                      request.resource.data.nextReminderDate is timestamp &&
+                      request.resource.data.isActive is bool;
+
+      // Allow update if user is the owner
+      allow update: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid &&
+                      request.resource.data.userId == resource.data.userId &&
+                      request.resource.data.relativeId == resource.data.relativeId &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+
+      // Allow delete if user is the owner
+      allow delete: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid;
+    }
+
+    // ==================== ACHIEVEMENTS COLLECTION (Read-Only) ====================
+
+    match /achievements/{achievementId} {
+      // Anyone can read achievements (they're public templates)
+      allow read: if true;
+
+      // Only admins can write (via Cloud Functions)
+      allow write: if false;
+    }
+
+    // ==================== USER ACHIEVEMENTS (Junction Collection) ====================
+
+    match /userAchievements/{userAchievementId} {
+      // Allow read if user is the owner
+      allow read: if isAuthenticated() &&
+                    resource.data.userId == request.auth.uid;
+
+      // Only Cloud Functions can write
+      allow write: if false;
+    }
+
+    // ==================== STATISTICS COLLECTION ====================
+
+    match /statistics/{userId} {
+      // Allow read if user is the owner
+      allow read: if isOwner(userId);
+
+      // Only Cloud Functions can write
+      allow write: if false;
+    }
+
+    // ==================== EDUCATIONAL CONTENT ====================
+
+    match /hadiths/{hadithId} {
+      // Anyone can read hadiths
+      allow read: if true;
+
+      // Only admins can write
+      allow write: if false;
+    }
+
+    match /faqs/{faqId} {
+      // Anyone can read FAQs
+      allow read: if true;
+
+      // Only admins can write
+      allow write: if false;
+    }
+
+    // ==================== DENY ALL OTHER PATHS ====================
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
