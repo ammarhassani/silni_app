@@ -20,5 +20,6 @@ class AppRoutes {
   static const String addInteraction = '/add-interaction';
   static const String achievements = '/achievements';
   static const String reminders = '/reminders';
+  static const String familyTree = '/family-tree';
   static const String profile = '/profile';
 }

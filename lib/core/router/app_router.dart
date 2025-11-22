@@ -10,6 +10,7 @@ import '../../features/relatives/screens/relatives_screen.dart';
 import '../../features/relatives/screens/relative_detail_screen.dart';
 import '../../features/relatives/screens/add_relative_screen.dart';
 import '../../features/reminders/screens/reminders_screen.dart';
+import '../../features/family_tree/screens/family_tree_screen.dart';
 import '../../features/statistics/screens/statistics_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import 'app_routes.dart';
@@ -112,6 +113,17 @@ final routerProvider = Provider<GoRouter>((ref) {
           context,
           state,
           const RemindersScreen(),
+        ),
+      ),
+
+      // Family Tree Routes
+      GoRoute(
+        path: AppRoutes.familyTree,
+        name: 'familyTree',
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          context,
+          state,
+          const FamilyTreeScreen(),
         ),
       ),
 

@@ -350,6 +350,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
           ],
         ),
+        const SizedBox(height: AppSpacing.md),
+        Row(
+          children: [
+            Expanded(
+              child: _buildQuickActionCard(
+                icon: Icons.account_tree_rounded,
+                title: 'شجرة العائلة',
+                subtitle: 'تصور جميل لعائلتك',
+                gradient: AppColors.goldenGradient,
+                onTap: () => context.push(AppRoutes.familyTree),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(child: const SizedBox()),
+          ],
+        ),
       ],
     ).animate(delay: const Duration(milliseconds: 300)).fadeIn().slideY(begin: 0.1, end: 0);
   }
