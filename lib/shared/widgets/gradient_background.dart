@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:simple_animations/simple_animations.dart';
 import '../../core/constants/app_colors.dart';
 
 class GradientBackground extends StatelessWidget {
@@ -37,7 +36,7 @@ class GradientBackground extends StatelessWidget {
   }
 }
 
-class AnimatedGradientBackground extends StatelessWidget {
+class AnimatedGradientBackground extends StatefulWidget {
   final Widget child;
   final Gradient gradient;
 
@@ -48,46 +47,66 @@ class AnimatedGradientBackground extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final tween = MultiTween<_GradientProps>()
-      ..add(
-        _GradientProps.color1,
-        (gradient as LinearGradient).colors[0].tweenTo(
-              (gradient as LinearGradient).colors[1],
-            ),
-        const Duration(seconds: 3),
-      )
-      ..add(
-        _GradientProps.color2,
-        (gradient as LinearGradient).colors[1].tweenTo(
-              (gradient as LinearGradient).colors[2],
-            ),
-        const Duration(seconds: 3),
-      );
+  State<AnimatedGradientBackground> createState() =>
+      _AnimatedGradientBackgroundState();
+}
 
-    return MirrorAnimationBuilder<MultiTweenValues<_GradientProps>>(
-      tween: tween,
+class _AnimatedGradientBackgroundState
+    extends State<AnimatedGradientBackground>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Color?> _colorAnimation1;
+  late Animation<Color?> _colorAnimation2;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
       duration: const Duration(seconds: 6),
-      builder: (context, value, child) {
+      vsync: this,
+    )..repeat(reverse: true);
+
+    final colors = (widget.gradient as LinearGradient).colors;
+
+    _colorAnimation1 = ColorTween(
+      begin: colors[0],
+      end: colors[1],
+    ).animate(_controller);
+
+    _colorAnimation2 = ColorTween(
+      begin: colors[1],
+      end: colors.length > 2 ? colors[2] : colors[1],
+    ).animate(_controller);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
         return Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                value.get(_GradientProps.color1),
-                value.get(_GradientProps.color2),
+                _colorAnimation1.value ?? Colors.transparent,
+                _colorAnimation2.value ?? Colors.transparent,
               ],
             ),
           ),
-          child: this.child,
+          child: widget.child,
         );
       },
     );
   }
 }
-
-enum _GradientProps { color1, color2 }
 
 /// Dramatic Background with Particles Effect
 class DramaticBackground extends StatelessWidget {
@@ -120,19 +139,7 @@ class DramaticBackground extends StatelessWidget {
             ),
           ),
         ),
-        // Overlay pattern
-        Opacity(
-          opacity: 0.1,
-          child: Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/pattern.png'),
-                repeat: ImageRepeat.repeat,
-              ),
-            ),
-          ),
-        ),
-        // Content
+        // Content (removed overlay pattern since assets/images/pattern.png doesn't exist)
         child,
       ],
     );
