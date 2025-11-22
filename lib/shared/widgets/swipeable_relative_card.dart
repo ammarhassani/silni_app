@@ -44,7 +44,7 @@ class SwipeableRelativeCard extends StatelessWidget {
             ),
             SlidableAction(
               onPressed: (_) => _sendMessage(relative.phoneNumber!),
-              backgroundColor: AppColors.royalBlue,
+              backgroundColor: AppColors.calmBlue,
               foregroundColor: Colors.white,
               icon: Icons.message_rounded,
               label: 'رسالة',
@@ -90,7 +90,7 @@ class SwipeableRelativeCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: GlassCard(
-        padding: AppSpacing.md,
+        padding: const EdgeInsets.all(AppSpacing.md),
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
         gradient: needsAttention
             ? LinearGradient(

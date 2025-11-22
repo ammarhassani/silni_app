@@ -294,7 +294,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
             date: DateTime.now(),
             notes: 'تواصل سريع',
             createdAt: DateTime.now(),
-          ).toFirestore(),
+          ),
         );
       },
     )

@@ -89,7 +89,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
               children: [
                 Text(
                   'شجرة العائلة',
-                  style: AppTypography.h2.copyWith(color: Colors.white),
+                  style: AppTypography.headlineLarge.copyWith(color: Colors.white),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -403,7 +403,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) {
         return GlassCard(
-          margin: AppSpacing.md,
+          margin: const EdgeInsets.all(AppSpacing.md),
           borderRadius: AppSpacing.radiusXl,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -441,7 +441,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
               // Name
               Text(
                 node.name,
-                style: AppTypography.h3.copyWith(color: Colors.white),
+                style: AppTypography.headlineMedium.copyWith(color: Colors.white),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -521,7 +521,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: GlassCard(
-          padding: AppSpacing.xl,
+          padding: const EdgeInsets.all(AppSpacing.xl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -529,7 +529,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
               const SizedBox(height: AppSpacing.lg),
               Text(
                 'شجرة عائلتك فارغة',
-                style: AppTypography.h3.copyWith(color: Colors.white),
+                style: AppTypography.headlineMedium.copyWith(color: Colors.white),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -564,8 +564,8 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   Widget _buildError() {
     return Center(
       child: GlassCard(
-        margin: AppSpacing.xl,
-        padding: AppSpacing.xl,
+        margin: const EdgeInsets.all(AppSpacing.xl),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

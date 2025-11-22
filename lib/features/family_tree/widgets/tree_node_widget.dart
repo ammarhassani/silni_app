@@ -114,7 +114,7 @@ class TreeNodeWidget extends StatelessWidget {
                     height: 24,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppColors.royalBlue,
+                      color: AppColors.calmBlue,
                       border: Border.all(color: Colors.white, width: 2),
                     ),
                     child: const Icon(
@@ -181,7 +181,7 @@ class TreeNodeWidget extends StatelessWidget {
         // Low priority - blue/purple
         return LinearGradient(
           colors: [
-            AppColors.royalBlue.withOpacity(0.6),
+            AppColors.calmBlue.withOpacity(0.6),
             AppColors.emotionalPurple.withOpacity(0.4),
           ],
         );

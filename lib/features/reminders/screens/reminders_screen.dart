@@ -96,7 +96,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               children: [
                 Text(
                   'تذكير صلة الرحم',
-                  style: AppTypography.h2.copyWith(color: Colors.white),
+                  style: AppTypography.headlineLarge.copyWith(color: Colors.white),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -126,7 +126,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
           // Reminder Templates Section
           Text(
             '✨ اختر نوع التذكير',
-            style: AppTypography.h3.copyWith(color: Colors.white),
+            style: AppTypography.headlineMedium.copyWith(color: Colors.white),
           ),
           const SizedBox(height: AppSpacing.md),
           _buildReminderTemplates(),
@@ -135,7 +135,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
           // Schedule Cards
           Text(
             '📅 جداول التذكير',
-            style: AppTypography.h3.copyWith(color: Colors.white),
+            style: AppTypography.headlineMedium.copyWith(color: Colors.white),
           ),
           const SizedBox(height: AppSpacing.md),
           _buildScheduleCards(schedules, relatives),
@@ -145,7 +145,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
           if (_getUnassignedRelatives(relatives, schedules).isNotEmpty) ...[
             Text(
               '👥 الأقارب غير المضافين',
-              style: AppTypography.h3.copyWith(color: Colors.white),
+              style: AppTypography.headlineMedium.copyWith(color: Colors.white),
             ),
             const SizedBox(height: AppSpacing.md),
             _buildUnassignedRelatives(relatives, schedules),
@@ -187,7 +187,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         width: 200,
         margin: const EdgeInsets.only(right: AppSpacing.md),
         child: GlassCard(
-          padding: AppSpacing.md,
+          padding: const EdgeInsets.all(AppSpacing.md),
           gradient: isSelected
               ? AppColors.goldenGradient
               : LinearGradient(
@@ -217,7 +217,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               const Spacer(),
               Text(
                 template.title,
-                style: AppTypography.h4.copyWith(color: Colors.white),
+                style: AppTypography.headlineSmall.copyWith(color: Colors.white),
               ),
               const SizedBox(height: 4),
               Text(
@@ -238,7 +238,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   Widget _buildScheduleCards(List<ReminderSchedule> schedules, List<Relative> relatives) {
     if (schedules.isEmpty) {
       return GlassCard(
-        padding: AppSpacing.lg,
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           children: [
             const Text('📝', style: TextStyle(fontSize: 48)),
@@ -274,7 +274,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         .toList();
 
     return GlassCard(
-      padding: AppSpacing.md,
+      padding: const EdgeInsets.all(AppSpacing.md),
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -292,7 +292,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                   children: [
                     Text(
                       schedule.frequency.arabicName,
-                      style: AppTypography.h4.copyWith(color: Colors.white),
+                      style: AppTypography.headlineSmall.copyWith(color: Colors.white),
                     ),
                     Text(
                       schedule.description,
@@ -385,7 +385,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     final unassigned = _getUnassignedRelatives(allRelatives, schedules);
 
     return GlassCard(
-      padding: AppSpacing.md,
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -468,7 +468,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: GlassCard(
-          padding: AppSpacing.xl,
+          padding: const EdgeInsets.all(AppSpacing.xl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -476,7 +476,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               const SizedBox(height: AppSpacing.lg),
               Text(
                 'لا يوجد أقارب بعد',
-                style: AppTypography.h3.copyWith(color: Colors.white),
+                style: AppTypography.headlineMedium.copyWith(color: Colors.white),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -503,8 +503,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   Widget _buildError() {
     return Center(
       child: GlassCard(
-        margin: AppSpacing.xl,
-        padding: AppSpacing.xl,
+        margin: const EdgeInsets.all(AppSpacing.xl),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -660,10 +660,10 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: const Color(0xFF1A1A1A),
       title: Text(
         'إنشاء ${widget.template.title}',
-        style: AppTypography.h3.copyWith(color: Colors.white),
+        style: AppTypography.headlineMedium.copyWith(color: Colors.white),
       ),
       content: SingleChildScrollView(
         child: Column(
@@ -680,7 +680,7 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
 
             // Time Picker
             GlassCard(
-              padding: AppSpacing.md,
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Row(
                 children: [
                   const Icon(Icons.access_time_rounded, color: Colors.white),
@@ -761,7 +761,7 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
 
   Widget _buildMonthDaySelector() {
     return GlassCard(
-      padding: AppSpacing.md,
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -774,7 +774,7 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
             value: _selectedDayOfMonth,
             hint: const Text('اختر اليوم'),
             isExpanded: true,
-            dropdownColor: AppColors.darkBackground,
+            dropdownColor: const Color(0xFF1A1A1A),
             items: List.generate(31, (index) {
               final day = index + 1;
               return DropdownMenuItem(
@@ -855,10 +855,10 @@ class _AddRelativesDialogState extends ConsumerState<_AddRelativesDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: const Color(0xFF1A1A1A),
       title: Text(
         'إضافة أقارب للتذكير',
-        style: AppTypography.h3.copyWith(color: Colors.white),
+        style: AppTypography.headlineMedium.copyWith(color: Colors.white),
       ),
       content: SizedBox(
         width: double.maxFinite,

@@ -342,7 +342,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 gradient: LinearGradient(
                   colors: [
                     AppColors.emotionalPurple.withOpacity(0.6),
-                    AppColors.royalBlue.withOpacity(0.4),
+                    AppColors.calmBlue.withOpacity(0.4),
                   ],
                 ),
                 onTap: () => context.push(AppRoutes.statistics),
@@ -380,7 +380,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return GestureDetector(
       onTap: onTap,
       child: GlassCard(
-        padding: AppSpacing.md,
+        padding: const EdgeInsets.all(AppSpacing.md),
         gradient: gradient,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
