@@ -413,7 +413,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
             icon: Icons.timeline,
             label: 'التفاعلات',
             value: '${relative.interactionCount}',
-            color: AppColors.islamicGold,
+            color: AppColors.premiumGold,
           ),
           Container(
             width: 1,
@@ -449,7 +449,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
           ),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: AppSpacing.xxs),
+        const SizedBox(height: AppSpacing.xs),
         Text(
           label,
           style: AppTypography.bodySmall.copyWith(
@@ -468,7 +468,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.info_outline, color: AppColors.islamicGold),
+              const Icon(Icons.info_outline, color: AppColors.premiumGold),
               const SizedBox(width: AppSpacing.sm),
               Text(
                 'التفاصيل',
@@ -570,7 +570,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                   color: Colors.white70,
                 ),
               ),
-              const SizedBox(height: AppSpacing.xxs),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 value,
                 style: AppTypography.bodyMedium.copyWith(
@@ -669,7 +669,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                                 color: Colors.white,
                               ),
                             ),
-                            const SizedBox(height: AppSpacing.xxs),
+                            const SizedBox(height: AppSpacing.xs),
                             Text(
                               interaction.relativeTime,
                               style: AppTypography.bodySmall.copyWith(
@@ -696,10 +696,10 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                           children: [
                             const Icon(
                               Icons.timer,
-                              color: AppColors.islamicGold,
+                              color: AppColors.premiumGold,
                               size: 16,
                             ),
-                            const SizedBox(height: AppSpacing.xxs),
+                            const SizedBox(height: AppSpacing.xs),
                             Text(
                               interaction.formattedDuration,
                               style: AppTypography.labelSmall.copyWith(

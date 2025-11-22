@@ -353,7 +353,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     Text(
                       hadith.type == HadithType.hadith ? 'حديث اليوم' : 'قول العلماء',
                       style: AppTypography.labelMedium.copyWith(
-                        color: AppColors.islamicGold,
+                        color: AppColors.premiumGold,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -378,7 +378,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               color: Colors.white.withOpacity(0.05),
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
               border: Border.all(
-                color: AppColors.islamicGold.withOpacity(0.3),
+                color: AppColors.premiumGold.withOpacity(0.3),
                 width: 1,
               ),
             ),
