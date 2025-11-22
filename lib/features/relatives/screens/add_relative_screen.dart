@@ -32,11 +32,10 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
 
   RelationshipType _selectedRelationship = RelationshipType.brother;
   Gender? _selectedGender;
-  AvatarType? _selectedAvatar;
   XFile? _selectedImage;
   bool _isLoading = false;
   bool _isFavorite = false;
-  int _priority = 2; // Medium by default
+  int _priority = 2; // Auto-set based on relationship
 
   final RelativesService _relativesService = RelativesService();
   final CloudinaryService _cloudinaryService = CloudinaryService();
@@ -101,9 +100,8 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         photoUrl = await _cloudinaryService.uploadProfilePicture(_selectedImage!);
       }
 
-      // Auto-suggest avatar if not manually selected
-      final avatarType = _selectedAvatar ??
-          AvatarType.suggestFromRelationship(_selectedRelationship, _selectedGender);
+      // Auto-suggest avatar based on relationship
+      final avatarType = AvatarType.suggestFromRelationship(_selectedRelationship, _selectedGender);
 
       // Create relative
       final relative = Relative(
@@ -310,14 +308,6 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                         _buildRelationshipPicker(),
                         const SizedBox(height: AppSpacing.md),
 
-                        // Gender
-                        _buildGenderPicker(),
-                        const SizedBox(height: AppSpacing.md),
-
-                        // Avatar Type
-                        _buildAvatarPicker(),
-                        const SizedBox(height: AppSpacing.md),
-
                         // Phone
                         _buildTextField(
                           controller: _phoneController,
@@ -493,6 +483,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
 
   Widget _buildRelationshipPicker() {
     return GlassCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -507,42 +498,51 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: RelationshipType.values.map((type) {
-              final isSelected = type == _selectedRelationship;
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedRelationship = type;
-                    // Auto-detect gender based on relationship
-                    _selectedGender = _getGenderFromRelationship(type);
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: isSelected ? AppColors.primaryGradient : null,
-                    color: isSelected ? null : Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(isSelected ? 0.5 : 0.3),
-                    ),
-                  ),
-                  child: Text(
-                    type.arabicName,
-                    style: AppTypography.bodySmall.copyWith(
-                      color: Colors.white,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
+          DropdownButtonFormField<RelationshipType>(
+            value: _selectedRelationship,
+            dropdownColor: const Color(0xFF1A1A1A),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white.withOpacity(0.1),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                borderSide: BorderSide(color: AppColors.islamicGreenPrimary, width: 2),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
+            ),
+            style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+            icon: Icon(Icons.arrow_drop_down, color: Colors.white.withOpacity(0.7)),
+            items: RelationshipType.values.map((type) {
+              return DropdownMenuItem(
+                value: type,
+                child: Text(
+                  type.arabicName,
+                  style: AppTypography.bodyMedium.copyWith(color: Colors.white),
                 ),
               );
             }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _selectedRelationship = value;
+                  // Auto-detect gender based on relationship
+                  _selectedGender = _getGenderFromRelationship(value);
+                  // Auto-set priority based on relationship closeness
+                  _priority = AvatarType.suggestPriority(value);
+                });
+              }
+            },
           ),
         ],
       ),
@@ -640,7 +640,10 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   }
 
   Widget _buildPriorityPicker() {
+    String priorityLabel = _priority == 1 ? 'عالية 🔥' : _priority == 2 ? 'متوسطة ⭐' : 'منخفضة 📌';
+
     return GlassCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -648,9 +651,22 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
             children: [
               Icon(Icons.priority_high, color: Colors.white.withOpacity(0.7)),
               const SizedBox(width: AppSpacing.sm),
-              Text(
-                'الأولوية',
-                style: AppTypography.titleMedium.copyWith(color: Colors.white),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'الأولوية',
+                      style: AppTypography.titleMedium.copyWith(color: Colors.white),
+                    ),
+                    Text(
+                      'تم ضبطها تلقائياً حسب صلة القرابة',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: Colors.white.withOpacity(0.6),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

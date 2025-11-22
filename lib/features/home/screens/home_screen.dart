@@ -741,6 +741,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Widget _buildNeedsContact(List<Relative> allRelatives) {
+    // Don't show anything if there are no relatives at all
+    if (allRelatives.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     final needsContact = allRelatives.where((r) => r.needsContact).take(3).toList();
 
     if (needsContact.isEmpty) {

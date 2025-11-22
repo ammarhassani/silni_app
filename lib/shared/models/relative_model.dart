@@ -57,17 +57,13 @@ enum AvatarType {
   youngBoy('young_boy', 'ولد صغير', '👦'),
   youngGirl('young_girl', 'بنت صغيرة', '👧'),
   teenBoy('teen_boy', 'شاب مراهق', '🧑'),
-  teenGirl('teen_girl', 'فتاة مراهقة', '👧'),
-  adultMan('adult_man', 'رجل بالغ', '👨'),
-  adultWoman('adult_woman', 'امرأة بالغة', '👩'),
+  teenGirl('teen_girl', 'فتاة مراهقة', '👧‍🦱'),
+  adultMan('adult_man', 'رجل', '👨'),
+  adultWoman('adult_woman', 'امرأة', '👩'),
   womanWithHijab('woman_hijab', 'امرأة بحجاب', '🧕'),
   beardedMan('bearded_man', 'رجل بلحية', '🧔'),
   elderlyMan('elderly_man', 'رجل مسن', '👴'),
-  elderlyWoman('elderly_woman', 'امرأة مسنة', '👵'),
-  father('father', 'أب', '👨‍💼'),
-  mother('mother', 'أم', '👩‍👧'),
-  grandfather('grandfather', 'جد', '👴'),
-  grandmother('grandmother', 'جدة', '👵');
+  elderlyWoman('elderly_woman', 'امرأة مسنة', '👵');
 
   final String value;
   final String arabicName;
@@ -87,30 +83,67 @@ enum AvatarType {
   static AvatarType suggestFromRelationship(RelationshipType relationship, Gender? gender) {
     switch (relationship) {
       case RelationshipType.father:
-        return AvatarType.father;
+        return AvatarType.beardedMan;
       case RelationshipType.mother:
-        return AvatarType.mother;
+        return AvatarType.womanWithHijab;
       case RelationshipType.grandfather:
-        return AvatarType.grandfather;
+        return AvatarType.elderlyMan;
       case RelationshipType.grandmother:
-        return AvatarType.grandmother;
+        return AvatarType.elderlyWoman;
       case RelationshipType.son:
         return AvatarType.youngBoy;
       case RelationshipType.daughter:
         return AvatarType.youngGirl;
       case RelationshipType.brother:
-      case RelationshipType.uncle:
-      case RelationshipType.nephew:
-      case RelationshipType.cousin:
-      case RelationshipType.husband:
-        return gender == Gender.male ? AvatarType.adultMan : AvatarType.adultWoman;
+        return AvatarType.adultMan;
       case RelationshipType.sister:
+        return AvatarType.womanWithHijab;
+      case RelationshipType.uncle:
+        return AvatarType.beardedMan;
       case RelationshipType.aunt:
+        return AvatarType.womanWithHijab;
+      case RelationshipType.nephew:
+        return AvatarType.teenBoy;
       case RelationshipType.niece:
+        return AvatarType.teenGirl;
+      case RelationshipType.husband:
+        return AvatarType.beardedMan;
       case RelationshipType.wife:
         return AvatarType.womanWithHijab;
+      case RelationshipType.cousin:
+        return gender == Gender.male ? AvatarType.adultMan : AvatarType.adultWoman;
       case RelationshipType.other:
         return gender == Gender.male ? AvatarType.adultMan : AvatarType.adultWoman;
+    }
+  }
+
+  /// Auto-suggest priority based on relationship closeness
+  static int suggestPriority(RelationshipType relationship) {
+    switch (relationship) {
+      // High priority - immediate family
+      case RelationshipType.father:
+      case RelationshipType.mother:
+      case RelationshipType.husband:
+      case RelationshipType.wife:
+      case RelationshipType.son:
+      case RelationshipType.daughter:
+        return 1; // High priority
+
+      // Medium priority - close family
+      case RelationshipType.brother:
+      case RelationshipType.sister:
+      case RelationshipType.grandfather:
+      case RelationshipType.grandmother:
+        return 2; // Medium priority
+
+      // Low priority - extended family
+      case RelationshipType.uncle:
+      case RelationshipType.aunt:
+      case RelationshipType.nephew:
+      case RelationshipType.niece:
+      case RelationshipType.cousin:
+      case RelationshipType.other:
+        return 3; // Low priority
     }
   }
 }
