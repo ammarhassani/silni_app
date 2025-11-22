@@ -41,7 +41,7 @@ dependencies:
   firebase_messaging: ^15.1.8
 
   # Internationalization
-  intl: ^0.19.0
+  intl: ^0.20.2
 
   # Image Processing & Media
   cached_network_image: ^3.4.1
