@@ -495,7 +495,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     return GestureDetector(
       onTap: () {
-        // TODO: Navigate to relative detail
+        context.push('${AppRoutes.relativeDetail}/${relative.id}');
       },
       child: Container(
         margin: const EdgeInsets.only(right: AppSpacing.md),
@@ -817,9 +817,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget _buildNeedsContactCard(Relative relative) {
     final daysSince = relative.daysSinceLastContact ?? 0;
 
-    return GlassCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Row(
+    return GestureDetector(
+      onTap: () {
+        context.push('${AppRoutes.relativeDetail}/${relative.id}');
+      },
+      child: GlassCard(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
         children: [
           Container(
             width: 60,
@@ -869,6 +873,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             size: 24,
           ),
         ],
+        ),
       ),
     );
   }
