@@ -5,6 +5,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/theme/theme_provider.dart';
+import '../../../core/theme/app_themes.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -14,6 +16,8 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currentTheme = ref.watch(themeProvider);
+
     return Scaffold(
       body: GradientBackground(
         animated: true,
@@ -46,6 +50,57 @@ class SettingsScreen extends ConsumerWidget {
                 child: ListView(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   children: [
+                    // Theme Selector
+                    GlassCard(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.palette, color: AppColors.islamicGold),
+                              const SizedBox(width: AppSpacing.sm),
+                              Text(
+                                'المظهر',
+                                style: AppTypography.titleLarge.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            'اختر المظهر المفضل لديك',
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: Colors.white70,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+
+                          // Theme Grid
+                          GridView.count(
+                            crossAxisCount: 3,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            crossAxisSpacing: AppSpacing.sm,
+                            mainAxisSpacing: AppSpacing.sm,
+                            children: AppThemeType.values.map((theme) {
+                              return _buildThemeCard(
+                                context,
+                                ref,
+                                theme,
+                                currentTheme == theme,
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.sm),
+
+                    // Profile
                     GlassCard(
                       child: ListTile(
                         leading: const Icon(Icons.person, color: Colors.white),
@@ -60,10 +115,16 @@ class SettingsScreen extends ConsumerWidget {
                           color: Colors.white.withOpacity(0.5),
                           size: 20,
                         ),
-                        onTap: () {},
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('ميزة الملف الشخصي قريباً')),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
+
+                    // Notifications
                     GlassCard(
                       child: ListTile(
                         leading:
@@ -79,10 +140,16 @@ class SettingsScreen extends ConsumerWidget {
                           color: Colors.white.withOpacity(0.5),
                           size: 20,
                         ),
-                        onTap: () {},
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('ميزة الإشعارات قريباً')),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
+
+                    // Logout
                     GlassCard(
                       child: ListTile(
                         leading: const Icon(Icons.logout, color: Colors.white),
@@ -106,6 +173,83 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThemeCard(
+    BuildContext context,
+    WidgetRef ref,
+    AppThemeType theme,
+    bool isSelected,
+  ) {
+    final themeColors = ThemeColors.getTheme(theme);
+
+    return GestureDetector(
+      onTap: () {
+        ref.read(themeProvider.notifier).setTheme(theme);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم تغيير المظهر إلى ${theme.arabicName}'),
+            backgroundColor: themeColors.primary,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: themeColors.primaryGradient,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          border: Border.all(
+            color: isSelected ? AppColors.islamicGold : Colors.white.withOpacity(0.2),
+            width: isSelected ? 3 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.islamicGold.withOpacity(0.5),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (isSelected)
+              const Icon(
+                Icons.check_circle,
+                color: Colors.white,
+                size: 32,
+              )
+            else
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.3),
+                ),
+                child: Icon(
+                  Icons.palette,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              theme.arabicName,
+              style: AppTypography.labelSmall.copyWith(
+                color: Colors.white,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ),
     );
