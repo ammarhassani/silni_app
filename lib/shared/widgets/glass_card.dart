@@ -13,6 +13,7 @@ class GlassCard extends StatelessWidget {
   final double blurStrength;
   final Color? color;
   final Border? border;
+  final Gradient? gradient;
   final VoidCallback? onTap;
 
   const GlassCard({
@@ -26,6 +27,7 @@ class GlassCard extends StatelessWidget {
     this.blurStrength = AppColors.blurStrength,
     this.color,
     this.border,
+    this.gradient,
     this.onTap,
   });
 
@@ -49,21 +51,22 @@ class GlassCard extends StatelessWidget {
           padding: padding ?? const EdgeInsets.all(AppSpacing.md),
           margin: margin,
           decoration: BoxDecoration(
-            color: color ?? defaultColor,
+            color: gradient == null ? (color ?? defaultColor) : null,
             borderRadius: BorderRadius.circular(borderRadius),
             border: border ??
                 Border.all(
                   color: Colors.white.withOpacity(0.2),
                   width: 1.5,
                 ),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withOpacity(0.2),
-                Colors.white.withOpacity(0.05),
-              ],
-            ),
+            gradient: gradient ??
+                LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withOpacity(0.2),
+                    Colors.white.withOpacity(0.05),
+                  ],
+                ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.1),
