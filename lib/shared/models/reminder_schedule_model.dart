@@ -128,8 +128,6 @@ class ReminderSchedule {
         return 'كل شهر في الساعة $time';
       case ReminderFrequency.friday:
         return 'كل جمعة في الساعة $time';
-      case ReminderFrequency.birthday:
-        return 'في عيد الميلاد';
       case ReminderFrequency.custom:
         return 'مخصص';
     }
@@ -179,7 +177,6 @@ class ReminderSchedule {
       case ReminderFrequency.friday:
         return now.weekday == 5; // Friday
 
-      case ReminderFrequency.birthday:
       case ReminderFrequency.custom:
         return false;
     }
