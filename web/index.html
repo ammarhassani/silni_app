@@ -29,8 +29,28 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>silni_app</title>
+  <title>صِلْني - Silni</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
+  <script>
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyBuS1snryQ_DWxhcEUtj0Lu_HDrdIvASDY",
+      authDomain: "silni-31811.firebaseapp.com",
+      projectId: "silni-31811",
+      storageBucket: "silni-31811.firebasestorage.app",
+      messagingSenderId: "1049917341546",
+      appId: "1:1049917341546:web:baa2792c28877379412f13",
+      measurementId: "G-1MR4GW3PR4"
+    };
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
