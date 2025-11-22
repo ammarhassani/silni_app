@@ -39,12 +39,12 @@ class AppColors {
   static const glassBlack = Color(0x33000000);
   static const blurStrength = 20.0;
 
-  // Background Gradients
+  // Background Gradients - DRAMATIC & COLORFUL
   static const backgroundGradientLight = LinearGradient(
     colors: [
-      Color(0xFFF5F5F5),
-      Color(0xFFE8F5E9),
-      Color(0xFFC8E6C9),
+      Color(0xFF1B5E20), // Deep Islamic Green
+      Color(0xFF2E7D32), // Medium Green
+      Color(0xFF388E3C), // Lighter Green
     ],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
