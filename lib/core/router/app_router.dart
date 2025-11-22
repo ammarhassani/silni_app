@@ -9,6 +9,7 @@ import '../../features/home/screens/home_screen.dart';
 import '../../features/relatives/screens/relatives_screen.dart';
 import '../../features/relatives/screens/relative_detail_screen.dart';
 import '../../features/relatives/screens/add_relative_screen.dart';
+import '../../features/relatives/screens/edit_relative_screen.dart';
 import '../../features/reminders/screens/reminders_screen.dart';
 import '../../features/family_tree/screens/family_tree_screen.dart';
 import '../../features/statistics/screens/statistics_screen.dart';
@@ -103,6 +104,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           state,
           const AddRelativeScreen(),
         ),
+      ),
+      GoRoute(
+        path: '${AppRoutes.editRelative}/:id',
+        name: 'editRelative',
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return _buildPageWithTransition(
+            context,
+            state,
+            EditRelativeScreen(relativeId: id),
+          );
+        },
       ),
 
       // Reminders Routes
