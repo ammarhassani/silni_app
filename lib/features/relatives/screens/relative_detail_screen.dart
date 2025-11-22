@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/models/relative_model.dart';
@@ -176,10 +177,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
               IconButton(
                 icon: const Icon(Icons.edit_rounded, color: Colors.white),
                 onPressed: () {
-                  // TODO: Navigate to edit screen
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('ميزة التعديل قريباً')),
-                  );
+                  context.push('${AppRoutes.editRelative}/${relative.id}');
                 },
               ),
             ],
