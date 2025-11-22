@@ -11,6 +11,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
+import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../../shared/services/relatives_service.dart';
@@ -135,10 +136,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     _buildIslamicReminder(),
                     const SizedBox(height: AppSpacing.xl),
 
+                    // Quick Actions
+                    _buildQuickActions(),
+                    const SizedBox(height: AppSpacing.xl),
+
                     // Family members circle avatars
                     relativesAsync.when(
                       data: (relatives) => _buildFamilyCircles(relatives),
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                      loading: () => const FamilyCirclesSkeleton(),
                       error: (_, __) => const SizedBox.shrink(),
                     ),
                     const SizedBox(height: AppSpacing.xl),
@@ -303,6 +308,99 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         .animate(delay: const Duration(milliseconds: 200))
         .fadeIn()
         .slideX(begin: 0.2, end: 0);
+  }
+
+  Widget _buildQuickActions() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'إجراءات سريعة',
+          style: AppTypography.headlineSmall.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Row(
+          children: [
+            Expanded(
+              child: _buildQuickActionCard(
+                icon: Icons.notifications_active_rounded,
+                title: 'التذكيرات',
+                subtitle: 'نظّم تذكيراتك',
+                gradient: AppColors.primaryGradient,
+                onTap: () => context.push(AppRoutes.reminders),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: _buildQuickActionCard(
+                icon: Icons.assessment_rounded,
+                title: 'الإحصائيات',
+                subtitle: 'تقدمك اليومي',
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.emotionalPurple.withOpacity(0.6),
+                    AppColors.royalBlue.withOpacity(0.4),
+                  ],
+                ),
+                onTap: () => context.push(AppRoutes.statistics),
+              ),
+            ),
+          ],
+        ),
+      ],
+    ).animate(delay: const Duration(milliseconds: 300)).fadeIn().slideY(begin: 0.1, end: 0);
+  }
+
+  Widget _buildQuickActionCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Gradient gradient,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: GlassCard(
+        padding: AppSpacing.md,
+        gradient: gradient,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 45,
+              height: 45,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.2),
+              ),
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              title,
+              style: AppTypography.titleMedium.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: AppTypography.bodySmall.copyWith(
+                color: Colors.white.withOpacity(0.8),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildFamilyCircles(List<Relative> relatives) {
@@ -821,7 +919,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         elevation: 0,
         onPressed: () {
           _confettiController.play();
-          // TODO: Show bottom sheet for quick action
+          context.push(AppRoutes.addRelative);
         },
         child: const Icon(
           Icons.add_rounded,

@@ -8,6 +8,8 @@ import '../../features/auth/screens/signup_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/relatives/screens/relatives_screen.dart';
 import '../../features/relatives/screens/relative_detail_screen.dart';
+import '../../features/relatives/screens/add_relative_screen.dart';
+import '../../features/reminders/screens/reminders_screen.dart';
 import '../../features/statistics/screens/statistics_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import 'app_routes.dart';
@@ -91,6 +93,26 @@ final routerProvider = Provider<GoRouter>((ref) {
             RelativeDetailScreen(relativeId: id),
           );
         },
+      ),
+      GoRoute(
+        path: AppRoutes.addRelative,
+        name: 'addRelative',
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          context,
+          state,
+          const AddRelativeScreen(),
+        ),
+      ),
+
+      // Reminders Routes
+      GoRoute(
+        path: AppRoutes.reminders,
+        name: 'reminders',
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          context,
+          state,
+          const RemindersScreen(),
+        ),
       ),
 
       // Statistics Routes

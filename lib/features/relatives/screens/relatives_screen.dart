@@ -566,7 +566,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         onPressed: () {
-          // TODO: Navigate to add relative
+          context.push(AppRoutes.addRelative);
         },
         child: const Icon(
           Icons.person_add_rounded,
