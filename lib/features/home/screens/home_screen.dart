@@ -14,13 +14,16 @@ import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
+import '../../../shared/models/hadith_model.dart';
 import '../../../shared/services/relatives_service.dart';
 import '../../../shared/services/interactions_service.dart';
+import '../../../shared/services/hadith_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
 // Providers for relatives and interactions
 final relativesServiceProvider = Provider((ref) => RelativesService());
 final interactionsServiceProvider = Provider((ref) => InteractionsService());
+final hadithServiceProvider = Provider((ref) => HadithService());
 
 final relativesStreamProvider = StreamProvider.family<List<Relative>, String>((ref, userId) {
   final service = ref.watch(relativesServiceProvider);
@@ -44,6 +47,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   late AnimationController _floatingController;
   late ConfettiController _confettiController;
   int _currentIndex = 0;
+  Hadith? _dailyHadith;
+  bool _isLoadingHadith = true;
 
   @override
   void initState() {
@@ -56,6 +61,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     _confettiController = ConfettiController(
       duration: const Duration(seconds: 2),
     );
+
+    _loadDailyHadith();
+  }
+
+  Future<void> _loadDailyHadith() async {
+    final hadithService = ref.read(hadithServiceProvider);
+    final hadith = await hadithService.getDailyHadith();
+    if (mounted) {
+      setState(() {
+        _dailyHadith = hadith;
+        _isLoadingHadith = false;
+      });
+    }
   }
 
   @override
@@ -256,52 +274,146 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Widget _buildIslamicReminder() {
+    if (_isLoadingHadith) {
+      return GlassCard(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.islamicGreenPrimary.withOpacity(0.2),
+            AppColors.premiumGold.withOpacity(0.1),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.2),
+              ),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Text(
+                'جاري تحميل الحديث...',
+                style: AppTypography.titleSmall.copyWith(
+                  color: Colors.white70,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_dailyHadith == null) {
+      return const SizedBox.shrink();
+    }
+
+    final hadith = _dailyHadith!;
+
     return GlassCard(
       gradient: LinearGradient(
         colors: [
-          AppColors.islamicGreenPrimary.withOpacity(0.2),
-          AppColors.premiumGold.withOpacity(0.1),
+          AppColors.islamicGreenPrimary.withOpacity(0.3),
+          AppColors.premiumGold.withOpacity(0.2),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.2),
-            ),
-            child: const Center(
-              child: Icon(
-                Icons.auto_awesome,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'تذكير اليوم',
-                  style: AppTypography.labelMedium.copyWith(
-                    color: Colors.white.withOpacity(0.8),
+          // Header
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: AppColors.goldenGradient,
+                ),
+                child: const Center(
+                  child: Text(
+                    '📿',
+                    style: TextStyle(fontSize: 24),
                   ),
                 ),
-                const SizedBox(height: 4),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      hadith.type == HadithType.hadith ? 'حديث اليوم' : 'قول العلماء',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: AppColors.islamicGold,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (hadith.formattedSource.isNotEmpty)
+                      Text(
+                        hadith.formattedSource,
+                        style: AppTypography.labelSmall.copyWith(
+                          color: Colors.white70,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Hadith text
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              border: Border.all(
+                color: AppColors.islamicGold.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Text(
+              hadith.arabicText,
+              style: AppTypography.titleMedium.copyWith(
+                color: Colors.white,
+                height: 1.8,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.justify,
+            ),
+          ),
+
+          // Reference
+          if (hadith.reference.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                Icon(
+                  Icons.book,
+                  size: 14,
+                  color: Colors.white.withOpacity(0.6),
+                ),
+                const SizedBox(width: AppSpacing.xs),
                 Text(
-                  'صلة الرحم تزيد في الرزق وتطيل العمر',
-                  style: AppTypography.titleSmall.copyWith(
-                    color: Colors.white,
-                    height: 1.5,
+                  hadith.reference,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: Colors.white.withOpacity(0.6),
+                    fontStyle: FontStyle.italic,
                   ),
                 ),
               ],
             ),
-          ),
+          ],
         ],
       ),
     )
