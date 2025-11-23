@@ -133,3 +133,74 @@ class RelativeCardSkeleton extends StatelessWidget {
     );
   }
 }
+
+/// Skeleton loader for Hadith card
+class HadithSkeletonLoader extends StatelessWidget {
+  const HadithSkeletonLoader({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Arabic text lines
+          const SkeletonLoader(
+            width: double.infinity,
+            height: 22,
+            borderRadius: 4,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          const SkeletonLoader(
+            width: double.infinity,
+            height: 22,
+            borderRadius: 4,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          SkeletonLoader(
+            width: MediaQuery.of(context).size.width * 0.7,
+            height: 22,
+            borderRadius: 4,
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Divider
+          Container(
+            height: 1,
+            width: double.infinity,
+            color: Colors.white.withOpacity(0.1),
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // English translation lines
+          const SkeletonLoader(
+            width: double.infinity,
+            height: 16,
+            borderRadius: 4,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          const SkeletonLoader(
+            width: double.infinity,
+            height: 16,
+            borderRadius: 4,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          SkeletonLoader(
+            width: MediaQuery.of(context).size.width * 0.6,
+            height: 16,
+            borderRadius: 4,
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Source
+          const SkeletonLoader(
+            width: 120,
+            height: 14,
+            borderRadius: 4,
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -5,9 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
+import '../../../shared/widgets/collapsible_picker.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/services/relatives_service.dart';
@@ -198,35 +200,43 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                 ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 children: [
                   Text(
                     template.frequency.emoji,
-                    style: const TextStyle(fontSize: 32),
+                    style: const TextStyle(fontSize: 28),
                   ),
                   const Spacer(),
                   if (isSelected)
                     const Icon(
                       Icons.check_circle_rounded,
                       color: Colors.white,
-                      size: 24,
+                      size: 20,
                     ),
                 ],
               ),
-              const Spacer(),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 template.title,
-                style: AppTypography.headlineSmall.copyWith(color: Colors.white),
+                style: AppTypography.titleMedium.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
-              Text(
-                template.description,
-                style: AppTypography.bodySmall.copyWith(
-                  color: Colors.white.withOpacity(0.8),
+              Flexible(
+                child: Text(
+                  template.description,
+                  style: AppTypography.bodySmall.copyWith(
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -269,6 +279,9 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   }
 
   Widget _buildScheduleCard(ReminderSchedule schedule, List<Relative> allRelatives) {
+    // Use theme-aware colors
+    final themeColors = ref.watch(themeColorsProvider);
+
     final scheduledRelatives = allRelatives
         .where((r) => schedule.relativeIds.contains(r.id))
         .toList();
@@ -299,6 +312,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                       style: AppTypography.bodySmall.copyWith(
                         color: Colors.white.withOpacity(0.7),
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -306,7 +321,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               Switch(
                 value: schedule.isActive,
                 onChanged: (value) => _toggleSchedule(schedule, value),
-                activeColor: AppColors.islamicGreenPrimary,
+                activeColor: themeColors.primary,
               ),
             ],
           ),
@@ -369,13 +384,16 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   }
 
   Widget _buildRelativeChip(Relative relative, ReminderSchedule schedule) {
+    // Use theme-aware colors for chips
+    final themeColors = ref.watch(themeColorsProvider);
+
     return Chip(
       avatar: Text(relative.displayEmoji, style: const TextStyle(fontSize: 18)),
       label: Text(
         relative.fullName,
         style: AppTypography.bodySmall.copyWith(color: Colors.white),
       ),
-      backgroundColor: AppColors.islamicGreenPrimary.withOpacity(0.3),
+      backgroundColor: themeColors.primary.withOpacity(0.3),
       deleteIcon: const Icon(Icons.close_rounded, size: 18, color: Colors.white70),
       onDeleted: () => _removeRelativeFromSchedule(schedule, relative.id),
     );
@@ -423,17 +441,20 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   }
 
   Widget _buildRelativeAvatarCard(Relative relative) {
+    // Use theme-aware colors
+    final themeColors = ref.watch(themeColorsProvider);
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
+        gradient: themeColors.primaryGradient,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         boxShadow: [
           BoxShadow(
-            color: AppColors.islamicGreenPrimary.withOpacity(0.3),
+            color: themeColors.primary.withOpacity(0.3),
             blurRadius: 8,
             spreadRadius: 1,
           ),
@@ -678,41 +699,62 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
             ),
             const SizedBox(height: AppSpacing.lg),
 
-            // Time Picker
-            GlassCard(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Row(
+            // Time Picker - Collapsible
+            CollapsiblePicker(
+              title: 'وقت التذكير',
+              icon: Icons.access_time_rounded,
+              summaryText: _selectedTime.format(context),
+              initiallyExpanded: true,
+              expandedContent: Column(
                 children: [
-                  const Icon(Icons.access_time_rounded, color: Colors.white),
-                  const SizedBox(width: AppSpacing.md),
                   Text(
-                    'الوقت: ${_selectedTime.format(context)}',
-                    style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+                    'اختر الوقت المناسب لإرسال التذكير',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: Colors.white.withOpacity(0.7),
+                    ),
                   ),
-                  const Spacer(),
-                  IconButton(
+                  const SizedBox(height: AppSpacing.md),
+                  ElevatedButton.icon(
                     onPressed: _pickTime,
-                    icon: const Icon(Icons.edit_rounded, color: Colors.white),
+                    icon: const Icon(Icons.schedule_rounded),
+                    label: Text('تغيير الوقت: ${_selectedTime.format(context)}'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white.withOpacity(0.2),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                        vertical: AppSpacing.md,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
 
-            // Weekly days selector
+            // Weekly days selector - Collapsible
             if (widget.template.frequency == ReminderFrequency.weekly) ...[
               const SizedBox(height: AppSpacing.md),
-              Text(
-                'اختر الأيام:',
-                style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+              CollapsiblePicker(
+                title: 'أيام الأسبوع',
+                icon: Icons.calendar_view_week_rounded,
+                summaryText: _selectedDays.isEmpty
+                    ? 'لم يتم اختيار أيام بعد'
+                    : '${_selectedDays.length} أيام محددة',
+                expandedContent: _buildDaySelector(),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              _buildDaySelector(),
             ],
 
-            // Monthly day selector
+            // Monthly day selector - Collapsible
             if (widget.template.frequency == ReminderFrequency.monthly) ...[
               const SizedBox(height: AppSpacing.md),
-              _buildMonthDaySelector(),
+              CollapsiblePicker(
+                title: 'يوم من الشهر',
+                icon: Icons.calendar_month_rounded,
+                summaryText: _selectedDayOfMonth == null
+                    ? 'اختر يوم من الشهر'
+                    : 'اليوم ${_selectedDayOfMonth}',
+                expandedContent: _buildMonthDaySelector(),
+              ),
             ],
           ],
         ),
@@ -731,6 +773,8 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
   }
 
   Widget _buildDaySelector() {
+    // Use theme-aware colors
+    final themeColors = ref.watch(themeColorsProvider);
     final days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
     return Wrap(
@@ -752,7 +796,7 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
               }
             });
           },
-          selectedColor: AppColors.islamicGreenPrimary,
+          selectedColor: themeColors.primary,
           checkmarkColor: Colors.white,
         );
       }),
@@ -760,20 +804,30 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
   }
 
   Widget _buildMonthDaySelector() {
-    return GlassCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'اختر يوم من الشهر (1-31):',
-            style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'اختر يوم من الشهر (1-31):',
+          style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          DropdownButton<int>(
+          child: DropdownButton<int>(
             value: _selectedDayOfMonth,
-            hint: const Text('اختر اليوم'),
+            hint: Text(
+              'اختر اليوم',
+              style: AppTypography.bodyMedium.copyWith(
+                color: Colors.white.withOpacity(0.7),
+              ),
+            ),
             isExpanded: true,
+            underline: const SizedBox(),
             dropdownColor: const Color(0xFF1A1A1A),
             items: List.generate(31, (index) {
               final day = index + 1;
@@ -786,8 +840,8 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
               setState(() => _selectedDayOfMonth = value);
             },
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -854,6 +908,9 @@ class _AddRelativesDialogState extends ConsumerState<_AddRelativesDialog> {
 
   @override
   Widget build(BuildContext context) {
+    // Use theme-aware colors
+    final themeColors = ref.watch(themeColorsProvider);
+
     return AlertDialog(
       backgroundColor: const Color(0xFF1A1A1A),
       title: Text(
@@ -901,7 +958,7 @@ class _AddRelativesDialogState extends ConsumerState<_AddRelativesDialog> {
                         color: Colors.white.withOpacity(0.7),
                       ),
                     ),
-                    activeColor: AppColors.islamicGreenPrimary,
+                    activeColor: themeColors.primary,
                     checkColor: Colors.white,
                   );
                 },

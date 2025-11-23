@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
@@ -51,11 +52,13 @@ class _GradientButtonState extends State<GradientButton>
   }
 
   void _onTapDown(TapDownDetails details) {
+    HapticFeedback.lightImpact(); // Subtle feedback on press
     setState(() => _isPressed = true);
     _controller.forward();
   }
 
   void _onTapUp(TapUpDetails details) {
+    HapticFeedback.mediumImpact(); // Confirming feedback on release
     setState(() => _isPressed = false);
     _controller.reverse();
     widget.onPressed();
@@ -188,7 +191,10 @@ class OutlinedGradientButton extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(AppSpacing.buttonRadius - 2),
-            onTap: onPressed,
+            onTap: () {
+              HapticFeedback.mediumImpact();
+              onPressed();
+            },
             child: Center(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,

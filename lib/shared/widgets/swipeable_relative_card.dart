@@ -102,38 +102,40 @@ class SwipeableRelativeCard extends StatelessWidget {
             : null,
         child: Row(
           children: [
-            // Avatar
-            Stack(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: needsAttention
-                        ? AppColors.streakFire
-                        : AppColors.primaryGradient,
-                    boxShadow: [
-                      BoxShadow(
-                        color: (needsAttention
-                                ? AppColors.joyfulOrange
-                                : AppColors.islamicGreenPrimary)
-                            .withOpacity(0.3),
-                        blurRadius: 8,
-                        spreadRadius: 1,
-                      ),
-                    ],
+            // Avatar with Hero animation
+            Hero(
+              tag: 'avatar-${relative.id}',
+              child: Stack(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: needsAttention
+                          ? AppColors.streakFire
+                          : AppColors.primaryGradient,
+                      boxShadow: [
+                        BoxShadow(
+                          color: (needsAttention
+                                  ? AppColors.joyfulOrange
+                                  : AppColors.islamicGreenPrimary)
+                              .withOpacity(0.3),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: relative.photoUrl != null
+                        ? ClipOval(
+                            child: Image.network(
+                              relative.photoUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
+                            ),
+                          )
+                        : _buildDefaultAvatar(),
                   ),
-                  child: relative.photoUrl != null
-                      ? ClipOval(
-                          child: Image.network(
-                            relative.photoUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
-                          ),
-                        )
-                      : _buildDefaultAvatar(),
-                ),
                 // Needs attention badge
                 if (needsAttention)
                   Positioned(
@@ -176,6 +178,7 @@ class SwipeableRelativeCard extends StatelessWidget {
                   ),
               ],
             ),
+          ),
             const SizedBox(width: AppSpacing.md),
 
             // Details

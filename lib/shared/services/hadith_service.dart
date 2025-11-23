@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -108,17 +109,33 @@ class HadithService {
   /// Get daily hadith (rotates on each call)
   Future<Hadith?> getDailyHadith() async {
     try {
-      // Get all hadith ordered by displayOrder
+      // Add 10-second timeout to prevent infinite loading
       final snapshot = await _hadithRef
           .where('topic', isEqualTo: 'silat_rahim')
           .where('isAuthentic', isEqualTo: true)
           .orderBy('displayOrder')
-          .get();
+          .get()
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              if (kDebugMode) {
+                print('⏱️ [HADITH] Query timed out, using fallback hadith');
+              }
+              // Return fallback: use default hadith directly
+              throw TimeoutException('Firestore query timed out');
+            },
+          );
 
       if (snapshot.docs.isEmpty) {
         // Seed default hadith if collection is empty
+        if (kDebugMode) {
+          print('📿 [HADITH] Collection empty, seeding defaults...');
+        }
         await _seedDefaultHadith();
-        return getDailyHadith(); // Retry after seeding
+
+        // After seeding, return a default hadith from local cache instead of retrying
+        // This prevents infinite recursion if seeding fails
+        return _getDefaultHadithFallback();
       }
 
       final hadithList = snapshot.docs
@@ -140,9 +157,42 @@ class HadithService {
       }
 
       return hadithList[nextIndex];
+    } on TimeoutException catch (e) {
+      if (kDebugMode) {
+        print('⏱️ [HADITH] Timeout: $e - Using fallback hadith');
+      }
+      // Return a default hadith from local cache
+      return _getDefaultHadithFallback();
     } catch (e) {
       if (kDebugMode) {
         print('❌ [HADITH] Error getting daily hadith: $e');
+        print('📿 [HADITH] Using fallback hadith');
+      }
+      // Return a default hadith from local cache as fallback
+      return _getDefaultHadithFallback();
+    }
+  }
+
+  /// Get a fallback hadith from local default data (no Firestore needed)
+  Hadith? _getDefaultHadithFallback() {
+    try {
+      if (defaultHadith.isEmpty) return null;
+
+      // Rotate through default hadith based on current date
+      final dayOfYear = DateTime.now().difference(DateTime(DateTime.now().year, 1, 1)).inDays;
+      final index = dayOfYear % defaultHadith.length;
+
+      final hadithData = defaultHadith[index];
+
+      // Create Hadith object from default data
+      return Hadith.fromMap({
+        ...hadithData,
+        'id': 'fallback_$index',
+        'createdAt': Timestamp.now(),
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ [HADITH] Error creating fallback hadith: $e');
       }
       return null;
     }

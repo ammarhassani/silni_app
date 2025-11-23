@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -27,12 +28,18 @@ class FirebaseConfig {
         if (kDebugMode) {
           print('✅ Firebase initialized for Web');
         }
+
+        // Enable Firestore persistence for Web
+        await _enableFirestoreWeb();
       } else {
         // For Android and iOS, use google-services.json and GoogleService-Info.plist
         await Firebase.initializeApp();
         if (kDebugMode) {
           print('✅ Firebase initialized for Mobile');
         }
+
+        // Enable Firestore persistence for Mobile
+        _enableFirestoreMobile();
       }
     } catch (e) {
       if (kDebugMode) {
@@ -40,6 +47,41 @@ class FirebaseConfig {
         print('⚠️ App will continue but Firebase features may not work');
       }
       // Don't rethrow - allow app to continue even if Firebase fails
+    }
+  }
+
+  /// Enable Firestore offline persistence for Mobile platforms
+  static void _enableFirestoreMobile() {
+    try {
+      FirebaseFirestore.instance.settings = const Settings(
+        persistenceEnabled: true,
+        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+      );
+      if (kDebugMode) {
+        print('✅ Firestore offline persistence enabled for Mobile');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ Could not enable Firestore persistence: $e');
+      }
+    }
+  }
+
+  /// Enable Firestore offline persistence for Web platform
+  static Future<void> _enableFirestoreWeb() async {
+    try {
+      // Web persistence is enabled differently
+      await FirebaseFirestore.instance.enablePersistence(
+        const PersistenceSettings(synchronizeTabs: true),
+      );
+      if (kDebugMode) {
+        print('✅ Firestore offline persistence enabled for Web');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ Could not enable Firestore persistence for Web: $e');
+        print('   This is normal if persistence is already enabled');
+      }
     }
   }
 

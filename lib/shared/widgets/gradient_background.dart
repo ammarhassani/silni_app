@@ -1,29 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/theme/theme_provider.dart';
+import 'islamic_pattern_background.dart';
 
-class GradientBackground extends StatelessWidget {
+class GradientBackground extends ConsumerWidget {
   final Widget child;
   final Gradient? gradient;
   final bool animated;
+  final bool showPattern;
+  final double patternOpacity;
 
   const GradientBackground({
     super.key,
     required this.child,
     this.gradient,
     this.animated = false,
+    this.showPattern = true,
+    this.patternOpacity = 0.08,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final defaultGradient = isDark
-        ? AppColors.backgroundGradientDark
-        : AppColors.backgroundGradientLight;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeType = ref.watch(themeProvider);
+    final themeColors = ref.watch(themeColorsProvider);
+
+    // Use theme-aware gradient
+    final defaultGradient = themeColors.backgroundGradient;
+
+    Widget backgroundChild = child;
+
+    // Wrap with Islamic pattern if enabled
+    if (showPattern) {
+      backgroundChild = IslamicPatternBackground(
+        themeType: themeType,
+        opacity: patternOpacity,
+        child: child,
+      );
+    }
 
     if (animated) {
       return AnimatedGradientBackground(
         gradient: gradient ?? defaultGradient,
-        child: child,
+        child: backgroundChild,
       );
     }
 
@@ -31,7 +50,7 @@ class GradientBackground extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: gradient ?? defaultGradient,
       ),
-      child: child,
+      child: backgroundChild,
     );
   }
 }

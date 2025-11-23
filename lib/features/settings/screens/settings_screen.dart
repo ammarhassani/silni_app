@@ -116,9 +116,7 @@ class SettingsScreen extends ConsumerWidget {
                           size: 20,
                         ),
                         onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('ميزة الملف الشخصي قريباً')),
-                          );
+                          context.push(AppRoutes.profile);
                         },
                       ),
                     ),
@@ -141,9 +139,7 @@ class SettingsScreen extends ConsumerWidget {
                           size: 20,
                         ),
                         onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('ميزة الإشعارات قريباً')),
-                          );
+                          context.push(AppRoutes.notifications);
                         },
                       ),
                     ),
