@@ -3,10 +3,37 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class CloudinaryConfig {
   CloudinaryConfig._();
 
-  static String get cloudName => dotenv.env['CLOUDINARY_CLOUD_NAME']!;
-  static String get apiKey => dotenv.env['CLOUDINARY_API_KEY']!;
-  static String get apiSecret => dotenv.env['CLOUDINARY_API_SECRET']!;
-  static String get uploadPreset => dotenv.env['CLOUDINARY_UPLOAD_PRESET']!;
+  static String get cloudName {
+    try {
+      return dotenv.env['CLOUDINARY_CLOUD_NAME'] ?? 'dli79vqgg';
+    } catch (e) {
+      return 'dli79vqgg';
+    }
+  }
+
+  static String get apiKey {
+    try {
+      return dotenv.env['CLOUDINARY_API_KEY'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static String get apiSecret {
+    try {
+      return dotenv.env['CLOUDINARY_API_SECRET'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static String get uploadPreset {
+    try {
+      return dotenv.env['CLOUDINARY_UPLOAD_PRESET'] ?? 'silni_unsigned';
+    } catch (e) {
+      return 'silni_unsigned';
+    }
+  }
 
   /// Get Cloudinary upload URL
   static String get uploadUrl =>

@@ -5,8 +5,25 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:image_picker/image_picker.dart';
 
 class CloudinaryService {
-  final String _cloudName = dotenv.env['CLOUDINARY_CLOUD_NAME']!;
-  final String _uploadPreset = dotenv.env['CLOUDINARY_UPLOAD_PRESET']!;
+  // Use lazy getters to safely access dotenv with fallbacks for web
+  String get _cloudName {
+    try {
+      return dotenv.env['CLOUDINARY_CLOUD_NAME'] ?? 'dli79vqgg';
+    } catch (e) {
+      // If dotenv is not initialized (web), use hardcoded value
+      return 'dli79vqgg';
+    }
+  }
+
+  String get _uploadPreset {
+    try {
+      return dotenv.env['CLOUDINARY_UPLOAD_PRESET'] ?? 'silni_unsigned';
+    } catch (e) {
+      // If dotenv is not initialized (web), use hardcoded value
+      return 'silni_unsigned';
+    }
+  }
+
   final Dio _dio = Dio();
 
   /// Upload image to Cloudinary

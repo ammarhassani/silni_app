@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -185,25 +187,28 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
 
           const SizedBox(height: AppSpacing.md),
 
-          // Avatar
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: AppColors.primaryGradient,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.islamicGreenPrimary.withOpacity(0.3),
-                  blurRadius: 20,
-                  spreadRadius: 5,
+          // Avatar with Hero animation
+          Hero(
+            tag: 'avatar-${relative.id}',
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: AppColors.primaryGradient,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.islamicGreenPrimary.withOpacity(0.3),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  relative.displayEmoji,
+                  style: const TextStyle(fontSize: 64),
                 ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                relative.displayEmoji,
-                style: const TextStyle(fontSize: 64),
               ),
             ),
           ),
@@ -306,7 +311,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
         if (relative.phoneNumber != null)
           Expanded(
             child: _buildActionButton(
-              icon: Icons.chat,
+              icon: FontAwesomeIcons.whatsapp,
               label: 'واتساب',
               gradient: LinearGradient(
                 colors: [Colors.green.shade400, Colors.green.shade600],
@@ -410,7 +415,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
             icon: Icons.timeline,
             label: 'التفاعلات',
             value: '${relative.interactionCount}',
-            color: AppColors.islamicGold,
+            color: AppColors.premiumGold,
           ),
           Container(
             width: 1,
@@ -446,7 +451,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
           ),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: AppSpacing.xxs),
+        const SizedBox(height: AppSpacing.xs),
         Text(
           label,
           style: AppTypography.bodySmall.copyWith(
@@ -465,7 +470,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.info_outline, color: AppColors.islamicGold),
+              const Icon(Icons.info_outline, color: AppColors.premiumGold),
               const SizedBox(width: AppSpacing.sm),
               Text(
                 'التفاصيل',
@@ -567,7 +572,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                   color: Colors.white70,
                 ),
               ),
-              const SizedBox(height: AppSpacing.xxs),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 value,
                 style: AppTypography.bodyMedium.copyWith(
@@ -666,7 +671,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                                 color: Colors.white,
                               ),
                             ),
-                            const SizedBox(height: AppSpacing.xxs),
+                            const SizedBox(height: AppSpacing.xs),
                             Text(
                               interaction.relativeTime,
                               style: AppTypography.bodySmall.copyWith(
@@ -693,10 +698,10 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                           children: [
                             const Icon(
                               Icons.timer,
-                              color: AppColors.islamicGold,
+                              color: AppColors.premiumGold,
                               size: 16,
                             ),
-                            const SizedBox(height: AppSpacing.xxs),
+                            const SizedBox(height: AppSpacing.xs),
                             Text(
                               interaction.formattedDuration,
                               style: AppTypography.labelSmall.copyWith(
@@ -718,6 +723,9 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
 
   // Actions
   Future<void> _makeCall(String phoneNumber) async {
+    // Haptic feedback for better UX
+    HapticFeedback.mediumImpact();
+
     final uri = Uri.parse('tel:$phoneNumber');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
@@ -731,6 +739,9 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
   }
 
   Future<void> _openWhatsApp(String phoneNumber) async {
+    // Haptic feedback for better UX
+    HapticFeedback.mediumImpact();
+
     // Remove any non-digit characters
     final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
     final uri = Uri.parse('https://wa.me/$cleanNumber');

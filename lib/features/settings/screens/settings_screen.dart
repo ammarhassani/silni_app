@@ -58,7 +58,7 @@ class SettingsScreen extends ConsumerWidget {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.palette, color: AppColors.islamicGold),
+                              const Icon(Icons.palette, color: AppColors.premiumGold),
                               const SizedBox(width: AppSpacing.sm),
                               Text(
                                 'المظهر',
@@ -116,9 +116,7 @@ class SettingsScreen extends ConsumerWidget {
                           size: 20,
                         ),
                         onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('ميزة الملف الشخصي قريباً')),
-                          );
+                          context.push(AppRoutes.profile);
                         },
                       ),
                     ),
@@ -141,9 +139,7 @@ class SettingsScreen extends ConsumerWidget {
                           size: 20,
                         ),
                         onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('ميزة الإشعارات قريباً')),
-                          );
+                          context.push(AppRoutes.notifications);
                         },
                       ),
                     ),
@@ -202,13 +198,13 @@ class SettingsScreen extends ConsumerWidget {
           gradient: themeColors.primaryGradient,
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           border: Border.all(
-            color: isSelected ? AppColors.islamicGold : Colors.white.withOpacity(0.2),
+            color: isSelected ? AppColors.premiumGold : Colors.white.withOpacity(0.2),
             width: isSelected ? 3 : 1,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppColors.islamicGold.withOpacity(0.5),
+                    color: AppColors.premiumGold.withOpacity(0.5),
                     blurRadius: 10,
                     spreadRadius: 2,
                   ),

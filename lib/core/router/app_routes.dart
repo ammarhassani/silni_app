@@ -22,4 +22,6 @@ class AppRoutes {
   static const String reminders = '/reminders';
   static const String familyTree = '/family-tree';
   static const String profile = '/profile';
+  static const String importContacts = '/import-contacts';
+  static const String notifications = '/notifications';
 }

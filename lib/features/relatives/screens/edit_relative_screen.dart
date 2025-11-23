@@ -372,23 +372,9 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
 
                         // Save button
                         GradientButton(
-                          onPressed: _isLoading ? null : _updateRelative,
-                          child: _isLoading
-                              ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : Text(
-                                  'حفظ التعديلات',
-                                  style: AppTypography.titleLarge.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                          text: 'حفظ التعديلات',
+                          onPressed: _updateRelative,
+                          isLoading: _isLoading,
                         ),
                       ],
                     ),
@@ -584,7 +570,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
           Row(
             children: [
               const Icon(Icons.priority_high,
-                  color: AppColors.islamicGold),
+                  color: AppColors.premiumGold),
               const SizedBox(width: AppSpacing.sm),
               Text(
                 'الأولوية',

@@ -52,6 +52,29 @@ class Hadith {
     );
   }
 
+  /// Create from Map (for fallback hadith from local data)
+  factory Hadith.fromMap(Map<String, dynamic> data) {
+    return Hadith(
+      id: data['id'] as String? ?? '',
+      arabicText: data['arabicText'] as String,
+      englishTranslation: data['englishTranslation'] as String? ?? '',
+      source: data['source'] as String,
+      reference: data['reference'] as String? ?? '',
+      topic: data['topic'] as String? ?? 'silat_rahim',
+      type: HadithType.fromString(data['type'] as String? ?? 'hadith'),
+      narrator: data['narrator'] as String? ?? '',
+      scholar: data['scholar'] as String? ?? '',
+      isAuthentic: data['isAuthentic'] as bool? ?? true,
+      displayOrder: data['displayOrder'] as int? ?? 0,
+      createdAt: data['createdAt'] is Timestamp
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
+      updatedAt: data['updatedAt'] is Timestamp
+          ? (data['updatedAt'] as Timestamp).toDate()
+          : null,
+    );
+  }
+
   /// Convert to Firestore document
   Map<String, dynamic> toFirestore() {
     return {

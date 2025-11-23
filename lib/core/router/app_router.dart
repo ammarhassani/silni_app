@@ -14,6 +14,9 @@ import '../../features/reminders/screens/reminders_screen.dart';
 import '../../features/family_tree/screens/family_tree_screen.dart';
 import '../../features/statistics/screens/statistics_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
+import '../../features/profile/screens/profile_screen.dart';
+import '../../features/contacts/screens/contact_import_screen.dart';
+import '../../features/notifications/screens/notifications_screen.dart';
 import 'app_routes.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -159,6 +162,39 @@ final routerProvider = Provider<GoRouter>((ref) {
           context,
           state,
           const SettingsScreen(),
+        ),
+      ),
+
+      // Profile Routes
+      GoRoute(
+        path: AppRoutes.profile,
+        name: 'profile',
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          context,
+          state,
+          const ProfileScreen(),
+        ),
+      ),
+
+      // Import Contacts Routes
+      GoRoute(
+        path: AppRoutes.importContacts,
+        name: 'importContacts',
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          context,
+          state,
+          const ContactImportScreen(),
+        ),
+      ),
+
+      // Notifications Routes
+      GoRoute(
+        path: AppRoutes.notifications,
+        name: 'notifications',
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          context,
+          state,
+          const NotificationsScreen(),
         ),
       ),
     ],

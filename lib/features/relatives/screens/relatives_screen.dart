@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
@@ -152,6 +153,9 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
   }
 
   Widget _buildSearchBar() {
+    // Use theme-aware colors
+    final themeColors = ref.watch(themeColorsProvider);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: GlassCard(
@@ -170,17 +174,17 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
           decoration: InputDecoration(
             hintText: 'ابحث عن قريب...',
             hintStyle: AppTypography.bodyMedium.copyWith(
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withOpacity(0.6),
             ),
             prefixIcon: Icon(
               Icons.search_rounded,
-              color: Colors.white.withOpacity(0.7),
+              color: themeColors.primary.withOpacity(0.8),
             ),
             suffixIcon: _searchQuery.isNotEmpty
                 ? IconButton(
                     icon: Icon(
                       Icons.clear_rounded,
-                      color: Colors.white.withOpacity(0.7),
+                      color: themeColors.primary.withOpacity(0.8),
                     ),
                     onPressed: () {
                       _searchController.clear();

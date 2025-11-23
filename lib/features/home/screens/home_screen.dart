@@ -12,6 +12,7 @@ import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
+import '../../../shared/widgets/avatar_carousel.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../../shared/models/hadith_model.dart';
@@ -21,16 +22,31 @@ import '../../../shared/services/hadith_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
 // Providers for relatives and interactions
-final relativesServiceProvider = Provider((ref) => RelativesService());
-final interactionsServiceProvider = Provider((ref) => InteractionsService());
-final hadithServiceProvider = Provider((ref) => HadithService());
+// keepAlive keeps the provider alive even when no longer watched (caching)
+final relativesServiceProvider = Provider((ref) {
+  return RelativesService();
+});
+
+final interactionsServiceProvider = Provider((ref) {
+  return InteractionsService();
+});
+
+final hadithServiceProvider = Provider((ref) {
+  return HadithService();
+});
 
 final relativesStreamProvider = StreamProvider.family<List<Relative>, String>((ref, userId) {
+  // Keep provider alive to cache data
+  ref.keepAlive();
+
   final service = ref.watch(relativesServiceProvider);
   return service.getRelativesStream(userId);
 });
 
 final todayInteractionsStreamProvider = StreamProvider.family<List<Interaction>, String>((ref, userId) {
+  // Keep provider alive to cache data
+  ref.keepAlive();
+
   final service = ref.watch(interactionsServiceProvider);
   return service.getTodayInteractionsStream(userId);
 });
@@ -282,33 +298,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             AppColors.premiumGold.withOpacity(0.1),
           ],
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.2),
-              ),
-              child: const Center(
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Text(
-                'جاري تحميل الحديث...',
-                style: AppTypography.titleSmall.copyWith(
-                  color: Colors.white70,
-                ),
-              ),
-            ),
-          ],
-        ),
+        child: const HadithSkeletonLoader(),
       );
     }
 
@@ -353,7 +343,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     Text(
                       hadith.type == HadithType.hadith ? 'حديث اليوم' : 'قول العلماء',
                       style: AppTypography.labelMedium.copyWith(
-                        color: AppColors.islamicGold,
+                        color: AppColors.premiumGold,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -378,7 +368,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               color: Colors.white.withOpacity(0.05),
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
               border: Border.all(
-                color: AppColors.islamicGold.withOpacity(0.3),
+                color: AppColors.premiumGold.withOpacity(0.3),
                 width: 1,
               ),
             ),
@@ -541,8 +531,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       return _buildEmptyState();
     }
 
-    // Show first 6 relatives
-    final displayRelatives = relatives.take(6).toList();
+    // Show first 8 relatives in carousel
+    final displayRelatives = relatives.take(8).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -578,113 +568,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.md),
-        SizedBox(
-          height: 100,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: displayRelatives.length + 1,
-            itemBuilder: (context, index) {
-              if (index == displayRelatives.length) {
-                // Add new relative button
-                return _buildAddRelativeCircle();
-              }
-
-              final relative = displayRelatives[index];
-              return _buildRelativeCircle(relative, index);
-            },
-          ),
+        const SizedBox(height: AppSpacing.sm),
+        AvatarCarousel(
+          relatives: displayRelatives,
+          onAddRelative: () => context.push(AppRoutes.addRelative),
         ),
       ],
     )
         .animate(delay: const Duration(milliseconds: 400))
         .fadeIn()
         .slideY(begin: 0.2, end: 0);
-  }
-
-  Widget _buildRelativeCircle(Relative relative, int index) {
-    final needsAttention = relative.needsContact;
-
-    return GestureDetector(
-      onTap: () {
-        context.push('${AppRoutes.relativeDetail}/${relative.id}');
-      },
-      child: Container(
-        margin: const EdgeInsets.only(right: AppSpacing.md),
-        child: Column(
-          children: [
-            Stack(
-              children: [
-                Container(
-                  width: 70,
-                  height: 70,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: needsAttention
-                        ? AppColors.streakFire
-                        : AppColors.primaryGradient,
-                    boxShadow: [
-                      BoxShadow(
-                        color: (needsAttention
-                                ? AppColors.joyfulOrange
-                                : AppColors.islamicGreenPrimary)
-                            .withOpacity(0.3),
-                        blurRadius: 12,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: relative.photoUrl != null
-                      ? ClipOval(
-                          child: Image.network(
-                            relative.photoUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _buildDefaultAvatar(relative),
-                          ),
-                        )
-                      : _buildDefaultAvatar(relative),
-                ),
-                if (needsAttention)
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.joyfulOrange,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: const Icon(
-                        Icons.notifications_active,
-                        color: Colors.white,
-                        size: 12,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            SizedBox(
-              width: 70,
-              child: Text(
-                relative.fullName.split(' ').first,
-                style: AppTypography.labelSmall.copyWith(
-                  color: Colors.white,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    )
-        .animate(delay: Duration(milliseconds: 500 + (index * 100)))
-        .fadeIn()
-        .scale(begin: const Offset(0.8, 0.8), end: const Offset(1.0, 1.0));
   }
 
   Widget _buildDefaultAvatar(Relative relative) {
@@ -694,48 +587,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         style: AppTypography.headlineMedium.copyWith(
           color: Colors.white,
           fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAddRelativeCircle() {
-    return GestureDetector(
-      onTap: () {
-        // TODO: Navigate to add relative
-      },
-      child: Container(
-        margin: const EdgeInsets.only(right: AppSpacing.md),
-        child: Column(
-          children: [
-            Container(
-              width: 70,
-              height: 70,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.2),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.5),
-                  width: 2,
-                  style: BorderStyle.solid,
-                ),
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.add,
-                  color: Colors.white,
-                  size: 32,
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'إضافة',
-              style: AppTypography.labelSmall.copyWith(
-                color: Colors.white.withOpacity(0.8),
-              ),
-            ),
-          ],
         ),
       ),
     );

@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:confetti/confetti.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
@@ -26,7 +30,6 @@ class AddRelativeScreen extends ConsumerStatefulWidget {
 class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _notesController = TextEditingController();
 
@@ -36,17 +39,28 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   bool _isLoading = false;
   bool _isFavorite = false;
   int _priority = 2; // Auto-set based on relationship
+  String _phoneNumber = ''; // Store phone number separately
+  AvatarType? _selectedAvatar; // User-selected avatar
 
   final RelativesService _relativesService = RelativesService();
   final CloudinaryService _cloudinaryService = CloudinaryService();
   final ContactsImportService _contactsService = ContactsImportService();
 
+  // Confetti controller for celebration animation
+  late ConfettiController _confettiController;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
-    _phoneController.dispose();
     _emailController.dispose();
     _notesController.dispose();
+    _confettiController.dispose();
     super.dispose();
   }
 
@@ -65,24 +79,9 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
       return;
     }
 
-    // Request permission
-    final hasPermission = await _contactsService.requestPermission();
-    if (!hasPermission) {
-      _showMessage('Contacts permission is required');
-      return;
-    }
-
-    // Get family contacts
-    final contacts = await _contactsService.getFamilyContacts();
-    if (contacts.isEmpty) {
-      _showMessage('No family contacts found');
-      return;
-    }
-
-    // Show contact picker dialog
+    // Navigate to contact import screen
     if (!mounted) return;
-    // TODO: Show contact picker dialog
-    _showMessage('Contact import coming soon!');
+    context.push(AppRoutes.importContacts);
   }
 
   Future<void> _saveRelative() async {
@@ -100,8 +99,9 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         photoUrl = await _cloudinaryService.uploadProfilePicture(_selectedImage!);
       }
 
-      // Auto-suggest avatar based on relationship
-      final avatarType = AvatarType.suggestFromRelationship(_selectedRelationship, _selectedGender);
+      // Use selected avatar or auto-suggest based on relationship
+      final avatarType = _selectedAvatar ??
+          AvatarType.suggestFromRelationship(_selectedRelationship, _selectedGender);
 
       // Create relative
       final relative = Relative(
@@ -111,9 +111,9 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         relationshipType: _selectedRelationship,
         gender: _selectedGender,
         avatarType: avatarType,
-        phoneNumber: _phoneController.text.trim().isEmpty
+        phoneNumber: _phoneNumber.trim().isEmpty
             ? null
-            : _phoneController.text.trim(),
+            : _phoneNumber.trim(),
         email: _emailController.text.trim().isEmpty
             ? null
             : _emailController.text.trim(),
@@ -130,6 +130,10 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
 
       if (!mounted) return;
       setState(() => _isLoading = false);
+
+      // 🎉 Celebration! Trigger confetti and haptic feedback
+      _confettiController.play();
+      HapticFeedback.mediumImpact();
 
       // Show success dialog
       await showDialog(
@@ -180,8 +184,9 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.of(context).pop();
-                  context.pop(); // Navigate back to previous screen
+                  HapticFeedback.lightImpact();
+                  Navigator.of(context).pop(); // Close dialog
+                  context.go(AppRoutes.home); // Navigate to home screen
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.islamicGreenPrimary,
@@ -240,18 +245,20 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: GradientBackground(
-        animated: true,
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              _buildHeader(),
+    return Stack(
+      children: [
+        Scaffold(
+          body: GradientBackground(
+            animated: true,
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // Header
+                  _buildHeader(),
 
-              // Form
-              Expanded(
-                child: SingleChildScrollView(
+                  // Form
+                  Expanded(
+                    child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Form(
@@ -261,6 +268,10 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                       children: [
                         // Photo picker
                         _buildPhotoPicker(),
+                        const SizedBox(height: AppSpacing.xl),
+
+                        // Avatar picker
+                        _buildAvatarPicker(),
                         const SizedBox(height: AppSpacing.xl),
 
                         // Import from contacts button (mobile only)
@@ -308,13 +319,48 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                         _buildRelationshipPicker(),
                         const SizedBox(height: AppSpacing.md),
 
-                        // Phone
-                        _buildTextField(
-                          controller: _phoneController,
-                          label: 'رقم الهاتف (اختياري)',
-                          hint: '+966 50 123 4567',
-                          icon: Icons.phone,
-                          keyboardType: TextInputType.phone,
+                        // Phone with international format
+                        IntlPhoneField(
+                          decoration: InputDecoration(
+                            labelText: 'رقم الهاتف (اختياري)',
+                            labelStyle: AppTypography.bodyMedium.copyWith(
+                              color: Colors.white.withOpacity(0.9),
+                            ),
+                            hintText: '50 123 4567',
+                            hintStyle: AppTypography.bodyMedium.copyWith(
+                              color: Colors.white.withOpacity(0.5),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white.withOpacity(0.1),
+                            prefixIcon: const Icon(Icons.phone, color: Colors.white70),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                              borderSide: BorderSide(
+                                color: Colors.white.withOpacity(0.2),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                              borderSide: const BorderSide(
+                                color: AppColors.islamicGreenPrimary,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          initialCountryCode: 'SA', // Saudi Arabia as default
+                          style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+                          dropdownTextStyle: AppTypography.bodyMedium.copyWith(color: Colors.white),
+                          dropdownIcon: const Icon(Icons.arrow_drop_down, color: Colors.white70),
+                          flagsButtonPadding: const EdgeInsets.only(left: 8),
+                          onChanged: (phone) {
+                            setState(() {
+                              _phoneNumber = phone.completeNumber;
+                            });
+                          },
                         ),
                         const SizedBox(height: AppSpacing.md),
 
@@ -363,6 +409,27 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
           ),
         ),
       ),
+        ),
+        // Confetti widget positioned at the top center
+        Align(
+          alignment: Alignment.topCenter,
+          child: ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirectionality: BlastDirectionality.explosive,
+            shouldLoop: false,
+            colors: const [
+              Colors.green,
+              Colors.blue,
+              Colors.pink,
+              Colors.orange,
+              Colors.purple,
+              Colors.yellow,
+            ],
+            numberOfParticles: 30,
+            gravity: 0.3,
+          ),
+        ),
+      ],
     );
   }
 
@@ -694,5 +761,135 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildAvatarPicker() {
+    // Get auto-suggested avatar
+    final suggestedAvatar = AvatarType.suggestFromRelationship(_selectedRelationship, _selectedGender);
+
+    return GlassCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.face_rounded, color: Colors.white.withOpacity(0.7)),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'اختر الأفاتار',
+                      style: AppTypography.titleMedium.copyWith(color: Colors.white),
+                    ),
+                    Text(
+                      'اختياري - سيتم اقتراح أفاتار تلقائياً',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: Colors.white.withOpacity(0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 5,
+              crossAxisSpacing: AppSpacing.sm,
+              mainAxisSpacing: AppSpacing.sm,
+              childAspectRatio: 1,
+            ),
+            itemCount: AvatarType.values.length,
+            itemBuilder: (context, index) {
+              final avatar = AvatarType.values[index];
+              final isSelected = _selectedAvatar == avatar;
+              final isSuggested = avatar == suggestedAvatar && _selectedAvatar == null;
+
+              return GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  setState(() {
+                    // Toggle: if already selected, deselect to use auto-suggest
+                    _selectedAvatar = isSelected ? null : avatar;
+                  });
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: isSelected || isSuggested ? AppColors.primaryGradient : null,
+                    color: isSelected || isSuggested ? null : Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    border: Border.all(
+                      color: isSuggested && !isSelected
+                          ? AppColors.premiumGold
+                          : Colors.white.withOpacity(isSelected ? 0.6 : 0.2),
+                      width: isSuggested && !isSelected ? 2 : 1,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: AppColors.islamicGreenPrimary.withOpacity(0.4),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        avatar.emoji,
+                        style: const TextStyle(fontSize: 28),
+                      ),
+                      if (isSuggested && !isSelected)
+                        Container(
+                          margin: const EdgeInsets.only(top: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.premiumGold,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'مقترح',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ).animate(delay: Duration(milliseconds: 50 * index))
+                .fadeIn(duration: const Duration(milliseconds: 300))
+                .scale(begin: const Offset(0.8, 0.8), end: const Offset(1, 1));
+            },
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            _selectedAvatar != null
+                ? 'الأفاتار المختار: ${_selectedAvatar!.arabicName}'
+                : 'الأفاتار المقترح: ${suggestedAvatar.arabicName}',
+            style: AppTypography.labelSmall.copyWith(
+              color: Colors.white.withOpacity(0.8),
+              fontStyle: FontStyle.italic,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    ).animate()
+      .fadeIn(duration: const Duration(milliseconds: 400))
+      .slideY(begin: 0.1, end: 0);
   }
 }
