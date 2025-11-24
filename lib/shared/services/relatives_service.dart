@@ -82,6 +82,30 @@ class RelativesService {
     }
   }
 
+  /// Get a single relative by ID as stream (for real-time updates)
+  Stream<Relative?> getRelativeStream(String relativeId) {
+    try {
+      if (kDebugMode) {
+        print('📡 [RELATIVES] Streaming relative: $relativeId');
+      }
+
+      return _relativesRef.doc(relativeId).snapshots().map((doc) {
+        if (!doc.exists) {
+          if (kDebugMode) {
+            print('⚠️ [RELATIVES] Relative not found: $relativeId');
+          }
+          return null;
+        }
+        return Relative.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>);
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ [RELATIVES] Error streaming relative: $e');
+      }
+      rethrow;
+    }
+  }
+
   /// Update a relative
   Future<void> updateRelative(String relativeId, Map<String, dynamic> updates) async {
     try {

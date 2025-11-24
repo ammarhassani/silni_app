@@ -85,6 +85,19 @@ class _AnimatedGradientBackgroundState
       vsync: this,
     )..repeat(reverse: true);
 
+    _updateAnimations();
+  }
+
+  @override
+  void didUpdateWidget(AnimatedGradientBackground oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update animations when gradient changes (theme change)
+    if (oldWidget.gradient != widget.gradient) {
+      _updateAnimations();
+    }
+  }
+
+  void _updateAnimations() {
     final colors = (widget.gradient as LinearGradient).colors;
 
     _colorAnimation1 = ColorTween(

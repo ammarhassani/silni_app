@@ -8,6 +8,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
@@ -123,6 +124,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final user = ref.watch(currentUserProvider);
     final displayName = user?.displayName ?? 'المستخدم';
     final userId = user?.uid ?? '';
+    final themeColors = ref.watch(themeColorsProvider);
 
     final relativesAsync = ref.watch(relativesStreamProvider(userId));
     final todayInteractionsAsync = ref.watch(todayInteractionsStreamProvider(userId));
@@ -144,8 +146,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               numberOfParticles: 50,
               gravity: 0.1,
               shouldLoop: false,
-              colors: const [
-                AppColors.islamicGreenPrimary,
+              colors: [
+                themeColors.primary,
                 AppColors.premiumGold,
                 AppColors.emotionalPurple,
                 AppColors.joyfulOrange,
@@ -211,6 +213,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Widget _buildIslamicHeader(String displayName) {
+    final themeColors = ref.watch(themeColorsProvider);
     final hour = DateTime.now().hour;
     String greeting = 'السلام عليكم';
     if (hour < 12) {
@@ -253,7 +256,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 height: 56,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: AppColors.goldenGradient,
+                  gradient: themeColors.goldenGradient,
                   boxShadow: [
                     BoxShadow(
                       color: AppColors.premiumGold.withOpacity(0.3),
@@ -290,11 +293,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Widget _buildIslamicReminder() {
+    final themeColors = ref.watch(themeColorsProvider);
     if (_isLoadingHadith) {
       return GlassCard(
         gradient: LinearGradient(
           colors: [
-            AppColors.islamicGreenPrimary.withOpacity(0.2),
+            themeColors.primary.withOpacity(0.2),
             AppColors.premiumGold.withOpacity(0.1),
           ],
         ),
@@ -311,7 +315,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return GlassCard(
       gradient: LinearGradient(
         colors: [
-          AppColors.islamicGreenPrimary.withOpacity(0.3),
+          themeColors.primary.withOpacity(0.3),
           AppColors.premiumGold.withOpacity(0.2),
         ],
       ),
@@ -326,7 +330,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 height: 44,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: AppColors.goldenGradient,
+                  gradient: themeColors.goldenGradient,
                 ),
                 child: const Center(
                   child: Text(
@@ -413,6 +417,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Widget _buildQuickActions() {
+    final themeColors = ref.watch(themeColorsProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -431,7 +436,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 icon: Icons.notifications_active_rounded,
                 title: 'التذكيرات',
                 subtitle: 'نظّم تذكيراتك',
-                gradient: AppColors.primaryGradient,
+                gradient: themeColors.primaryGradient,
                 onTap: () => context.push(AppRoutes.reminders),
               ),
             ),
@@ -462,8 +467,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 subtitle: 'تصور جميل لعائلتك',
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.islamicGreenDark,
-                    AppColors.islamicGreenPrimary.withOpacity(0.8),
+                    themeColors.primaryDark,
+                    themeColors.primary.withOpacity(0.8),
                   ],
                 ),
                 onTap: () => context.push(AppRoutes.familyTree),
@@ -704,6 +709,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Widget _buildNeedsContact(List<Relative> allRelatives) {
+    final themeColors = ref.watch(themeColorsProvider);
     // Don't show anything if there are no relatives at all
     if (allRelatives.isEmpty) {
       return const SizedBox.shrink();
@@ -715,7 +721,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       return GlassCard(
         gradient: LinearGradient(
           colors: [
-            AppColors.islamicGreenLight.withOpacity(0.3),
+            themeColors.primaryLight.withOpacity(0.3),
             AppColors.premiumGold.withOpacity(0.2),
           ],
         ),
@@ -842,6 +848,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Widget _buildBottomNav() {
+    final themeColors = ref.watch(themeColorsProvider);
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -868,7 +875,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           backgroundColor: Colors.transparent,
           elevation: 0,
           type: BottomNavigationBarType.fixed,
-          selectedItemColor: AppColors.islamicGreenLight,
+          selectedItemColor: themeColors.primaryLight,
           unselectedItemColor: Colors.white.withOpacity(0.5),
           selectedLabelStyle: AppTypography.labelSmall,
           unselectedLabelStyle: AppTypography.labelSmall,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -160,86 +161,30 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
       );
 
       if (!mounted) return;
-      setState(() => _isLoading = false);
 
-      // Show success dialog
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: AppColors.goldenGradient,
-                ),
-                child: const Icon(
-                  Icons.check_circle_rounded,
-                  size: 50,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                'تم تحديث البيانات!',
-                style: AppTypography.headlineMedium.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'تم تحديث بيانات ${_nameController.text.trim()} بنجاح',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white70,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-          actions: [
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.islamicGreenPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                  ),
-                ),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  context.pop(); // Navigate back
-                },
-                child: Text(
-                  'حسناً',
-                  style: AppTypography.titleMedium.copyWith(color: Colors.white),
-                ),
-              ),
-            ),
-          ],
+      // Show success message
+      HapticFeedback.mediumImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('تم تحديث ${_nameController.text.trim()} بنجاح! ✅'),
+          backgroundColor: AppColors.islamicGreenPrimary,
+          duration: const Duration(seconds: 1),
         ),
       );
 
+      // Reset loading state before navigation
+      setState(() => _isLoading = false);
+
+      // Navigate back immediately
       if (mounted) {
         context.pop();
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e')),
-        );
-      }
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('خطأ: $e')),
+      );
     }
   }
 
