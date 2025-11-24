@@ -8,6 +8,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/models/relative_model.dart';
@@ -34,20 +35,23 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
   final AuthService _authService = AuthService();
 
   bool _isLoading = false;
+  bool _isLoggingInteraction = false; // Prevent duplicate logs
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = ref.watch(themeColorsProvider);
+
     return Scaffold(
       body: GradientBackground(
         animated: true,
         child: SafeArea(
-          child: FutureBuilder<Relative?>(
-            future: _relativesService.getRelative(widget.relativeId),
+          child: StreamBuilder<Relative?>(
+            stream: _relativesService.getRelativeStream(widget.relativeId),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
+                return Center(
                   child: CircularProgressIndicator(
-                    color: AppColors.islamicGreenPrimary,
+                    color: themeColors.primary,
                   ),
                 );
               }
@@ -133,7 +137,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _isLoading ? null : () => _markAsContacted(),
-        backgroundColor: AppColors.islamicGreenPrimary,
+        backgroundColor: themeColors.primary,
         icon: _isLoading
             ? const SizedBox(
                 width: 20,
@@ -153,6 +157,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
   }
 
   Widget _buildHeader(Relative relative) {
+    final themeColors = ref.watch(themeColorsProvider);
     final priorityColor = relative.priority == 1
         ? Colors.red
         : relative.priority == 2
@@ -195,10 +200,10 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
               height: 120,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: AppColors.primaryGradient,
+                gradient: themeColors.primaryGradient,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.islamicGreenPrimary.withOpacity(0.3),
+                    color: themeColors.primary.withOpacity(0.3),
                     blurRadius: 20,
                     spreadRadius: 5,
                   ),
@@ -234,7 +239,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
               vertical: AppSpacing.xs,
             ),
             decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
+              gradient: themeColors.primaryGradient,
               borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             ),
             child: Text(
@@ -389,6 +394,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
   }
 
   Widget _buildStatsCard(Relative relative) {
+    final themeColors = ref.watch(themeColorsProvider);
     final daysSince = relative.daysSinceLastContact;
 
     return GlassCard(
@@ -404,7 +410,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                 : daysSince == 0
                     ? 'اليوم'
                     : 'منذ $daysSince يوم',
-            color: relative.needsContact ? Colors.red : AppColors.islamicGreenPrimary,
+            color: relative.needsContact ? Colors.red : themeColors.primary,
           ),
           Container(
             width: 1,
@@ -557,10 +563,11 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
     required String label,
     required String value,
   }) {
+    final themeColors = ref.watch(themeColorsProvider);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: AppColors.islamicGreenPrimary, size: 20),
+        Icon(icon, color: themeColors.primary, size: 20),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Column(
@@ -587,15 +594,16 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
   }
 
   Widget _buildRecentInteractions(String relativeId) {
+    final themeColors = ref.watch(themeColorsProvider);
     return StreamBuilder<List<Interaction>>(
       stream: _interactionsService.getRelativeInteractionsStream(relativeId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Padding(
-            padding: EdgeInsets.all(AppSpacing.lg),
+          return Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
             child: Center(
               child: CircularProgressIndicator(
-                color: AppColors.islamicGreenPrimary,
+                color: themeColors.primary,
               ),
             ),
           );
@@ -650,7 +658,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          gradient: AppColors.primaryGradient,
+                          gradient: themeColors.primaryGradient,
                           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                         ),
                         child: Center(
@@ -729,6 +737,8 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
     final uri = Uri.parse('tel:$phoneNumber');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
+      // Auto-log the interaction
+      await _logInteraction(InteractionType.call, 'مكالمة هاتفية');
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -747,6 +757,8 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
     final uri = Uri.parse('https://wa.me/$cleanNumber');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+      // Auto-log the interaction
+      await _logInteraction(InteractionType.message, 'رسالة واتساب');
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -760,6 +772,8 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
     final uri = Uri.parse('sms:$phoneNumber');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
+      // Auto-log the interaction
+      await _logInteraction(InteractionType.message, 'رسالة نصية');
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -769,7 +783,60 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
     }
   }
 
+  // Helper method to log interactions automatically
+  Future<void> _logInteraction(InteractionType type, String notes) async {
+    // Prevent duplicate interactions from rapid clicks
+    if (_isLoggingInteraction) return;
+
+    _isLoggingInteraction = true;
+
+    try {
+      final user = _authService.currentUser;
+      if (user == null) {
+        _isLoggingInteraction = false;
+        return;
+      }
+
+      final interaction = Interaction(
+        id: '',
+        userId: user.uid,
+        relativeId: widget.relativeId,
+        type: type,
+        date: DateTime.now(),
+        notes: notes,
+        createdAt: DateTime.now(),
+      );
+
+      await _interactionsService.createInteraction(interaction);
+
+      if (mounted) {
+        HapticFeedback.lightImpact();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم تسجيل التواصل: ${type.arabicName}'),
+            duration: const Duration(seconds: 1),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.islamicGreenPrimary,
+          ),
+        );
+      }
+    } catch (e) {
+      // Silently fail - don't interrupt user flow
+      if (mounted) {
+        debugPrint('Error logging interaction: $e');
+      }
+    } finally {
+      // Allow new interactions after a short delay
+      await Future.delayed(const Duration(seconds: 2));
+      _isLoggingInteraction = false;
+    }
+  }
+
   Future<void> _markAsContacted() async {
+    if (_isLoading) return; // Prevent multiple calls
+
+    final themeColors = ref.read(themeColorsProvider);
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {
@@ -791,24 +858,27 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
 
       await _interactionsService.createInteraction(interaction);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تم تسجيل التواصل بنجاح! 🎉'),
-            backgroundColor: AppColors.islamicGreenPrimary,
-          ),
-        );
-      }
+      if (!mounted) return;
+
+      setState(() => _isLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('تم تسجيل التواصل بنجاح! 🎉'),
+          backgroundColor: themeColors.primary,
+          duration: const Duration(seconds: 2),
+        ),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('حدث خطأ: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 }

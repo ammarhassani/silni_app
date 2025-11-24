@@ -129,83 +129,34 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
       await _relativesService.createRelative(relative);
 
       if (!mounted) return;
-      setState(() => _isLoading = false);
 
       // 🎉 Celebration! Trigger confetti and haptic feedback
       _confettiController.play();
       HapticFeedback.mediumImpact();
 
-      // Show success dialog
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: AppColors.goldenGradient,
-                ),
-                child: const Icon(
-                  Icons.check_circle_rounded,
-                  size: 50,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                'تم حفظ القريب!',
-                style: AppTypography.headlineMedium.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'تمت إضافة ${relative.fullName} بنجاح',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white.withOpacity(0.8),
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-          actions: [
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  Navigator.of(context).pop(); // Close dialog
-                  context.go(AppRoutes.home); // Navigate to home screen
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.islamicGreenPrimary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                  ),
-                ),
-                child: const Text('حسناً'),
-              ),
-            ),
-          ],
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('تم حفظ ${relative.fullName} بنجاح! 🎉'),
+          backgroundColor: AppColors.islamicGreenPrimary,
+          duration: const Duration(seconds: 1),
         ),
       );
+
+      // Reset loading state before navigation
+      setState(() => _isLoading = false);
+
+      // Wait a moment for confetti, then navigate
+      await Future.delayed(const Duration(milliseconds: 400));
+
+      if (!mounted) return;
+
+      // Navigate back to home
+      context.go(AppRoutes.home);
     } catch (e) {
       if (!mounted) return;
-      _showMessage('خطأ: $e');
       setState(() => _isLoading = false);
+      _showMessage('خطأ: $e');
     }
   }
 
