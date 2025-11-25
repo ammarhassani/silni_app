@@ -42,10 +42,13 @@ class RelativesService {
       return _relativesRef
           .where('userId', isEqualTo: userId)
           .where('isArchived', isEqualTo: false)
-          .orderBy('priority', descending: false)
-          .orderBy('fullName', descending: false)
+          .orderBy('priority')  // Ascending by default (lower number = higher priority)
+          .orderBy('fullName')  // Ascending alphabetically
           .snapshots()
           .map((snapshot) {
+        if (kDebugMode) {
+          print('📊 [RELATIVES] Received ${snapshot.docs.length} relatives from Firestore');
+        }
         return snapshot.docs.map((doc) {
           return Relative.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>);
         }).toList();

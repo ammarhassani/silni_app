@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
@@ -32,11 +33,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     final isAuthenticated = ref.read(isAuthenticatedProvider);
 
     if (isAuthenticated) {
-      context.go(AppRoutes.home);
+      if (mounted) context.go(AppRoutes.home);
     } else {
       // Check if user has seen onboarding
-      // TODO: Add shared preferences to check onboarding status
-      context.go(AppRoutes.onboarding);
+      final prefs = await SharedPreferences.getInstance();
+      final hasSeenOnboarding = prefs.getBool('onboarding_completed') ?? false;
+
+      if (!mounted) return;
+
+      if (hasSeenOnboarding) {
+        context.go(AppRoutes.login);
+      } else {
+        context.go(AppRoutes.onboarding);
+      }
     }
   }
 

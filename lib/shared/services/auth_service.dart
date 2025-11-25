@@ -36,16 +36,16 @@ class AuthService {
       // Update display name
       await credential.user?.updateDisplayName(fullName);
 
-      // Create user document in Firestore asynchronously (don't block signup)
-      _createUserDocument(
+      if (kDebugMode) {
+        print('📝 Creating user document in Firestore...');
+      }
+
+      // Create user document - MUST complete before signup succeeds
+      await _createUserDocument(
         uid: credential.user!.uid,
         email: email,
         fullName: fullName,
-      ).catchError((e) {
-        if (kDebugMode) {
-          print('⚠️ Failed to create user document: $e');
-        }
-      });
+      );
 
       if (kDebugMode) {
         print('✅ User created successfully: ${credential.user?.uid}');
@@ -168,29 +168,62 @@ class AuthService {
     required String email,
     required String fullName,
   }) async {
-    await _firestore.collection('users').doc(uid).set({
-      'id': uid,
-      'email': email,
-      'fullName': fullName,
-      'phoneNumber': null,
-      'profilePictureUrl': null,
-      'createdAt': FieldValue.serverTimestamp(),
-      'lastLoginAt': FieldValue.serverTimestamp(),
-      'emailVerified': false,
-      'subscriptionStatus': 'free',
-      'language': 'ar',
-      'notificationsEnabled': true,
-      'reminderTime': '09:00',
-      'theme': 'light',
-      'totalInteractions': 0,
-      'currentStreak': 0,
-      'longestStreak': 0,
-      'points': 0,
-      'level': 1,
-      'badges': [],
-      'dataExportRequested': false,
-      'accountDeletionRequested': false,
-    });
+    if (kDebugMode) {
+      print('🔄 Creating user document for: $uid');
+    }
+
+    try {
+      // Force token refresh to ensure valid auth state before write
+      if (kDebugMode) {
+        print('🔑 Refreshing auth token...');
+      }
+      await _auth.currentUser?.getIdToken(true);
+
+      if (kDebugMode) {
+        print('✅ Token refreshed, proceeding with write...');
+      }
+
+      await _firestore.collection('users').doc(uid).set({
+        'id': uid,
+        'email': email,
+        'fullName': fullName,
+        'phoneNumber': null,
+        'profilePictureUrl': null,
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastLoginAt': FieldValue.serverTimestamp(),
+        'emailVerified': false,
+        'subscriptionStatus': 'free',
+        'language': 'ar',
+        'notificationsEnabled': true,
+        'reminderTime': '09:00',
+        'theme': 'light',
+        'totalInteractions': 0,
+        'currentStreak': 0,
+        'longestStreak': 0,
+        'points': 0,
+        'level': 1,
+        'badges': [],
+        'dataExportRequested': false,
+        'accountDeletionRequested': false,
+      });
+
+      if (kDebugMode) {
+        print('✅ User document created successfully');
+      }
+    } on FirebaseException catch (e) {
+      if (kDebugMode) {
+        print('❌ Firestore error: ${e.code}');
+        print('❌ Firestore message: ${e.message}');
+        print('❌ Firestore details: ${e.toString()}');
+      }
+      rethrow;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Unexpected error creating user document: $e');
+        print('❌ Error type: ${e.runtimeType}');
+      }
+      rethrow;
+    }
   }
 
   // Update last login timestamp

@@ -18,9 +18,11 @@ import '../../features/profile/screens/profile_screen.dart';
 import '../../features/contacts/screens/contact_import_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
 import 'app_routes.dart';
+import 'navigation_service.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
+    navigatorKey: NavigationService.navigatorKey,
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: true,
     routes: [

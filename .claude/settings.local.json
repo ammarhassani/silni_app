@@ -1,7 +1,19 @@
 {
   "permissions": {
     "allow": [
-      "Bash(flutter analyze:*)"
+      "Bash(flutter analyze:*)",
+      "Bash(\"c:\\Users\\A\\Desktop\\silni-app\\silni_app\\lib\\features\\reminders\\screens\\reminders_screen.dart\")",
+      "Bash(firebase use:*)",
+      "Bash(firebase deploy:*)",
+      "Bash(cat:*)",
+      "Bash(flutter run:*)",
+      "Bash(firebase projects:list:*)",
+      "Bash(firebase firestore:rules:list:*)",
+      "Bash(curl:*)",
+      "Bash(firebase firestore:rules:get:*)",
+      "Bash(gcloud auth print-access-token:*)",
+      "Bash(firebase login:ci:*)",
+      "Bash(flutter:*)"
     ],
     "deny": [],
     "ask": []

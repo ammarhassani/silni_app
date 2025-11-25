@@ -3,11 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/theme/app_themes.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
@@ -15,6 +18,7 @@ import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../../shared/services/relatives_service.dart';
 import '../../../shared/services/interactions_service.dart';
+import '../../../shared/services/auth_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
 // Providers
@@ -558,14 +562,59 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  void _saveName() {
+  Future<void> _saveName() async {
     final newName = _nameController.text.trim();
-    if (newName.isNotEmpty) {
-      // TODO: Update user display name in Firebase
-      setState(() => _isEditingName = false);
+    if (newName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم حفظ الاسم')),
+        const SnackBar(
+          content: Text('الاسم لا يمكن أن يكون فارغاً'),
+          backgroundColor: AppColors.error,
+        ),
       );
+      return;
+    }
+
+    if (newName.length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('الاسم يجب أن يكون حرفين على الأقل'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // Update Firebase Auth display name
+      await user.updateDisplayName(newName);
+
+      // Update Firestore user document
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({'fullName': newName});
+
+      if (mounted) {
+        setState(() => _isEditingName = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم حفظ الاسم بنجاح'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('حدث خطأ: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -588,12 +637,45 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: const Text('إلغاء'),
           ),
           TextButton(
-            onPressed: () {
-              // TODO: Send password reset email
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('تم إرسال رابط إعادة التعيين')),
-              );
+
+              try {
+                final user = FirebaseAuth.instance.currentUser;
+                if (user?.email == null) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('البريد الإلكتروني غير متوفر'),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                  }
+                  return;
+                }
+
+                final authService = ref.read(authServiceProvider);
+                await authService.resetPassword(user!.email!);
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني'),
+                      backgroundColor: AppColors.success,
+                      duration: Duration(seconds: 4),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('حدث خطأ: ${e.toString()}'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('إرسال'),
           ),
@@ -621,9 +703,94 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: const Text('إلغاء'),
           ),
           TextButton(
-            onPressed: () {
-              // TODO: Delete account
+            onPressed: () async {
               Navigator.pop(context);
+
+              // Show loading dialog
+              if (mounted) {
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+
+              try {
+                final user = FirebaseAuth.instance.currentUser;
+                if (user == null) return;
+
+                final firestore = FirebaseFirestore.instance;
+                final batch = firestore.batch();
+
+                // Delete user's relatives
+                final relativesSnapshot = await firestore
+                    .collection('relatives')
+                    .where('userId', isEqualTo: user.uid)
+                    .get();
+                for (var doc in relativesSnapshot.docs) {
+                  batch.delete(doc.reference);
+                }
+
+                // Delete user's interactions
+                final interactionsSnapshot = await firestore
+                    .collection('interactions')
+                    .where('userId', isEqualTo: user.uid)
+                    .get();
+                for (var doc in interactionsSnapshot.docs) {
+                  batch.delete(doc.reference);
+                }
+
+                // Delete user's reminders
+                final remindersSnapshot = await firestore
+                    .collection('reminders')
+                    .where('userId', isEqualTo: user.uid)
+                    .get();
+                for (var doc in remindersSnapshot.docs) {
+                  batch.delete(doc.reference);
+                }
+
+                // Delete user's FCM token
+                batch.delete(firestore.collection('fcmTokens').doc(user.uid));
+
+                // Delete user document
+                batch.delete(firestore.collection('users').doc(user.uid));
+
+                // Commit all deletions
+                await batch.commit();
+
+                // Delete Firebase Auth account
+                await user.delete();
+
+                // Close loading dialog
+                if (mounted) {
+                  Navigator.pop(context);
+
+                  // Navigate to login
+                  context.go(AppRoutes.login);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('تم حذف حسابك بنجاح'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                }
+              } catch (e) {
+                // Close loading dialog
+                if (mounted) {
+                  Navigator.pop(context);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('حدث خطأ: ${e.toString()}'),
+                      backgroundColor: AppColors.error,
+                      duration: const Duration(seconds: 4),
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('حذف', style: TextStyle(color: Colors.red)),
           ),

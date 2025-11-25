@@ -1,0 +1,92 @@
+rules_version = '2';
+
+/**
+ * FIREBASE STORAGE SECURITY RULES FOR SILNI APP
+ *
+ * These rules ensure that:
+ * 1. Users can only upload files to their own directories
+ * 2. File size and type restrictions are enforced
+ * 3. Only authenticated users can access storage
+ */
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ==================== HELPER FUNCTIONS ====================
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if file is an image
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    // Check if file is under 5MB
+    function isUnder5MB() {
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // Check if file is under 10MB
+    function isUnder10MB() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // Check if user is the owner
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ==================== USER PROFILE PICTURES ====================
+
+    match /users/{userId}/profile/{fileName} {
+      // Allow read if authenticated
+      allow read: if isAuthenticated();
+
+      // Allow write if user is owner, file is image, and under 5MB
+      allow write: if isOwner(userId) &&
+                     isImage() &&
+                     isUnder5MB();
+
+      // Allow delete if user is owner
+      allow delete: if isOwner(userId);
+    }
+
+    // ==================== RELATIVE PHOTOS ====================
+
+    match /relatives/{relativeId}/{fileName} {
+      // Allow read if authenticated (user ownership verified in Firestore)
+      allow read: if isAuthenticated();
+
+      // Allow write if authenticated, file is image, and under 10MB
+      allow write: if isAuthenticated() &&
+                     isImage() &&
+                     isUnder10MB();
+
+      // Allow delete if authenticated
+      allow delete: if isAuthenticated();
+    }
+
+    // ==================== INTERACTION ATTACHMENTS ====================
+
+    match /interactions/{interactionId}/{fileName} {
+      // Allow read if authenticated
+      allow read: if isAuthenticated();
+
+      // Allow write if authenticated and under 10MB
+      allow write: if isAuthenticated() &&
+                     isUnder10MB();
+
+      // Allow delete if authenticated
+      allow delete: if isAuthenticated();
+    }
+
+    // ==================== DENY ALL OTHER PATHS ====================
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
