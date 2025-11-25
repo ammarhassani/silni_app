@@ -1,0 +1,169 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==================== HELPER FUNCTIONS ====================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isPremium() {
+      return isAuthenticated() &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.subscriptionStatus == 'premium';
+    }
+
+    // ==================== USERS COLLECTION ====================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+
+      allow create: if isAuthenticated() &&
+                      request.auth.uid == userId &&
+                      request.resource.data.email is string &&
+                      request.resource.data.fullName is string &&
+                      request.resource.data.fullName.size() >= 2 &&
+                      request.resource.data.fullName.size() <= 100;
+
+      allow update: if isOwner(userId) &&
+                      request.resource.data.id == resource.data.id &&
+                      request.resource.data.email == resource.data.email &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+
+      allow delete: if false;
+    }
+
+    // ==================== RELATIVES COLLECTION ====================
+
+    match /relatives/{relativeId} {
+      allow read: if isAuthenticated() &&
+                    resource.data.userId == request.auth.uid;
+
+      allow create: if isAuthenticated() &&
+                      request.resource.data.userId == request.auth.uid &&
+                      request.resource.data.fullName is string &&
+                      request.resource.data.fullName.size() >= 2 &&
+                      request.resource.data.fullName.size() <= 100 &&
+                      request.resource.data.relationshipType is string &&
+                      request.resource.data.relationshipType in [
+                        'father', 'mother', 'brother', 'sister',
+                        'son', 'daughter', 'grandfather', 'grandmother',
+                        'uncle', 'aunt', 'nephew', 'niece',
+                        'cousin', 'husband', 'wife', 'other'
+                      ] &&
+                      request.resource.data.priority is int &&
+                      request.resource.data.priority >= 1 &&
+                      request.resource.data.priority <= 3;
+
+      allow update: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid &&
+                      request.resource.data.userId == resource.data.userId &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+
+      allow delete: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid;
+    }
+
+    // ==================== INTERACTIONS COLLECTION ====================
+
+    match /interactions/{interactionId} {
+      allow read: if isAuthenticated() &&
+                    resource.data.userId == request.auth.uid;
+
+      allow create: if isAuthenticated() &&
+                      request.resource.data.userId == request.auth.uid &&
+                      request.resource.data.relativeId is string &&
+                      request.resource.data.type is string &&
+                      request.resource.data.type in [
+                        'call', 'visit', 'message', 'gift', 'event', 'other'
+                      ] &&
+                      request.resource.data.date is timestamp &&
+                      (request.resource.data.get('photoUrls', []).size() == 0 || isPremium());
+
+      allow update: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid &&
+                      request.resource.data.userId == resource.data.userId &&
+                      request.resource.data.relativeId == resource.data.relativeId &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+
+      allow delete: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid;
+    }
+
+    // ==================== REMINDERS COLLECTION ====================
+
+    match /reminders/{reminderId} {
+      allow read: if isAuthenticated() &&
+                    resource.data.userId == request.auth.uid;
+
+      allow create: if isAuthenticated() &&
+                      request.resource.data.userId == request.auth.uid &&
+                      request.resource.data.relativeId is string &&
+                      request.resource.data.frequency is string &&
+                      request.resource.data.frequency in [
+                        'daily', 'weekly', 'biweekly', 'monthly', 'custom'
+                      ] &&
+                      request.resource.data.nextReminderDate is timestamp &&
+                      request.resource.data.isActive is bool;
+
+      allow update: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid &&
+                      request.resource.data.userId == resource.data.userId &&
+                      request.resource.data.relativeId == resource.data.relativeId &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+
+      allow delete: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid;
+    }
+
+    // ==================== ACHIEVEMENTS COLLECTION ====================
+
+    match /achievements/{achievementId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /userAchievements/{userAchievementId} {
+      allow read: if isAuthenticated() &&
+                    resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
+
+    // ==================== STATISTICS COLLECTION ====================
+
+    match /statistics/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if false;
+    }
+
+    // ==================== EDUCATIONAL CONTENT ====================
+
+    match /hadiths/{hadithId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /faqs/{faqId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ==================== FCM TOKENS ====================
+
+    match /fcmTokens/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId);
+    }
+
+    // ==================== DENY ALL OTHER PATHS ====================
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

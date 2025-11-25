@@ -1,6 +1,12 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+import '../../core/router/navigation_service.dart';
+import '../../core/router/app_routes.dart';
 import 'dart:async';
 
 /// Service for handling Firebase Cloud Messaging notifications
@@ -12,6 +18,8 @@ class NotificationService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   String? _fcmToken;
   final StreamController<RemoteMessage> _messageStreamController =
@@ -22,6 +30,14 @@ class NotificationService {
   /// Initialize notification service
   Future<void> initialize() async {
     try {
+      // Initialize timezone data
+      tz.initializeTimeZones();
+      tz.setLocalLocation(tz.getLocation('Asia/Riyadh')); // Default to Saudi Arabia timezone
+
+      if (kDebugMode) {
+        print('🔔 [NOTIFICATIONS] Timezone initialized: ${tz.local.name}');
+      }
+
       // Request notification permissions
       final settings = await _firebaseMessaging.requestPermission(
         alert: true,
@@ -46,13 +62,19 @@ class NotificationService {
         print('🔔 [NOTIFICATIONS] FCM Token: $_fcmToken');
       }
 
+      // Save FCM token to Firestore
+      if (_fcmToken != null) {
+        await _saveFcmToken(_fcmToken!);
+      }
+
       // Listen to token refresh
-      _firebaseMessaging.onTokenRefresh.listen((newToken) {
+      _firebaseMessaging.onTokenRefresh.listen((newToken) async {
         _fcmToken = newToken;
         if (kDebugMode) {
           print('🔔 [NOTIFICATIONS] FCM Token refreshed: $newToken');
         }
-        // TODO: Save token to Firestore for this user
+        // Save refreshed token to Firestore
+        await _saveFcmToken(newToken);
       });
 
       // Handle foreground messages
@@ -151,6 +173,29 @@ class NotificationService {
     );
   }
 
+  /// Save FCM token to Firestore
+  Future<void> _saveFcmToken(String token) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      await _firestore.collection('fcmTokens').doc(user.uid).set({
+        'token': token,
+        'userId': user.uid,
+        'platform': kIsWeb ? 'web' : 'mobile',
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      if (kDebugMode) {
+        print('🔔 [NOTIFICATIONS] FCM token saved to Firestore');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ [NOTIFICATIONS] Error saving FCM token: $e');
+      }
+    }
+  }
+
   /// Handle notification tap navigation
   void _handleNotificationTap(RemoteMessage message) {
     final data = message.data;
@@ -163,8 +208,49 @@ class NotificationService {
     final type = data['type'];
     final relativeId = data['relativeId'];
 
-    // TODO: Implement navigation based on type
-    // Example: Navigator.pushNamed(context, '/relative/$relativeId');
+    // Delay navigation slightly to ensure app is fully loaded
+    Future.delayed(const Duration(milliseconds: 500), () {
+      switch (type) {
+        case 'reminder':
+          // Navigate to relative detail if relativeId is provided
+          if (relativeId != null && relativeId.isNotEmpty) {
+            NavigationService.navigateTo(
+              '${AppRoutes.relativeDetail}/$relativeId',
+            );
+          } else {
+            // Otherwise navigate to reminders screen
+            NavigationService.navigateTo(AppRoutes.reminders);
+          }
+          break;
+
+        case 'relative':
+          // Navigate to relative detail
+          if (relativeId != null && relativeId.isNotEmpty) {
+            NavigationService.navigateTo(
+              '${AppRoutes.relativeDetail}/$relativeId',
+            );
+          }
+          break;
+
+        case 'achievement':
+          // Navigate to profile/achievements
+          NavigationService.navigateTo(AppRoutes.profile);
+          break;
+
+        case 'streak':
+          // Navigate to statistics screen
+          NavigationService.navigateTo(AppRoutes.statistics);
+          break;
+
+        default:
+          // Navigate to home by default
+          NavigationService.navigateTo(AppRoutes.home);
+      }
+
+      if (kDebugMode) {
+        print('✅ [NOTIFICATIONS] Navigated to appropriate screen for type: $type');
+      }
+    });
   }
 
   /// Get FCM token
@@ -216,6 +302,8 @@ class NotificationService {
         importance: Importance.high,
         priority: Priority.high,
         icon: '@mipmap/ic_launcher',
+        playSound: true,
+        enableVibration: true,
       );
 
       const iosDetails = DarwinNotificationDetails(
@@ -229,24 +317,29 @@ class NotificationService {
         iOS: iosDetails,
       );
 
-      // Note: For actual scheduling, you would need flutter_local_notifications with timezone support
-      // This is a simplified version
+      // Convert DateTime to TZDateTime with local timezone
+      final tzScheduledTime = tz.TZDateTime.from(scheduledTime, tz.local);
+
       if (kDebugMode) {
-        print('🔔 [NOTIFICATIONS] Scheduled notification for $scheduledTime');
+        print('🔔 [NOTIFICATIONS] Scheduling notification for $tzScheduledTime (${tz.local.name})');
       }
 
-      // TODO: Implement actual scheduling with timezone support
-      // await _localNotifications.zonedSchedule(
-      //   id,
-      //   title,
-      //   body,
-      //   tz.TZDateTime.from(scheduledTime, tz.local),
-      //   details,
-      //   androidAllowWhileIdle: true,
-      //   uiLocalNotificationDateInterpretation:
-      //       UILocalNotificationDateInterpretation.absoluteTime,
-      //   payload: payload,
-      // );
+      // Schedule the notification with timezone support
+      await _localNotifications.zonedSchedule(
+        id,
+        title,
+        body,
+        tzScheduledTime,
+        details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        payload: payload,
+      );
+
+      if (kDebugMode) {
+        print('✅ [NOTIFICATIONS] Notification scheduled successfully for $tzScheduledTime');
+      }
     } catch (e) {
       if (kDebugMode) {
         print('❌ [NOTIFICATIONS] Error scheduling notification: $e');

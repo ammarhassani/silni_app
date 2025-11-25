@@ -585,9 +585,9 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   }
 
   void _editSchedule(ReminderSchedule schedule) {
-    // TODO: Implement edit schedule
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('قريباً: تعديل التذكير')),
+    showDialog(
+      context: context,
+      builder: (context) => _EditScheduleDialog(schedule: schedule),
     );
   }
 
@@ -1005,6 +1005,152 @@ class _AddRelativesDialogState extends ConsumerState<_AddRelativesDialog> {
           SnackBar(content: Text('خطأ: $e')),
         );
       }
+    }
+  }
+}
+
+
+// Edit Schedule Dialog
+class _EditScheduleDialog extends ConsumerStatefulWidget {
+  final ReminderSchedule schedule;
+
+  const _EditScheduleDialog({required this.schedule});
+
+  @override
+  ConsumerState<_EditScheduleDialog> createState() => _EditScheduleDialogState();
+}
+
+class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
+  late TimeOfDay _selectedTime;
+  late List<int> _selectedDays;
+  late int? _selectedDayOfMonth;
+
+  @override
+  void initState() {
+    super.initState();
+    final parts = widget.schedule.time.split(':');
+    _selectedTime = TimeOfDay(
+      hour: int.parse(parts[0]),
+      minute: int.parse(parts[1]),
+    );
+    _selectedDays = List.from(widget.schedule.customDays ?? []);
+    _selectedDayOfMonth = widget.schedule.dayOfMonth;
+  }
+
+  Future<void> _pickTime() async {
+    final time = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime,
+      builder: (context, child) => Theme(data: ThemeData.dark(), child: child!),
+    );
+    if (time != null) setState(() => _selectedTime = time);
+  }
+
+  Widget _buildDaySelector() {
+    final days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: List.generate(7, (index) {
+        final isSelected = _selectedDays.contains(index);
+        return FilterChip(
+          label: Text(days[index]),
+          selected: isSelected,
+          onSelected: (selected) {
+            setState(() {
+              if (selected) _selectedDays.add(index); else _selectedDays.remove(index);
+            });
+          },
+          selectedColor: Colors.white.withOpacity(0.3),
+          labelStyle: TextStyle(color: Colors.white, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
+        );
+      }),
+    );
+  }
+
+  Widget _buildMonthDaySelector() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: List.generate(31, (index) {
+        final day = index + 1;
+        final isSelected = _selectedDayOfMonth == day;
+        return FilterChip(
+          label: Text('$day'),
+          selected: isSelected,
+          onSelected: (selected) => setState(() => _selectedDayOfMonth = selected ? day : null),
+          selectedColor: Colors.white.withOpacity(0.3),
+          labelStyle: TextStyle(color: Colors.white, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
+        );
+      }),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF1A1A1A),
+      title: Text('تعديل التذكير', style: AppTypography.headlineMedium.copyWith(color: Colors.white)),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('وقت التذكير', style: AppTypography.titleMedium.copyWith(color: Colors.white)),
+            const SizedBox(height: AppSpacing.sm),
+            ElevatedButton.icon(
+              onPressed: _pickTime,
+              icon: const Icon(Icons.schedule_rounded),
+              label: Text('الوقت: ${_selectedTime.format(context)}'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white.withOpacity(0.2),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+              ),
+            ),
+            if (widget.schedule.frequency == ReminderFrequency.weekly) ...[
+              const SizedBox(height: AppSpacing.lg),
+              Text('أيام الأسبوع', style: AppTypography.titleMedium.copyWith(color: Colors.white)),
+              const SizedBox(height: AppSpacing.sm),
+              _buildDaySelector(),
+            ],
+            if (widget.schedule.frequency == ReminderFrequency.monthly) ...[
+              const SizedBox(height: AppSpacing.lg),
+              Text('يوم من الشهر', style: AppTypography.titleMedium.copyWith(color: Colors.white)),
+              const SizedBox(height: AppSpacing.sm),
+              _buildMonthDaySelector(),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+        TextButton(onPressed: _saveChanges, child: const Text('حفظ')),
+      ],
+    );
+  }
+
+  void _saveChanges() async {
+    if (widget.schedule.frequency == ReminderFrequency.weekly && _selectedDays.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى اختيار يوم واحد على الأقل')));
+      return;
+    }
+    if (widget.schedule.frequency == ReminderFrequency.monthly && _selectedDayOfMonth == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى اختيار يوم من الشهر')));
+      return;
+    }
+
+    final service = ref.read(reminderSchedulesServiceProvider);
+    try {
+      final timeString = '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
+      final updatedSchedule = widget.schedule.copyWith(time: timeString, customDays: _selectedDays, dayOfMonth: _selectedDayOfMonth);
+      await service.updateSchedule(widget.schedule.id, updatedSchedule.toFirestore());
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث التذكير بنجاح')));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e')));
     }
   }
 }
