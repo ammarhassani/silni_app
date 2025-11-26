@@ -76,7 +76,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
-    final userId = user?.uid ?? '';
+    final userId = user?.id ?? '';
     final relativesAsync = ref.watch(relativesStreamProvider(userId));
 
     return Scaffold(
@@ -195,6 +195,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
                   )
                 : null,
             border: InputBorder.none,
+            filled: false, // Make background transparent
           ),
         ),
       ),
@@ -280,7 +281,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
 
   Widget _buildRelativeCard(Relative relative, int index) {
     final user = ref.watch(currentUserProvider);
-    final userId = user?.uid ?? '';
+    final userId = user?.id ?? '';
 
     return SwipeableRelativeCard(
       relative: relative,

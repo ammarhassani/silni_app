@@ -57,9 +57,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             },
           );
 
-      print('✅ [LOGIN] Firebase authentication successful!');
-      print('👤 [LOGIN] User ID: ${credential.user?.uid}');
-      print('📧 [LOGIN] Email verified: ${credential.user?.emailVerified}');
+      print('✅ [LOGIN] Supabase authentication successful!');
+      print('👤 [LOGIN] User ID: ${credential.user?.id}');
+      print('📧 [LOGIN] Email: ${credential.user?.email}');
 
       if (!mounted) {
         print('⚠️ [LOGIN] Widget unmounted, aborting navigation');

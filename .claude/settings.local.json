@@ -13,7 +13,12 @@
       "Bash(firebase firestore:rules:get:*)",
       "Bash(gcloud auth print-access-token:*)",
       "Bash(firebase login:ci:*)",
-      "Bash(flutter:*)"
+      "Bash(flutter:*)",
+      "Bash(firebase init:*)",
+      "Bash(find:*)",
+      "Bash(supabase --version:*)",
+      "Bash(dir /s /b *.sql 2)",
+      "Bash(nul)"
     ],
     "deny": [],
     "ask": []

@@ -86,7 +86,7 @@ class StatisticsScreen extends ConsumerWidget {
               // Stats with real data
               Expanded(
                 child: StreamBuilder<List<Relative>>(
-                  stream: relativesService.getRelativesStream(user.uid),
+                  stream: relativesService.getRelativesStream(user.id),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(

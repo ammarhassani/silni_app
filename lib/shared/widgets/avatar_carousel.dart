@@ -43,6 +43,18 @@ class _AvatarCarouselState extends State<AvatarCarousel> {
   }
 
   @override
+  void didUpdateWidget(AvatarCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If the number of relatives changed, reset to first page
+    if (oldWidget.relatives.length != widget.relatives.length) {
+      // Jump to first page to show new relative
+      if (_pageController.hasClients) {
+        _pageController.jumpToPage(0);
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
@@ -73,6 +85,7 @@ class _AvatarCarouselState extends State<AvatarCarousel> {
 
               final relative = widget.relatives[index];
               return _buildCarouselItem(
+                key: ValueKey(relative.id), // Add unique key for each relative
                 index: index,
                 child: _buildRelativeAvatar(relative),
               );
@@ -89,6 +102,7 @@ class _AvatarCarouselState extends State<AvatarCarousel> {
   }
 
   Widget _buildCarouselItem({
+    Key? key,
     required int index,
     required Widget child,
   }) {
@@ -98,6 +112,7 @@ class _AvatarCarouselState extends State<AvatarCarousel> {
     final opacity = 1.0 - math.min(difference * 0.3, 0.5);
 
     return Transform.scale(
+      key: key,
       scale: scale,
       child: Opacity(
         opacity: opacity.clamp(0.5, 1.0),

@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 /// Model for authentic hadith and scholarly quotes about family ties (صلة الرحم)
 class Hadith {
   final String id;
@@ -32,23 +30,24 @@ class Hadith {
     this.updatedAt,
   });
 
-  /// Create from Firestore document
-  factory Hadith.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data()!;
+  /// Create from Supabase JSON
+  factory Hadith.fromJson(Map<String, dynamic> json) {
     return Hadith(
-      id: doc.id,
-      arabicText: data['arabicText'] as String,
-      englishTranslation: data['englishTranslation'] as String? ?? '',
-      source: data['source'] as String,
-      reference: data['reference'] as String? ?? '',
-      topic: data['topic'] as String? ?? 'silat_rahim',
-      type: HadithType.fromString(data['type'] as String? ?? 'hadith'),
-      narrator: data['narrator'] as String? ?? '',
-      scholar: data['scholar'] as String? ?? '',
-      isAuthentic: data['isAuthentic'] as bool? ?? true,
-      displayOrder: data['displayOrder'] as int? ?? 0,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      id: json['id'] as String,
+      arabicText: json['arabic_text'] as String,
+      englishTranslation: json['english_translation'] as String? ?? '',
+      source: json['source'] as String,
+      reference: json['reference'] as String? ?? '',
+      topic: json['topic'] as String? ?? 'silat_rahim',
+      type: HadithType.fromString(json['type'] as String? ?? 'hadith'),
+      narrator: json['narrator'] as String? ?? '',
+      scholar: json['scholar'] as String? ?? '',
+      isAuthentic: json['is_authentic'] as bool? ?? true,
+      displayOrder: json['display_order'] as int? ?? 0,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : null,
     );
   }
 
@@ -66,30 +65,29 @@ class Hadith {
       scholar: data['scholar'] as String? ?? '',
       isAuthentic: data['isAuthentic'] as bool? ?? true,
       displayOrder: data['displayOrder'] as int? ?? 0,
-      createdAt: data['createdAt'] is Timestamp
-          ? (data['createdAt'] as Timestamp).toDate()
+      createdAt: data['createdAt'] is DateTime
+          ? data['createdAt'] as DateTime
           : DateTime.now(),
-      updatedAt: data['updatedAt'] is Timestamp
-          ? (data['updatedAt'] as Timestamp).toDate()
+      updatedAt: data['updatedAt'] is DateTime
+          ? data['updatedAt'] as DateTime
           : null,
     );
   }
 
-  /// Convert to Firestore document
-  Map<String, dynamic> toFirestore() {
+  /// Convert to Supabase JSON
+  Map<String, dynamic> toJson() {
     return {
-      'arabicText': arabicText,
-      'englishTranslation': englishTranslation,
+      'arabic_text': arabicText,
+      'english_translation': englishTranslation,
       'source': source,
       'reference': reference,
       'topic': topic,
       'type': type.value,
       'narrator': narrator,
       'scholar': scholar,
-      'isAuthentic': isAuthentic,
-      'displayOrder': displayOrder,
-      'createdAt': Timestamp.fromDate(createdAt),
-      if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),
+      'is_authentic': isAuthentic,
+      'display_order': displayOrder,
+      // Don't include id, created_at, updated_at - managed by database
     };
   }
 

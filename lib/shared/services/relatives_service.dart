@@ -1,14 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/config/supabase_config.dart';
 import '../models/relative_model.dart';
 
 class RelativesService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static const String _collection = 'relatives';
-
-  /// Get relatives collection reference
-  CollectionReference<Map<String, dynamic>> get _relativesRef =>
-      _firestore.collection(_collection);
+  final SupabaseClient _supabase = SupabaseConfig.client;
+  static const String _table = 'relatives';
 
   /// Create a new relative
   Future<String> createRelative(Relative relative) async {
@@ -17,13 +14,19 @@ class RelativesService {
         print('📝 [RELATIVES] Creating relative: ${relative.fullName}');
       }
 
-      final docRef = await _relativesRef.add(relative.toFirestore());
+      final response = await _supabase
+          .from(_table)
+          .insert(relative.toJson())
+          .select('id')
+          .single();
+
+      final id = response['id'] as String;
 
       if (kDebugMode) {
-        print('✅ [RELATIVES] Created relative with ID: ${docRef.id}');
+        print('✅ [RELATIVES] Created relative with ID: $id');
       }
 
-      return docRef.id;
+      return id;
     } catch (e) {
       if (kDebugMode) {
         print('❌ [RELATIVES] Error creating relative: $e');
@@ -39,19 +42,34 @@ class RelativesService {
         print('📡 [RELATIVES] Streaming relatives for user: $userId');
       }
 
-      return _relativesRef
-          .where('userId', isEqualTo: userId)
-          .where('isArchived', isEqualTo: false)
-          .orderBy('priority')  // Ascending by default (lower number = higher priority)
-          .orderBy('fullName')  // Ascending alphabetically
-          .snapshots()
-          .map((snapshot) {
+      return _supabase
+          .from(_table)
+          .stream(primaryKey: ['id'])
+          .map((data) {
         if (kDebugMode) {
-          print('📊 [RELATIVES] Received ${snapshot.docs.length} relatives from Firestore');
+          print('📊 [RELATIVES] Received ${data.length} total relatives from Supabase');
         }
-        return snapshot.docs.map((doc) {
-          return Relative.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>);
-        }).toList();
+
+        // Filter for this user's non-archived relatives
+        final filtered = data
+            .where((json) =>
+                json['user_id'] == userId &&
+                json['is_archived'] == false)
+            .map((json) => Relative.fromJson(json))
+            .toList();
+
+        // Sort by priority (ascending), then by full_name (ascending)
+        filtered.sort((a, b) {
+          final priorityCompare = a.priority.compareTo(b.priority);
+          if (priorityCompare != 0) return priorityCompare;
+          return a.fullName.compareTo(b.fullName);
+        });
+
+        if (kDebugMode) {
+          print('📊 [RELATIVES] Filtered to ${filtered.length} relatives for user');
+        }
+
+        return filtered;
       });
     } catch (e) {
       if (kDebugMode) {
@@ -68,15 +86,20 @@ class RelativesService {
         print('📖 [RELATIVES] Fetching relative: $relativeId');
       }
 
-      final doc = await _relativesRef.doc(relativeId).get();
-      if (!doc.exists) {
+      final response = await _supabase
+          .from(_table)
+          .select()
+          .eq('id', relativeId)
+          .maybeSingle();
+
+      if (response == null) {
         if (kDebugMode) {
           print('⚠️ [RELATIVES] Relative not found: $relativeId');
         }
         return null;
       }
 
-      return Relative.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>);
+      return Relative.fromJson(response);
     } catch (e) {
       if (kDebugMode) {
         print('❌ [RELATIVES] Error fetching relative: $e');
@@ -92,14 +115,18 @@ class RelativesService {
         print('📡 [RELATIVES] Streaming relative: $relativeId');
       }
 
-      return _relativesRef.doc(relativeId).snapshots().map((doc) {
-        if (!doc.exists) {
+      return _supabase
+          .from(_table)
+          .stream(primaryKey: ['id'])
+          .eq('id', relativeId)
+          .map((data) {
+        if (data.isEmpty) {
           if (kDebugMode) {
             print('⚠️ [RELATIVES] Relative not found: $relativeId');
           }
           return null;
         }
-        return Relative.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>);
+        return Relative.fromJson(data.first);
       });
     } catch (e) {
       if (kDebugMode) {
@@ -116,10 +143,11 @@ class RelativesService {
         print('📝 [RELATIVES] Updating relative: $relativeId');
       }
 
-      // Add updatedAt timestamp
-      updates['updatedAt'] = Timestamp.now();
-
-      await _relativesRef.doc(relativeId).update(updates);
+      // Note: updated_at is automatically set by database trigger
+      await _supabase
+          .from(_table)
+          .update(updates)
+          .eq('id', relativeId);
 
       if (kDebugMode) {
         print('✅ [RELATIVES] Updated relative: $relativeId');
@@ -139,10 +167,13 @@ class RelativesService {
         print('🗑️ [RELATIVES] Archiving relative: $relativeId');
       }
 
-      await _relativesRef.doc(relativeId).update({
-        'isArchived': true,
-        'updatedAt': Timestamp.now(),
-      });
+      await _supabase
+          .from(_table)
+          .update({
+            'is_archived': true,
+            // updated_at handled by trigger
+          })
+          .eq('id', relativeId);
 
       if (kDebugMode) {
         print('✅ [RELATIVES] Archived relative: $relativeId');
@@ -158,10 +189,13 @@ class RelativesService {
   /// Toggle favorite status
   Future<void> toggleFavorite(String relativeId, bool isFavorite) async {
     try {
-      await _relativesRef.doc(relativeId).update({
-        'isFavorite': isFavorite,
-        'updatedAt': Timestamp.now(),
-      });
+      await _supabase
+          .from(_table)
+          .update({
+            'is_favorite': isFavorite,
+            // updated_at handled by trigger
+          })
+          .eq('id', relativeId);
 
       if (kDebugMode) {
         print('⭐ [RELATIVES] Toggled favorite for $relativeId: $isFavorite');
@@ -175,12 +209,12 @@ class RelativesService {
   }
 
   /// Increment interaction count and update last contact date
+  /// Uses the database RPC function for atomic increment
   Future<void> recordInteraction(String relativeId) async {
     try {
-      await _relativesRef.doc(relativeId).update({
-        'interactionCount': FieldValue.increment(1),
-        'lastContactDate': Timestamp.now(),
-        'updatedAt': Timestamp.now(),
+      await _supabase.rpc('record_interaction_and_update_relative', params: {
+        'p_relative_id': relativeId,
+        'p_interaction_data': null, // null means only update relative, no interaction record
       });
 
       if (kDebugMode) {
@@ -203,15 +237,18 @@ class RelativesService {
 
   /// Get favorite relatives
   Stream<List<Relative>> getFavoriteRelatives(String userId) {
-    return _relativesRef
-        .where('userId', isEqualTo: userId)
-        .where('isFavorite', isEqualTo: true)
-        .where('isArchived', isEqualTo: false)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return Relative.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>);
-      }).toList();
+    return _supabase
+        .from(_table)
+        .stream(primaryKey: ['id'])
+        .map((data) {
+      // Filter for this user's favorite non-archived relatives
+      return data
+          .where((json) =>
+              json['user_id'] == userId &&
+              json['is_favorite'] == true &&
+              json['is_archived'] == false)
+          .map((json) => Relative.fromJson(json))
+          .toList();
     });
   }
 
@@ -228,13 +265,13 @@ class RelativesService {
   /// Get relatives count
   Future<int> getRelativesCount(String userId) async {
     try {
-      final snapshot = await _relativesRef
-          .where('userId', isEqualTo: userId)
-          .where('isArchived', isEqualTo: false)
-          .count()
-          .get();
+      final response = await _supabase
+          .from(_table)
+          .select('id')
+          .eq('user_id', userId)
+          .eq('is_archived', false);
 
-      return snapshot.count ?? 0;
+      return (response as List).length;
     } catch (e) {
       if (kDebugMode) {
         print('❌ [RELATIVES] Error counting relatives: $e');

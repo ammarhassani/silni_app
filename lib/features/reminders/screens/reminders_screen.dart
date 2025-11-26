@@ -50,7 +50,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
-    final userId = user?.uid ?? '';
+    final userId = user?.id ?? '';
 
     final schedulesAsync = ref.watch(reminderSchedulesStreamProvider(userId));
     final relativesAsync = ref.watch(relativesStreamProvider(userId));
@@ -543,7 +543,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
 
   void _showCreateScheduleDialog(ReminderTemplate template) {
     final user = ref.read(currentUserProvider);
-    final userId = user?.uid ?? '';
+    final userId = user?.id ?? '';
 
     showDialog(
       context: context,
@@ -573,7 +573,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     try {
       await service.updateSchedule(
         schedule.id,
-        schedule.copyWith(isActive: value).toFirestore(),
+        schedule.copyWith(isActive: value).toJson(),
       );
     } catch (e) {
       if (mounted) {
@@ -637,7 +637,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
 
       await service.updateSchedule(
         schedule.id,
-        schedule.copyWith(relativeIds: updatedRelativeIds).toFirestore(),
+        schedule.copyWith(relativeIds: updatedRelativeIds).toJson(),
       );
     } catch (e) {
       if (mounted) {
@@ -871,7 +871,7 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
         createdAt: DateTime.now(),
       );
 
-      await service.createSchedule(schedule.toFirestore());
+      await service.createSchedule(schedule.toJson());
 
       if (mounted) {
         Navigator.pop(context);
@@ -988,7 +988,7 @@ class _AddRelativesDialogState extends ConsumerState<_AddRelativesDialog> {
 
       await service.updateSchedule(
         widget.schedule.id,
-        widget.schedule.copyWith(relativeIds: updatedRelativeIds).toFirestore(),
+        widget.schedule.copyWith(relativeIds: updatedRelativeIds).toJson(),
       );
 
       if (mounted) {
@@ -1144,7 +1144,7 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
     try {
       final timeString = '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
       final updatedSchedule = widget.schedule.copyWith(time: timeString, customDays: _selectedDays, dayOfMonth: _selectedDayOfMonth);
-      await service.updateSchedule(widget.schedule.id, updatedSchedule.toFirestore());
+      await service.updateSchedule(widget.schedule.id, updatedSchedule.toJson());
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث التذكير بنجاح')));

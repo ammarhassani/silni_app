@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 /// Relationship types for relatives
 enum RelationshipType {
   father('father', 'أب', 1),
@@ -57,7 +55,7 @@ enum AvatarType {
   youngBoy('young_boy', 'ولد صغير', '👦'),
   youngGirl('young_girl', 'بنت صغيرة', '👧'),
   teenBoy('teen_boy', 'شاب مراهق', '🧑'),
-  teenGirl('teen_girl', 'فتاة مراهقة', '👧‍🦱'),
+  teenGirl('teen_girl', 'فتاة مراهقة', '👧'),
   adultMan('adult_man', 'رجل', '👨'),
   adultWoman('adult_woman', 'امرأة', '👩'),
   womanWithHijab('woman_hijab', 'امرأة بحجاب', '🧕'),
@@ -208,69 +206,73 @@ class Relative {
     this.updatedAt,
   });
 
-  /// Create from Firestore document
-  factory Relative.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data()!;
+  /// Create from Supabase JSON
+  factory Relative.fromJson(Map<String, dynamic> json) {
     return Relative(
-      id: doc.id,
-      userId: data['userId'] as String,
-      fullName: data['fullName'] as String,
-      relationshipType: RelationshipType.fromString(data['relationshipType'] as String),
-      gender: Gender.fromString(data['gender'] as String?),
-      avatarType: AvatarType.fromString(data['avatarType'] as String?),
-      dateOfBirth: (data['dateOfBirth'] as Timestamp?)?.toDate(),
-      phoneNumber: data['phoneNumber'] as String?,
-      email: data['email'] as String?,
-      address: data['address'] as String?,
-      city: data['city'] as String?,
-      country: data['country'] as String?,
-      photoUrl: data['photoUrl'] as String?,
-      notes: data['notes'] as String?,
-      tags: List<String>.from(data['tags'] ?? []),
-      priority: data['priority'] as int? ?? 2,
-      islamicImportance: data['islamicImportance'] as String?,
-      preferredContactMethod: data['preferredContactMethod'] as String?,
-      bestTimeToContact: data['bestTimeToContact'] as String?,
-      interactionCount: data['interactionCount'] as int? ?? 0,
-      lastContactDate: (data['lastContactDate'] as Timestamp?)?.toDate(),
-      healthStatus: data['healthStatus'] as String?,
-      isArchived: data['isArchived'] as bool? ?? false,
-      isFavorite: data['isFavorite'] as bool? ?? false,
-      contactId: data['contactId'] as String?,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      fullName: json['full_name'] as String,
+      relationshipType: RelationshipType.fromString(json['relationship_type'] as String),
+      gender: Gender.fromString(json['gender'] as String?),
+      avatarType: AvatarType.fromString(json['avatar_type'] as String?),
+      dateOfBirth: json['date_of_birth'] != null
+          ? DateTime.parse(json['date_of_birth'] as String)
+          : null,
+      phoneNumber: json['phone_number'] as String?,
+      email: json['email'] as String?,
+      address: json['address'] as String?,
+      city: json['city'] as String?,
+      country: json['country'] as String?,
+      photoUrl: json['photo_url'] as String?,
+      notes: json['notes'] as String?,
+      tags: List<String>.from(json['tags'] ?? []),
+      priority: json['priority'] as int? ?? 2,
+      islamicImportance: json['islamic_importance'] as String?,
+      preferredContactMethod: json['preferred_contact_method'] as String?,
+      bestTimeToContact: json['best_time_to_contact'] as String?,
+      interactionCount: json['interaction_count'] as int? ?? 0,
+      lastContactDate: json['last_contact_date'] != null
+          ? DateTime.parse(json['last_contact_date'] as String)
+          : null,
+      healthStatus: json['health_status'] as String?,
+      isArchived: json['is_archived'] as bool? ?? false,
+      isFavorite: json['is_favorite'] as bool? ?? false,
+      contactId: json['contact_id'] as String?,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : null,
     );
   }
 
-  /// Convert to Firestore document
-  Map<String, dynamic> toFirestore() {
+  /// Convert to Supabase JSON
+  Map<String, dynamic> toJson() {
     return {
-      'userId': userId,
-      'fullName': fullName,
-      'relationshipType': relationshipType.value,
+      'user_id': userId,
+      'full_name': fullName,
+      'relationship_type': relationshipType.value,
       'gender': gender?.value,
-      'avatarType': avatarType?.value,
-      'dateOfBirth': dateOfBirth != null ? Timestamp.fromDate(dateOfBirth!) : null,
-      'phoneNumber': phoneNumber,
+      'avatar_type': avatarType?.value,
+      'date_of_birth': dateOfBirth?.toIso8601String(),
+      'phone_number': phoneNumber,
       'email': email,
       'address': address,
       'city': city,
       'country': country,
-      'photoUrl': photoUrl,
+      'photo_url': photoUrl,
       'notes': notes,
       'tags': tags,
       'priority': priority,
-      'islamicImportance': islamicImportance,
-      'preferredContactMethod': preferredContactMethod,
-      'bestTimeToContact': bestTimeToContact,
-      'interactionCount': interactionCount,
-      'lastContactDate': lastContactDate != null ? Timestamp.fromDate(lastContactDate!) : null,
-      'healthStatus': healthStatus,
-      'isArchived': isArchived,
-      'isFavorite': isFavorite,
-      'contactId': contactId,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+      'islamic_importance': islamicImportance,
+      'preferred_contact_method': preferredContactMethod,
+      'best_time_to_contact': bestTimeToContact,
+      'interaction_count': interactionCount,
+      'last_contact_date': lastContactDate?.toIso8601String(),
+      'health_status': healthStatus,
+      'is_archived': isArchived,
+      'is_favorite': isFavorite,
+      'contact_id': contactId,
+      // Don't include id, created_at, updated_at - managed by database
     };
   }
 

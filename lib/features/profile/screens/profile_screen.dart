@@ -3,8 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../core/config/supabase_config.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -13,12 +12,10 @@ import '../../../core/theme/app_themes.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
-import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../../shared/services/relatives_service.dart';
 import '../../../shared/services/interactions_service.dart';
-import '../../../shared/services/auth_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
 // Providers
@@ -55,7 +52,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
-    final userId = user?.uid ?? '';
+    final userId = user?.id ?? '';
     final themeColors = ref.watch(themeColorsProvider);
 
     final relativesAsync = ref.watch(userRelativesProvider(userId));
@@ -146,7 +143,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildHeader(dynamic user, ThemeColors themeColors) {
-    final displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'المستخدم';
+    final displayName = user?.userMetadata?['full_name'] ?? user?.email?.split('@')[0] ?? 'المستخدم';
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -184,10 +181,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                     ],
                   ),
-                  child: user?.photoURL != null
+                  child: user?.userMetadata?['profile_picture_url'] != null
                       ? ClipOval(
                           child: Image.network(
-                            user!.photoURL!,
+                            user!.userMetadata!['profile_picture_url'] as String,
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => _buildDefaultAvatar(displayName),
                           ),
@@ -585,17 +582,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = SupabaseConfig.client.auth.currentUser;
       if (user == null) return;
 
-      // Update Firebase Auth display name
-      await user.updateDisplayName(newName);
-
-      // Update Firestore user document
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({'fullName': newName});
+      // Update Supabase user profile in database
+      await SupabaseConfig.client
+          .from('users')
+          .update({'full_name': newName})
+          .eq('id', user.id);
 
       if (mounted) {
         setState(() => _isEditingName = false);
@@ -641,8 +635,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Navigator.pop(context);
 
               try {
-                final user = FirebaseAuth.instance.currentUser;
-                if (user?.email == null) {
+                final user = SupabaseConfig.client.auth.currentUser;
+                if (user == null || user.email == null) {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -655,7 +649,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 }
 
                 final authService = ref.read(authServiceProvider);
-                await authService.resetPassword(user!.email!);
+                await authService.resetPassword(user.email!);
 
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -718,50 +712,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               }
 
               try {
-                final user = FirebaseAuth.instance.currentUser;
-                if (user == null) return;
-
-                final firestore = FirebaseFirestore.instance;
-                final batch = firestore.batch();
-
-                // Delete user's relatives
-                final relativesSnapshot = await firestore
-                    .collection('relatives')
-                    .where('userId', isEqualTo: user.uid)
-                    .get();
-                for (var doc in relativesSnapshot.docs) {
-                  batch.delete(doc.reference);
-                }
-
-                // Delete user's interactions
-                final interactionsSnapshot = await firestore
-                    .collection('interactions')
-                    .where('userId', isEqualTo: user.uid)
-                    .get();
-                for (var doc in interactionsSnapshot.docs) {
-                  batch.delete(doc.reference);
-                }
-
-                // Delete user's reminders
-                final remindersSnapshot = await firestore
-                    .collection('reminders')
-                    .where('userId', isEqualTo: user.uid)
-                    .get();
-                for (var doc in remindersSnapshot.docs) {
-                  batch.delete(doc.reference);
-                }
-
-                // Delete user's FCM token
-                batch.delete(firestore.collection('fcmTokens').doc(user.uid));
-
-                // Delete user document
-                batch.delete(firestore.collection('users').doc(user.uid));
-
-                // Commit all deletions
-                await batch.commit();
-
-                // Delete Firebase Auth account
-                await user.delete();
+                // Use Supabase delete account method (handles all cascading deletions via RPC)
+                final authService = ref.read(authServiceProvider);
+                await authService.deleteAccount();
 
                 // Close loading dialog
                 if (mounted) {
