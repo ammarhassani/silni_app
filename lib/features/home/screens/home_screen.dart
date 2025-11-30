@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -122,14 +123,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
-    final displayName = user?.displayName ?? 'المستخدم';
-    final userId = user?.uid ?? '';
+
+    // Show loading screen if user is not yet loaded
+    if (user == null) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    final displayName = user.userMetadata?['full_name'] as String? ?? user.email ?? 'المستخدم';
+    final userId = user.id;
     final themeColors = ref.watch(themeColorsProvider);
 
     final relativesAsync = ref.watch(relativesStreamProvider(userId));
     final todayInteractionsAsync = ref.watch(todayInteractionsStreamProvider(userId));
 
     return Scaffold(
+      extendBody: true, // Extend body behind bottom nav for glassmorphism effect
       body: Stack(
         children: [
           // Animated background
@@ -157,6 +169,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
           // Main content
           SafeArea(
+            bottom: false, // Don't apply safe area to bottom so content flows under nav
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
               child: Padding(
@@ -198,7 +211,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       loading: () => const SizedBox.shrink(),
                       error: (_, __) => const SizedBox.shrink(),
                     ),
-                    const SizedBox(height: AppSpacing.xxxl),
+                    const SizedBox(height: 120), // Extra padding for bottom nav
                   ],
                 ),
               ),
@@ -536,8 +549,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       return _buildEmptyState();
     }
 
+    // Sort by creation date (oldest first) so newest appears on LEFT in RTL
+    final sortedByDate = List<Relative>.from(relatives)
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
     // Show first 8 relatives in carousel
-    final displayRelatives = relatives.take(8).toList();
+    final displayRelatives = sortedByDate.take(8).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -626,7 +643,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           GradientButton(
             text: 'إضافة أول قريب',
             onPressed: () {
-              // TODO: Navigate to add relative
+              context.push(AppRoutes.addRelative);
             },
             icon: Icons.person_add,
           ),
@@ -849,54 +866,155 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   Widget _buildBottomNav() {
     final themeColors = ref.watch(themeColorsProvider);
+
+    final items = [
+      (icon: Icons.home_rounded, label: 'الرئيسية'),
+      (icon: Icons.people_rounded, label: 'الأقارب'),
+      (icon: Icons.bar_chart_rounded, label: 'الإحصائيات'),
+      (icon: Icons.settings_rounded, label: 'الإعدادات'),
+    ];
+
     return Container(
+      height: 75,
+      margin: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [
-            Colors.black.withOpacity(0.3),
-            Colors.black.withOpacity(0.5),
+            Colors.black.withOpacity(0.15),
+            Colors.black.withOpacity(0.25),
           ],
         ),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(AppSpacing.radiusXl),
-          topRight: Radius.circular(AppSpacing.radiusXl),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.4),
+          width: 1.5,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: themeColors.primary.withOpacity(0.5),
+            blurRadius: 50,
+            spreadRadius: -5,
+          ),
+          BoxShadow(
+            color: AppColors.premiumGold.withOpacity(0.4),
+            blurRadius: 40,
+            spreadRadius: -10,
+          ),
+        ],
       ),
       child: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(AppSpacing.radiusXl),
-          topRight: Radius.circular(AppSpacing.radiusXl),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: _onNavTapped,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: themeColors.primaryLight,
-          unselectedItemColor: Colors.white.withOpacity(0.5),
-          selectedLabelStyle: AppTypography.labelSmall,
-          unselectedLabelStyle: AppTypography.labelSmall,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_rounded),
-              label: 'الرئيسية',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.people_rounded),
-              label: 'الأقارب',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.bar_chart_rounded),
-              label: 'الإحصائيات',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.settings_rounded),
-              label: 'الإعدادات',
-            ),
-          ],
+        borderRadius: BorderRadius.circular(30),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Stack(
+            children: [
+              // Animated glow indicator
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
+                left: _currentIndex * (MediaQuery.of(context).size.width / 4) - 16,
+                top: 8,
+                child: Container(
+                  width: (MediaQuery.of(context).size.width / 4),
+                  height: 60,
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      colors: [
+                        themeColors.primary.withOpacity(0.4),
+                        themeColors.primary.withOpacity(0.0),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(seconds: 2),
+                    builder: (context, value, child) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: themeColors.primary.withOpacity(0.3 * value),
+                              blurRadius: 20,
+                              spreadRadius: 5,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    onEnd: () {
+                      if (mounted) setState(() {});
+                    },
+                  ),
+                ),
+              ),
+
+              // Nav items
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: List.generate(items.length, (index) {
+                  final isSelected = index == _currentIndex;
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () => _onNavTapped(index),
+                      behavior: HitTestBehavior.opaque,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOutCubic,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            AnimatedScale(
+                              scale: isSelected ? 1.2 : 1.0,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeOutCubic,
+                              child: Icon(
+                                items[index].icon,
+                                color: isSelected
+                                    ? Colors.white
+                                    : Colors.white.withOpacity(0.5),
+                                size: 26,
+                                shadows: isSelected
+                                    ? [
+                                        Shadow(
+                                          color: themeColors.primary,
+                                          blurRadius: 20,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            AnimatedDefaultTextStyle(
+                              duration: const Duration(milliseconds: 300),
+                              style: AppTypography.labelSmall.copyWith(
+                                color: isSelected
+                                    ? Colors.white
+                                    : Colors.white.withOpacity(0.5),
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                shadows: isSelected
+                                    ? [
+                                        Shadow(
+                                          color: themeColors.primary,
+                                          blurRadius: 10,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Text(items[index].label),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ],
+          ),
         ),
       ),
     );

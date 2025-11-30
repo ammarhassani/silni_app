@@ -43,8 +43,8 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
-    final userId = user?.uid ?? '';
-    final displayName = user?.displayName ?? 'أنا';
+    final userId = user?.id ?? '';
+    final displayName = user?.userMetadata?['full_name'] ?? user?.email ?? 'أنا';
 
     final relativesAsync = ref.watch(relativesStreamProvider(userId));
 

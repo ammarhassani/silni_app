@@ -106,7 +106,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
       // Create relative
       final relative = Relative(
         id: '', // Will be auto-generated
-        userId: user.uid,
+        userId: user.id,
         fullName: _nameController.text.trim(),
         relationshipType: _selectedRelationship,
         gender: _selectedGender,

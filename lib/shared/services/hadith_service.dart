@@ -1,20 +1,17 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/config/supabase_config.dart';
 import '../models/hadith_model.dart';
 
 class HadithService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static const String _collection = 'hadith';
+  final SupabaseClient _supabase = SupabaseConfig.client;
+  static const String _table = 'hadith';
   static const String _lastIndexKey = 'last_hadith_index';
 
-  /// Get hadith collection reference
-  CollectionReference<Map<String, dynamic>> get _hadithRef =>
-      _firestore.collection(_collection);
-
   /// Default authentic hadith about family ties (صلة الرحم)
-  /// These are pre-loaded if Firestore collection is empty
+  /// These are used as fallback if database is unavailable
   static final List<Map<String, dynamic>> defaultHadith = [
     {
       'arabicText': 'قال رسول الله ﷺ: "مَن أَحَبَّ أَنْ يُبْسَطَ له في رِزْقِهِ، وَيُنْسَأَ له في أَثَرِهِ، فَلْيَصِلْ رَحِمَهُ"',
@@ -109,37 +106,34 @@ class HadithService {
   /// Get daily hadith (rotates on each call)
   Future<Hadith?> getDailyHadith() async {
     try {
-      // Add 10-second timeout to prevent infinite loading
-      final snapshot = await _hadithRef
-          .where('topic', isEqualTo: 'silat_rahim')
-          .where('isAuthentic', isEqualTo: true)
-          .orderBy('displayOrder')
-          .get()
+      // Query hadith from Supabase (already seeded during setup)
+      final response = await _supabase
+          .from(_table)
+          .select()
+          .eq('topic', 'silat_rahim')
+          .eq('is_authentic', true)
+          .order('display_order')
           .timeout(
             const Duration(seconds: 10),
             onTimeout: () {
               if (kDebugMode) {
                 print('⏱️ [HADITH] Query timed out, using fallback hadith');
               }
-              // Return fallback: use default hadith directly
-              throw TimeoutException('Firestore query timed out');
+              throw TimeoutException('Supabase query timed out');
             },
           );
 
-      if (snapshot.docs.isEmpty) {
-        // Seed default hadith if collection is empty
-        if (kDebugMode) {
-          print('📿 [HADITH] Collection empty, seeding defaults...');
-        }
-        await _seedDefaultHadith();
+      final hadithData = response as List;
 
-        // After seeding, return a default hadith from local cache instead of retrying
-        // This prevents infinite recursion if seeding fails
+      if (hadithData.isEmpty) {
+        if (kDebugMode) {
+          print('📿 [HADITH] Collection empty, using fallback hadith');
+        }
         return _getDefaultHadithFallback();
       }
 
-      final hadithList = snapshot.docs
-          .map((doc) => Hadith.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>))
+      final hadithList = hadithData
+          .map((json) => Hadith.fromJson(json))
           .toList();
 
       // Get the last shown index from SharedPreferences
@@ -161,19 +155,17 @@ class HadithService {
       if (kDebugMode) {
         print('⏱️ [HADITH] Timeout: $e - Using fallback hadith');
       }
-      // Return a default hadith from local cache
       return _getDefaultHadithFallback();
     } catch (e) {
       if (kDebugMode) {
         print('❌ [HADITH] Error getting daily hadith: $e');
         print('📿 [HADITH] Using fallback hadith');
       }
-      // Return a default hadith from local cache as fallback
       return _getDefaultHadithFallback();
     }
   }
 
-  /// Get a fallback hadith from local default data (no Firestore needed)
+  /// Get a fallback hadith from local default data (no database needed)
   Hadith? _getDefaultHadithFallback() {
     try {
       if (defaultHadith.isEmpty) return null;
@@ -188,7 +180,7 @@ class HadithService {
       return Hadith.fromMap({
         ...hadithData,
         'id': 'fallback_$index',
-        'createdAt': Timestamp.now(),
+        'createdAt': DateTime.now(),
       });
     } catch (e) {
       if (kDebugMode) {
@@ -198,46 +190,23 @@ class HadithService {
     }
   }
 
-  /// Seed default hadith into Firestore
-  Future<void> _seedDefaultHadith() async {
-    try {
-      if (kDebugMode) {
-        print('📿 [HADITH] Seeding default hadith collection...');
-      }
-
-      final batch = _firestore.batch();
-      for (final hadithData in defaultHadith) {
-        final docRef = _hadithRef.doc();
-        final hadith = {
-          ...hadithData,
-          'createdAt': Timestamp.now(),
-        };
-        batch.set(docRef, hadith);
-      }
-
-      await batch.commit();
-
-      if (kDebugMode) {
-        print('✅ [HADITH] Seeded ${defaultHadith.length} default hadith');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ [HADITH] Error seeding hadith: $e');
-      }
-    }
-  }
-
-  /// Get all hadith (for admin/management)
+  /// Get all hadith stream (for admin/management)
   Stream<List<Hadith>> getAllHadithStream() {
     try {
-      return _hadithRef
-          .where('topic', isEqualTo: 'silat_rahim')
-          .orderBy('displayOrder')
-          .snapshots()
-          .map((snapshot) {
-        return snapshot.docs
-            .map((doc) => Hadith.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>))
+      return _supabase
+          .from(_table)
+          .stream(primaryKey: ['id'])
+          .map((data) {
+        // Filter for silat_rahim topic and sort by display order
+        final filtered = data
+            .where((json) => json['topic'] == 'silat_rahim')
+            .map((json) => Hadith.fromJson(json))
             .toList();
+
+        // Sort by display order
+        filtered.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+
+        return filtered;
       });
     } catch (e) {
       if (kDebugMode) {
@@ -250,11 +219,18 @@ class HadithService {
   /// Add new hadith (for future admin functionality)
   Future<String> addHadith(Hadith hadith) async {
     try {
-      final docRef = await _hadithRef.add(hadith.toFirestore());
+      final response = await _supabase
+          .from(_table)
+          .insert(hadith.toJson())
+          .select('id')
+          .single();
+
+      final id = response['id'] as String;
+
       if (kDebugMode) {
-        print('✅ [HADITH] Added new hadith: ${docRef.id}');
+        print('✅ [HADITH] Added new hadith: $id');
       }
-      return docRef.id;
+      return id;
     } catch (e) {
       if (kDebugMode) {
         print('❌ [HADITH] Error adding hadith: $e');
@@ -266,8 +242,12 @@ class HadithService {
   /// Update hadith
   Future<void> updateHadith(String hadithId, Map<String, dynamic> updates) async {
     try {
-      updates['updatedAt'] = Timestamp.now();
-      await _hadithRef.doc(hadithId).update(updates);
+      // Note: updated_at is automatically set by database trigger
+      await _supabase
+          .from(_table)
+          .update(updates)
+          .eq('id', hadithId);
+
       if (kDebugMode) {
         print('✅ [HADITH] Updated hadith: $hadithId');
       }
@@ -282,7 +262,11 @@ class HadithService {
   /// Delete hadith
   Future<void> deleteHadith(String hadithId) async {
     try {
-      await _hadithRef.doc(hadithId).delete();
+      await _supabase
+          .from(_table)
+          .delete()
+          .eq('id', hadithId);
+
       if (kDebugMode) {
         print('✅ [HADITH] Deleted hadith: $hadithId');
       }

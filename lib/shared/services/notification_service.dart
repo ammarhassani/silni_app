@@ -1,10 +1,10 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import '../../core/config/supabase_config.dart';
 import '../../core/router/navigation_service.dart';
 import '../../core/router/app_routes.dart';
 import 'dart:async';
@@ -18,8 +18,7 @@ class NotificationService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final SupabaseClient _supabase = SupabaseConfig.client;
 
   String? _fcmToken;
   final StreamController<RemoteMessage> _messageStreamController =
@@ -173,21 +172,22 @@ class NotificationService {
     );
   }
 
-  /// Save FCM token to Firestore
+  /// Save FCM token to Supabase
   Future<void> _saveFcmToken(String token) async {
     try {
-      final user = _auth.currentUser;
+      final user = _supabase.auth.currentUser;
       if (user == null) return;
 
-      await _firestore.collection('fcmTokens').doc(user.uid).set({
+      // Upsert FCM token to Supabase (insert or update)
+      await _supabase.from('fcm_tokens').upsert({
+        'user_id': user.id,
         'token': token,
-        'userId': user.uid,
         'platform': kIsWeb ? 'web' : 'mobile',
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+        'updated_at': DateTime.now().toIso8601String(),
+      });
 
       if (kDebugMode) {
-        print('🔔 [NOTIFICATIONS] FCM token saved to Firestore');
+        print('🔔 [NOTIFICATIONS] FCM token saved to Supabase');
       }
     } catch (e) {
       if (kDebugMode) {

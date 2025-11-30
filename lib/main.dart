@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'core/config/firebase_config.dart';
+import 'core/config/firebase_config.dart'; // Still needed for FCM
+import 'core/config/supabase_config.dart'; // NEW: Supabase configuration
+import 'core/config/app_scroll_behavior.dart'; // Enable mouse drag scrolling for web
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
@@ -25,7 +27,10 @@ void main() async {
     debugPrint('⚠️ Could not load .env file: $e');
   }
 
-  // Initialize Firebase
+  // Initialize Supabase (primary backend)
+  await SupabaseConfig.initialize();
+
+  // Initialize Firebase (for FCM notifications only)
   await FirebaseConfig.initialize();
 
   // Run app
@@ -57,6 +62,7 @@ class SilniApp extends ConsumerWidget {
       themeMode: ThemeMode.light, // Always use light mode (theme colors change instead)
       themeAnimationDuration: const Duration(milliseconds: 400), // Smooth theme transitions
       themeAnimationCurve: Curves.easeInOut,
+      scrollBehavior: AppScrollBehavior(), // Enable mouse drag scrolling for web
       routerConfig: router,
       builder: (context, child) {
         return Directionality(

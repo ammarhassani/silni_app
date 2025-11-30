@@ -50,7 +50,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       print('👤 [SIGNUP] Name: ${_nameController.text.trim()}');
       print('📧 [SIGNUP] Email: ${_emailController.text.trim()}');
 
-      // Add timeout to prevent infinite hanging (increased to 60s for Firestore write)
+      // Add timeout to prevent infinite hanging
       final credential = await authService
           .signUpWithEmail(
             email: _emailController.text.trim(),
@@ -58,14 +58,17 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             fullName: _nameController.text.trim(),
           )
           .timeout(
-            const Duration(seconds: 60),
+            const Duration(seconds: 15),
             onTimeout: () {
-              throw Exception('Sign up timeout - Firebase took too long to respond');
+              throw Exception(
+                'Signup is taking longer than expected. This may indicate a '
+                'network issue or service problem. Please try again.'
+              );
             },
           );
 
       print('✅ [SIGNUP] Firebase user created successfully!');
-      print('👤 [SIGNUP] User ID: ${credential.user?.uid}');
+      print('👤 [SIGNUP] User ID: ${credential.user?.id}');
       print('📧 [SIGNUP] Email: ${credential.user?.email}');
 
       if (!mounted) {

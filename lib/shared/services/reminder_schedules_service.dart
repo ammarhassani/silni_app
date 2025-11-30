@@ -1,10 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/config/supabase_config.dart';
 import '../models/reminder_schedule_model.dart';
 
 class ReminderSchedulesService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final String _collection = 'reminder_schedules';
+  final SupabaseClient _supabase = SupabaseConfig.client;
+  static const String _table = 'reminder_schedules';
 
   /// Create a new reminder schedule
   Future<String> createSchedule(Map<String, dynamic> scheduleData) async {
@@ -13,13 +14,19 @@ class ReminderSchedulesService {
         print('🔔 [SCHEDULES] Creating schedule...');
       }
 
-      final docRef = await _firestore.collection(_collection).add(scheduleData);
+      final response = await _supabase
+          .from(_table)
+          .insert(scheduleData)
+          .select('id')
+          .single();
+
+      final id = response['id'] as String;
 
       if (kDebugMode) {
-        print('✅ [SCHEDULES] Schedule created: ${docRef.id}');
+        print('✅ [SCHEDULES] Schedule created: $id');
       }
 
-      return docRef.id;
+      return id;
     } catch (e) {
       if (kDebugMode) {
         print('❌ [SCHEDULES] Create error: $e');
@@ -35,21 +42,24 @@ class ReminderSchedulesService {
         print('📡 [SCHEDULES] Streaming schedules for user: $userId');
       }
 
-      return _firestore
-          .collection(_collection)
-          .where('userId', isEqualTo: userId)
-          .orderBy('createdAt', descending: true)
-          .snapshots()
-          .map((snapshot) {
-        final schedules = snapshot.docs
-            .map((doc) => ReminderSchedule.fromFirestore(doc))
+      return _supabase
+          .from(_table)
+          .stream(primaryKey: ['id'])
+          .map((data) {
+        // Filter for this user's schedules
+        final filtered = data
+            .where((json) => json['user_id'] == userId)
+            .map((json) => ReminderSchedule.fromJson(json))
             .toList();
 
+        // Sort by created_at descending (most recent first)
+        filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
         if (kDebugMode) {
-          print('📋 [SCHEDULES] Loaded ${schedules.length} schedules');
+          print('📋 [SCHEDULES] Loaded ${filtered.length} schedules');
         }
 
-        return schedules;
+        return filtered;
       });
     } catch (e) {
       if (kDebugMode) {
@@ -66,16 +76,22 @@ class ReminderSchedulesService {
         print('📡 [SCHEDULES] Streaming active schedules for user: $userId');
       }
 
-      return _firestore
-          .collection(_collection)
-          .where('userId', isEqualTo: userId)
-          .where('isActive', isEqualTo: true)
-          .orderBy('createdAt', descending: true)
-          .snapshots()
-          .map((snapshot) {
-        return snapshot.docs
-            .map((doc) => ReminderSchedule.fromFirestore(doc))
+      return _supabase
+          .from(_table)
+          .stream(primaryKey: ['id'])
+          .map((data) {
+        // Filter for this user's active schedules
+        final filtered = data
+            .where((json) =>
+                json['user_id'] == userId &&
+                json['is_active'] == true)
+            .map((json) => ReminderSchedule.fromJson(json))
             .toList();
+
+        // Sort by created_at descending (most recent first)
+        filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+        return filtered;
       });
     } catch (e) {
       if (kDebugMode) {
@@ -92,16 +108,20 @@ class ReminderSchedulesService {
         print('🔍 [SCHEDULES] Getting schedule: $scheduleId');
       }
 
-      final doc = await _firestore.collection(_collection).doc(scheduleId).get();
+      final response = await _supabase
+          .from(_table)
+          .select()
+          .eq('id', scheduleId)
+          .maybeSingle();
 
-      if (!doc.exists) {
+      if (response == null) {
         if (kDebugMode) {
           print('⚠️ [SCHEDULES] Schedule not found: $scheduleId');
         }
         return null;
       }
 
-      return ReminderSchedule.fromFirestore(doc);
+      return ReminderSchedule.fromJson(response);
     } catch (e) {
       if (kDebugMode) {
         print('❌ [SCHEDULES] Get error: $e');
@@ -117,10 +137,11 @@ class ReminderSchedulesService {
         print('✏️ [SCHEDULES] Updating schedule: $scheduleId');
       }
 
-      // Add updated timestamp
-      data['updatedAt'] = Timestamp.now();
-
-      await _firestore.collection(_collection).doc(scheduleId).update(data);
+      // Note: updated_at is automatically set by database trigger
+      await _supabase
+          .from(_table)
+          .update(data)
+          .eq('id', scheduleId);
 
       if (kDebugMode) {
         print('✅ [SCHEDULES] Schedule updated successfully');
@@ -140,7 +161,10 @@ class ReminderSchedulesService {
         print('🗑️ [SCHEDULES] Deleting schedule: $scheduleId');
       }
 
-      await _firestore.collection(_collection).doc(scheduleId).delete();
+      await _supabase
+          .from(_table)
+          .delete()
+          .eq('id', scheduleId);
 
       if (kDebugMode) {
         print('✅ [SCHEDULES] Schedule deleted successfully');
@@ -160,7 +184,7 @@ class ReminderSchedulesService {
         print('🔄 [SCHEDULES] Toggling schedule status: $scheduleId to $isActive');
       }
 
-      await updateSchedule(scheduleId, {'isActive': isActive});
+      await updateSchedule(scheduleId, {'is_active': isActive});
     } catch (e) {
       if (kDebugMode) {
         print('❌ [SCHEDULES] Toggle error: $e');
@@ -183,7 +207,7 @@ class ReminderSchedulesService {
 
       final updatedRelativeIds = [...schedule.relativeIds, ...relativeIds];
 
-      await updateSchedule(scheduleId, {'relativeIds': updatedRelativeIds});
+      await updateSchedule(scheduleId, {'relative_ids': updatedRelativeIds});
 
       if (kDebugMode) {
         print('✅ [SCHEDULES] Added ${relativeIds.length} relatives');
@@ -210,7 +234,7 @@ class ReminderSchedulesService {
 
       final updatedRelativeIds = schedule.relativeIds.where((id) => id != relativeId).toList();
 
-      await updateSchedule(scheduleId, {'relativeIds': updatedRelativeIds});
+      await updateSchedule(scheduleId, {'relative_ids': updatedRelativeIds});
 
       if (kDebugMode) {
         print('✅ [SCHEDULES] Relative removed');
@@ -230,14 +254,14 @@ class ReminderSchedulesService {
         print('📅 [SCHEDULES] Getting today\'s schedules for user: $userId');
       }
 
-      final snapshot = await _firestore
-          .collection(_collection)
-          .where('userId', isEqualTo: userId)
-          .where('isActive', isEqualTo: true)
-          .get();
+      final response = await _supabase
+          .from(_table)
+          .select()
+          .eq('user_id', userId)
+          .eq('is_active', true);
 
-      final allSchedules = snapshot.docs
-          .map((doc) => ReminderSchedule.fromFirestore(doc))
+      final allSchedules = (response as List)
+          .map((json) => ReminderSchedule.fromJson(json))
           .toList();
 
       // Filter schedules that should fire today
@@ -268,16 +292,22 @@ class ReminderSchedulesService {
         print('📡 [SCHEDULES] Streaming $frequency schedules for user: $userId');
       }
 
-      return _firestore
-          .collection(_collection)
-          .where('userId', isEqualTo: userId)
-          .where('frequency', isEqualTo: frequency)
-          .orderBy('createdAt', descending: true)
-          .snapshots()
-          .map((snapshot) {
-        return snapshot.docs
-            .map((doc) => ReminderSchedule.fromFirestore(doc))
+      return _supabase
+          .from(_table)
+          .stream(primaryKey: ['id'])
+          .map((data) {
+        // Filter for this user's schedules with specified frequency
+        final filtered = data
+            .where((json) =>
+                json['user_id'] == userId &&
+                json['frequency'] == frequency)
+            .map((json) => ReminderSchedule.fromJson(json))
             .toList();
+
+        // Sort by created_at descending (most recent first)
+        filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+        return filtered;
       });
     } catch (e) {
       if (kDebugMode) {

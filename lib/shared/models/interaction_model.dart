@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 /// Types of interactions with relatives
 enum InteractionType {
   call('call', 'اتصال', '📞'),
@@ -61,47 +59,51 @@ class Interaction {
     this.updatedAt,
   });
 
-  /// Create from Firestore document
-  factory Interaction.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data()!;
+  /// Create from Supabase JSON
+  factory Interaction.fromJson(Map<String, dynamic> json) {
     return Interaction(
-      id: doc.id,
-      userId: data['userId'] as String,
-      relativeId: data['relativeId'] as String,
-      type: InteractionType.fromString(data['type'] as String),
-      date: (data['date'] as Timestamp).toDate(),
-      duration: data['duration'] as int?,
-      location: data['location'] as String?,
-      notes: data['notes'] as String?,
-      mood: data['mood'] as String?,
-      photoUrls: List<String>.from(data['photoUrls'] ?? []),
-      audioNoteUrl: data['audioNoteUrl'] as String?,
-      tags: List<String>.from(data['tags'] ?? []),
-      rating: data['rating'] as int?,
-      isRecurring: data['isRecurring'] as bool? ?? false,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      relativeId: json['relative_id'] as String,
+      type: InteractionType.fromString(json['interaction_type'] as String),
+      date: DateTime.parse(json['interaction_date'] as String),
+      duration: json['duration'] as int?,
+      location: json['location'] as String?,
+      notes: json['notes'] as String?,
+      mood: json['mood'] as String?,
+      photoUrls: json['photo_urls'] != null
+          ? List<String>.from(json['photo_urls'] as List)
+          : [],
+      audioNoteUrl: json['audio_note_url'] as String?,
+      tags: json['tags'] != null
+          ? List<String>.from(json['tags'] as List)
+          : [],
+      rating: json['rating'] as int?,
+      isRecurring: json['is_recurring'] as bool? ?? false,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : null,
     );
   }
 
-  /// Convert to Firestore document
-  Map<String, dynamic> toFirestore() {
+  /// Convert to Supabase JSON
+  Map<String, dynamic> toJson() {
     return {
-      'userId': userId,
-      'relativeId': relativeId,
-      'type': type.value,
-      'date': Timestamp.fromDate(date),
+      'user_id': userId,
+      'relative_id': relativeId,
+      'interaction_type': type.value,
+      'interaction_date': date.toIso8601String(),
       'duration': duration,
       'location': location,
       'notes': notes,
       'mood': mood,
-      'photoUrls': photoUrls,
-      'audioNoteUrl': audioNoteUrl,
+      'photo_urls': photoUrls,
+      'audio_note_url': audioNoteUrl,
       'tags': tags,
       'rating': rating,
-      'isRecurring': isRecurring,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+      'is_recurring': isRecurring,
+      // Don't include id, created_at, updated_at - managed by database
     };
   }
 

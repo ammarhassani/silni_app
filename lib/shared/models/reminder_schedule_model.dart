@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 /// Reminder frequency types
 enum ReminderFrequency {
   daily('daily', 'يومي', '📅'),
@@ -48,38 +46,39 @@ class ReminderSchedule {
     this.updatedAt,
   });
 
-  /// Create from Firestore document
-  factory ReminderSchedule.fromFirestore(
-      DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data()!;
+  /// Create from Supabase JSON
+  factory ReminderSchedule.fromJson(Map<String, dynamic> json) {
     return ReminderSchedule(
-      id: doc.id,
-      userId: data['userId'] as String,
-      frequency: ReminderFrequency.fromString(data['frequency'] as String),
-      relativeIds: List<String>.from(data['relativeIds'] ?? []),
-      time: data['time'] as String,
-      isActive: data['isActive'] as bool? ?? true,
-      customDays: data['customDays'] != null
-          ? List<int>.from(data['customDays'])
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      frequency: ReminderFrequency.fromString(json['frequency'] as String),
+      relativeIds: json['relative_ids'] != null
+          ? List<String>.from(json['relative_ids'] as List)
+          : [],
+      time: json['reminder_time'] as String,
+      isActive: json['is_active'] as bool? ?? true,
+      customDays: json['custom_days'] != null
+          ? List<int>.from(json['custom_days'] as List)
           : null,
-      dayOfMonth: data['dayOfMonth'] as int?,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      dayOfMonth: json['day_of_month'] as int?,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : null,
     );
   }
 
-  /// Convert to Firestore document
-  Map<String, dynamic> toFirestore() {
+  /// Convert to Supabase JSON
+  Map<String, dynamic> toJson() {
     return {
-      'userId': userId,
+      'user_id': userId,
       'frequency': frequency.value,
-      'relativeIds': relativeIds,
-      'time': time,
-      'isActive': isActive,
-      'customDays': customDays,
-      'dayOfMonth': dayOfMonth,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+      'relative_ids': relativeIds,
+      'reminder_time': time,
+      'is_active': isActive,
+      'custom_days': customDays,
+      'day_of_month': dayOfMonth,
+      // Don't include id, created_at, updated_at - managed by database
     };
   }
 
