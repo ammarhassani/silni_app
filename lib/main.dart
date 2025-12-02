@@ -2,12 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'core/config/firebase_config.dart'; // Still needed for FCM
 import 'core/config/supabase_config.dart'; // NEW: Supabase configuration
 import 'core/config/app_scroll_behavior.dart'; // Enable mouse drag scrolling for web
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
+import 'shared/widgets/floating_points_overlay.dart';
+
+// Firebase Analytics instance
+final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,13 +24,14 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Load environment variables (gracefully handle if not available on web)
+  // Load environment variables
   try {
     await dotenv.load(fileName: '.env');
+    debugPrint('✅ Environment variables loaded successfully');
   } catch (e) {
-    // .env file not available (common in web builds)
-    // Environment variables should be set through build configuration
-    debugPrint('⚠️ Could not load .env file: $e');
+    debugPrint('❌ CRITICAL: Could not load .env file: $e');
+    debugPrint('⚠️ App will continue but Supabase, Firebase, and Sentry may not function properly');
+    debugPrint('💡 Make sure .env file exists and is listed in pubspec.yaml assets');
   }
 
   // Initialize Supabase (primary backend)
@@ -33,10 +40,27 @@ void main() async {
   // Initialize Firebase (for FCM notifications only)
   await FirebaseConfig.initialize();
 
-  // Run app
-  runApp(
-    const ProviderScope(
-      child: SilniApp(),
+  // Initialize Sentry and run app
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = dotenv.env['SENTRY_DSN'] ?? '';
+      options.tracesSampleRate = 1.0; // Capture 100% of transactions in debug/staging
+      options.enableAutoPerformanceTracing = true;
+      options.attachThreads = true;
+      options.attachStacktrace = true;
+      options.environment = dotenv.env['ENVIRONMENT'] ?? 'development';
+      // Only report crashes in production - skip sending in development
+      if (dotenv.env['ENVIRONMENT'] != 'production') {
+        options.beforeSend = (event, hint) {
+          debugPrint('🐛 [Sentry] Event captured (dev mode - not sent)');
+          return null; // Don't send in development/staging
+        };
+      }
+    },
+    appRunner: () => runApp(
+      const ProviderScope(
+        child: SilniApp(),
+      ),
     ),
   );
 }
@@ -67,7 +91,10 @@ class SilniApp extends ConsumerWidget {
       builder: (context, child) {
         return Directionality(
           textDirection: TextDirection.rtl, // Arabic RTL
-          child: child!,
+          child: FloatingPointsHost(
+            key: floatingPointsHostKey,
+            child: child!,
+          ),
         );
       },
     );

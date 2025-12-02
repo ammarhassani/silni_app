@@ -53,6 +53,13 @@ google-services.json
 GoogleService-Info.plist
 firebase_options.dart
 
+# Android signing keys (CRITICAL - contains release signing credentials!)
+/android/key.properties
+/android/*.jks
+/android/*.keystore
+/android/app/*.jks
+/android/app/*.keystore
+
 # IDE
 .vscode/
 .idea/

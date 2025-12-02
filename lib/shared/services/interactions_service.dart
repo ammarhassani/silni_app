@@ -1,11 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
+import '../../core/services/gamification_service.dart';
 import '../models/interaction_model.dart';
 
 class InteractionsService {
   final SupabaseClient _supabase = SupabaseConfig.client;
+  final GamificationService? _gamificationService;
   static const String _table = 'interactions';
+
+  InteractionsService({GamificationService? gamificationService})
+      : _gamificationService = gamificationService;
 
   /// Create a new interaction
   /// Uses RPC function to atomically create interaction and update relative
@@ -15,22 +20,7 @@ class InteractionsService {
         print('📝 [INTERACTIONS] Creating ${interaction.type.arabicName} interaction');
       }
 
-      // Prepare interaction data for the RPC function
-      final interactionData = {
-        'user_id': interaction.userId,
-        'interaction_type': interaction.type.value,
-        'notes': interaction.notes,
-        'interaction_date': interaction.date.toIso8601String(),
-      };
-
-      // Use RPC function to atomically create interaction and update relative
-      await _supabase.rpc('record_interaction_and_update_relative', params: {
-        'p_relative_id': interaction.relativeId,
-        'p_interaction_data': interactionData,
-      });
-
-      // Since RPC doesn't return the ID, we need to insert directly instead
-      // Let's modify this to use direct insert and then update the relative
+      // Insert interaction directly
       final response = await _supabase
           .from(_table)
           .insert(interaction.toJson())
@@ -39,15 +29,33 @@ class InteractionsService {
 
       final id = response['id'] as String;
 
-      // Update the relative's interaction count separately
-      // (The RPC would be better but needs the interaction ID)
+      // Update the relative's interaction count and last contact date
       await _supabase.rpc('record_interaction_and_update_relative', params: {
         'p_relative_id': interaction.relativeId,
-        'p_interaction_data': null, // null means only update relative
+        'p_user_id': interaction.userId,
       });
 
       if (kDebugMode) {
         print('✅ [INTERACTIONS] Created interaction with ID: $id');
+      }
+
+      // Process gamification (points, streaks, badges, levels)
+      if (_gamificationService != null) {
+        try {
+          final gamificationResult = await _gamificationService.processInteractionGamification(
+            userId: interaction.userId,
+            interaction: interaction.copyWith(id: id),
+          );
+
+          if (kDebugMode) {
+            print('🎮 [INTERACTIONS] Gamification processed: $gamificationResult');
+          }
+        } catch (e) {
+          // Don't fail interaction creation if gamification fails
+          if (kDebugMode) {
+            print('⚠️ [INTERACTIONS] Gamification processing failed (non-critical): $e');
+          }
+        }
       }
 
       return id;
@@ -122,7 +130,7 @@ class InteractionsService {
           .from(_table)
           .select()
           .eq('user_id', userId)
-          .order('interaction_date', ascending: false)
+          .order('date', ascending: false)
           .limit(limit);
 
       return (response as List)
@@ -150,7 +158,8 @@ class InteractionsService {
       final filtered = data
           .where((json) {
             if (json['user_id'] != userId) return false;
-            final date = DateTime.parse(json['interaction_date'] as String);
+            // Convert to local time for accurate comparison
+            final date = DateTime.parse(json['date'] as String).toLocal();
             return date.isAfter(startOfDay) && date.isBefore(endOfDay);
           })
           .map((json) => Interaction.fromJson(json))
@@ -170,8 +179,8 @@ class InteractionsService {
           .from(_table)
           .select('id')
           .eq('user_id', userId)
-          .gte('interaction_date', startDate.toIso8601String())
-          .lte('interaction_date', endDate.toIso8601String());
+          .gte('date', startDate.toIso8601String())
+          .lte('date', endDate.toIso8601String());
 
       return (response as List).length;
     } catch (e) {
@@ -264,8 +273,8 @@ class InteractionsService {
           .from(_table)
           .select('id')
           .eq('user_id', userId)
-          .gte('interaction_date', startOfDay.toIso8601String())
-          .lt('interaction_date', endOfDay.toIso8601String())
+          .gte('date', startOfDay.toIso8601String())
+          .lt('date', endOfDay.toIso8601String())
           .limit(1);
 
       return (response as List).isNotEmpty;

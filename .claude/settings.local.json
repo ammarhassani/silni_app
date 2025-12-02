@@ -18,7 +18,11 @@
       "Bash(find:*)",
       "Bash(supabase --version:*)",
       "Bash(dir /s /b *.sql 2)",
-      "Bash(nul)"
+      "Bash(nul)",
+      "Bash(tree:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(tee:*)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": []

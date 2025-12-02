@@ -9,6 +9,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../core/providers/analytics_provider.dart';
 import '../../../shared/services/auth_service.dart';
 import '../providers/auth_provider.dart';
 
@@ -70,6 +71,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       print('✅ [SIGNUP] Firebase user created successfully!');
       print('👤 [SIGNUP] User ID: ${credential.user?.id}');
       print('📧 [SIGNUP] Email: ${credential.user?.email}');
+
+      // Track signup event
+      final analytics = ref.read(analyticsServiceProvider);
+      await analytics.logSignUp('email');
 
       if (!mounted) {
         print('⚠️ [SIGNUP] Widget unmounted, aborting navigation');

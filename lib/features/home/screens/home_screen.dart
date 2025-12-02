@@ -10,17 +10,25 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../../core/models/gamification_event.dart';
+import '../../../core/providers/gamification_events_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/widgets/avatar_carousel.dart';
+import '../../../shared/widgets/gamification_stats_card.dart';
+import '../../../shared/widgets/floating_points_overlay.dart';
+import '../../../shared/widgets/level_up_modal.dart';
+import '../../../shared/widgets/badge_unlock_modal.dart';
+import '../../../shared/widgets/streak_milestone_modal.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../../shared/models/hadith_model.dart';
 import '../../../shared/services/relatives_service.dart';
 import '../../../shared/services/interactions_service.dart';
 import '../../../shared/services/hadith_service.dart';
+import '../../../shared/providers/interactions_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 
 // Providers for relatives and interactions
@@ -29,9 +37,7 @@ final relativesServiceProvider = Provider((ref) {
   return RelativesService();
 });
 
-final interactionsServiceProvider = Provider((ref) {
-  return InteractionsService();
-});
+// Note: interactionsServiceProvider is now imported from shared/providers/interactions_provider.dart
 
 final hadithServiceProvider = Provider((ref) {
   return HadithService();
@@ -61,16 +67,19 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _floatingController;
   late ConfettiController _confettiController;
   int _currentIndex = 0;
   Hadith? _dailyHadith;
   bool _isLoadingHadith = true;
+  final List<GamificationEvent> _pendingEvents = [];
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
     _floatingController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
@@ -81,6 +90,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
 
     _loadDailyHadith();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // When app resumes, process pending events
+    if (state == AppLifecycleState.resumed && _pendingEvents.isNotEmpty) {
+      // Delay slightly to ensure UI is ready
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          for (final event in _pendingEvents) {
+            _processGamificationEvent(event);
+          }
+          _pendingEvents.clear();
+        }
+      });
+    }
   }
 
   Future<void> _loadDailyHadith() async {
@@ -96,9 +123,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _floatingController.dispose();
     _confettiController.dispose();
     super.dispose();
+  }
+
+  /// Process a single gamification event
+  void _processGamificationEvent(GamificationEvent event) {
+    switch (event.type) {
+      case GamificationEventType.pointsEarned:
+        // Show floating points animation
+        context.showFloatingPoints(points: event.points ?? 0);
+        break;
+
+      case GamificationEventType.levelUp:
+        // Trigger confetti for level up
+        _confettiController.play();
+        // Show level up celebration modal
+        if (event.newLevel != null) {
+          LevelUpModal.show(
+            context,
+            oldLevel: event.oldLevel ?? event.newLevel! - 1,
+            newLevel: event.newLevel!,
+            currentXP: event.currentXP ?? 0,
+            xpToNextLevel: event.xpToNextLevel ?? 0,
+          );
+        }
+        break;
+
+      case GamificationEventType.streakMilestone:
+        // Trigger confetti for streak milestones
+        _confettiController.play();
+        // Show streak milestone celebration modal
+        if (event.streak != null) {
+          StreakMilestoneModal.show(
+            context,
+            streak: event.streak!,
+          );
+        }
+        break;
+
+      case GamificationEventType.badgeUnlocked:
+        // Trigger confetti for badge unlocks
+        _confettiController.play();
+        // Show badge unlock celebration modal
+        if (event.badgeId != null) {
+          BadgeUnlockModal.show(
+            context,
+            badgeId: event.badgeId!,
+            badgeName: event.badgeName ?? 'وسام جديد',
+            badgeDescription: event.badgeDescription ?? 'أحسنت!',
+          );
+        }
+        break;
+
+      case GamificationEventType.streakIncreased:
+        // No special UI for regular streak increases
+        break;
+    }
   }
 
   void _onNavTapped(int index) {
@@ -112,9 +195,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         context.push(AppRoutes.relatives);
         break;
       case 2:
-        context.push(AppRoutes.statistics);
+        context.push(AppRoutes.achievements);
         break;
       case 3:
+        context.push(AppRoutes.statistics);
+        break;
+      case 4:
         context.push(AppRoutes.settings);
         break;
     }
@@ -136,6 +222,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final displayName = user.userMetadata?['full_name'] as String? ?? user.email ?? 'المستخدم';
     final userId = user.id;
     final themeColors = ref.watch(themeColorsProvider);
+
+    // Listen to gamification events for visual feedback
+    ref.listen<AsyncValue<GamificationEvent>>(
+      gamificationEventsStreamProvider,
+      (previous, next) {
+        next.whenData((event) {
+          // Only process events for this user
+          if (event.userId != userId) return;
+
+          // Check if app is in foreground
+          final appLifecycleState = WidgetsBinding.instance.lifecycleState;
+          final isInForeground = appLifecycleState == null ||
+                                 appLifecycleState == AppLifecycleState.resumed;
+
+          if (isInForeground) {
+            // Process immediately if app is visible
+            _processGamificationEvent(event);
+          } else {
+            // Store for later if app is in background
+            _pendingEvents.add(event);
+          }
+        });
+      },
+    );
 
     final relativesAsync = ref.watch(relativesStreamProvider(userId));
     final todayInteractionsAsync = ref.watch(todayInteractionsStreamProvider(userId));
@@ -194,6 +304,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       data: (relatives) => _buildFamilyCircles(relatives),
                       loading: () => const FamilyCirclesSkeleton(),
                       error: (_, __) => const SizedBox.shrink(),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+
+                    // Gamification Stats
+                    GamificationStatsCard(
+                      userId: userId,
+                      compact: true,
                     ),
                     const SizedBox(height: AppSpacing.xl),
 
@@ -257,6 +374,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -297,6 +416,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             fontStyle: FontStyle.italic,
             height: 1.6,
           ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     )
@@ -530,6 +651,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
             Text(
@@ -537,6 +660,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               style: AppTypography.bodySmall.copyWith(
                 color: Colors.white.withOpacity(0.8),
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -709,6 +834,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   style: AppTypography.titleSmall.copyWith(
                     color: Colors.white,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -716,6 +843,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   style: AppTypography.bodySmall.copyWith(
                     color: Colors.white.withOpacity(0.7),
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -838,6 +967,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   style: AppTypography.titleMedium.copyWith(
                     color: Colors.white,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -849,6 +980,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   style: AppTypography.bodySmall.copyWith(
                     color: Colors.white.withOpacity(0.7),
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -870,6 +1003,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final items = [
       (icon: Icons.home_rounded, label: 'الرئيسية'),
       (icon: Icons.people_rounded, label: 'الأقارب'),
+      (icon: Icons.emoji_events_rounded, label: 'الإنجازات'),
       (icon: Icons.bar_chart_rounded, label: 'الإحصائيات'),
       (icon: Icons.settings_rounded, label: 'الإعدادات'),
     ];
@@ -908,112 +1042,123 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         borderRadius: BorderRadius.circular(30),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-          child: Stack(
-            children: [
-              // Animated glow indicator
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOutCubic,
-                left: _currentIndex * (MediaQuery.of(context).size.width / 4) - 16,
-                top: 8,
-                child: Container(
-                  width: (MediaQuery.of(context).size.width / 4),
-                  height: 60,
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      colors: [
-                        themeColors.primary.withOpacity(0.4),
-                        themeColors.primary.withOpacity(0.0),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0.0, end: 1.0),
-                    duration: const Duration(seconds: 2),
-                    builder: (context, value, child) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: themeColors.primary.withOpacity(0.3 * value),
-                              blurRadius: 20,
-                              spreadRadius: 5,
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    onEnd: () {
-                      if (mounted) setState(() {});
-                    },
-                  ),
-                ),
-              ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final itemWidth = constraints.maxWidth / items.length;
+              final indicatorWidth = itemWidth * 0.8;
 
-              // Nav items
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: List.generate(items.length, (index) {
-                  final isSelected = index == _currentIndex;
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () => _onNavTapped(index),
-                      behavior: HitTestBehavior.opaque,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOutCubic,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            AnimatedScale(
-                              scale: isSelected ? 1.2 : 1.0,
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeOutCubic,
-                              child: Icon(
-                                items[index].icon,
-                                color: isSelected
-                                    ? Colors.white
-                                    : Colors.white.withOpacity(0.5),
-                                size: 26,
-                                shadows: isSelected
-                                    ? [
-                                        Shadow(
-                                          color: themeColors.primary,
-                                          blurRadius: 20,
-                                        ),
-                                      ]
-                                    : null,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            AnimatedDefaultTextStyle(
-                              duration: const Duration(milliseconds: 300),
-                              style: AppTypography.labelSmall.copyWith(
-                                color: isSelected
-                                    ? Colors.white
-                                    : Colors.white.withOpacity(0.5),
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                shadows: isSelected
-                                    ? [
-                                        Shadow(
-                                          color: themeColors.primary,
-                                          blurRadius: 10,
-                                        ),
-                                      ]
-                                    : null,
-                              ),
-                              child: Text(items[index].label),
-                            ),
+              return Stack(
+                children: [
+                  // Animated glow indicator
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOutCubic,
+                    left: _currentIndex * itemWidth + (itemWidth - indicatorWidth) / 2,
+                    top: 8,
+                    child: Container(
+                      width: indicatorWidth,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          colors: [
+                            themeColors.primary.withOpacity(0.4),
+                            themeColors.primary.withOpacity(0.0),
                           ],
                         ),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        duration: const Duration(seconds: 2),
+                        builder: (context, value, child) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: themeColors.primary.withOpacity(0.3 * value),
+                                  blurRadius: 20,
+                                  spreadRadius: 5,
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        onEnd: () {
+                          if (mounted) setState(() {});
+                        },
                       ),
                     ),
-                  );
-                }),
-              ),
-            ],
+                  ),
+
+                  // Nav items
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: List.generate(items.length, (index) {
+                      final isSelected = index == _currentIndex;
+                      return Expanded(
+                        child: GestureDetector(
+                          onTap: () => _onNavTapped(index),
+                          behavior: HitTestBehavior.opaque,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeOutCubic,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                AnimatedScale(
+                                  scale: isSelected ? 1.2 : 1.0,
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeOutCubic,
+                                  child: Icon(
+                                    items[index].icon,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.white.withOpacity(0.5),
+                                    size: 26,
+                                    shadows: isSelected
+                                        ? [
+                                            Shadow(
+                                              color: themeColors.primary,
+                                              blurRadius: 20,
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                AnimatedDefaultTextStyle(
+                                  duration: const Duration(milliseconds: 300),
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.white.withOpacity(0.5),
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                    shadows: isSelected
+                                        ? [
+                                            Shadow(
+                                              color: themeColors.primary,
+                                              blurRadius: 10,
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  child: Text(
+                                    items[index].label,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),

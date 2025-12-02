@@ -1,0 +1,63 @@
+# ========================================
+# Android Release Signing Configuration
+# ========================================
+#
+# INSTRUCTIONS:
+# 1. Copy this file to key.properties
+# 2. Fill in your actual keystore details
+# 3. NEVER commit key.properties to git
+#
+# ========================================
+
+# Path to your keystore file
+storeFile=../silni-release-key.jks
+
+# Keystore password
+storePassword=your_keystore_password_here
+
+# Key alias
+keyAlias=silni-key-alias
+
+# Key password
+keyPassword=your_key_password_here
+
+# ========================================
+# HOW TO CREATE A KEYSTORE:
+# ========================================
+#
+# Run this command in the android/ directory:
+#
+# keytool -genkey -v -keystore silni-release-key.jks \
+#   -keyalg RSA -keysize 2048 -validity 10000 \
+#   -alias silni-key-alias
+#
+# You will be prompted for:
+# - Keystore password (REMEMBER THIS!)
+# - Key password (REMEMBER THIS!)
+# - Your name/organization details
+#
+# IMPORTANT:
+# - Store the keystore file securely (backup to secure location)
+# - Store passwords in password manager
+# - If you lose the keystore, you can't update your app!
+#
+# ========================================
+# SECURITY NOTES:
+# ========================================
+#
+# 1. The keystore file (*.jks) should be:
+#    - Stored securely (encrypted backup)
+#    - NEVER committed to git
+#    - Backed up in multiple secure locations
+#
+# 2. The key.properties file should be:
+#    - In .gitignore
+#    - NOT shared publicly
+#    - Used only for local builds
+#
+# 3. For CI/CD pipelines:
+#    - Store keystore as encrypted secret
+#    - Use environment variables for passwords
+#    - Never log passwords in build output
+#
+# ========================================
