@@ -17,6 +17,10 @@ import '../../features/settings/screens/settings_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/contacts/screens/contact_import_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
+import '../../features/gamification/screens/gaming_center_screen.dart';
+import '../../features/gamification/screens/badges_screen.dart';
+import '../../features/gamification/screens/detailed_stats_screen.dart';
+import '../../features/gamification/screens/leaderboard_screen.dart';
 import 'app_routes.dart';
 import 'navigation_service.dart';
 
@@ -123,6 +127,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
 
+      // Achievements Route
+      GoRoute(
+        path: AppRoutes.achievements,
+        name: 'achievements',
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          context,
+          state,
+          const GamingCenterScreen(),
+        ),
+      ),
+
       // Reminders Routes
       GoRoute(
         path: AppRoutes.reminders,
@@ -197,6 +212,35 @@ final routerProvider = Provider<GoRouter>((ref) {
           context,
           state,
           const NotificationsScreen(),
+        ),
+      ),
+
+      // Gamification Routes
+      GoRoute(
+        path: AppRoutes.badges,
+        name: 'badges',
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          context,
+          state,
+          const BadgesScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.detailedStats,
+        name: 'detailedStats',
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          context,
+          state,
+          const DetailedStatsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.leaderboard,
+        name: 'leaderboard',
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          context,
+          state,
+          const LeaderboardScreen(),
         ),
       ),
     ],

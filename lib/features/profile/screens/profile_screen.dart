@@ -12,15 +12,15 @@ import '../../../core/theme/app_themes.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../shared/widgets/gamification_stats_card.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../../shared/services/relatives_service.dart';
-import '../../../shared/services/interactions_service.dart';
+import '../../../shared/providers/interactions_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 
 // Providers
 final relativesServiceProvider = Provider((ref) => RelativesService());
-final interactionsServiceProvider = Provider((ref) => InteractionsService());
 
 final userRelativesProvider = StreamProvider.family<List<Relative>, String>((ref, userId) {
   final service = ref.watch(relativesServiceProvider);
@@ -77,6 +77,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   child: _buildUserInfoCard(user, themeColors),
                 ),
               ),
+
+              // Statistics
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: Text(
+                    '📊 إحصائياتي',
+                    style: AppTypography.headlineMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
+
+              // Gamification Stats
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: GamificationStatsCard(
+                    userId: userId,
+                    compact: false,
+                  ),
+                ),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
 
               // Statistics
               SliverToBoxAdapter(
@@ -224,8 +253,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (_isEditingName)
-                SizedBox(
-                  width: 200,
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minWidth: 120,
+                    maxWidth: MediaQuery.of(context).size.width * 0.6,
+                  ),
                   child: TextField(
                     controller: _nameController,
                     autofocus: true,
@@ -254,6 +286,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               const SizedBox(width: AppSpacing.sm),
               IconButton(
@@ -341,7 +375,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _buildInfoRow(
             icon: Icons.verified_user_outlined,
             label: 'حالة التحقق',
-            value: user?.emailVerified == true ? 'تم التحقق ✓' : 'لم يتم التحقق',
+            value: user?.emailConfirmedAt != null ? 'تم التحقق ✓' : 'لم يتم التحقق',
             themeColors: themeColors,
           ),
 
@@ -350,8 +384,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _buildInfoRow(
             icon: Icons.calendar_today_outlined,
             label: 'تاريخ الانضمام',
-            value: user?.metadata.creationTime != null
-                ? _formatDate(user!.metadata.creationTime!)
+            value: user?.createdAt != null
+                ? _formatDate(user!.createdAt)
                 : 'غير متوفر',
             themeColors: themeColors,
           ),
@@ -387,6 +421,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 style: AppTypography.labelSmall.copyWith(
                   color: Colors.white.withOpacity(0.7),
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
               Text(
@@ -395,6 +431,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   color: Colors.white,
                   fontWeight: FontWeight.w500,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -480,6 +518,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               color: Colors.white,
               fontWeight: FontWeight.bold,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
@@ -488,6 +528,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               color: Colors.white.withOpacity(0.9),
             ),
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

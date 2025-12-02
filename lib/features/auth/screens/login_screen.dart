@@ -9,6 +9,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../core/providers/analytics_provider.dart';
 import '../../../shared/services/auth_service.dart';
 import '../providers/auth_provider.dart';
 
@@ -60,6 +61,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       print('✅ [LOGIN] Supabase authentication successful!');
       print('👤 [LOGIN] User ID: ${credential.user?.id}');
       print('📧 [LOGIN] Email: ${credential.user?.email}');
+
+      // Track login event
+      final analytics = ref.read(analyticsServiceProvider);
+      await analytics.logLogin('email');
 
       if (!mounted) {
         print('⚠️ [LOGIN] Widget unmounted, aborting navigation');

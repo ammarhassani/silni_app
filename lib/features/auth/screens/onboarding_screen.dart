@@ -146,37 +146,39 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildPage(OnboardingPage page, int index) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Icon with dramatic animation
-          DramaticGlassCard(
-            width: 180,
-            height: 180,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: page.gradient,
-                shape: BoxShape.circle,
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(height: AppSpacing.xl),
+            // Icon with dramatic animation
+            DramaticGlassCard(
+              width: 160,
+              height: 160,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: page.gradient,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Icon(
+                    page.icon,
+                    size: 80,
+                    color: Colors.white,
+                  )
+                      .animate(
+                        onPlay: (controller) => controller.repeat(reverse: true),
+                      )
+                      .scale(
+                        duration: const Duration(seconds: 2),
+                        begin: const Offset(1.0, 1.0),
+                        end: const Offset(1.1, 1.1),
+                      ),
+                ),
               ),
-              child: Center(
-                child: Icon(
-                  page.icon,
-                  size: 100,
-                  color: Colors.white,
-                )
-                    .animate(
-                      onPlay: (controller) => controller.repeat(reverse: true),
-                    )
-                    .scale(
-                      duration: const Duration(seconds: 2),
-                      begin: const Offset(1.0, 1.0),
-                      end: const Offset(1.1, 1.1),
-                    ),
-              ),
-            ),
-          )
+            )
               .animate()
               .scale(
                 delay: Duration(milliseconds: 100 * index),
@@ -185,16 +187,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               )
               .fadeIn(duration: const Duration(milliseconds: 400)),
 
-          const SizedBox(height: AppSpacing.xxxl),
+          const SizedBox(height: AppSpacing.xxl),
 
           // Title
           Text(
             page.title,
             style: AppTypography.dramatic.copyWith(
               color: Colors.white,
-              fontSize: 40,
+              fontSize: 32,
             ),
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           )
               .animate(delay: Duration(milliseconds: 200 + (100 * index)))
               .fadeIn(duration: const Duration(milliseconds: 600))
@@ -210,11 +214,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               height: 1.8,
             ),
             textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
           )
               .animate(delay: Duration(milliseconds: 400 + (100 * index)))
               .fadeIn(duration: const Duration(milliseconds: 600))
               .slideY(begin: 0.3, end: 0, curve: Curves.easeOut),
-        ],
+          const SizedBox(height: AppSpacing.xl),
+          ],
+        ),
       ),
     );
   }

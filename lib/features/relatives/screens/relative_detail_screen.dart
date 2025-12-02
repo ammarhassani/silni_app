@@ -14,7 +14,7 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../../shared/services/relatives_service.dart';
-import '../../../shared/services/interactions_service.dart';
+import '../../../shared/providers/interactions_provider.dart';
 import '../../../shared/services/auth_service.dart';
 
 class RelativeDetailScreen extends ConsumerStatefulWidget {
@@ -31,7 +31,6 @@ class RelativeDetailScreen extends ConsumerStatefulWidget {
 
 class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
   final RelativesService _relativesService = RelativesService();
-  final InteractionsService _interactionsService = InteractionsService();
   final AuthService _authService = AuthService();
 
   bool _isLoading = false;
@@ -228,6 +227,8 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
               fontWeight: FontWeight.bold,
             ),
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
 
           const SizedBox(height: AppSpacing.xs),
@@ -295,66 +296,130 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
   }
 
   Widget _buildContactActions(Relative relative) {
-    return Row(
-      children: [
-        // Call button
-        if (relative.phoneNumber != null)
-          Expanded(
-            child: _buildActionButton(
-              icon: Icons.phone,
-              label: 'اتصال',
-              gradient: LinearGradient(
-                colors: [Colors.green.shade600, Colors.green.shade800],
-              ),
-              onTap: () => _makeCall(relative.phoneNumber!),
-            ),
-          ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Switch to Column layout on very small screens
+        final useColumn = constraints.maxWidth < 360;
 
-        if (relative.phoneNumber != null) const SizedBox(width: AppSpacing.sm),
-
-        // WhatsApp button
-        if (relative.phoneNumber != null)
-          Expanded(
-            child: _buildActionButton(
-              icon: FontAwesomeIcons.whatsapp,
-              label: 'واتساب',
-              gradient: LinearGradient(
-                colors: [Colors.green.shade400, Colors.green.shade600],
-              ),
-              onTap: () => _openWhatsApp(relative.phoneNumber!),
-            ),
-          ),
-
-        if (relative.phoneNumber != null) const SizedBox(width: AppSpacing.sm),
-
-        // Message button
-        if (relative.phoneNumber != null)
-          Expanded(
-            child: _buildActionButton(
-              icon: Icons.message,
-              label: 'رسالة',
-              gradient: LinearGradient(
-                colors: [Colors.blue.shade600, Colors.blue.shade800],
-              ),
-              onTap: () => _sendMessage(relative.phoneNumber!),
-            ),
-          ),
-
-        // Show placeholder if no phone
-        if (relative.phoneNumber == null)
-          Expanded(
-            child: GlassCard(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Text(
-                'لا يوجد رقم هاتف',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white70,
+        if (useColumn) {
+          return Column(
+            children: [
+              // Call button
+              if (relative.phoneNumber != null)
+                _buildActionButton(
+                  icon: Icons.phone,
+                  label: 'اتصال',
+                  gradient: LinearGradient(
+                    colors: [Colors.green.shade600, Colors.green.shade800],
+                  ),
+                  onTap: () => _makeCall(relative.phoneNumber!),
                 ),
-                textAlign: TextAlign.center,
+
+              if (relative.phoneNumber != null) const SizedBox(height: AppSpacing.sm),
+
+              // WhatsApp button
+              if (relative.phoneNumber != null)
+                _buildActionButton(
+                  icon: FontAwesomeIcons.whatsapp,
+                  label: 'واتساب',
+                  gradient: LinearGradient(
+                    colors: [Colors.green.shade400, Colors.green.shade600],
+                  ),
+                  onTap: () => _openWhatsApp(relative.phoneNumber!),
+                ),
+
+              if (relative.phoneNumber != null) const SizedBox(height: AppSpacing.sm),
+
+              // Message button
+              if (relative.phoneNumber != null)
+                _buildActionButton(
+                  icon: Icons.message,
+                  label: 'رسالة',
+                  gradient: LinearGradient(
+                    colors: [Colors.blue.shade600, Colors.blue.shade800],
+                  ),
+                  onTap: () => _sendMessage(relative.phoneNumber!),
+                ),
+
+              // Show placeholder if no phone
+              if (relative.phoneNumber == null)
+                GlassCard(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Text(
+                    'لا يوجد رقم هاتف',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: Colors.white70,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+            ],
+          );
+        }
+
+        // Use Row for wider screens
+        return Row(
+          children: [
+            // Call button
+            if (relative.phoneNumber != null)
+              Flexible(
+                child: _buildActionButton(
+                  icon: Icons.phone,
+                  label: 'اتصال',
+                  gradient: LinearGradient(
+                    colors: [Colors.green.shade600, Colors.green.shade800],
+                  ),
+                  onTap: () => _makeCall(relative.phoneNumber!),
+                ),
               ),
-            ),
-          ),
-      ],
+
+            if (relative.phoneNumber != null) const SizedBox(width: AppSpacing.sm),
+
+            // WhatsApp button
+            if (relative.phoneNumber != null)
+              Flexible(
+                child: _buildActionButton(
+                  icon: FontAwesomeIcons.whatsapp,
+                  label: 'واتساب',
+                  gradient: LinearGradient(
+                    colors: [Colors.green.shade400, Colors.green.shade600],
+                  ),
+                  onTap: () => _openWhatsApp(relative.phoneNumber!),
+                ),
+              ),
+
+            if (relative.phoneNumber != null) const SizedBox(width: AppSpacing.sm),
+
+            // Message button
+            if (relative.phoneNumber != null)
+              Flexible(
+                child: _buildActionButton(
+                  icon: Icons.message,
+                  label: 'رسالة',
+                  gradient: LinearGradient(
+                    colors: [Colors.blue.shade600, Colors.blue.shade800],
+                  ),
+                  onTap: () => _sendMessage(relative.phoneNumber!),
+                ),
+              ),
+
+            // Show placeholder if no phone
+            if (relative.phoneNumber == null)
+              Expanded(
+                child: GlassCard(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Text(
+                    'لا يوجد رقم هاتف',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: Colors.white70,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -402,37 +467,43 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatItem(
-            icon: Icons.calendar_today,
-            label: 'آخر تواصل',
-            value: daysSince == null
-                ? 'لم يتم'
-                : daysSince == 0
-                    ? 'اليوم'
-                    : 'منذ $daysSince يوم',
-            color: relative.needsContact ? Colors.red : themeColors.primary,
+          Flexible(
+            child: _buildStatItem(
+              icon: Icons.calendar_today,
+              label: 'آخر تواصل',
+              value: daysSince == null
+                  ? 'لم يتم'
+                  : daysSince == 0
+                      ? 'اليوم'
+                      : 'منذ $daysSince يوم',
+              color: relative.needsContact ? Colors.red : themeColors.primary,
+            ),
           ),
           Container(
             width: 1,
             height: 40,
             color: Colors.white.withOpacity(0.2),
           ),
-          _buildStatItem(
-            icon: Icons.timeline,
-            label: 'التفاعلات',
-            value: '${relative.interactionCount}',
-            color: AppColors.premiumGold,
+          Flexible(
+            child: _buildStatItem(
+              icon: Icons.timeline,
+              label: 'التفاعلات',
+              value: '${relative.interactionCount}',
+              color: AppColors.premiumGold,
+            ),
           ),
           Container(
             width: 1,
             height: 40,
             color: Colors.white.withOpacity(0.2),
           ),
-          _buildStatItem(
-            icon: Icons.access_time,
-            label: 'الحالة',
-            value: relative.needsContact ? 'يحتاج تواصل' : 'تم التواصل',
-            color: relative.needsContact ? Colors.orange : Colors.green,
+          Flexible(
+            child: _buildStatItem(
+              icon: Icons.access_time,
+              label: 'الحالة',
+              value: relative.needsContact ? 'يحتاج تواصل' : 'تم التواصل',
+              color: relative.needsContact ? Colors.orange : Colors.green,
+            ),
           ),
         ],
       ),
@@ -456,6 +527,8 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
             fontWeight: FontWeight.bold,
           ),
           textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
@@ -463,6 +536,8 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
           style: AppTypography.bodySmall.copyWith(
             color: Colors.white70,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
@@ -578,6 +653,8 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                 style: AppTypography.labelSmall.copyWith(
                   color: Colors.white70,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
@@ -585,6 +662,8 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                 style: AppTypography.bodyMedium.copyWith(
                   color: Colors.white,
                 ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -596,7 +675,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
   Widget _buildRecentInteractions(String relativeId) {
     final themeColors = ref.watch(themeColorsProvider);
     return StreamBuilder<List<Interaction>>(
-      stream: _interactionsService.getRelativeInteractionsStream(relativeId),
+      stream: ref.read(interactionsServiceProvider).getRelativeInteractionsStream(relativeId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Padding(
@@ -678,6 +757,8 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                               style: AppTypography.titleMedium.copyWith(
                                 color: Colors.white,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: AppSpacing.xs),
                             Text(
@@ -685,6 +766,8 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                               style: AppTypography.bodySmall.copyWith(
                                 color: Colors.white70,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             if (interaction.notes != null &&
                                 interaction.notes!.isNotEmpty) ...[
@@ -807,7 +890,8 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
         createdAt: DateTime.now(),
       );
 
-      await _interactionsService.createInteraction(interaction);
+      final interactionsService = ref.read(interactionsServiceProvider);
+      await interactionsService.createInteraction(interaction);
 
       if (mounted) {
         HapticFeedback.lightImpact();
@@ -856,7 +940,8 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
         createdAt: DateTime.now(),
       );
 
-      await _interactionsService.createInteraction(interaction);
+      final interactionsService = ref.read(interactionsServiceProvider);
+      await interactionsService.createInteraction(interaction);
 
       if (!mounted) return;
 

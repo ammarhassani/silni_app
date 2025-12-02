@@ -1,4 +1,4 @@
-package com.example.silni_app
+package com.silni.app
 
 import io.flutter.embedding.android.FlutterActivity
 

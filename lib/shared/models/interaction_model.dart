@@ -65,8 +65,8 @@ class Interaction {
       id: json['id'] as String,
       userId: json['user_id'] as String,
       relativeId: json['relative_id'] as String,
-      type: InteractionType.fromString(json['interaction_type'] as String),
-      date: DateTime.parse(json['interaction_date'] as String),
+      type: InteractionType.fromString(json['type'] as String),
+      date: DateTime.parse(json['date'] as String),
       duration: json['duration'] as int?,
       location: json['location'] as String?,
       notes: json['notes'] as String?,
@@ -92,8 +92,8 @@ class Interaction {
     return {
       'user_id': userId,
       'relative_id': relativeId,
-      'interaction_type': type.value,
-      'interaction_date': date.toIso8601String(),
+      'type': type.value,
+      'date': date.toIso8601String(),
       'duration': duration,
       'location': location,
       'notes': notes,
@@ -164,7 +164,9 @@ class Interaction {
   /// Get relative time (e.g., "منذ يومين")
   String get relativeTime {
     final now = DateTime.now();
-    final difference = now.difference(date);
+    // Convert date to local timezone for accurate comparison
+    final localDate = date.toLocal();
+    final difference = now.difference(localDate);
 
     if (difference.inDays == 0) {
       if (difference.inHours == 0) {

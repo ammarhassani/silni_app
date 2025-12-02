@@ -1,0 +1,271 @@
+workflows:
+  ios-development-build:
+    name: iOS Development Build (Free Apple Account)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: YOUR_API_KEY_NAME_HERE  # You'll set this up in Codemagic UI
+    environment:
+      ios_signing:
+        distribution_type: development
+        bundle_identifier: com.example.silniApp
+      vars:
+        # Add these as environment variables in Codemagic UI (encrypted)
+        # Supabase - Staging
+        SUPABASE_STAGING_URL: $SUPABASE_STAGING_URL
+        SUPABASE_STAGING_ANON_KEY: $SUPABASE_STAGING_ANON_KEY
+        # Supabase - Production
+        SUPABASE_PRODUCTION_URL: $SUPABASE_PRODUCTION_URL
+        SUPABASE_PRODUCTION_ANON_KEY: $SUPABASE_PRODUCTION_ANON_KEY
+        # Firebase (for FCM only)
+        FIREBASE_API_KEY: $FIREBASE_API_KEY
+        FIREBASE_AUTH_DOMAIN: $FIREBASE_AUTH_DOMAIN
+        FIREBASE_PROJECT_ID: $FIREBASE_PROJECT_ID
+        FIREBASE_STORAGE_BUCKET: $FIREBASE_STORAGE_BUCKET
+        FIREBASE_MESSAGING_SENDER_ID: $FIREBASE_MESSAGING_SENDER_ID
+        FIREBASE_APP_ID: $FIREBASE_APP_ID
+        FIREBASE_MEASUREMENT_ID: $FIREBASE_MEASUREMENT_ID
+        # Cloudinary
+        CLOUDINARY_CLOUD_NAME: $CLOUDINARY_CLOUD_NAME
+        CLOUDINARY_API_KEY: $CLOUDINARY_API_KEY
+        CLOUDINARY_API_SECRET: $CLOUDINARY_API_SECRET
+        CLOUDINARY_UPLOAD_PRESET: $CLOUDINARY_UPLOAD_PRESET
+        # Environment
+        APP_ENV: staging
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Set up environment variables
+        script: |
+          cat > .env << EOF
+          # Firebase Web Configuration
+          FIREBASE_API_KEY=$FIREBASE_API_KEY
+          FIREBASE_AUTH_DOMAIN=$FIREBASE_AUTH_DOMAIN
+          FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID
+          FIREBASE_STORAGE_BUCKET=$FIREBASE_STORAGE_BUCKET
+          FIREBASE_MESSAGING_SENDER_ID=$FIREBASE_MESSAGING_SENDER_ID
+          FIREBASE_APP_ID=$FIREBASE_APP_ID
+          FIREBASE_MEASUREMENT_ID=$FIREBASE_MEASUREMENT_ID
+
+          # Supabase Configuration - STAGING
+          SUPABASE_STAGING_URL=$SUPABASE_STAGING_URL
+          SUPABASE_STAGING_ANON_KEY=$SUPABASE_STAGING_ANON_KEY
+
+          # Supabase Configuration - PRODUCTION
+          SUPABASE_PRODUCTION_URL=$SUPABASE_PRODUCTION_URL
+          SUPABASE_PRODUCTION_ANON_KEY=$SUPABASE_PRODUCTION_ANON_KEY
+
+          # Cloudinary Configuration
+          CLOUDINARY_CLOUD_NAME=$CLOUDINARY_CLOUD_NAME
+          CLOUDINARY_API_KEY=$CLOUDINARY_API_KEY
+          CLOUDINARY_API_SECRET=$CLOUDINARY_API_SECRET
+          CLOUDINARY_UPLOAD_PRESET=$CLOUDINARY_UPLOAD_PRESET
+
+          # Environment
+          APP_ENV=$APP_ENV
+          EOF
+          echo "✅ Environment file created"
+          cat .env
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios && pod install
+      - name: Flutter analyze
+        script: |
+          flutter analyze
+      - name: Build iOS app
+        script: |
+          flutter build ipa \
+            --release \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+    publishing:
+      email:
+        recipients:
+          - YOUR_EMAIL_HERE@example.com  # Change this to your email
+        notify:
+          success: true
+          failure: true
+
+  ios-ad-hoc-build:
+    name: iOS Ad-Hoc Build (For Multiple Testers - Requires Paid Account)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: YOUR_API_KEY_NAME_HERE
+    environment:
+      ios_signing:
+        distribution_type: ad_hoc  # Requires paid Apple Developer account
+        bundle_identifier: com.example.silniApp
+      vars:
+        # Supabase - Staging
+        SUPABASE_STAGING_URL: $SUPABASE_STAGING_URL
+        SUPABASE_STAGING_ANON_KEY: $SUPABASE_STAGING_ANON_KEY
+        # Supabase - Production
+        SUPABASE_PRODUCTION_URL: $SUPABASE_PRODUCTION_URL
+        SUPABASE_PRODUCTION_ANON_KEY: $SUPABASE_PRODUCTION_ANON_KEY
+        # Firebase
+        FIREBASE_API_KEY: $FIREBASE_API_KEY
+        FIREBASE_AUTH_DOMAIN: $FIREBASE_AUTH_DOMAIN
+        FIREBASE_PROJECT_ID: $FIREBASE_PROJECT_ID
+        FIREBASE_STORAGE_BUCKET: $FIREBASE_STORAGE_BUCKET
+        FIREBASE_MESSAGING_SENDER_ID: $FIREBASE_MESSAGING_SENDER_ID
+        FIREBASE_APP_ID: $FIREBASE_APP_ID
+        FIREBASE_MEASUREMENT_ID: $FIREBASE_MEASUREMENT_ID
+        # Cloudinary
+        CLOUDINARY_CLOUD_NAME: $CLOUDINARY_CLOUD_NAME
+        CLOUDINARY_API_KEY: $CLOUDINARY_API_KEY
+        CLOUDINARY_API_SECRET: $CLOUDINARY_API_SECRET
+        CLOUDINARY_UPLOAD_PRESET: $CLOUDINARY_UPLOAD_PRESET
+        # Environment
+        APP_ENV: production
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Set up environment variables
+        script: |
+          cat > .env << EOF
+          # Firebase Web Configuration
+          FIREBASE_API_KEY=$FIREBASE_API_KEY
+          FIREBASE_AUTH_DOMAIN=$FIREBASE_AUTH_DOMAIN
+          FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID
+          FIREBASE_STORAGE_BUCKET=$FIREBASE_STORAGE_BUCKET
+          FIREBASE_MESSAGING_SENDER_ID=$FIREBASE_MESSAGING_SENDER_ID
+          FIREBASE_APP_ID=$FIREBASE_APP_ID
+          FIREBASE_MEASUREMENT_ID=$FIREBASE_MEASUREMENT_ID
+
+          # Supabase Configuration - STAGING
+          SUPABASE_STAGING_URL=$SUPABASE_STAGING_URL
+          SUPABASE_STAGING_ANON_KEY=$SUPABASE_STAGING_ANON_KEY
+
+          # Supabase Configuration - PRODUCTION
+          SUPABASE_PRODUCTION_URL=$SUPABASE_PRODUCTION_URL
+          SUPABASE_PRODUCTION_ANON_KEY=$SUPABASE_PRODUCTION_ANON_KEY
+
+          # Cloudinary Configuration
+          CLOUDINARY_CLOUD_NAME=$CLOUDINARY_CLOUD_NAME
+          CLOUDINARY_API_KEY=$CLOUDINARY_API_KEY
+          CLOUDINARY_API_SECRET=$CLOUDINARY_API_SECRET
+          CLOUDINARY_UPLOAD_PRESET=$CLOUDINARY_UPLOAD_PRESET
+
+          # Environment
+          APP_ENV=$APP_ENV
+          EOF
+          echo "✅ Environment file created"
+          cat .env
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios && pod install
+      - name: Flutter analyze
+        script: |
+          flutter analyze
+      - name: Build iOS app
+        script: |
+          flutter build ipa \
+            --release \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      email:
+        recipients:
+          - YOUR_EMAIL_HERE@example.com
+        notify:
+          success: true
+          failure: true
+
+  android-build:
+    name: Android Build (Bonus - For Easy Multi-User Testing)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      android_signing:
+        - silni_keystore  # You'll upload your keystore in Codemagic UI
+      vars:
+        # Supabase - Staging
+        SUPABASE_STAGING_URL: $SUPABASE_STAGING_URL
+        SUPABASE_STAGING_ANON_KEY: $SUPABASE_STAGING_ANON_KEY
+        # Supabase - Production
+        SUPABASE_PRODUCTION_URL: $SUPABASE_PRODUCTION_URL
+        SUPABASE_PRODUCTION_ANON_KEY: $SUPABASE_PRODUCTION_ANON_KEY
+        # Firebase
+        FIREBASE_API_KEY: $FIREBASE_API_KEY
+        FIREBASE_AUTH_DOMAIN: $FIREBASE_AUTH_DOMAIN
+        FIREBASE_PROJECT_ID: $FIREBASE_PROJECT_ID
+        FIREBASE_STORAGE_BUCKET: $FIREBASE_STORAGE_BUCKET
+        FIREBASE_MESSAGING_SENDER_ID: $FIREBASE_MESSAGING_SENDER_ID
+        FIREBASE_APP_ID: $FIREBASE_APP_ID
+        FIREBASE_MEASUREMENT_ID: $FIREBASE_MEASUREMENT_ID
+        # Cloudinary
+        CLOUDINARY_CLOUD_NAME: $CLOUDINARY_CLOUD_NAME
+        CLOUDINARY_API_KEY: $CLOUDINARY_API_KEY
+        CLOUDINARY_API_SECRET: $CLOUDINARY_API_SECRET
+        CLOUDINARY_UPLOAD_PRESET: $CLOUDINARY_UPLOAD_PRESET
+        # Environment
+        APP_ENV: production
+      flutter: stable
+      java: 17
+    scripts:
+      - name: Set up environment variables
+        script: |
+          cat > .env << EOF
+          # Firebase Web Configuration
+          FIREBASE_API_KEY=$FIREBASE_API_KEY
+          FIREBASE_AUTH_DOMAIN=$FIREBASE_AUTH_DOMAIN
+          FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID
+          FIREBASE_STORAGE_BUCKET=$FIREBASE_STORAGE_BUCKET
+          FIREBASE_MESSAGING_SENDER_ID=$FIREBASE_MESSAGING_SENDER_ID
+          FIREBASE_APP_ID=$FIREBASE_APP_ID
+          FIREBASE_MEASUREMENT_ID=$FIREBASE_MEASUREMENT_ID
+
+          # Supabase Configuration - STAGING
+          SUPABASE_STAGING_URL=$SUPABASE_STAGING_URL
+          SUPABASE_STAGING_ANON_KEY=$SUPABASE_STAGING_ANON_KEY
+
+          # Supabase Configuration - PRODUCTION
+          SUPABASE_PRODUCTION_URL=$SUPABASE_PRODUCTION_URL
+          SUPABASE_PRODUCTION_ANON_KEY=$SUPABASE_PRODUCTION_ANON_KEY
+
+          # Cloudinary Configuration
+          CLOUDINARY_CLOUD_NAME=$CLOUDINARY_CLOUD_NAME
+          CLOUDINARY_API_KEY=$CLOUDINARY_API_KEY
+          CLOUDINARY_API_SECRET=$CLOUDINARY_API_SECRET
+          CLOUDINARY_UPLOAD_PRESET=$CLOUDINARY_UPLOAD_PRESET
+
+          # Environment
+          APP_ENV=$APP_ENV
+          EOF
+          echo "✅ Environment file created"
+          cat .env
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+      - name: Build Android APK (easier for testing)
+        script: |
+          flutter build apk --release --flavor production
+      - name: Build Android App Bundle (for Play Store)
+        script: |
+          flutter build appbundle --release --flavor production
+    artifacts:
+      - build/**/outputs/**/*.apk
+      - build/**/outputs/**/*.aab
+      - build/**/outputs/**/mapping.txt
+      - flutter_drive.log
+    publishing:
+      email:
+        recipients:
+          - YOUR_EMAIL_HERE@example.com
+        notify:
+          success: true
+          failure: true
