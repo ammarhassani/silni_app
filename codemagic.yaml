@@ -3,16 +3,14 @@ workflows:
     name: iOS Development Build (Free Apple Account)
     max_build_duration: 60
     instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: codemagic_apple_id
     environment:
-      xcode: latest
-      groups:
-        - app_store_credentials
       ios_signing:
         distribution_type: development
         bundle_identifier: com.silni.app
+      xcode: latest
       vars:
-        # Your iPhone 15 Pro (actually iPhone 16,1)
-        DEVICE_UDID: "00008130-001079992210001C"
         SUPABASE_STAGING_URL: https://dqqyhmydodjpqboykzow.supabase.co
         SUPABASE_STAGING_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxcXlobXlkb2RqcHFib3lrem93Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQwOTQ1MzUsImV4cCI6MjA3OTY3MDUzNX0.I6rNpnUIzk05VM-3MCTTTFbIEm7VRttYXFpbiITn2gg
         SUPABASE_PRODUCTION_URL: https://bapwklwxmwhpucutyras.supabase.co
