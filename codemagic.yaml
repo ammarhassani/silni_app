@@ -6,9 +6,6 @@ workflows:
     integrations:
       app_store_connect: codemagic_apple_id
     environment:
-      ios_signing:
-        distribution_type: development
-        bundle_identifier: com.silni.app
       xcode: latest
       vars:
         SUPABASE_STAGING_URL: https://dqqyhmydodjpqboykzow.supabase.co
@@ -55,6 +52,15 @@ workflows:
       - name: Install CocoaPods dependencies
         script: |
           cd ios && pod install
+      - name: Setup code signing
+        script: |
+          # Register device and create provisioning profile
+          set -e
+          keychain initialize
+          app-store-connect fetch-signing-files com.silni.app \
+            --type IOS_APP_DEVELOPMENT \
+            --create
+          xcode-project use-profiles
       - name: Flutter analyze
         script: |
           flutter analyze || true
