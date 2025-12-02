@@ -1,13 +1,13 @@
 workflows:
   ios-development-build:
-    name: iOS Development Build (Free Apple Account)
+    name: iOS Build (Paid Apple Developer Account)
     max_build_duration: 60
     instance_type: mac_mini_m2
     integrations:
       app_store_connect: codemagic_apple_id
     environment:
       ios_signing:
-        distribution_type: development
+        distribution_type: ad_hoc
         bundle_identifier: com.silni.app
       xcode: latest
       vars:
