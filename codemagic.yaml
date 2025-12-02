@@ -6,9 +6,6 @@ workflows:
     integrations:
       app_store_connect: codemagic_apple_id
     environment:
-      ios_signing:
-        distribution_type: ad_hoc
-        bundle_identifier: com.silni.app
       xcode: latest
       vars:
         SUPABASE_STAGING_URL: https://dqqyhmydodjpqboykzow.supabase.co
