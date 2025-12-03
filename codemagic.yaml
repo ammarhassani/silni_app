@@ -5,8 +5,21 @@ workflows:
     instance_type: mac_mini_m2
     integrations:
       app_store_connect: codemagic_apple_id
+
     environment:
       xcode: latest
+      flutter: stable
+      cocoapods: default
+
+      # Tell Codemagic which cert/profile to use
+      ios_signing:
+        provisioning_profiles:
+          - profile: APP_STORE_PROFILE        # reference name from UI
+            environment_variable: CM_IOS_PROFILE
+        certificates:
+          - certificate: DISTRIBUTION_CERTIFICATE  # reference name from UI
+            environment_variable: CM_IOS_CERT
+
       vars:
         SUPABASE_STAGING_URL: https://dqqyhmydodjpqboykzow.supabase.co
         SUPABASE_STAGING_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxcXlobXlkb2RqcHFib3lrem93Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQwOTQ1MzUsImV4cCI6MjA3OTY3MDUzNX0.I6rNpnUIzk05VM-3MCTTTFbIEm7VRttYXFpbiITn2gg
@@ -22,10 +35,9 @@ workflows:
         CLOUDINARY_CLOUD_NAME: dli79vqgg
         CLOUDINARY_UPLOAD_PRESET: silni_unsigned
         APP_ENV: staging
-      flutter: stable
-      cocoapods: default
+
     scripts:
-      - name: Set up environment variables
+      - name: Set up environment variables file
         script: |
           cat > .env << 'EOF'
           FIREBASE_API_KEY=AIzaSyBuS1snryQ_DWxhcEUtj0Lu_HDrdIvASDY
@@ -40,33 +52,40 @@ workflows:
           SUPABASE_PRODUCTION_URL=https://bapwklwxmwhpucutyras.supabase.co
           SUPABASE_PRODUCTION_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhcHdrbHd4bXdocHVjdXR5cmFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxMDA2MjUsImV4cCI6MjA3OTY3NjYyNX0.1logTpQ9UnMDzYsZytjL6HAWFpknuMOyqGu0TyWj6eA
           CLOUDINARY_CLOUD_NAME=dli79vqgg
-          CLOUDINARY_API_KEY=your_cloudinary_api_key
-          CLOUDINARY_API_SECRET=your_cloudinary_api_secret
           CLOUDINARY_UPLOAD_PRESET=silni_unsigned
           APP_ENV=staging
           EOF
-          echo "✅ Environment file created"
-      - name: Get Flutter packages
+          echo "Environment file created"
+
+      - name: Import signing files into keychain
         script: |
-          flutter pub get
-      - name: Install CocoaPods dependencies
-        script: |
-          cd ios && pod install
-      - name: Setup code signing
-        script: |
-          # Setup distribution signing for TestFlight
           set -e
           keychain initialize
 
-          echo "🔍 Fetching signing files from App Store Connect..."
-          app-store-connect fetch-signing-files com.silni.app \
-            --type IOS_APP_STORE
+          # Write certificate and profile to disk from env vars
+          echo "$CM_IOS_CERT" | base64 --decode > ios_dist_cert.p12
+          echo "$CM_IOS_PROFILE" | base64 --decode > ios_profile.mobileprovision
 
-          echo "✅ Applying profiles to Xcode project..."
-          xcode-project use-profiles
-      - name: Flutter analyze
+          # Import certificate (password is configured when you added the cert)
+          keychain add-certificates --certificate ios_dist_cert.p12 --certificate-password "$CM_CERT_PASSWORD"
+
+          # Install provisioning profile
+          profiles install ios_profile.mobileprovision
+
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Install CocoaPods dependencies
         script: |
-          flutter analyze || true
+          cd ios
+          pod install
+
+      - name: Setup code signing in Xcode project
+        script: xcode-project use-profiles
+
+      - name: Flutter analyze
+        script: flutter analyze || true
+
       - name: Build iOS app
         script: |
           flutter build ipa --release \
@@ -79,10 +98,12 @@ workflows:
             --dart-define=FIREBASE_API_KEY=${FIREBASE_API_KEY} \
             --dart-define=CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME} \
             --dart-define=CLOUDINARY_UPLOAD_PRESET=${CLOUDINARY_UPLOAD_PRESET}
+
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
       - flutter_drive.log
+
     publishing:
       app_store_connect:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
@@ -103,6 +124,8 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
+      flutter: stable
+      java: 17
       vars:
         SUPABASE_STAGING_URL: https://dqqyhmydodjpqboykzow.supabase.co
         SUPABASE_STAGING_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxcXlobXlkb2RqcHFib3lrem93Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQwOTQ1MzUsImV4cCI6MjA3OTY3MDUzNX0.I6rNpnUIzk05VM-3MCTTTFbIEm7VRttYXFpbiITn2gg
@@ -118,16 +141,15 @@ workflows:
         CLOUDINARY_CLOUD_NAME: dli79vqgg
         CLOUDINARY_UPLOAD_PRESET: silni_unsigned
         APP_ENV: production
-      flutter: stable
-      java: 17
+
     scripts:
-      - name: Set up environment variables
+      - name: Set up environment variables file
         script: |
           cat > .env << 'EOF'
           FIREBASE_API_KEY=AIzaSyBuS1snryQ_DWxhcEUtj0Lu_HDrdIvASDY
           FIREBASE_AUTH_DOMAIN=silni-31811.firebaseapp.com
           FIREBASE_PROJECT_ID=silni-31811
-          FIREBASE_STORAGE_BUCKET=silni-31811.firebasestorage.app
+          FIREBASE_STORAGE_BUCKET=silni-11.firebasestorage.app
           FIREBASE_MESSAGING_SENDER_ID=104991741546
           FIREBASE_APP_ID=1:104991741546:web:baa2792c28877379412f13
           FIREBASE_MEASUREMENT_ID=G-JMW4oM9PXM
@@ -136,21 +158,21 @@ workflows:
           SUPABASE_PRODUCTION_URL=https://bapwklwxmwhpucutyras.supabase.co
           SUPABASE_PRODUCTION_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhcHdrbHd4bXdocHVjdXR5cmFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxMDA2MjUsImV4cCI6MjA3OTY3NjYyNX0.1logTpQ9UnMDzYsZytjL6HAWFpknuMOyqGu0TyWj6eA
           CLOUDINARY_CLOUD_NAME=dli79vqgg
-          CLOUDINARY_API_KEY=your_cloudinary_api_key
-          CLOUDINARY_API_SECRET=your_cloudinary_api_secret
           CLOUDINARY_UPLOAD_PRESET=silni_unsigned
           APP_ENV=production
           EOF
-          echo "✅ Environment file created"
+          echo "Environment file created"
+
       - name: Get Flutter packages
-        script: |
-          flutter pub get
+        script: flutter pub get
+
       - name: Build Android APK
-        script: |
-          flutter build apk --release --flavor production
+        script: flutter build apk --release --flavor production
+
     artifacts:
       - build/**/outputs/**/*.apk
       - flutter_drive.log
+
     publishing:
       email:
         recipients:
