@@ -37,15 +37,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _login() async {
-    if (!_formKey.currentState!.validate()) return;
+    debugPrint('');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('🔐 [LOGIN FLOW] STARTED');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+    if (!_formKey.currentState!.validate()) {
+      debugPrint('⚠️ [LOGIN FLOW] Form validation failed');
+      return;
+    }
+
+    debugPrint('✅ [LOGIN FLOW] Form validation passed');
+    debugPrint('📊 [LOGIN FLOW] Setting loading state to true');
 
     setState(() => _isLoading = true);
 
     try {
       final authService = ref.read(authServiceProvider);
+      debugPrint('✅ [LOGIN FLOW] AuthService retrieved from provider');
 
-      print('🔐 [LOGIN] Starting login process...');
-      print('📧 [LOGIN] Email: ${_emailController.text.trim()}');
+      debugPrint('📧 [LOGIN FLOW] Email: ${_emailController.text.trim()}');
+      debugPrint('');
+
+      debugPrint('🔄 [LOGIN FLOW] Calling authService.signInWithEmail() with 30s timeout...');
+      final startTime = DateTime.now();
 
       // Add timeout to prevent infinite hanging
       final credential = await authService
@@ -56,42 +71,73 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           .timeout(
             const Duration(seconds: 30),
             onTimeout: () {
-              throw Exception('Login timeout - Firebase took too long to respond');
+              debugPrint('⏱️ [LOGIN FLOW] TIMEOUT after 30 seconds');
+              throw Exception('Login timeout - Supabase took too long to respond');
             },
           );
 
-      print('✅ [LOGIN] Supabase authentication successful!');
-      print('👤 [LOGIN] User ID: ${credential.user?.id}');
-      print('📧 [LOGIN] Email: ${credential.user?.email}');
+      final duration = DateTime.now().difference(startTime);
+      debugPrint('✅ [LOGIN FLOW] Supabase auth completed in ${duration.inMilliseconds}ms');
+      debugPrint('👤 [LOGIN FLOW] User authenticated successfully:');
+      debugPrint('   - User ID: ${credential.user?.id}');
+      debugPrint('   - Email: ${credential.user?.email}');
+      debugPrint('   - Session exists: ${credential.session != null}');
+      debugPrint('   - Session token: ${credential.session?.accessToken != null ? '(present)' : '(null)'}');
+      debugPrint('');
 
       // Track login event (fire and forget - don't block auth flow)
+      debugPrint('📊 [LOGIN FLOW] Triggering analytics (fire-and-forget)...');
       final analytics = ref.read(analyticsServiceProvider);
       analytics.logLogin('email').catchError((e) {
-        if (kDebugMode) print('⚠️ [LOGIN] Analytics failed: $e');
+        debugPrint('⚠️ [LOGIN FLOW] Analytics failed (non-blocking): $e');
       });
+      debugPrint('✅ [LOGIN FLOW] Analytics call initiated (not waiting for completion)');
+      debugPrint('');
 
       if (!mounted) {
-        print('⚠️ [LOGIN] Widget unmounted, aborting navigation');
+        debugPrint('🔴 [LOGIN FLOW] Widget unmounted, aborting navigation');
+        debugPrint('🔴 [LOGIN FLOW] FLOW ABORTED');
+        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        debugPrint('');
         return;
       }
 
-      print('🚀 [LOGIN] Navigating to home screen...');
+      debugPrint('✅ [LOGIN FLOW] Widget still mounted');
+      debugPrint('🚀 [LOGIN FLOW] Attempting navigation to home screen...');
+      debugPrint('   - Target route: ${AppRoutes.home}');
+      debugPrint('   - Navigation method: context.go()');
 
       // Navigate to home - use go instead of pushReplacement
       context.go(AppRoutes.home);
 
-      print('✅ [LOGIN] Navigation initiated successfully!');
+      debugPrint('✅ [LOGIN FLOW] context.go() executed successfully');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('✅ [LOGIN FLOW] COMPLETED SUCCESSFULLY');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('');
 
       // Don't reset loading state on success - let the new screen take over
-    } on AuthException catch (e) {
+    } on AuthException catch (e, stackTrace) {
       // Handle Supabase auth errors specifically
-      print('❌ [LOGIN] AuthException: ${e.message}');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('🔴 [LOGIN FLOW] AuthException caught');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('❌ [LOGIN FLOW] Error message: ${e.message}');
+      debugPrint('❌ [LOGIN FLOW] Status code: ${e.statusCode}');
+      debugPrint('📍 [LOGIN FLOW] Stack trace:');
+      debugPrint(stackTrace.toString());
+      debugPrint('');
 
-      if (!mounted) return;
+      if (!mounted) {
+        debugPrint('⚠️ [LOGIN FLOW] Widget unmounted, cannot show error');
+        return;
+      }
 
       setState(() => _isLoading = false);
+      debugPrint('📊 [LOGIN FLOW] Loading state reset to false');
 
       String errorMessage = AuthService.getErrorMessage(e.message);
+      debugPrint('💬 [LOGIN FLOW] User error message: $errorMessage');
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -100,16 +146,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           duration: const Duration(seconds: 3),
         ),
       );
-    } catch (e) {
+      debugPrint('📢 [LOGIN FLOW] Error shown to user via SnackBar');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('🔴 [LOGIN FLOW] FAILED WITH AUTH ERROR');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('');
+    } catch (e, stackTrace) {
       // Handle other errors
-      print('❌ [LOGIN] Unexpected error: ${e.runtimeType} - $e');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('🔴 [LOGIN FLOW] Unexpected exception caught');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('❌ [LOGIN FLOW] Exception type: ${e.runtimeType}');
+      debugPrint('❌ [LOGIN FLOW] Exception: $e');
+      debugPrint('📍 [LOGIN FLOW] Stack trace:');
+      debugPrint(stackTrace.toString());
+      debugPrint('');
 
-      if (!mounted) return;
+      if (!mounted) {
+        debugPrint('⚠️ [LOGIN FLOW] Widget unmounted, cannot show error');
+        return;
+      }
 
       setState(() => _isLoading = false);
+      debugPrint('📊 [LOGIN FLOW] Loading state reset to false');
 
       // For non-auth errors, pass the string to getErrorMessage
       String errorMessage = AuthService.getErrorMessage(e.toString());
+      debugPrint('💬 [LOGIN FLOW] User error message: $errorMessage');
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -118,6 +181,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           duration: const Duration(seconds: 3),
         ),
       );
+      debugPrint('📢 [LOGIN FLOW] Error shown to user via SnackBar');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('🔴 [LOGIN FLOW] FAILED WITH UNEXPECTED ERROR');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('');
     }
   }
 

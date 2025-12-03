@@ -75,10 +75,29 @@ class SupabaseConfig {
 
       // Validate credentials
       if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
+        if (kDebugMode) {
+          print('❌ [SupabaseConfig] VALIDATION FAILED');
+          print('❌ [SupabaseConfig] URL empty: ${supabaseUrl.isEmpty}');
+          print('❌ [SupabaseConfig] Key empty: ${supabaseAnonKey.isEmpty}');
+        }
         throw Exception(
           'Missing Supabase credentials for environment: $environment. '
-          'Please check your .env file.',
+          'Please check your .env file or --dart-define flags.',
         );
+      }
+
+      if (kDebugMode) {
+        // Show partial URL for debugging without exposing full endpoint
+        final urlPreview = supabaseUrl.length > 20
+          ? '${supabaseUrl.substring(0, 10)}...${supabaseUrl.substring(supabaseUrl.length - 10)}'
+          : supabaseUrl;
+        final keyPreview = supabaseAnonKey.length > 20
+          ? '${supabaseAnonKey.substring(0, 10)}...${supabaseAnonKey.substring(supabaseAnonKey.length - 10)}'
+          : '(hidden)';
+        print('✅ [SupabaseConfig] Credentials validated');
+        print('🔗 [SupabaseConfig] URL preview: $urlPreview');
+        print('🔑 [SupabaseConfig] Key preview: $keyPreview');
+        print('🔄 [SupabaseConfig] Starting Supabase.initialize()...');
       }
 
       // Initialize Supabase with platform-specific options

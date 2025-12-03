@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +20,30 @@ final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // ========================================
+  // DIAGNOSTIC LOGGING - iOS Debug
+  // ========================================
+  debugPrint('');
+  debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  debugPrint('🚀 [APP STARTUP] Silni App Initializing...');
+  debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  debugPrint('');
+
+  // Platform Detection
+  debugPrint('📱 [PLATFORM] Build Mode: ${kDebugMode ? 'DEBUG' : 'RELEASE'}');
+  if (kIsWeb) {
+    debugPrint('📱 [PLATFORM] Running on: WEB');
+  } else if (Platform.isIOS) {
+    debugPrint('📱 [PLATFORM] Running on: iOS');
+    debugPrint('📱 [PLATFORM] iOS Version: ${Platform.operatingSystemVersion}');
+  } else if (Platform.isAndroid) {
+    debugPrint('📱 [PLATFORM] Running on: Android');
+    debugPrint('📱 [PLATFORM] Android Version: ${Platform.operatingSystemVersion}');
+  } else {
+    debugPrint('📱 [PLATFORM] Running on: ${Platform.operatingSystem}');
+  }
+  debugPrint('');
+
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -25,22 +51,72 @@ void main() async {
   ]);
 
   // Load environment variables
+  debugPrint('📂 [ENV] Loading environment variables from .env file...');
   try {
     await dotenv.load(fileName: '.env');
-    debugPrint('✅ Environment variables loaded successfully');
-  } catch (e) {
-    debugPrint('❌ CRITICAL: Could not load .env file: $e');
-    debugPrint('⚠️ App will continue but Supabase, Firebase, and Sentry may not function properly');
-    debugPrint('💡 Make sure .env file exists and is listed in pubspec.yaml assets');
+    debugPrint('✅ [ENV] .env file loaded successfully');
+
+    // Log which environment variables are available (without exposing sensitive data)
+    final envKeys = dotenv.env.keys.toList();
+    debugPrint('📋 [ENV] Available variables: ${envKeys.length} keys');
+    debugPrint('📋 [ENV] Has SUPABASE_STAGING_URL: ${dotenv.env.containsKey('SUPABASE_STAGING_URL')}');
+    debugPrint('📋 [ENV] Has SUPABASE_STAGING_ANON_KEY: ${dotenv.env.containsKey('SUPABASE_STAGING_ANON_KEY')}');
+    debugPrint('📋 [ENV] Has APP_ENV: ${dotenv.env.containsKey('APP_ENV')}');
+
+    // Check dart-define values (these take precedence)
+    final dartDefineUrl = const String.fromEnvironment('SUPABASE_STAGING_URL');
+    final dartDefineAppEnv = const String.fromEnvironment('APP_ENV');
+    debugPrint('🔧 [DART-DEFINE] SUPABASE_STAGING_URL: ${dartDefineUrl.isNotEmpty ? '(provided)' : '(empty)'}');
+    debugPrint('🔧 [DART-DEFINE] APP_ENV: ${dartDefineAppEnv.isNotEmpty ? dartDefineAppEnv : '(empty)'}');
+    debugPrint('');
+  } catch (e, stackTrace) {
+    debugPrint('❌ [ENV] CRITICAL: Could not load .env file');
+    debugPrint('❌ [ENV] Error: $e');
+    debugPrint('❌ [ENV] Stack trace: $stackTrace');
+    debugPrint('⚠️ [ENV] App will rely on --dart-define flags from build command');
+    debugPrint('⚠️ [ENV] If dart-define flags are missing, Supabase will fail to initialize');
+
+    // Check if dart-define provides fallback
+    final dartDefineUrl = const String.fromEnvironment('SUPABASE_STAGING_URL');
+    if (dartDefineUrl.isEmpty) {
+      debugPrint('🔴 [ENV] CRITICAL: No dart-define fallback found!');
+      debugPrint('🔴 [ENV] App WILL FAIL - no credentials available');
+    } else {
+      debugPrint('🟢 [ENV] OK: dart-define fallback is available');
+    }
+    debugPrint('');
   }
 
   // Initialize Supabase (primary backend)
-  await SupabaseConfig.initialize();
+  debugPrint('🔵 [SUPABASE] Starting initialization...');
+  try {
+    await SupabaseConfig.initialize();
+    debugPrint('✅ [SUPABASE] Initialization completed successfully');
+    debugPrint('✅ [SUPABASE] Client is ready');
+    debugPrint('');
+  } catch (e, stackTrace) {
+    debugPrint('🔴 [SUPABASE] CRITICAL: Initialization FAILED');
+    debugPrint('🔴 [SUPABASE] Error: $e');
+    debugPrint('🔴 [SUPABASE] Stack trace: $stackTrace');
+    debugPrint('🔴 [SUPABASE] Auth will NOT work - app is broken');
+    debugPrint('');
+    // Don't rethrow - let app start so we can see logs
+  }
 
   // Initialize Firebase (for FCM notifications only)
-  await FirebaseConfig.initialize();
+  debugPrint('🟠 [FIREBASE] Starting initialization...');
+  try {
+    await FirebaseConfig.initialize();
+    debugPrint('✅ [FIREBASE] Initialization completed');
+    debugPrint('');
+  } catch (e) {
+    debugPrint('⚠️ [FIREBASE] Initialization failed: $e');
+    debugPrint('⚠️ [FIREBASE] FCM notifications may not work');
+    debugPrint('');
+  }
 
   // Initialize Sentry and run app
+  debugPrint('🐛 [SENTRY] Initializing error tracking...');
   await SentryFlutter.init(
     (options) {
       options.dsn = dotenv.env['SENTRY_DSN'] ?? '';
@@ -49,19 +125,29 @@ void main() async {
       options.attachThreads = true;
       options.attachStacktrace = true;
       options.environment = dotenv.env['ENVIRONMENT'] ?? 'development';
+      debugPrint('🐛 [SENTRY] Environment: ${options.environment}');
       // Only report crashes in production - skip sending in development
       if (dotenv.env['ENVIRONMENT'] != 'production') {
         options.beforeSend = (event, hint) {
-          debugPrint('🐛 [Sentry] Event captured (dev mode - not sent)');
+          debugPrint('🐛 [SENTRY] Event captured (dev mode - not sent)');
           return null; // Don't send in development/staging
         };
+        debugPrint('🐛 [SENTRY] Running in dev mode - errors will NOT be sent to Sentry');
       }
     },
-    appRunner: () => runApp(
-      const ProviderScope(
-        child: SilniApp(),
-      ),
-    ),
+    appRunner: () {
+      debugPrint('✅ [SENTRY] Initialized successfully');
+      debugPrint('');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('✅ [APP STARTUP] All services initialized - Starting app');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('');
+      return runApp(
+        const ProviderScope(
+          child: SilniApp(),
+        ),
+      );
+    },
   );
 }
 

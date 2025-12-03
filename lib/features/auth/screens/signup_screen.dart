@@ -42,16 +42,32 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   }
 
   Future<void> _signUp() async {
-    if (!_formKey.currentState!.validate()) return;
+    debugPrint('');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('📝 [SIGNUP FLOW] STARTED');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+    if (!_formKey.currentState!.validate()) {
+      debugPrint('⚠️ [SIGNUP FLOW] Form validation failed');
+      return;
+    }
+
+    debugPrint('✅ [SIGNUP FLOW] Form validation passed');
+    debugPrint('📊 [SIGNUP FLOW] Setting loading state to true');
 
     setState(() => _isLoading = true);
 
     try {
       final authService = ref.read(authServiceProvider);
+      debugPrint('✅ [SIGNUP FLOW] AuthService retrieved from provider');
 
-      print('📝 [SIGNUP] Starting sign up process...');
-      print('👤 [SIGNUP] Name: ${_nameController.text.trim()}');
-      print('📧 [SIGNUP] Email: ${_emailController.text.trim()}');
+      debugPrint('👤 [SIGNUP FLOW] User data:');
+      debugPrint('   - Name: ${_nameController.text.trim()}');
+      debugPrint('   - Email: ${_emailController.text.trim()}');
+      debugPrint('');
+
+      debugPrint('🔄 [SIGNUP FLOW] Calling authService.signUpWithEmail() with 30s timeout...');
+      final startTime = DateTime.now();
 
       // Add timeout to prevent infinite hanging (increased for iOS networks)
       final credential = await authService
@@ -63,6 +79,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           .timeout(
             const Duration(seconds: 30),  // Increased from 15s for iOS
             onTimeout: () {
+              debugPrint('⏱️ [SIGNUP FLOW] TIMEOUT after 30 seconds');
               throw Exception(
                 'Signup is taking longer than expected. This may indicate a '
                 'network issue or service problem. Please try again.'
@@ -70,38 +87,68 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             },
           );
 
-      print('✅ [SIGNUP] Supabase user created successfully!');
-      print('👤 [SIGNUP] User ID: ${credential.user?.id}');
-      print('📧 [SIGNUP] Email: ${credential.user?.email}');
+      final duration = DateTime.now().difference(startTime);
+      debugPrint('✅ [SIGNUP FLOW] Supabase auth completed in ${duration.inMilliseconds}ms');
+      debugPrint('👤 [SIGNUP FLOW] User created successfully:');
+      debugPrint('   - User ID: ${credential.user?.id}');
+      debugPrint('   - Email: ${credential.user?.email}');
+      debugPrint('   - Session exists: ${credential.session != null}');
+      debugPrint('   - Session token: ${credential.session?.accessToken != null ? '(present)' : '(null)'}');
+      debugPrint('');
 
       // Track signup event (fire and forget - don't block auth flow)
+      debugPrint('📊 [SIGNUP FLOW] Triggering analytics (fire-and-forget)...');
       final analytics = ref.read(analyticsServiceProvider);
       analytics.logSignUp('email').catchError((e) {
-        if (kDebugMode) print('⚠️ [SIGNUP] Analytics failed: $e');
+        debugPrint('⚠️ [SIGNUP FLOW] Analytics failed (non-blocking): $e');
       });
+      debugPrint('✅ [SIGNUP FLOW] Analytics call initiated (not waiting for completion)');
+      debugPrint('');
 
       if (!mounted) {
-        print('⚠️ [SIGNUP] Widget unmounted, aborting navigation');
+        debugPrint('🔴 [SIGNUP FLOW] Widget unmounted, aborting navigation');
+        debugPrint('🔴 [SIGNUP FLOW] FLOW ABORTED');
+        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        debugPrint('');
         return;
       }
 
-      print('🚀 [SIGNUP] Navigating to home screen...');
+      debugPrint('✅ [SIGNUP FLOW] Widget still mounted');
+      debugPrint('🚀 [SIGNUP FLOW] Attempting navigation to home screen...');
+      debugPrint('   - Target route: ${AppRoutes.home}');
+      debugPrint('   - Navigation method: context.go()');
 
       // Navigate to home
       context.go(AppRoutes.home);
 
-      print('✅ [SIGNUP] Navigation initiated successfully!');
+      debugPrint('✅ [SIGNUP FLOW] context.go() executed successfully');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('✅ [SIGNUP FLOW] COMPLETED SUCCESSFULLY');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('');
 
       // Don't reset loading state on success - let the new screen take over
-    } on AuthException catch (e) {
+    } on AuthException catch (e, stackTrace) {
       // Handle Supabase auth errors specifically
-      print('❌ [SIGNUP] AuthException: ${e.message}');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('🔴 [SIGNUP FLOW] AuthException caught');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('❌ [SIGNUP FLOW] Error message: ${e.message}');
+      debugPrint('❌ [SIGNUP FLOW] Status code: ${e.statusCode}');
+      debugPrint('📍 [SIGNUP FLOW] Stack trace:');
+      debugPrint(stackTrace.toString());
+      debugPrint('');
 
-      if (!mounted) return;
+      if (!mounted) {
+        debugPrint('⚠️ [SIGNUP FLOW] Widget unmounted, cannot show error');
+        return;
+      }
 
       setState(() => _isLoading = false);
+      debugPrint('📊 [SIGNUP FLOW] Loading state reset to false');
 
       String errorMessage = AuthService.getErrorMessage(e.message);
+      debugPrint('💬 [SIGNUP FLOW] User error message: $errorMessage');
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -110,16 +157,33 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           duration: const Duration(seconds: 3),
         ),
       );
-    } catch (e) {
+      debugPrint('📢 [SIGNUP FLOW] Error shown to user via SnackBar');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('🔴 [SIGNUP FLOW] FAILED WITH AUTH ERROR');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('');
+    } catch (e, stackTrace) {
       // Handle other errors
-      print('❌ [SIGNUP] Unexpected error: ${e.runtimeType} - $e');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('🔴 [SIGNUP FLOW] Unexpected exception caught');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('❌ [SIGNUP FLOW] Exception type: ${e.runtimeType}');
+      debugPrint('❌ [SIGNUP FLOW] Exception: $e');
+      debugPrint('📍 [SIGNUP FLOW] Stack trace:');
+      debugPrint(stackTrace.toString());
+      debugPrint('');
 
-      if (!mounted) return;
+      if (!mounted) {
+        debugPrint('⚠️ [SIGNUP FLOW] Widget unmounted, cannot show error');
+        return;
+      }
 
       setState(() => _isLoading = false);
+      debugPrint('📊 [SIGNUP FLOW] Loading state reset to false');
 
       // For non-auth errors, pass the string to getErrorMessage
       String errorMessage = AuthService.getErrorMessage(e.toString());
+      debugPrint('💬 [SIGNUP FLOW] User error message: $errorMessage');
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -128,6 +192,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           duration: const Duration(seconds: 3),
         ),
       );
+      debugPrint('📢 [SIGNUP FLOW] Error shown to user via SnackBar');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('🔴 [SIGNUP FLOW] FAILED WITH UNEXPECTED ERROR');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('');
     }
   }
 

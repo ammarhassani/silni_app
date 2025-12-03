@@ -21,8 +21,15 @@ class AuthService {
   }) async {
     try {
       if (kDebugMode) {
-        print('📝 Starting Supabase sign up...');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('📝 [AuthService.signUpWithEmail] STARTING');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('📧 [AuthService] Email: $email');
+        print('👤 [AuthService] Full name: $fullName');
+        print('🔄 [AuthService] Calling _supabase.auth.signUp()...');
       }
+
+      final startTime = DateTime.now();
 
       // Create user with Supabase Auth
       final response = await _supabase.auth.signUp(
@@ -33,37 +40,62 @@ class AuthService {
         },
       );
 
+      final duration = DateTime.now().difference(startTime);
+
       if (kDebugMode) {
-        print('✅ Supabase user created: ${response.user?.id}');
-        print('📧 Session: ${response.session != null ? "Active" : "Null (email confirmation required?)"}');
+        print('✅ [AuthService] signUp() completed in ${duration.inMilliseconds}ms');
+        print('📊 [AuthService] Response details:');
+        print('   - User object: ${response.user != null ? 'present' : 'NULL'}');
+        print('   - User ID: ${response.user?.id ?? '(null)'}');
+        print('   - Session object: ${response.session != null ? 'present' : 'NULL'}');
+        print('   - Access token: ${response.session?.accessToken != null ? 'present' : '(null)'}');
+        print('   - Refresh token: ${response.session?.refreshToken != null ? 'present' : '(null)'}');
       }
 
       if (response.user == null) {
+        if (kDebugMode) {
+          print('🔴 [AuthService] CRITICAL: No user returned from signUp()');
+        }
         throw AuthException('Sign up failed - no user returned');
       }
 
       // Check if email confirmation is required
       if (response.session == null) {
         if (kDebugMode) {
-          print('⚠️ No session created - email confirmation may be required');
+          print('⚠️ [AuthService] No session created - email confirmation may be required');
+          print('🔴 [AuthService] User created but cannot authenticate without session');
         }
         throw AuthException('يرجى تأكيد بريدك الإلكتروني. تحقق من صندوق الوارد الخاص بك.');
       }
 
       if (kDebugMode) {
-        print('✅ User created successfully: ${response.user?.id}');
-        print('✅ User profile auto-created by database trigger');
+        print('✅ [AuthService] User created successfully: ${response.user?.id}');
+        print('✅ [AuthService] Session active - user can authenticate');
+        print('✅ [AuthService] User profile auto-created by database trigger');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('✅ [AuthService.signUpWithEmail] SUCCESS');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       }
 
       return response;
     } on AuthException catch (e) {
       if (kDebugMode) {
-        print('❌ Sign up error: ${e.message}');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('🔴 [AuthService.signUpWithEmail] AuthException');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('❌ [AuthService] Error message: ${e.message}');
+        print('❌ [AuthService] Status code: ${e.statusCode}');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       }
       rethrow;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Unexpected sign up error: $e');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('🔴 [AuthService.signUpWithEmail] Unexpected exception');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('❌ [AuthService] Exception type: ${e.runtimeType}');
+        print('❌ [AuthService] Exception: $e');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       }
       rethrow;
     }
@@ -76,40 +108,70 @@ class AuthService {
   }) async {
     try {
       if (kDebugMode) {
-        print('🔐 Starting Supabase sign in...');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('🔐 [AuthService.signInWithEmail] STARTING');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('📧 [AuthService] Email: $email');
+        print('🔄 [AuthService] Calling _supabase.auth.signInWithPassword()...');
       }
+
+      final startTime = DateTime.now();
 
       final response = await _supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
+      final duration = DateTime.now().difference(startTime);
+
       if (kDebugMode) {
-        print('✅ Supabase auth successful: ${response.user?.id}');
+        print('✅ [AuthService] signInWithPassword() completed in ${duration.inMilliseconds}ms');
+        print('📊 [AuthService] Response details:');
+        print('   - User object: ${response.user != null ? 'present' : 'NULL'}');
+        print('   - User ID: ${response.user?.id ?? '(null)'}');
+        print('   - Session object: ${response.session != null ? 'present' : 'NULL'}');
+        print('   - Access token: ${response.session?.accessToken != null ? 'present' : '(null)'}');
+        print('   - Refresh token: ${response.session?.refreshToken != null ? 'present' : '(null)'}');
       }
 
       if (response.user != null) {
         // Update last login asynchronously (don't block login)
+        if (kDebugMode) {
+          print('🔄 [AuthService] Updating last login timestamp (async)...');
+        }
         _updateLastLogin(response.user!.id).catchError((e) {
           if (kDebugMode) {
-            print('⚠️ Failed to update last login: $e');
+            print('⚠️ [AuthService] Failed to update last login: $e');
           }
         });
       }
 
       if (kDebugMode) {
-        print('✅ User signed in: ${response.user?.id}');
+        print('✅ [AuthService] User signed in successfully: ${response.user?.id}');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('✅ [AuthService.signInWithEmail] SUCCESS');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       }
 
       return response;
     } on AuthException catch (e) {
       if (kDebugMode) {
-        print('❌ Sign in error: ${e.message}');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('🔴 [AuthService.signInWithEmail] AuthException');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('❌ [AuthService] Error message: ${e.message}');
+        print('❌ [AuthService] Status code: ${e.statusCode}');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       }
       rethrow;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Unexpected sign in error: $e');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('🔴 [AuthService.signInWithEmail] Unexpected exception');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('❌ [AuthService] Exception type: ${e.runtimeType}');
+        print('❌ [AuthService] Exception: $e');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       }
       rethrow;
     }
