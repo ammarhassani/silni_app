@@ -58,8 +58,10 @@ workflows:
           set -e
           keychain initialize
 
-          echo "🔍 Listing existing certificates..."
-          app-store-connect certificates list || echo "No certificates or permission issue"
+          echo "🔍 Creating new development certificate..."
+          app-store-connect certificates create \
+            --type IOS_DEVELOPMENT \
+            --save || echo "Certificate creation skipped"
 
           echo "🔍 Fetching signing files..."
           app-store-connect fetch-signing-files com.silni.app \
