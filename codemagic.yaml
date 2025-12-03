@@ -14,7 +14,6 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.silni.app
-        team_id: 3SPV37F368
 
       vars:
         SUPABASE_STAGING_URL: https://dqqyhmydodjpqboykzow.supabase.co
@@ -53,6 +52,27 @@ workflows:
           EOF
           echo "Environment file created"
 
+      - name: Create export options
+        script: |
+          cat > /Users/builder/export_options.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>3SPV37F368</string>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>signingStyle</key>
+            <string>manual</string>
+          </dict>
+          </plist>
+          EOF
+
       - name: Setup code signing
         script: |
           keychain initialize
@@ -72,6 +92,7 @@ workflows:
       - name: Build iOS app
         script: |
           flutter build ipa --release \
+            --export-options-plist=/Users/builder/export_options.plist \
             --dart-define=APP_ENV=staging \
             --dart-define=ENABLE_LOGGER=true \
             --dart-define=SUPABASE_STAGING_URL=${SUPABASE_STAGING_URL} \
