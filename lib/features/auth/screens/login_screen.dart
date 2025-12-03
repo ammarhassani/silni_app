@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -63,9 +64,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       print('👤 [LOGIN] User ID: ${credential.user?.id}');
       print('📧 [LOGIN] Email: ${credential.user?.email}');
 
-      // Track login event
+      // Track login event (fire and forget - don't block auth flow)
       final analytics = ref.read(analyticsServiceProvider);
-      await analytics.logLogin('email');
+      analytics.logLogin('email').catchError((e) {
+        if (kDebugMode) print('⚠️ [LOGIN] Analytics failed: $e');
+      });
 
       if (!mounted) {
         print('⚠️ [LOGIN] Widget unmounted, aborting navigation');

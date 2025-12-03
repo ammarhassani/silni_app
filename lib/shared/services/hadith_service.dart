@@ -114,7 +114,7 @@ class HadithService {
           .eq('is_authentic', true)
           .order('display_order')
           .timeout(
-            const Duration(seconds: 10),
+            const Duration(seconds: 20),  // Increased from 10s for iOS
             onTimeout: () {
               if (kDebugMode) {
                 print('⏱️ [HADITH] Query timed out, using fallback hadith');

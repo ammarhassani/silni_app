@@ -41,6 +41,11 @@ class SupabaseConfig {
 
       if (kDebugMode) {
         print('🌍 [SupabaseConfig] Environment: $environment');
+        // Debug: Show where credentials are coming from
+        final dartDefineUrl = const String.fromEnvironment('SUPABASE_STAGING_URL');
+        final envUrl = dotenv.env['SUPABASE_STAGING_URL'];
+        print('📍 [SupabaseConfig] dart-define SUPABASE_STAGING_URL: ${dartDefineUrl.isEmpty ? "(empty)" : dartDefineUrl}');
+        print('📍 [SupabaseConfig] .env SUPABASE_STAGING_URL: ${envUrl ?? "(null)"}');
       }
 
       // Get environment-specific credentials
@@ -108,11 +113,13 @@ class SupabaseConfig {
         print('Stack trace: $stackTrace');
       }
 
-      // Don't throw - allow app to start but log the error
-      // Services will fail gracefully if Supabase is not initialized
-      if (kDebugMode) {
-        print('⚠️ [SupabaseConfig] App will continue but Supabase features will not work');
-      }
+      // Re-throw with user-friendly message
+      // This prevents the app from continuing with an uninitialized Supabase instance
+      throw Exception(
+        'فشل الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.\n\n'
+        'Failed to connect to server. Please check your internet connection and try again.\n\n'
+        'Technical details: $e'
+      );
     }
   }
 

@@ -9,7 +9,13 @@ class AnalyticsService {
   Future<void> logSignUp(String method) async {
     try {
       if (kDebugMode) print('📊 [Analytics] User signed up via $method');
-      await _analytics.logSignUp(signUpMethod: method);
+
+      await _analytics.logSignUp(signUpMethod: method).timeout(
+        const Duration(seconds: 3),  // Short timeout for iOS
+        onTimeout: () {
+          if (kDebugMode) print('⚠️ [Analytics] Signup logging timeout - continuing');
+        },
+      );
     } catch (e) {
       if (kDebugMode) print('⚠️ [Analytics] Failed to log signup: $e');
       // Fail silently - don't block user flow
@@ -19,7 +25,13 @@ class AnalyticsService {
   Future<void> logLogin(String method) async {
     try {
       if (kDebugMode) print('📊 [Analytics] User logged in via $method');
-      await _analytics.logLogin(loginMethod: method);
+
+      await _analytics.logLogin(loginMethod: method).timeout(
+        const Duration(seconds: 3),  // Short timeout for iOS
+        onTimeout: () {
+          if (kDebugMode) print('⚠️ [Analytics] Login logging timeout - continuing');
+        },
+      );
     } catch (e) {
       if (kDebugMode) print('⚠️ [Analytics] Failed to log login: $e');
       // Fail silently - don't block user flow

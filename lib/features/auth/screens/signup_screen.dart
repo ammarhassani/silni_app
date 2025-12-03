@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -52,7 +53,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       print('👤 [SIGNUP] Name: ${_nameController.text.trim()}');
       print('📧 [SIGNUP] Email: ${_emailController.text.trim()}');
 
-      // Add timeout to prevent infinite hanging
+      // Add timeout to prevent infinite hanging (increased for iOS networks)
       final credential = await authService
           .signUpWithEmail(
             email: _emailController.text.trim(),
@@ -60,7 +61,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             fullName: _nameController.text.trim(),
           )
           .timeout(
-            const Duration(seconds: 15),
+            const Duration(seconds: 30),  // Increased from 15s for iOS
             onTimeout: () {
               throw Exception(
                 'Signup is taking longer than expected. This may indicate a '
@@ -69,13 +70,15 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             },
           );
 
-      print('✅ [SIGNUP] Firebase user created successfully!');
+      print('✅ [SIGNUP] Supabase user created successfully!');
       print('👤 [SIGNUP] User ID: ${credential.user?.id}');
       print('📧 [SIGNUP] Email: ${credential.user?.email}');
 
-      // Track signup event
+      // Track signup event (fire and forget - don't block auth flow)
       final analytics = ref.read(analyticsServiceProvider);
-      await analytics.logSignUp('email');
+      analytics.logSignUp('email').catchError((e) {
+        if (kDebugMode) print('⚠️ [SIGNUP] Analytics failed: $e');
+      });
 
       if (!mounted) {
         print('⚠️ [SIGNUP] Widget unmounted, aborting navigation');
