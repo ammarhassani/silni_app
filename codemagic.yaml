@@ -54,18 +54,13 @@ workflows:
           cd ios && pod install
       - name: Setup code signing
         script: |
-          # Register device and create provisioning profile
+          # Setup distribution signing for TestFlight
           set -e
           keychain initialize
 
-          echo "🔍 Creating new development certificate..."
-          app-store-connect certificates create \
-            --type IOS_DEVELOPMENT \
-            --save || echo "Certificate creation skipped"
-
-          echo "🔍 Fetching signing files..."
+          echo "🔍 Fetching App Store signing files for TestFlight..."
           app-store-connect fetch-signing-files com.silni.app \
-            --type IOS_APP_DEVELOPMENT \
+            --type IOS_APP_STORE \
             --create \
             --verbose
 
@@ -91,6 +86,13 @@ workflows:
       - /tmp/xcodebuild_logs/*.log
       - flutter_drive.log
     publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+        beta_groups:
+          - Internal Testers
       email:
         recipients:
           - your.email@example.com
