@@ -78,6 +78,7 @@ workflows:
         script: |
           flutter build ipa --release \
             --dart-define=APP_ENV=staging \
+            --dart-define=ENABLE_LOGGER=true \
             --dart-define=SUPABASE_STAGING_URL=${SUPABASE_STAGING_URL} \
             --dart-define=SUPABASE_STAGING_ANON_KEY=${SUPABASE_STAGING_ANON_KEY} \
             --dart-define=SUPABASE_PRODUCTION_URL=${SUPABASE_PRODUCTION_URL} \

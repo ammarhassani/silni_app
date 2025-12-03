@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/app_logger_service.dart';
 
 /// Supabase configuration and initialization for Silni app
 ///
@@ -20,17 +21,15 @@ class SupabaseConfig {
   /// For web: Configures for optimal web performance
   /// For mobile: Enables offline persistence and local storage
   static Future<void> initialize() async {
+    final logger = AppLoggerService();
+
     if (_initialized) {
-      if (kDebugMode) {
-        print('⚠️ [SupabaseConfig] Already initialized, skipping...');
-      }
+      logger.warning('Supabase already initialized, skipping', category: LogCategory.service, tag: 'SupabaseConfig');
       return;
     }
 
     try {
-      if (kDebugMode) {
-        print('🚀 [SupabaseConfig] Initializing Supabase...');
-      }
+      logger.info('Initializing Supabase', category: LogCategory.service, tag: 'SupabaseConfig');
 
       // Determine environment - check dart-define first, then .env fallback
       final environment = const String.fromEnvironment('APP_ENV',
@@ -39,14 +38,25 @@ class SupabaseConfig {
         : dotenv.env['APP_ENV'] ?? 'staging';
       final isProduction = environment == 'production';
 
-      if (kDebugMode) {
-        print('🌍 [SupabaseConfig] Environment: $environment');
-        // Debug: Show where credentials are coming from
-        final dartDefineUrl = const String.fromEnvironment('SUPABASE_STAGING_URL');
-        final envUrl = dotenv.env['SUPABASE_STAGING_URL'];
-        print('📍 [SupabaseConfig] dart-define SUPABASE_STAGING_URL: ${dartDefineUrl.isEmpty ? "(empty)" : dartDefineUrl}');
-        print('📍 [SupabaseConfig] .env SUPABASE_STAGING_URL: ${envUrl ?? "(null)"}');
-      }
+      logger.info(
+        'Environment determined',
+        category: LogCategory.service,
+        tag: 'SupabaseConfig',
+        metadata: {'environment': environment, 'isProduction': isProduction},
+      );
+
+      // Debug: Show where credentials are coming from
+      final dartDefineUrl = const String.fromEnvironment('SUPABASE_STAGING_URL');
+      final envUrl = dotenv.env['SUPABASE_STAGING_URL'];
+      logger.debug(
+        'Credential sources',
+        category: LogCategory.service,
+        tag: 'SupabaseConfig',
+        metadata: {
+          'dartDefineUrl': dartDefineUrl.isEmpty ? '(empty)' : dartDefineUrl,
+          'envUrl': envUrl ?? '(null)',
+        },
+      );
 
       // Get environment-specific credentials
       // Priority: dart-define > .env > empty string
@@ -75,30 +85,40 @@ class SupabaseConfig {
 
       // Validate credentials
       if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
-        if (kDebugMode) {
-          print('❌ [SupabaseConfig] VALIDATION FAILED');
-          print('❌ [SupabaseConfig] URL empty: ${supabaseUrl.isEmpty}');
-          print('❌ [SupabaseConfig] Key empty: ${supabaseAnonKey.isEmpty}');
-        }
+        logger.error(
+          'Credential validation failed',
+          category: LogCategory.service,
+          tag: 'SupabaseConfig',
+          metadata: {
+            'urlEmpty': supabaseUrl.isEmpty,
+            'keyEmpty': supabaseAnonKey.isEmpty,
+            'environment': environment,
+          },
+        );
         throw Exception(
           'Missing Supabase credentials for environment: $environment. '
           'Please check your .env file or --dart-define flags.',
         );
       }
 
-      if (kDebugMode) {
-        // Show partial URL for debugging without exposing full endpoint
-        final urlPreview = supabaseUrl.length > 20
-          ? '${supabaseUrl.substring(0, 10)}...${supabaseUrl.substring(supabaseUrl.length - 10)}'
-          : supabaseUrl;
-        final keyPreview = supabaseAnonKey.length > 20
-          ? '${supabaseAnonKey.substring(0, 10)}...${supabaseAnonKey.substring(supabaseAnonKey.length - 10)}'
-          : '(hidden)';
-        print('✅ [SupabaseConfig] Credentials validated');
-        print('🔗 [SupabaseConfig] URL preview: $urlPreview');
-        print('🔑 [SupabaseConfig] Key preview: $keyPreview');
-        print('🔄 [SupabaseConfig] Starting Supabase.initialize()...');
-      }
+      // Show partial URL for debugging without exposing full endpoint
+      final urlPreview = supabaseUrl.length > 20
+        ? '${supabaseUrl.substring(0, 10)}...${supabaseUrl.substring(supabaseUrl.length - 10)}'
+        : supabaseUrl;
+      final keyPreview = supabaseAnonKey.length > 20
+        ? '${supabaseAnonKey.substring(0, 10)}...${supabaseAnonKey.substring(supabaseAnonKey.length - 10)}'
+        : '(hidden)';
+
+      logger.info(
+        'Credentials validated',
+        category: LogCategory.service,
+        tag: 'SupabaseConfig',
+        metadata: {
+          'urlPreview': urlPreview,
+          'keyPreview': keyPreview,
+        },
+      );
+      logger.debug('Starting Supabase.initialize()...', category: LogCategory.service, tag: 'SupabaseConfig');
 
       // Initialize Supabase with platform-specific options
       await Supabase.initialize(
@@ -119,18 +139,24 @@ class SupabaseConfig {
 
       _initialized = true;
 
-      if (kDebugMode) {
-        print('✅ [SupabaseConfig] Supabase initialized successfully');
-        print('🔗 [SupabaseConfig] URL: $supabaseUrl');
-        print('🔒 [SupabaseConfig] Auth Flow: PKCE');
-        print('💾 [SupabaseConfig] Session Persistence: Enabled');
-      }
+      logger.info(
+        'Supabase initialized successfully',
+        category: LogCategory.service,
+        tag: 'SupabaseConfig',
+        metadata: {
+          'url': supabaseUrl,
+          'authFlow': 'PKCE',
+          'sessionPersistence': 'Enabled',
+        },
+      );
     } catch (e, stackTrace) {
-      if (kDebugMode) {
-        print('❌ [SupabaseConfig] Failed to initialize Supabase');
-        print('Error: $e');
-        print('Stack trace: $stackTrace');
-      }
+      logger.error(
+        'Failed to initialize Supabase',
+        category: LogCategory.service,
+        tag: 'SupabaseConfig',
+        metadata: {'error': e.toString()},
+        stackTrace: stackTrace,
+      );
 
       // Re-throw with user-friendly message
       // This prevents the app from continuing with an uninitialized Supabase instance

@@ -13,6 +13,8 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 import 'shared/widgets/floating_points_overlay.dart';
+import 'shared/widgets/logger_host.dart'; // In-app logger
+import 'core/services/app_logger_service.dart'; // Logger service
 
 // Firebase Analytics instance
 final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
@@ -20,29 +22,47 @@ final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize logger service FIRST
+  final logger = AppLoggerService();
+
+  // Enable logger for TestFlight builds and debug mode
+  logger.setEnabled(
+    kDebugMode || const bool.fromEnvironment('ENABLE_LOGGER', defaultValue: false)
+  );
+
   // ========================================
   // DIAGNOSTIC LOGGING - iOS Debug
   // ========================================
-  debugPrint('');
-  debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  debugPrint('🚀 [APP STARTUP] Silni App Initializing...');
-  debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  debugPrint('');
+  logger.info('Silni App Initializing...', category: LogCategory.lifecycle, tag: 'main');
 
   // Platform Detection
-  debugPrint('📱 [PLATFORM] Build Mode: ${kDebugMode ? 'DEBUG' : 'RELEASE'}');
+  logger.info(
+    'Build Mode: ${kDebugMode ? 'DEBUG' : 'RELEASE'}',
+    category: LogCategory.lifecycle,
+    tag: 'Platform',
+  );
+
   if (kIsWeb) {
-    debugPrint('📱 [PLATFORM] Running on: WEB');
+    logger.info('Running on: WEB', category: LogCategory.lifecycle, tag: 'Platform');
   } else if (Platform.isIOS) {
-    debugPrint('📱 [PLATFORM] Running on: iOS');
-    debugPrint('📱 [PLATFORM] iOS Version: ${Platform.operatingSystemVersion}');
+    logger.info(
+      'Running on: iOS ${Platform.operatingSystemVersion}',
+      category: LogCategory.lifecycle,
+      tag: 'Platform',
+    );
   } else if (Platform.isAndroid) {
-    debugPrint('📱 [PLATFORM] Running on: Android');
-    debugPrint('📱 [PLATFORM] Android Version: ${Platform.operatingSystemVersion}');
+    logger.info(
+      'Running on: Android ${Platform.operatingSystemVersion}',
+      category: LogCategory.lifecycle,
+      tag: 'Platform',
+    );
   } else {
-    debugPrint('📱 [PLATFORM] Running on: ${Platform.operatingSystem}');
+    logger.info(
+      'Running on: ${Platform.operatingSystem}',
+      category: LogCategory.lifecycle,
+      tag: 'Platform',
+    );
   }
-  debugPrint('');
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
@@ -51,72 +71,101 @@ void main() async {
   ]);
 
   // Load environment variables
-  debugPrint('📂 [ENV] Loading environment variables from .env file...');
+  logger.info('Loading environment variables from .env file...', category: LogCategory.lifecycle, tag: 'ENV');
   try {
     await dotenv.load(fileName: '.env');
-    debugPrint('✅ [ENV] .env file loaded successfully');
+    logger.info('.env file loaded successfully', category: LogCategory.lifecycle, tag: 'ENV');
 
     // Log which environment variables are available (without exposing sensitive data)
     final envKeys = dotenv.env.keys.toList();
-    debugPrint('📋 [ENV] Available variables: ${envKeys.length} keys');
-    debugPrint('📋 [ENV] Has SUPABASE_STAGING_URL: ${dotenv.env.containsKey('SUPABASE_STAGING_URL')}');
-    debugPrint('📋 [ENV] Has SUPABASE_STAGING_ANON_KEY: ${dotenv.env.containsKey('SUPABASE_STAGING_ANON_KEY')}');
-    debugPrint('📋 [ENV] Has APP_ENV: ${dotenv.env.containsKey('APP_ENV')}');
+    logger.debug(
+      'Environment variables loaded',
+      category: LogCategory.lifecycle,
+      tag: 'ENV',
+      metadata: {
+        'variableCount': envKeys.length,
+        'hasSupabaseUrl': dotenv.env.containsKey('SUPABASE_STAGING_URL'),
+        'hasSupabaseKey': dotenv.env.containsKey('SUPABASE_STAGING_ANON_KEY'),
+        'hasAppEnv': dotenv.env.containsKey('APP_ENV'),
+      },
+    );
 
     // Check dart-define values (these take precedence)
     final dartDefineUrl = const String.fromEnvironment('SUPABASE_STAGING_URL');
     final dartDefineAppEnv = const String.fromEnvironment('APP_ENV');
-    debugPrint('🔧 [DART-DEFINE] SUPABASE_STAGING_URL: ${dartDefineUrl.isNotEmpty ? '(provided)' : '(empty)'}');
-    debugPrint('🔧 [DART-DEFINE] APP_ENV: ${dartDefineAppEnv.isNotEmpty ? dartDefineAppEnv : '(empty)'}');
-    debugPrint('');
+    logger.debug(
+      'Dart-define values checked',
+      category: LogCategory.lifecycle,
+      tag: 'DART-DEFINE',
+      metadata: {
+        'hasSupabaseUrl': dartDefineUrl.isNotEmpty,
+        'appEnv': dartDefineAppEnv.isNotEmpty ? dartDefineAppEnv : '(empty)',
+      },
+    );
   } catch (e, stackTrace) {
-    debugPrint('❌ [ENV] CRITICAL: Could not load .env file');
-    debugPrint('❌ [ENV] Error: $e');
-    debugPrint('❌ [ENV] Stack trace: $stackTrace');
-    debugPrint('⚠️ [ENV] App will rely on --dart-define flags from build command');
-    debugPrint('⚠️ [ENV] If dart-define flags are missing, Supabase will fail to initialize');
+    logger.critical(
+      'Could not load .env file',
+      category: LogCategory.lifecycle,
+      tag: 'ENV',
+      metadata: {'error': e.toString()},
+      stackTrace: stackTrace,
+    );
+    logger.warning(
+      'App will rely on --dart-define flags from build command',
+      category: LogCategory.lifecycle,
+      tag: 'ENV',
+    );
 
     // Check if dart-define provides fallback
     final dartDefineUrl = const String.fromEnvironment('SUPABASE_STAGING_URL');
     if (dartDefineUrl.isEmpty) {
-      debugPrint('🔴 [ENV] CRITICAL: No dart-define fallback found!');
-      debugPrint('🔴 [ENV] App WILL FAIL - no credentials available');
+      logger.critical(
+        'No dart-define fallback found! App WILL FAIL - no credentials available',
+        category: LogCategory.lifecycle,
+        tag: 'ENV',
+      );
     } else {
-      debugPrint('🟢 [ENV] OK: dart-define fallback is available');
+      logger.info(
+        'dart-define fallback is available',
+        category: LogCategory.lifecycle,
+        tag: 'ENV',
+      );
     }
-    debugPrint('');
   }
 
   // Initialize Supabase (primary backend)
-  debugPrint('🔵 [SUPABASE] Starting initialization...');
+  logger.info('Starting Supabase initialization...', category: LogCategory.database, tag: 'Supabase');
   try {
     await SupabaseConfig.initialize();
-    debugPrint('✅ [SUPABASE] Initialization completed successfully');
-    debugPrint('✅ [SUPABASE] Client is ready');
-    debugPrint('');
+    logger.info('Supabase initialization completed successfully', category: LogCategory.database, tag: 'Supabase');
+    logger.info('Supabase client is ready', category: LogCategory.database, tag: 'Supabase');
   } catch (e, stackTrace) {
-    debugPrint('🔴 [SUPABASE] CRITICAL: Initialization FAILED');
-    debugPrint('🔴 [SUPABASE] Error: $e');
-    debugPrint('🔴 [SUPABASE] Stack trace: $stackTrace');
-    debugPrint('🔴 [SUPABASE] Auth will NOT work - app is broken');
-    debugPrint('');
+    logger.critical(
+      'Supabase initialization FAILED - Auth will NOT work',
+      category: LogCategory.database,
+      tag: 'Supabase',
+      metadata: {'error': e.toString()},
+      stackTrace: stackTrace,
+    );
     // Don't rethrow - let app start so we can see logs
   }
 
   // Initialize Firebase (for FCM notifications only)
-  debugPrint('🟠 [FIREBASE] Starting initialization...');
+  logger.info('Starting Firebase initialization...', category: LogCategory.service, tag: 'Firebase');
   try {
     await FirebaseConfig.initialize();
-    debugPrint('✅ [FIREBASE] Initialization completed');
-    debugPrint('');
+    logger.info('Firebase initialization completed', category: LogCategory.service, tag: 'Firebase');
   } catch (e) {
-    debugPrint('⚠️ [FIREBASE] Initialization failed: $e');
-    debugPrint('⚠️ [FIREBASE] FCM notifications may not work');
-    debugPrint('');
+    logger.warning(
+      'Firebase initialization failed - FCM notifications may not work',
+      category: LogCategory.service,
+      tag: 'Firebase',
+      metadata: {'error': e.toString()},
+    );
   }
 
   // Initialize Sentry and run app
-  debugPrint('🐛 [SENTRY] Initializing error tracking...');
+  logger.info('Initializing error tracking...', category: LogCategory.service, tag: 'Sentry');
   await SentryFlutter.init(
     (options) {
       options.dsn = dotenv.env['SENTRY_DSN'] ?? '';
@@ -125,23 +174,31 @@ void main() async {
       options.attachThreads = true;
       options.attachStacktrace = true;
       options.environment = dotenv.env['ENVIRONMENT'] ?? 'development';
-      debugPrint('🐛 [SENTRY] Environment: ${options.environment}');
+      logger.debug(
+        'Sentry environment: ${options.environment}',
+        category: LogCategory.service,
+        tag: 'Sentry',
+      );
       // Only report crashes in production - skip sending in development
       if (dotenv.env['ENVIRONMENT'] != 'production') {
         options.beforeSend = (event, hint) {
-          debugPrint('🐛 [SENTRY] Event captured (dev mode - not sent)');
+          logger.debug(
+            'Sentry event captured (dev mode - not sent)',
+            category: LogCategory.service,
+            tag: 'Sentry',
+          );
           return null; // Don't send in development/staging
         };
-        debugPrint('🐛 [SENTRY] Running in dev mode - errors will NOT be sent to Sentry');
+        logger.debug(
+          'Running in dev mode - errors will NOT be sent to Sentry',
+          category: LogCategory.service,
+          tag: 'Sentry',
+        );
       }
     },
     appRunner: () {
-      debugPrint('✅ [SENTRY] Initialized successfully');
-      debugPrint('');
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      debugPrint('✅ [APP STARTUP] All services initialized - Starting app');
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      debugPrint('');
+      logger.info('Sentry initialized successfully', category: LogCategory.service, tag: 'Sentry');
+      logger.info('All services initialized - Starting app', category: LogCategory.lifecycle, tag: 'main');
       return runApp(
         const ProviderScope(
           child: SilniApp(),
@@ -177,9 +234,12 @@ class SilniApp extends ConsumerWidget {
       builder: (context, child) {
         return Directionality(
           textDirection: TextDirection.rtl, // Arabic RTL
-          child: FloatingPointsHost(
-            key: floatingPointsHostKey,
-            child: child!,
+          child: LoggerHost(
+            showFAB: true, // Show logger FAB for TestFlight debugging
+            child: FloatingPointsHost(
+              key: floatingPointsHostKey,
+              child: child!,
+            ),
           ),
         );
       },

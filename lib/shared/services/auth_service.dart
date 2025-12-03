@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
+import '../../core/services/app_logger_service.dart';
 
 class AuthService {
   final SupabaseClient _supabase = SupabaseConfig.client;
@@ -19,15 +19,20 @@ class AuthService {
     required String password,
     required String fullName,
   }) async {
+    final logger = AppLoggerService();
+
     try {
-      if (kDebugMode) {
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        print('📝 [AuthService.signUpWithEmail] STARTING');
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        print('📧 [AuthService] Email: $email');
-        print('👤 [AuthService] Full name: $fullName');
-        print('🔄 [AuthService] Calling _supabase.auth.signUp()...');
-      }
+      logger.info('Sign up starting', category: LogCategory.auth, tag: 'signUpWithEmail');
+      logger.debug(
+        'Sign up parameters',
+        category: LogCategory.auth,
+        tag: 'signUpWithEmail',
+        metadata: {
+          'email': email,
+          'fullName': fullName,
+        },
+      );
+      logger.debug('Calling Supabase auth.signUp()...', category: LogCategory.auth, tag: 'signUpWithEmail');
 
       final startTime = DateTime.now();
 
@@ -42,61 +47,71 @@ class AuthService {
 
       final duration = DateTime.now().difference(startTime);
 
-      if (kDebugMode) {
-        print('✅ [AuthService] signUp() completed in ${duration.inMilliseconds}ms');
-        print('📊 [AuthService] Response details:');
-        print('   - User object: ${response.user != null ? 'present' : 'NULL'}');
-        print('   - User ID: ${response.user?.id ?? '(null)'}');
-        print('   - Session object: ${response.session != null ? 'present' : 'NULL'}');
-        print('   - Access token: ${response.session?.accessToken != null ? 'present' : '(null)'}');
-        print('   - Refresh token: ${response.session?.refreshToken != null ? 'present' : '(null)'}');
-      }
+      logger.info(
+        'Supabase signUp() completed',
+        category: LogCategory.auth,
+        tag: 'signUpWithEmail',
+        metadata: {
+          'durationMs': duration.inMilliseconds,
+          'hasUser': response.user != null,
+          'userId': response.user?.id,
+          'hasSession': response.session != null,
+          'hasAccessToken': response.session?.accessToken != null,
+          'hasRefreshToken': response.session?.refreshToken != null,
+        },
+      );
 
       if (response.user == null) {
-        if (kDebugMode) {
-          print('🔴 [AuthService] CRITICAL: No user returned from signUp()');
-        }
+        logger.critical('No user returned from signUp()', category: LogCategory.auth, tag: 'signUpWithEmail');
         throw AuthException('Sign up failed - no user returned');
       }
 
       // Check if email confirmation is required
       if (response.session == null) {
-        if (kDebugMode) {
-          print('⚠️ [AuthService] No session created - email confirmation may be required');
-          print('🔴 [AuthService] User created but cannot authenticate without session');
-        }
+        logger.warning(
+          'No session created - email confirmation required',
+          category: LogCategory.auth,
+          tag: 'signUpWithEmail',
+          metadata: {'userId': response.user?.id},
+        );
         throw AuthException('يرجى تأكيد بريدك الإلكتروني. تحقق من صندوق الوارد الخاص بك.');
       }
 
-      if (kDebugMode) {
-        print('✅ [AuthService] User created successfully: ${response.user?.id}');
-        print('✅ [AuthService] Session active - user can authenticate');
-        print('✅ [AuthService] User profile auto-created by database trigger');
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        print('✅ [AuthService.signUpWithEmail] SUCCESS');
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      }
+      logger.info(
+        'Sign up successful',
+        category: LogCategory.auth,
+        tag: 'signUpWithEmail',
+        metadata: {
+          'userId': response.user?.id,
+          'sessionActive': true,
+          'profileAutoCreated': true,
+        },
+      );
 
       return response;
-    } on AuthException catch (e) {
-      if (kDebugMode) {
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        print('🔴 [AuthService.signUpWithEmail] AuthException');
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        print('❌ [AuthService] Error message: ${e.message}');
-        print('❌ [AuthService] Status code: ${e.statusCode}');
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      }
+    } on AuthException catch (e, stackTrace) {
+      logger.error(
+        'AuthException during sign up',
+        category: LogCategory.auth,
+        tag: 'signUpWithEmail',
+        metadata: {
+          'message': e.message,
+          'statusCode': e.statusCode,
+        },
+        stackTrace: stackTrace,
+      );
       rethrow;
-    } catch (e) {
-      if (kDebugMode) {
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        print('🔴 [AuthService.signUpWithEmail] Unexpected exception');
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        print('❌ [AuthService] Exception type: ${e.runtimeType}');
-        print('❌ [AuthService] Exception: $e');
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      }
+    } catch (e, stackTrace) {
+      logger.error(
+        'Unexpected exception during sign up',
+        category: LogCategory.auth,
+        tag: 'signUpWithEmail',
+        metadata: {
+          'exceptionType': e.runtimeType.toString(),
+          'exception': e.toString(),
+        },
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -106,14 +121,17 @@ class AuthService {
     required String email,
     required String password,
   }) async {
+    final logger = AppLoggerService();
+
     try {
-      if (kDebugMode) {
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        print('🔐 [AuthService.signInWithEmail] STARTING');
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        print('📧 [AuthService] Email: $email');
-        print('🔄 [AuthService] Calling _supabase.auth.signInWithPassword()...');
-      }
+      logger.info('Sign in starting', category: LogCategory.auth, tag: 'signInWithEmail');
+      logger.debug(
+        'Sign in parameters',
+        category: LogCategory.auth,
+        tag: 'signInWithEmail',
+        metadata: {'email': email},
+      );
+      logger.debug('Calling Supabase signInWithPassword()...', category: LogCategory.auth, tag: 'signInWithEmail');
 
       final startTime = DateTime.now();
 
@@ -124,142 +142,170 @@ class AuthService {
 
       final duration = DateTime.now().difference(startTime);
 
-      if (kDebugMode) {
-        print('✅ [AuthService] signInWithPassword() completed in ${duration.inMilliseconds}ms');
-        print('📊 [AuthService] Response details:');
-        print('   - User object: ${response.user != null ? 'present' : 'NULL'}');
-        print('   - User ID: ${response.user?.id ?? '(null)'}');
-        print('   - Session object: ${response.session != null ? 'present' : 'NULL'}');
-        print('   - Access token: ${response.session?.accessToken != null ? 'present' : '(null)'}');
-        print('   - Refresh token: ${response.session?.refreshToken != null ? 'present' : '(null)'}');
-      }
+      logger.info(
+        'Supabase signInWithPassword() completed',
+        category: LogCategory.auth,
+        tag: 'signInWithEmail',
+        metadata: {
+          'durationMs': duration.inMilliseconds,
+          'hasUser': response.user != null,
+          'userId': response.user?.id,
+          'hasSession': response.session != null,
+          'hasAccessToken': response.session?.accessToken != null,
+          'hasRefreshToken': response.session?.refreshToken != null,
+        },
+      );
 
       if (response.user != null) {
         // Update last login asynchronously (don't block login)
-        if (kDebugMode) {
-          print('🔄 [AuthService] Updating last login timestamp (async)...');
-        }
+        logger.debug('Updating last login timestamp (async)...', category: LogCategory.auth, tag: 'signInWithEmail');
         _updateLastLogin(response.user!.id).catchError((e) {
-          if (kDebugMode) {
-            print('⚠️ [AuthService] Failed to update last login: $e');
-          }
+          logger.warning(
+            'Failed to update last login',
+            category: LogCategory.auth,
+            tag: 'signInWithEmail',
+            metadata: {'error': e.toString()},
+          );
         });
       }
 
-      if (kDebugMode) {
-        print('✅ [AuthService] User signed in successfully: ${response.user?.id}');
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        print('✅ [AuthService.signInWithEmail] SUCCESS');
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      }
+      logger.info(
+        'Sign in successful',
+        category: LogCategory.auth,
+        tag: 'signInWithEmail',
+        metadata: {'userId': response.user?.id},
+      );
 
       return response;
-    } on AuthException catch (e) {
-      if (kDebugMode) {
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        print('🔴 [AuthService.signInWithEmail] AuthException');
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        print('❌ [AuthService] Error message: ${e.message}');
-        print('❌ [AuthService] Status code: ${e.statusCode}');
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      }
+    } on AuthException catch (e, stackTrace) {
+      logger.error(
+        'AuthException during sign in',
+        category: LogCategory.auth,
+        tag: 'signInWithEmail',
+        metadata: {
+          'message': e.message,
+          'statusCode': e.statusCode,
+        },
+        stackTrace: stackTrace,
+      );
       rethrow;
-    } catch (e) {
-      if (kDebugMode) {
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        print('🔴 [AuthService.signInWithEmail] Unexpected exception');
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        print('❌ [AuthService] Exception type: ${e.runtimeType}');
-        print('❌ [AuthService] Exception: $e');
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      }
+    } catch (e, stackTrace) {
+      logger.error(
+        'Unexpected exception during sign in',
+        category: LogCategory.auth,
+        tag: 'signInWithEmail',
+        metadata: {
+          'exceptionType': e.runtimeType.toString(),
+          'exception': e.toString(),
+        },
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
 
   // Sign out
   Future<void> signOut() async {
+    final logger = AppLoggerService();
+
     try {
+      logger.info('Sign out starting', category: LogCategory.auth, tag: 'signOut');
       await _supabase.auth.signOut();
-      if (kDebugMode) {
-        print('✅ User signed out');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Sign out error: $e');
-      }
+      logger.info('Sign out successful', category: LogCategory.auth, tag: 'signOut');
+    } catch (e, stackTrace) {
+      logger.error(
+        'Sign out error',
+        category: LogCategory.auth,
+        tag: 'signOut',
+        metadata: {'error': e.toString()},
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
 
   // Reset password
   Future<void> resetPassword(String email) async {
+    final logger = AppLoggerService();
+
     try {
+      logger.info('Password reset starting', category: LogCategory.auth, tag: 'resetPassword', metadata: {'email': email});
       await _supabase.auth.resetPasswordForEmail(email);
-      if (kDebugMode) {
-        print('✅ Password reset email sent to: $email');
-      }
-    } on AuthException catch (e) {
-      if (kDebugMode) {
-        print('❌ Password reset error: ${e.message}');
-      }
+      logger.info('Password reset email sent', category: LogCategory.auth, tag: 'resetPassword', metadata: {'email': email});
+    } on AuthException catch (e, stackTrace) {
+      logger.error(
+        'Password reset error',
+        category: LogCategory.auth,
+        tag: 'resetPassword',
+        metadata: {'message': e.message, 'email': email},
+        stackTrace: stackTrace,
+      );
       rethrow;
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Unexpected password reset error: $e');
-      }
+    } catch (e, stackTrace) {
+      logger.error(
+        'Unexpected password reset error',
+        category: LogCategory.auth,
+        tag: 'resetPassword',
+        metadata: {'error': e.toString(), 'email': email},
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
 
   // Delete account
   Future<void> deleteAccount() async {
+    final logger = AppLoggerService();
+
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) {
+        logger.error('No user logged in', category: LogCategory.auth, tag: 'deleteAccount');
         throw Exception('No user logged in');
       }
 
-      if (kDebugMode) {
-        print('🗑️ Deleting user account: ${user.id}');
-      }
+      logger.info('Deleting user account', category: LogCategory.auth, tag: 'deleteAccount', metadata: {'userId': user.id});
 
       // Call RPC function to delete user data and account
       // This triggers cascading deletes for all user data
       await _supabase.rpc('delete_user_account');
 
-      if (kDebugMode) {
-        print('✅ User data deleted from database');
-      }
+      logger.debug('User data deleted from database', category: LogCategory.auth, tag: 'deleteAccount');
 
       // Sign out (Supabase Auth user deletion is handled by RPC or manually via Admin API)
       await _supabase.auth.signOut();
 
-      if (kDebugMode) {
-        print('✅ Account deleted successfully');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Delete account error: $e');
-      }
+      logger.info('Account deleted successfully', category: LogCategory.auth, tag: 'deleteAccount', metadata: {'userId': user.id});
+    } catch (e, stackTrace) {
+      logger.error(
+        'Delete account error',
+        category: LogCategory.auth,
+        tag: 'deleteAccount',
+        metadata: {'error': e.toString()},
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
 
   // Update last login timestamp
   Future<void> _updateLastLogin(String uid) async {
+    final logger = AppLoggerService();
+
     try {
+      logger.debug('Updating last login timestamp', category: LogCategory.auth, tag: '_updateLastLogin', metadata: {'userId': uid});
       await _supabase.from('users').update({
         'last_login_at': DateTime.now().toIso8601String(),
       }).eq('id', uid);
 
-      if (kDebugMode) {
-        print('✅ Last login updated for user: $uid');
-      }
+      logger.debug('Last login updated successfully', category: LogCategory.auth, tag: '_updateLastLogin', metadata: {'userId': uid});
     } catch (e) {
-      if (kDebugMode) {
-        print('⚠️ Failed to update last login: $e');
-      }
+      logger.warning(
+        'Failed to update last login (non-critical)',
+        category: LogCategory.auth,
+        tag: '_updateLastLogin',
+        metadata: {'userId': uid, 'error': e.toString()},
+      );
       // Don't rethrow - this is a non-critical operation
     }
   }
