@@ -11,10 +11,10 @@ workflows:
       flutter: stable
       cocoapods: default
 
-      # This tells Codemagic to use the cert/profile you uploaded in the UI
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.silni.app
+        team_id: 3SPV37F368
 
       vars:
         SUPABASE_STAGING_URL: https://dqqyhmydodjpqboykzow.supabase.co
