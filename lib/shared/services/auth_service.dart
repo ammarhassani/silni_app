@@ -35,10 +35,19 @@ class AuthService {
 
       if (kDebugMode) {
         print('✅ Supabase user created: ${response.user?.id}');
+        print('📧 Session: ${response.session != null ? "Active" : "Null (email confirmation required?)"}');
       }
 
       if (response.user == null) {
-        throw Exception('Sign up failed - no user returned');
+        throw AuthException('Sign up failed - no user returned');
+      }
+
+      // Check if email confirmation is required
+      if (response.session == null) {
+        if (kDebugMode) {
+          print('⚠️ No session created - email confirmation may be required');
+        }
+        throw AuthException('يرجى تأكيد بريدك الإلكتروني. تحقق من صندوق الوارد الخاص بك.');
       }
 
       if (kDebugMode) {
