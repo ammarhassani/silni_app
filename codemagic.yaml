@@ -76,7 +76,15 @@ workflows:
           flutter analyze || true
       - name: Build iOS app
         script: |
-          flutter build ipa --release
+          flutter build ipa --release \
+            --dart-define=APP_ENV=staging \
+            --dart-define=SUPABASE_STAGING_URL=${SUPABASE_STAGING_URL} \
+            --dart-define=SUPABASE_STAGING_ANON_KEY=${SUPABASE_STAGING_ANON_KEY} \
+            --dart-define=SUPABASE_PRODUCTION_URL=${SUPABASE_PRODUCTION_URL} \
+            --dart-define=SUPABASE_PRODUCTION_ANON_KEY=${SUPABASE_PRODUCTION_ANON_KEY} \
+            --dart-define=FIREBASE_API_KEY=${FIREBASE_API_KEY} \
+            --dart-define=CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME} \
+            --dart-define=CLOUDINARY_UPLOAD_PRESET=${CLOUDINARY_UPLOAD_PRESET}
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log

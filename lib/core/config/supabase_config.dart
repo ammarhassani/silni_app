@@ -32,8 +32,11 @@ class SupabaseConfig {
         print('🚀 [SupabaseConfig] Initializing Supabase...');
       }
 
-      // Determine environment from .env
-      final environment = dotenv.env['APP_ENV'] ?? 'staging';
+      // Determine environment - check dart-define first, then .env fallback
+      final environment = const String.fromEnvironment('APP_ENV',
+        defaultValue: '') != ''
+        ? const String.fromEnvironment('APP_ENV')
+        : dotenv.env['APP_ENV'] ?? 'staging';
       final isProduction = environment == 'production';
 
       if (kDebugMode) {
@@ -41,15 +44,28 @@ class SupabaseConfig {
       }
 
       // Get environment-specific credentials
+      // Priority: dart-define > .env > empty string
       final String supabaseUrl;
       final String supabaseAnonKey;
 
       if (isProduction) {
-        supabaseUrl = dotenv.env['SUPABASE_PRODUCTION_URL'] ?? '';
-        supabaseAnonKey = dotenv.env['SUPABASE_PRODUCTION_ANON_KEY'] ?? '';
+        supabaseUrl = const String.fromEnvironment('SUPABASE_PRODUCTION_URL',
+          defaultValue: '') != ''
+          ? const String.fromEnvironment('SUPABASE_PRODUCTION_URL')
+          : dotenv.env['SUPABASE_PRODUCTION_URL'] ?? '';
+        supabaseAnonKey = const String.fromEnvironment('SUPABASE_PRODUCTION_ANON_KEY',
+          defaultValue: '') != ''
+          ? const String.fromEnvironment('SUPABASE_PRODUCTION_ANON_KEY')
+          : dotenv.env['SUPABASE_PRODUCTION_ANON_KEY'] ?? '';
       } else {
-        supabaseUrl = dotenv.env['SUPABASE_STAGING_URL'] ?? '';
-        supabaseAnonKey = dotenv.env['SUPABASE_STAGING_ANON_KEY'] ?? '';
+        supabaseUrl = const String.fromEnvironment('SUPABASE_STAGING_URL',
+          defaultValue: '') != ''
+          ? const String.fromEnvironment('SUPABASE_STAGING_URL')
+          : dotenv.env['SUPABASE_STAGING_URL'] ?? '';
+        supabaseAnonKey = const String.fromEnvironment('SUPABASE_STAGING_ANON_KEY',
+          defaultValue: '') != ''
+          ? const String.fromEnvironment('SUPABASE_STAGING_ANON_KEY')
+          : dotenv.env['SUPABASE_STAGING_ANON_KEY'] ?? '';
       }
 
       // Validate credentials
