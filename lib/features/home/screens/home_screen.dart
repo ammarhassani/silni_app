@@ -29,6 +29,7 @@ import '../../../shared/services/relatives_service.dart';
 import '../../../shared/services/interactions_service.dart';
 import '../../../shared/services/hadith_service.dart';
 import '../../../shared/providers/interactions_provider.dart';
+import '../../../core/config/supabase_config.dart';
 import '../../auth/providers/auth_provider.dart';
 
 // Providers for relatives and interactions
@@ -208,7 +209,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserProvider);
+    // Try to get user from stream first
+    final streamUser = ref.watch(currentUserProvider);
+
+    // Fallback to synchronous check if stream hasn't emitted yet
+    // This fixes the race condition on iOS where navigation happens before stream emits
+    final user = streamUser ?? SupabaseConfig.currentUser;
 
     // Show loading screen if user is not yet loaded
     if (user == null) {
