@@ -14,6 +14,8 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.silni.app
+        certificate: DISTRIBUTION_CERTIFICATE
+        provisioning_profile: APP_STORE_PROFILE
 
       vars:
         SUPABASE_STAGING_URL: https://dqqyhmydodjpqboykzow.supabase.co
