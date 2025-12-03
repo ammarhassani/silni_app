@@ -54,18 +54,17 @@ workflows:
           cd ios && pod install
       - name: Setup code signing
         script: |
-          # Setup distribution signing for TestFlight
+          # Setup distribution signing for TestFlight using manually uploaded certificates
           set -e
           keychain initialize
 
-          echo "🔍 Fetching App Store signing files for TestFlight..."
-          app-store-connect fetch-signing-files com.silni.app \
-            --type IOS_APP_STORE \
-            --create \
-            --verbose
+          echo "🔑 Adding distribution certificate to keychain..."
+          keychain add-certificates
 
-          echo "✅ Applying profiles to Xcode project..."
+          echo "📱 Installing provisioning profile..."
           xcode-project use-profiles
+
+          echo "✅ Code signing configured for TestFlight"
       - name: Flutter analyze
         script: |
           flutter analyze || true
