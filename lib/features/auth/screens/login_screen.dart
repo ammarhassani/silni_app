@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -79,31 +80,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       print('✅ [LOGIN] Navigation initiated successfully!');
 
       // Don't reset loading state on success - let the new screen take over
-    } catch (e) {
-      print('❌ [LOGIN] Error occurred: ${e.runtimeType}');
-      print('❌ [LOGIN] Error message: $e');
+    } on AuthException catch (e) {
+      // Handle Supabase auth errors specifically
+      print('❌ [LOGIN] AuthException: ${e.message}');
 
-      if (!mounted) {
-        print('⚠️ [LOGIN] Widget unmounted during error handling');
-        return;
-      }
+      if (!mounted) return;
 
-      // Reset loading state on error
       setState(() => _isLoading = false);
 
-      String errorMessage = AuthService.getErrorMessage(
-        e.toString().contains('user-not-found')
-            ? 'user-not-found'
-            : e.toString().contains('wrong-password')
-                ? 'wrong-password'
-                : e.toString().contains('invalid-credential')
-                ? 'wrong-password'
-                : e.toString().contains('invalid-email')
-                ? 'invalid-email'
-                : e.toString().contains('timeout')
-                ? 'too-many-requests'
-                : 'unknown',
+      String errorMessage = AuthService.getErrorMessage(e.message);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 3),
+        ),
       );
+    } catch (e) {
+      // Handle other errors
+      print('❌ [LOGIN] Unexpected error: ${e.runtimeType} - $e');
+
+      if (!mounted) return;
+
+      setState(() => _isLoading = false);
+
+      // For non-auth errors, pass the string to getErrorMessage
+      String errorMessage = AuthService.getErrorMessage(e.toString());
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
