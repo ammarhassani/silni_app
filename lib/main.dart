@@ -164,6 +164,43 @@ void main() async {
     );
   }
 
+  // Configure global error handlers with device context
+  logger.info('Configuring error handlers...', category: LogCategory.service, tag: 'ErrorHandling');
+
+  // Enhanced Flutter error handler with device context
+  FlutterError.onError = (FlutterErrorDetails details) async {
+    // Log locally
+    logger.critical(
+      'Flutter Error: ${details.exceptionAsString()}',
+      category: LogCategory.lifecycle,
+      metadata: {
+        'stack_trace': details.stack.toString(),
+        'library': details.library ?? 'unknown',
+        'context': details.context?.toString() ?? 'no context',
+      },
+      stackTrace: details.stack,
+    );
+
+    // Send to Sentry (will be filtered by beforeSend hook)
+    await Sentry.captureException(
+      details.exception,
+      stackTrace: details.stack,
+    );
+  };
+
+  // Catch errors outside Flutter framework
+  PlatformDispatcher.instance.onError = (error, stack) {
+    logger.critical(
+      'Platform Error: ${error.toString()}',
+      category: LogCategory.lifecycle,
+      metadata: {'error_type': error.runtimeType.toString()},
+      stackTrace: stack,
+    );
+
+    Sentry.captureException(error, stackTrace: stack);
+    return true;
+  };
+
   // Initialize Sentry and run app
   logger.info('Initializing error tracking...', category: LogCategory.service, tag: 'Sentry');
   await SentryFlutter.init(
@@ -179,22 +216,51 @@ void main() async {
         category: LogCategory.service,
         tag: 'Sentry',
       );
-      // Only report crashes in production - skip sending in development
-      if (dotenv.env['ENVIRONMENT'] != 'production') {
-        options.beforeSend = (event, hint) {
+      // Configure beforeSend to enable TestFlight and staging logging
+      options.beforeSend = (event, hint) {
+        final environment = dotenv.env['ENVIRONMENT'] ?? 'development';
+        final isTestFlight = const String.fromEnvironment('IS_TESTFLIGHT', defaultValue: 'false') == 'true';
+
+        // Send events from production OR staging/TestFlight builds
+        // Block only from local development
+        if (environment == 'production' || environment == 'staging' || isTestFlight) {
           logger.debug(
-            'Sentry event captured (dev mode - not sent)',
+            'Sentry event sent',
             category: LogCategory.service,
             tag: 'Sentry',
+            metadata: {'environment': environment, 'is_testflight': isTestFlight},
           );
-          return null; // Don't send in development/staging
-        };
+
+          // Add custom tags for better debugging
+          event.tags ??= {};
+          event.tags!['app_environment'] = environment;
+          event.tags!['is_testflight'] = isTestFlight.toString();
+          event.tags!['build_mode'] = kDebugMode ? 'debug' : 'release';
+          event.tags!['platform'] = Platform.operatingSystem;
+
+          return event;
+        }
+
+        // Block local development events
         logger.debug(
-          'Running in dev mode - errors will NOT be sent to Sentry',
+          'Sentry event captured (local dev - not sent)',
           category: LogCategory.service,
           tag: 'Sentry',
         );
-      }
+        return null;
+      };
+
+      logger.debug(
+        'Sentry configured',
+        category: LogCategory.service,
+        tag: 'Sentry',
+        metadata: {
+          'environment': dotenv.env['ENVIRONMENT'] ?? 'development',
+          'will_send_events': dotenv.env['ENVIRONMENT'] == 'production' ||
+              dotenv.env['ENVIRONMENT'] == 'staging' ||
+              const String.fromEnvironment('IS_TESTFLIGHT', defaultValue: 'false') == 'true',
+        },
+      );
     },
     appRunner: () {
       logger.info('Sentry initialized successfully', category: LogCategory.service, tag: 'Sentry');

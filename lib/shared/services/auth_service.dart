@@ -1,4 +1,7 @@
+import 'dart:io' show Platform, InternetAddress;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import '../../core/config/supabase_config.dart';
 import '../../core/services/app_logger_service.dart';
 
@@ -12,6 +15,57 @@ class AuthService {
 
   // Get current user
   User? get currentUser => _supabase.auth.currentUser;
+
+  // Helper method to add Sentry breadcrumbs and local logging
+  void _addAuthBreadcrumb(String message, {Map<String, dynamic>? data}) {
+    final logger = AppLoggerService();
+
+    // Add to Sentry breadcrumbs for remote debugging
+    Sentry.addBreadcrumb(Breadcrumb(
+      message: message,
+      category: 'auth',
+      level: SentryLevel.info,
+      data: data,
+    ));
+
+    // Also log locally
+    logger.debug(message, category: LogCategory.auth, metadata: data);
+  }
+
+  // Check internet connectivity
+  Future<bool> _checkInternetConnection() async {
+    try {
+      final result = await InternetAddress.lookup('google.com')
+          .timeout(const Duration(seconds: 5));
+      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Check storage availability (SharedPreferences)
+  Future<bool> _checkStorageAvailability() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('_test_key', 'test');
+      final canRead = prefs.getString('_test_key') == 'test';
+      await prefs.remove('_test_key');
+      return canRead;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Check secure storage accessibility (iOS-specific)
+  Future<bool> _checkSecureStorage() async {
+    try {
+      // Check if we can access secure storage
+      final prefs = await SharedPreferences.getInstance();
+      return true; // If we can get instance, storage is accessible
+    } catch (e) {
+      return false;
+    }
+  }
 
   // Sign up with email and password
   Future<AuthResponse> signUpWithEmail({
@@ -124,13 +178,42 @@ class AuthService {
     final logger = AppLoggerService();
 
     try {
+      // Step 1: Initial checks and breadcrumb
       logger.info('Sign in starting', category: LogCategory.auth, tag: 'signInWithEmail');
-      logger.debug(
-        'Sign in parameters',
-        category: LogCategory.auth,
-        tag: 'signInWithEmail',
-        metadata: {'email': email},
-      );
+
+      final hasInternet = await _checkInternetConnection();
+      final storageAvailable = await _checkStorageAvailability();
+
+      _addAuthBreadcrumb('Starting sign-in', data: {
+        'email': email,
+        'has_internet': hasInternet,
+        'storage_available': storageAvailable,
+        'platform': Platform.operatingSystem,
+      });
+
+      if (!hasInternet) {
+        logger.warning('No internet connection detected', category: LogCategory.auth, tag: 'signInWithEmail');
+      }
+
+      if (!storageAvailable) {
+        logger.warning('Storage not available', category: LogCategory.auth, tag: 'signInWithEmail');
+      }
+
+      // Step 2: iOS-specific checks
+      if (Platform.isIOS) {
+        final secureStorageAccessible = await _checkSecureStorage();
+        _addAuthBreadcrumb('iOS-specific checks', data: {
+          'ios_version': Platform.operatingSystemVersion,
+          'secure_storage_accessible': secureStorageAccessible,
+        });
+
+        if (!secureStorageAccessible) {
+          logger.warning('iOS secure storage not accessible', category: LogCategory.auth, tag: 'signInWithEmail');
+        }
+      }
+
+      // Step 3: Call Supabase API
+      _addAuthBreadcrumb('Calling Supabase signInWithPassword');
       logger.debug('Calling Supabase signInWithPassword()...', category: LogCategory.auth, tag: 'signInWithEmail');
 
       final startTime = DateTime.now();
@@ -141,6 +224,14 @@ class AuthService {
       );
 
       final duration = DateTime.now().difference(startTime);
+
+      // Step 4: Log successful auth
+      _addAuthBreadcrumb('Supabase auth successful', data: {
+        'duration_ms': duration.inMilliseconds,
+        'has_session': response.session != null,
+        'has_user': response.user != null,
+        'session_expires_at': response.session?.expiresAt,
+      });
 
       logger.info(
         'Supabase signInWithPassword() completed',
@@ -156,8 +247,19 @@ class AuthService {
         },
       );
 
+      // Step 5: Verify session storage
+      final storedSession = _supabase.auth.currentSession;
+      _addAuthBreadcrumb('Session storage verified', data: {
+        'stored': storedSession != null,
+        'matches': storedSession?.user.id == response.user?.id,
+      });
+
+      if (storedSession == null) {
+        logger.warning('Session not stored in local storage', category: LogCategory.auth, tag: 'signInWithEmail');
+      }
+
+      // Step 6: Update last login (async)
       if (response.user != null) {
-        // Update last login asynchronously (don't block login)
         logger.debug('Updating last login timestamp (async)...', category: LogCategory.auth, tag: 'signInWithEmail');
         _updateLastLogin(response.user!.id).catchError((e) {
           logger.warning(
@@ -178,6 +280,12 @@ class AuthService {
 
       return response;
     } on AuthException catch (e, stackTrace) {
+      // Log auth exception with breadcrumb
+      _addAuthBreadcrumb('Auth exception occurred', data: {
+        'status_code': e.statusCode,
+        'message': e.message,
+      });
+
       logger.error(
         'AuthException during sign in',
         category: LogCategory.auth,
@@ -188,8 +296,21 @@ class AuthService {
         },
         stackTrace: stackTrace,
       );
+
+      // Send to Sentry with full context
+      await Sentry.captureException(e, stackTrace: stackTrace, hint: Hint.withMap({
+        'auth_flow': 'sign_in',
+        'email': email,
+        'platform': Platform.operatingSystem,
+      }));
       rethrow;
     } catch (e, stackTrace) {
+      // Log unexpected exception with breadcrumb
+      _addAuthBreadcrumb('Unexpected exception occurred', data: {
+        'exception_type': e.runtimeType.toString(),
+        'exception': e.toString(),
+      });
+
       logger.error(
         'Unexpected exception during sign in',
         category: LogCategory.auth,
@@ -200,6 +321,14 @@ class AuthService {
         },
         stackTrace: stackTrace,
       );
+
+      // Send to Sentry
+      await Sentry.captureException(e, stackTrace: stackTrace, hint: Hint.withMap({
+        'auth_flow': 'sign_in',
+        'email': email,
+        'platform': Platform.operatingSystem,
+      }));
+
       rethrow;
     }
   }

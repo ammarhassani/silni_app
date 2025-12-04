@@ -1,5 +1,7 @@
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/app_logger_service.dart';
@@ -138,6 +140,58 @@ class SupabaseConfig {
           retryAttempts: 3, // Retry failed uploads
         ),
       );
+
+      // Verify PKCE storage is working on iOS
+      if (Platform.isIOS) {
+        try {
+          logger.debug('Verifying iOS storage...', category: LogCategory.service, tag: 'SupabaseConfig');
+
+          final prefs = await SharedPreferences.getInstance();
+          final testKey = '_supabase_storage_test_${DateTime.now().millisecondsSinceEpoch}';
+          await prefs.setString(testKey, 'test_value');
+          final retrieved = prefs.getString(testKey);
+          await prefs.remove(testKey);
+
+          logger.info(
+            'iOS storage verification',
+            category: LogCategory.service,
+            tag: 'SupabaseConfig',
+            metadata: {
+              'storage_write': true,
+              'storage_read': retrieved == 'test_value',
+              'storage_delete': true,
+            },
+          );
+
+          if (retrieved != 'test_value') {
+            throw Exception('iOS storage verification failed - could not read back test value');
+          }
+
+          logger.info('iOS storage verified successfully', category: LogCategory.service, tag: 'SupabaseConfig');
+        } catch (e, stackTrace) {
+          logger.error(
+            'Storage verification failed',
+            category: LogCategory.service,
+            tag: 'SupabaseConfig',
+            metadata: {'error': e.toString()},
+            stackTrace: stackTrace,
+          );
+
+          // Send to Sentry for remote debugging
+          await Sentry.captureException(e, stackTrace: stackTrace, hint: Hint.withMap({
+            'context': 'ios_storage_verification',
+            'platform': Platform.operatingSystem,
+            'os_version': Platform.operatingSystemVersion,
+          }));
+
+          // Don't throw - allow app to continue but log the issue
+          logger.warning(
+            'Continuing despite storage verification failure',
+            category: LogCategory.service,
+            tag: 'SupabaseConfig',
+          );
+        }
+      }
 
       _initialized = true;
 
