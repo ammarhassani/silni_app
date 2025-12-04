@@ -66,9 +66,39 @@ workflows:
       - name: Flutter analyze
         script: flutter analyze || true
 
+      - name: Create export options
+        script: |
+          cat > ~/export_options.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>3SPV37F368</string>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>compileBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.silni.app</key>
+              <string>APP_STORE_PROFILE</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+          echo "Export options created"
+
       - name: Build iOS app
         script: |
           flutter build ipa --release \
+            --export-options-plist=$HOME/export_options.plist \
             --dart-define=APP_ENV=staging \
             --dart-define=ENABLE_LOGGER=true \
             --dart-define=SUPABASE_STAGING_URL=${SUPABASE_STAGING_URL} \
