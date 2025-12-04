@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/app_logger_service.dart';
 
@@ -125,9 +126,10 @@ class SupabaseConfig {
         url: supabaseUrl,
         anonKey: supabaseAnonKey,
         debug: kDebugMode,
-        authOptions: const FlutterAuthClientOptions(
+        authOptions: FlutterAuthClientOptions(
           authFlowType: AuthFlowType.pkce, // Recommended for security
           autoRefreshToken: true,
+          pkceAsyncStorage: SharedPreferencesGotrueAsyncStorage(),
         ),
         realtimeClientOptions: const RealtimeClientOptions(
           logLevel: kDebugMode ? RealtimeLogLevel.info : RealtimeLogLevel.error,
