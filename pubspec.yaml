@@ -43,7 +43,8 @@ dependencies:
 
   # Monitoring & Analytics
   sentry_flutter: ^9.8.0
-  firebase_analytics: ^11.6.0
+  # NOTE: firebase_analytics removed - was causing iOS issues without GoogleService-Info.plist
+  # firebase_analytics: ^11.6.0
 
   # Internationalization
   intl: ^0.20.2

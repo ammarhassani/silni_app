@@ -123,12 +123,17 @@ class AuthService {
       // Check if email confirmation is required
       if (response.session == null) {
         logger.warning(
-          'No session created - email confirmation required',
+          'No session created - email confirmation may be required or iOS session storage failed',
           category: LogCategory.auth,
           tag: 'signUpWithEmail',
-          metadata: {'userId': response.user?.id},
+          metadata: {
+            'userId': response.user?.id,
+            'platform': Platform.operatingSystem,
+            'userExists': response.user != null,
+          },
         );
-        throw AuthException('يرجى تأكيد بريدك الإلكتروني. تحقق من صندوق الوارد الخاص بك.');
+        // Use English message so getErrorMessage() can match it properly
+        throw AuthException('Email not confirmed - please check your inbox');
       }
 
       logger.info(
