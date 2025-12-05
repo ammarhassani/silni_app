@@ -1,120 +1,74 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
 
 /// Analytics service for tracking user events and behavior
+/// NOTE: Firebase Analytics has been disabled due to iOS configuration issues.
+/// This is a no-op implementation that logs to console in debug mode only.
+/// Re-enable Firebase Analytics when GoogleService-Info.plist is properly configured.
 class AnalyticsService {
-  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
-
   // Auth Events
   Future<void> logSignUp(String method) async {
-    try {
-      if (kDebugMode) print('📊 [Analytics] User signed up via $method');
-
-      await _analytics.logSignUp(signUpMethod: method).timeout(
-        const Duration(seconds: 3),  // Short timeout for iOS
-        onTimeout: () {
-          if (kDebugMode) print('⚠️ [Analytics] Signup logging timeout - continuing');
-        },
-      );
-    } catch (e) {
-      if (kDebugMode) print('⚠️ [Analytics] Failed to log signup: $e');
-      // Fail silently - don't block user flow
-    }
+    if (kDebugMode) print('📊 [Analytics] User signed up via $method (no-op)');
+    // No-op: Firebase Analytics disabled
   }
 
   Future<void> logLogin(String method) async {
-    try {
-      if (kDebugMode) print('📊 [Analytics] User logged in via $method');
-
-      await _analytics.logLogin(loginMethod: method).timeout(
-        const Duration(seconds: 3),  // Short timeout for iOS
-        onTimeout: () {
-          if (kDebugMode) print('⚠️ [Analytics] Login logging timeout - continuing');
-        },
-      );
-    } catch (e) {
-      if (kDebugMode) print('⚠️ [Analytics] Failed to log login: $e');
-      // Fail silently - don't block user flow
-    }
+    if (kDebugMode) print('📊 [Analytics] User logged in via $method (no-op)');
+    // No-op: Firebase Analytics disabled
   }
 
   // Relative Events
   Future<void> logRelativeAdded(String relationshipType) async {
-    if (kDebugMode) print('📊 [Analytics] Relative added: $relationshipType');
-    await _analytics.logEvent(
-      name: 'relative_added',
-      parameters: {'relationship_type': relationshipType},
-    );
+    if (kDebugMode) print('📊 [Analytics] Relative added: $relationshipType (no-op)');
+    // No-op: Firebase Analytics disabled
   }
 
   Future<void> logRelativeViewed(String relationshipType) async {
-    if (kDebugMode) print('📊 [Analytics] Relative viewed: $relationshipType');
-    await _analytics.logEvent(
-      name: 'relative_viewed',
-      parameters: {'relationship_type': relationshipType},
-    );
+    if (kDebugMode) print('📊 [Analytics] Relative viewed: $relationshipType (no-op)');
+    // No-op: Firebase Analytics disabled
   }
 
   Future<void> logRelativeDeleted(String relationshipType) async {
-    if (kDebugMode) print('📊 [Analytics] Relative deleted: $relationshipType');
-    await _analytics.logEvent(
-      name: 'relative_deleted',
-      parameters: {'relationship_type': relationshipType},
-    );
+    if (kDebugMode) print('📊 [Analytics] Relative deleted: $relationshipType (no-op)');
+    // No-op: Firebase Analytics disabled
   }
 
   // Interaction Events
   Future<void> logInteractionRecorded(String interactionType) async {
-    if (kDebugMode) print('📊 [Analytics] Interaction recorded: $interactionType');
-    await _analytics.logEvent(
-      name: 'interaction_recorded',
-      parameters: {'interaction_type': interactionType},
-    );
+    if (kDebugMode) print('📊 [Analytics] Interaction recorded: $interactionType (no-op)');
+    // No-op: Firebase Analytics disabled
   }
 
   Future<void> logStreakMilestone(int streakDays) async {
-    if (kDebugMode) print('📊 [Analytics] Streak milestone: $streakDays days');
-    await _analytics.logEvent(
-      name: 'streak_milestone',
-      parameters: {'streak_days': streakDays},
-    );
+    if (kDebugMode) print('📊 [Analytics] Streak milestone: $streakDays days (no-op)');
+    // No-op: Firebase Analytics disabled
   }
 
   // Screen Views
   Future<void> logScreenView(String screenName) async {
-    if (kDebugMode) print('📊 [Analytics] Screen view: $screenName');
-    await _analytics.logScreenView(screenName: screenName);
+    if (kDebugMode) print('📊 [Analytics] Screen view: $screenName (no-op)');
+    // No-op: Firebase Analytics disabled
   }
 
   // Gamification Events
   Future<void> logBadgeUnlocked(String badgeName) async {
-    if (kDebugMode) print('📊 [Analytics] Badge unlocked: $badgeName');
-    await _analytics.logEvent(
-      name: 'badge_unlocked',
-      parameters: {'badge_name': badgeName},
-    );
+    if (kDebugMode) print('📊 [Analytics] Badge unlocked: $badgeName (no-op)');
+    // No-op: Firebase Analytics disabled
   }
 
   Future<void> logLevelUp(int newLevel) async {
-    if (kDebugMode) print('📊 [Analytics] Level up: $newLevel');
-    await _analytics.logLevelUp(level: newLevel);
+    if (kDebugMode) print('📊 [Analytics] Level up: $newLevel (no-op)');
+    // No-op: Firebase Analytics disabled
   }
 
   // App Lifecycle
   Future<void> logAppOpen() async {
-    if (kDebugMode) print('📊 [Analytics] App opened');
-    await _analytics.logAppOpen();
+    if (kDebugMode) print('📊 [Analytics] App opened (no-op)');
+    // No-op: Firebase Analytics disabled
   }
 
   // Error Tracking (complements Sentry)
   Future<void> logError(String errorMessage, {String? context}) async {
-    if (kDebugMode) print('📊 [Analytics] Error: $errorMessage');
-    await _analytics.logEvent(
-      name: 'app_error',
-      parameters: {
-        'error_message': errorMessage,
-        if (context != null) 'context': context,
-      },
-    );
+    if (kDebugMode) print('📊 [Analytics] Error: $errorMessage (no-op)');
+    // No-op: Firebase Analytics disabled
   }
 }

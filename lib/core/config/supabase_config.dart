@@ -124,14 +124,16 @@ class SupabaseConfig {
       logger.debug('Starting Supabase.initialize()...', category: LogCategory.service, tag: 'SupabaseConfig');
 
       // Initialize Supabase with platform-specific options
+      // NOTE: Using AuthFlowType.implicit for email/password auth
+      // PKCE is designed for OAuth redirect flows and can cause session issues on iOS
       await Supabase.initialize(
         url: supabaseUrl,
         anonKey: supabaseAnonKey,
         debug: kDebugMode,
-        authOptions: FlutterAuthClientOptions(
-          authFlowType: AuthFlowType.pkce, // Recommended for security
+        authOptions: const FlutterAuthClientOptions(
+          authFlowType: AuthFlowType.implicit, // Use implicit for email/password auth
           autoRefreshToken: true,
-          pkceAsyncStorage: SharedPreferencesGotrueAsyncStorage(),
+          // NOTE: Removed pkceAsyncStorage - not needed for implicit flow
         ),
         realtimeClientOptions: const RealtimeClientOptions(
           logLevel: kDebugMode ? RealtimeLogLevel.info : RealtimeLogLevel.error,
@@ -141,7 +143,7 @@ class SupabaseConfig {
         ),
       );
 
-      // Verify PKCE storage is working on iOS
+      // Verify storage is working on iOS (session persistence)
       if (Platform.isIOS) {
         try {
           logger.debug('Verifying iOS storage...', category: LogCategory.service, tag: 'SupabaseConfig');
