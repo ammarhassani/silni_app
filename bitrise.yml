@@ -17,13 +17,6 @@ workflows:
     - certificate-and-profile-installer@1:
         inputs:
         - verbose: true
-    - ios-auto-provision-appstoreconnect@2:
-        inputs:
-        - distribution_type: app-store
-        - project_path: "$BITRISE_PROJECT_PATH"
-        - scheme: "$BITRISE_SCHEME"
-        - configuration: Release
-        - apple_team_id: "3SPV37F368"
     - flutter-installer@0:
         inputs:
         - version: 3.38.3
@@ -36,7 +29,7 @@ workflows:
         - project_location: "$BITRISE_FLUTTER_PROJECT_LOCATION"
         - platform: both
         - ios_output_type: archive
-        - ios_additional_params: "--release"
+        - ios_additional_params: "--release --export-options-plist=ios/exportOptions.plist"
     - deploy-to-bitrise-io@2: {}
   primary:
     description: |
