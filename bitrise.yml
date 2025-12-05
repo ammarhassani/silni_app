@@ -1,0 +1,128 @@
+---
+format_version: '23'
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+project_type: flutter
+workflows:
+  deploy:
+    description: |
+      Builds and deploys app using [Deploy to bitrise.io Step](https://devcenter.bitrise.io/en/getting-started/getting-started-with-flutter-apps.html#deploying-a-flutter-app).
+
+      If you build for iOS, make sure to set up code signing secrets on Bitrise for a successful build.
+
+      Next steps:
+      - Check out [Getting started with Flutter apps](https://devcenter.bitrise.io/en/getting-started/getting-started-with-flutter-apps.html) for signing and deployment options.
+      - Check out the [Code signing guide](https://devcenter.bitrise.io/en/code-signing.html) for iOS and Android
+    steps:
+    - git-clone@8: {}
+    - certificate-and-profile-installer@1:
+        inputs:
+        - verbose: true
+    - manage-ios-code-signing@2:
+        inputs:
+        - distribution_method: app-store
+        - project_path: "$BITRISE_PROJECT_PATH"
+        - scheme: "$BITRISE_SCHEME"
+        - team_id: "3SPV37F368"
+    - flutter-installer@0:
+        inputs:
+        - version: 3.38.3
+        - is_update: 'false'
+    - flutter-analyze@0:
+        inputs:
+        - project_location: "$BITRISE_FLUTTER_PROJECT_LOCATION"
+    - flutter-build@0:
+        inputs:
+        - project_location: "$BITRISE_FLUTTER_PROJECT_LOCATION"
+        - platform: both
+        - ios_output_type: archive
+        - ios_additional_params: "--release"
+    - deploy-to-bitrise-io@2: {}
+  primary:
+    description: |
+      Builds project and runs tests.
+
+      Next steps:
+      - Check out [Getting started with Flutter apps](https://devcenter.bitrise.io/en/getting-started/getting-started-with-flutter-apps.html).
+    steps:
+    - git-clone@8: {}
+    - flutter-installer@0:
+        inputs:
+        - version: 3.38.3
+        - is_update: 'false'
+    - restore-dart-cache@2: {}
+    - flutter-analyze@0:
+        inputs:
+        - project_location: "$BITRISE_FLUTTER_PROJECT_LOCATION"
+    - save-dart-cache@1: {}
+    - deploy-to-bitrise-io@2: {}
+    triggers:
+      push:
+      - branch: claude/flutter-migration-guide-01LsZvTFZyGCUD6JbEcqKWJB
+      pull_request:
+      - source_branch: "*"
+meta:
+  bitrise.io:
+    stack: osx-xcode-edge
+    machine_type_id: g2.mac.large
+app:
+  envs:
+  - BITRISE_FLUTTER_PROJECT_LOCATION: "."
+    opts:
+      is_expand: false
+  - FIREBASE_API_KEY: AIzaSyBuS1snryQ_DWxhcEUtj0Lu_HDrdIvASDY
+    opts:
+      is_expand: false
+  - FIREBASE_AUTH_DOMAIN: silni-31811.firebaseapp.com
+    opts:
+      is_expand: false
+  - FIREBASE_PROJECT_ID: silni-31811
+    opts:
+      is_expand: false
+  - FIREBASE_STORAGE_BUCKET: silni-31811.firebasestorage.app
+    opts:
+      is_expand: false
+  - FIREBASE_MESSAGING_SENDER_ID: '104991741546'
+    opts:
+      is_expand: false
+  - FIREBASE_APP_ID: 1:104991741546:web:baa2792c28877379412f13
+    opts:
+      is_expand: false
+  - FIREBASE_MEASUREMENT_ID: G-JMW4oM9PXM
+    opts:
+      is_expand: false
+  - SUPABASE_STAGING_URL: https://dqqyhmydodjpqboykzow.supabase.co
+    opts:
+      is_expand: false
+  - SUPABASE_STAGING_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxcXlobXlkb2RqcHFib3lrem93Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQwOTQ1MzUsImV4cCI6MjA3OTY3MDUzNX0.I6rNpnUIzk05VM-3MCTTTFbIEm7VRttYXFpbiITn2gg
+    opts:
+      is_expand: false
+  - SUPABASE_PRODUCTION_URL: https://bapwklwxmwhpucutyras.supabase.co
+    opts:
+      is_expand: false
+  - SUPABASE_PRODUCTION_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhcHdrbHd4bXdocHVjdXR5cmFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxMDA2MjUsImV4cCI6MjA3OTY3NjYyNX0.1logTpQ9UnMDzYsZytjL6HAWFpknuMOyqGu0TyWj6eA
+    opts:
+      is_expand: false
+  - CLOUDINARY_CLOUD_NAME: dli79vqgg
+    opts:
+      is_expand: false
+  - CLOUDINARY_UPLOAD_PRESET: silni_unsigned
+    opts:
+      is_expand: false
+  - APP_ENV: staging
+    opts:
+      is_expand: false
+  - ENVIRONMENT: development
+    opts:
+      is_expand: false
+  - IS_TESTFLIGHT: IS_TESTFLIGHT=false
+    opts:
+      is_expand: false
+  - SENTRY_DSN: https://540a407e144e08e455f377ead56644a7@o4510476494241792.ingest.de.sentry.io/4510476495880272
+    opts:
+      is_expand: false
+  - BITRISE_PROJECT_PATH: ios/Runner.xcworkspace
+    opts:
+      is_expand: false
+  - BITRISE_SCHEME: Runner
+    opts:
+      is_expand: false

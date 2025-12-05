@@ -1,6 +1,9 @@
-import 'package:flutter/foundation.dart';
+import 'dart:io' show Platform, InternetAddress;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import '../../core/config/supabase_config.dart';
+import '../../core/services/app_logger_service.dart';
 
 class AuthService {
   final SupabaseClient _supabase = SupabaseConfig.client;
@@ -13,16 +16,79 @@ class AuthService {
   // Get current user
   User? get currentUser => _supabase.auth.currentUser;
 
+  // Helper method to add Sentry breadcrumbs and local logging
+  void _addAuthBreadcrumb(String message, {Map<String, dynamic>? data}) {
+    final logger = AppLoggerService();
+
+    // Add to Sentry breadcrumbs for remote debugging
+    Sentry.addBreadcrumb(Breadcrumb(
+      message: message,
+      category: 'auth',
+      level: SentryLevel.info,
+      data: data,
+    ));
+
+    // Also log locally
+    logger.debug(message, category: LogCategory.auth, metadata: data);
+  }
+
+  // Check internet connectivity
+  Future<bool> _checkInternetConnection() async {
+    try {
+      final result = await InternetAddress.lookup('google.com')
+          .timeout(const Duration(seconds: 5));
+      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Check storage availability (SharedPreferences)
+  Future<bool> _checkStorageAvailability() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('_test_key', 'test');
+      final canRead = prefs.getString('_test_key') == 'test';
+      await prefs.remove('_test_key');
+      return canRead;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Check secure storage accessibility (iOS-specific)
+  Future<bool> _checkSecureStorage() async {
+    try {
+      // Check if we can access secure storage
+      final prefs = await SharedPreferences.getInstance();
+      return true; // If we can get instance, storage is accessible
+    } catch (e) {
+      return false;
+    }
+  }
+
   // Sign up with email and password
   Future<AuthResponse> signUpWithEmail({
     required String email,
     required String password,
     required String fullName,
   }) async {
+    final logger = AppLoggerService();
+
     try {
-      if (kDebugMode) {
-        print('📝 Starting Supabase sign up...');
-      }
+      logger.info('Sign up starting', category: LogCategory.auth, tag: 'signUpWithEmail');
+      logger.debug(
+        'Sign up parameters',
+        category: LogCategory.auth,
+        tag: 'signUpWithEmail',
+        metadata: {
+          'email': email,
+          'fullName': fullName,
+        },
+      );
+      logger.debug('Calling Supabase auth.signUp()...', category: LogCategory.auth, tag: 'signUpWithEmail');
+
+      final startTime = DateTime.now();
 
       // Create user with Supabase Auth
       final response = await _supabase.auth.signUp(
@@ -33,29 +99,73 @@ class AuthService {
         },
       );
 
-      if (kDebugMode) {
-        print('✅ Supabase user created: ${response.user?.id}');
-      }
+      final duration = DateTime.now().difference(startTime);
+
+      logger.info(
+        'Supabase signUp() completed',
+        category: LogCategory.auth,
+        tag: 'signUpWithEmail',
+        metadata: {
+          'durationMs': duration.inMilliseconds,
+          'hasUser': response.user != null,
+          'userId': response.user?.id,
+          'hasSession': response.session != null,
+          'hasAccessToken': response.session?.accessToken != null,
+          'hasRefreshToken': response.session?.refreshToken != null,
+        },
+      );
 
       if (response.user == null) {
-        throw Exception('Sign up failed - no user returned');
+        logger.critical('No user returned from signUp()', category: LogCategory.auth, tag: 'signUpWithEmail');
+        throw AuthException('Sign up failed - no user returned');
       }
 
-      if (kDebugMode) {
-        print('✅ User created successfully: ${response.user?.id}');
-        print('✅ User profile auto-created by database trigger');
+      // Check if email confirmation is required
+      if (response.session == null) {
+        logger.warning(
+          'No session created - email confirmation required',
+          category: LogCategory.auth,
+          tag: 'signUpWithEmail',
+          metadata: {'userId': response.user?.id},
+        );
+        throw AuthException('يرجى تأكيد بريدك الإلكتروني. تحقق من صندوق الوارد الخاص بك.');
       }
+
+      logger.info(
+        'Sign up successful',
+        category: LogCategory.auth,
+        tag: 'signUpWithEmail',
+        metadata: {
+          'userId': response.user?.id,
+          'sessionActive': true,
+          'profileAutoCreated': true,
+        },
+      );
 
       return response;
-    } on AuthException catch (e) {
-      if (kDebugMode) {
-        print('❌ Sign up error: ${e.message}');
-      }
+    } on AuthException catch (e, stackTrace) {
+      logger.error(
+        'AuthException during sign up',
+        category: LogCategory.auth,
+        tag: 'signUpWithEmail',
+        metadata: {
+          'message': e.message,
+          'statusCode': e.statusCode,
+        },
+        stackTrace: stackTrace,
+      );
       rethrow;
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Unexpected sign up error: $e');
-      }
+    } catch (e, stackTrace) {
+      logger.error(
+        'Unexpected exception during sign up',
+        category: LogCategory.auth,
+        tag: 'signUpWithEmail',
+        metadata: {
+          'exceptionType': e.runtimeType.toString(),
+          'exception': e.toString(),
+        },
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -65,130 +175,266 @@ class AuthService {
     required String email,
     required String password,
   }) async {
+    final logger = AppLoggerService();
+
     try {
-      if (kDebugMode) {
-        print('🔐 Starting Supabase sign in...');
+      // Step 1: Initial checks and breadcrumb
+      logger.info('Sign in starting', category: LogCategory.auth, tag: 'signInWithEmail');
+
+      final hasInternet = await _checkInternetConnection();
+      final storageAvailable = await _checkStorageAvailability();
+
+      _addAuthBreadcrumb('Starting sign-in', data: {
+        'email': email,
+        'has_internet': hasInternet,
+        'storage_available': storageAvailable,
+        'platform': Platform.operatingSystem,
+      });
+
+      if (!hasInternet) {
+        logger.warning('No internet connection detected', category: LogCategory.auth, tag: 'signInWithEmail');
       }
+
+      if (!storageAvailable) {
+        logger.warning('Storage not available', category: LogCategory.auth, tag: 'signInWithEmail');
+      }
+
+      // Step 2: iOS-specific checks
+      if (Platform.isIOS) {
+        final secureStorageAccessible = await _checkSecureStorage();
+        _addAuthBreadcrumb('iOS-specific checks', data: {
+          'ios_version': Platform.operatingSystemVersion,
+          'secure_storage_accessible': secureStorageAccessible,
+        });
+
+        if (!secureStorageAccessible) {
+          logger.warning('iOS secure storage not accessible', category: LogCategory.auth, tag: 'signInWithEmail');
+        }
+      }
+
+      // Step 3: Call Supabase API
+      _addAuthBreadcrumb('Calling Supabase signInWithPassword');
+      logger.debug('Calling Supabase signInWithPassword()...', category: LogCategory.auth, tag: 'signInWithEmail');
+
+      final startTime = DateTime.now();
 
       final response = await _supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
-      if (kDebugMode) {
-        print('✅ Supabase auth successful: ${response.user?.id}');
+      final duration = DateTime.now().difference(startTime);
+
+      // Step 4: Log successful auth
+      _addAuthBreadcrumb('Supabase auth successful', data: {
+        'duration_ms': duration.inMilliseconds,
+        'has_session': response.session != null,
+        'has_user': response.user != null,
+        'session_expires_at': response.session?.expiresAt,
+      });
+
+      logger.info(
+        'Supabase signInWithPassword() completed',
+        category: LogCategory.auth,
+        tag: 'signInWithEmail',
+        metadata: {
+          'durationMs': duration.inMilliseconds,
+          'hasUser': response.user != null,
+          'userId': response.user?.id,
+          'hasSession': response.session != null,
+          'hasAccessToken': response.session?.accessToken != null,
+          'hasRefreshToken': response.session?.refreshToken != null,
+        },
+      );
+
+      // Step 5: Verify session storage
+      final storedSession = _supabase.auth.currentSession;
+      _addAuthBreadcrumb('Session storage verified', data: {
+        'stored': storedSession != null,
+        'matches': storedSession?.user.id == response.user?.id,
+      });
+
+      if (storedSession == null) {
+        logger.warning('Session not stored in local storage', category: LogCategory.auth, tag: 'signInWithEmail');
       }
 
+      // Step 6: Update last login (async)
       if (response.user != null) {
-        // Update last login asynchronously (don't block login)
+        logger.debug('Updating last login timestamp (async)...', category: LogCategory.auth, tag: 'signInWithEmail');
         _updateLastLogin(response.user!.id).catchError((e) {
-          if (kDebugMode) {
-            print('⚠️ Failed to update last login: $e');
-          }
+          logger.warning(
+            'Failed to update last login',
+            category: LogCategory.auth,
+            tag: 'signInWithEmail',
+            metadata: {'error': e.toString()},
+          );
         });
       }
 
-      if (kDebugMode) {
-        print('✅ User signed in: ${response.user?.id}');
-      }
+      logger.info(
+        'Sign in successful',
+        category: LogCategory.auth,
+        tag: 'signInWithEmail',
+        metadata: {'userId': response.user?.id},
+      );
 
       return response;
-    } on AuthException catch (e) {
-      if (kDebugMode) {
-        print('❌ Sign in error: ${e.message}');
-      }
+    } on AuthException catch (e, stackTrace) {
+      // Log auth exception with breadcrumb
+      _addAuthBreadcrumb('Auth exception occurred', data: {
+        'status_code': e.statusCode,
+        'message': e.message,
+      });
+
+      logger.error(
+        'AuthException during sign in',
+        category: LogCategory.auth,
+        tag: 'signInWithEmail',
+        metadata: {
+          'message': e.message,
+          'statusCode': e.statusCode,
+        },
+        stackTrace: stackTrace,
+      );
+
+      // Send to Sentry with full context
+      await Sentry.captureException(e, stackTrace: stackTrace, hint: Hint.withMap({
+        'auth_flow': 'sign_in',
+        'email': email,
+        'platform': Platform.operatingSystem,
+      }));
       rethrow;
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Unexpected sign in error: $e');
-      }
+    } catch (e, stackTrace) {
+      // Log unexpected exception with breadcrumb
+      _addAuthBreadcrumb('Unexpected exception occurred', data: {
+        'exception_type': e.runtimeType.toString(),
+        'exception': e.toString(),
+      });
+
+      logger.error(
+        'Unexpected exception during sign in',
+        category: LogCategory.auth,
+        tag: 'signInWithEmail',
+        metadata: {
+          'exceptionType': e.runtimeType.toString(),
+          'exception': e.toString(),
+        },
+        stackTrace: stackTrace,
+      );
+
+      // Send to Sentry
+      await Sentry.captureException(e, stackTrace: stackTrace, hint: Hint.withMap({
+        'auth_flow': 'sign_in',
+        'email': email,
+        'platform': Platform.operatingSystem,
+      }));
+
       rethrow;
     }
   }
 
   // Sign out
   Future<void> signOut() async {
+    final logger = AppLoggerService();
+
     try {
+      logger.info('Sign out starting', category: LogCategory.auth, tag: 'signOut');
       await _supabase.auth.signOut();
-      if (kDebugMode) {
-        print('✅ User signed out');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Sign out error: $e');
-      }
+      logger.info('Sign out successful', category: LogCategory.auth, tag: 'signOut');
+    } catch (e, stackTrace) {
+      logger.error(
+        'Sign out error',
+        category: LogCategory.auth,
+        tag: 'signOut',
+        metadata: {'error': e.toString()},
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
 
   // Reset password
   Future<void> resetPassword(String email) async {
+    final logger = AppLoggerService();
+
     try {
+      logger.info('Password reset starting', category: LogCategory.auth, tag: 'resetPassword', metadata: {'email': email});
       await _supabase.auth.resetPasswordForEmail(email);
-      if (kDebugMode) {
-        print('✅ Password reset email sent to: $email');
-      }
-    } on AuthException catch (e) {
-      if (kDebugMode) {
-        print('❌ Password reset error: ${e.message}');
-      }
+      logger.info('Password reset email sent', category: LogCategory.auth, tag: 'resetPassword', metadata: {'email': email});
+    } on AuthException catch (e, stackTrace) {
+      logger.error(
+        'Password reset error',
+        category: LogCategory.auth,
+        tag: 'resetPassword',
+        metadata: {'message': e.message, 'email': email},
+        stackTrace: stackTrace,
+      );
       rethrow;
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Unexpected password reset error: $e');
-      }
+    } catch (e, stackTrace) {
+      logger.error(
+        'Unexpected password reset error',
+        category: LogCategory.auth,
+        tag: 'resetPassword',
+        metadata: {'error': e.toString(), 'email': email},
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
 
   // Delete account
   Future<void> deleteAccount() async {
+    final logger = AppLoggerService();
+
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) {
+        logger.error('No user logged in', category: LogCategory.auth, tag: 'deleteAccount');
         throw Exception('No user logged in');
       }
 
-      if (kDebugMode) {
-        print('🗑️ Deleting user account: ${user.id}');
-      }
+      logger.info('Deleting user account', category: LogCategory.auth, tag: 'deleteAccount', metadata: {'userId': user.id});
 
       // Call RPC function to delete user data and account
       // This triggers cascading deletes for all user data
       await _supabase.rpc('delete_user_account');
 
-      if (kDebugMode) {
-        print('✅ User data deleted from database');
-      }
+      logger.debug('User data deleted from database', category: LogCategory.auth, tag: 'deleteAccount');
 
       // Sign out (Supabase Auth user deletion is handled by RPC or manually via Admin API)
       await _supabase.auth.signOut();
 
-      if (kDebugMode) {
-        print('✅ Account deleted successfully');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Delete account error: $e');
-      }
+      logger.info('Account deleted successfully', category: LogCategory.auth, tag: 'deleteAccount', metadata: {'userId': user.id});
+    } catch (e, stackTrace) {
+      logger.error(
+        'Delete account error',
+        category: LogCategory.auth,
+        tag: 'deleteAccount',
+        metadata: {'error': e.toString()},
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
 
   // Update last login timestamp
   Future<void> _updateLastLogin(String uid) async {
+    final logger = AppLoggerService();
+
     try {
+      logger.debug('Updating last login timestamp', category: LogCategory.auth, tag: '_updateLastLogin', metadata: {'userId': uid});
       await _supabase.from('users').update({
         'last_login_at': DateTime.now().toIso8601String(),
       }).eq('id', uid);
 
-      if (kDebugMode) {
-        print('✅ Last login updated for user: $uid');
-      }
+      logger.debug('Last login updated successfully', category: LogCategory.auth, tag: '_updateLastLogin', metadata: {'userId': uid});
     } catch (e) {
-      if (kDebugMode) {
-        print('⚠️ Failed to update last login: $e');
-      }
+      logger.warning(
+        'Failed to update last login (non-critical)',
+        category: LogCategory.auth,
+        tag: '_updateLastLogin',
+        metadata: {'userId': uid, 'error': e.toString()},
+      );
       // Don't rethrow - this is a non-critical operation
     }
   }

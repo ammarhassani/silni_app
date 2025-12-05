@@ -29,6 +29,7 @@ import '../../../shared/services/relatives_service.dart';
 import '../../../shared/services/interactions_service.dart';
 import '../../../shared/services/hadith_service.dart';
 import '../../../shared/providers/interactions_provider.dart';
+import '../../../core/config/supabase_config.dart';
 import '../../auth/providers/auth_provider.dart';
 
 // Providers for relatives and interactions
@@ -78,8 +79,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   void initState() {
     super.initState();
+    debugPrint('');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('🏠 [HOME SCREEN] initState() called');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('✅ [HOME SCREEN] Adding lifecycle observer');
+
     WidgetsBinding.instance.addObserver(this);
 
+    debugPrint('✅ [HOME SCREEN] Initializing animation controllers');
     _floatingController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
@@ -89,7 +97,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       duration: const Duration(seconds: 2),
     );
 
+    debugPrint('🔄 [HOME SCREEN] Loading daily hadith...');
     _loadDailyHadith();
+    debugPrint('✅ [HOME SCREEN] initState() completed');
+    debugPrint('');
   }
 
   @override
@@ -208,10 +219,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserProvider);
+    debugPrint('');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('🏠 [HOME SCREEN] build() called');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+    // Try to get user from stream first
+    debugPrint('🔍 [HOME SCREEN] Checking currentUserProvider stream...');
+    final streamUser = ref.watch(currentUserProvider);
+    debugPrint('📊 [HOME SCREEN] Stream user: ${streamUser != null ? 'present (${streamUser.id})' : 'NULL'}');
+
+    // Fallback to synchronous check if stream hasn't emitted yet
+    // This fixes the race condition on iOS where navigation happens before stream emits
+    debugPrint('🔍 [HOME SCREEN] Checking SupabaseConfig.currentUser fallback...');
+    final fallbackUser = SupabaseConfig.currentUser;
+    debugPrint('📊 [HOME SCREEN] Fallback user: ${fallbackUser != null ? 'present (${fallbackUser.id})' : 'NULL'}');
+
+    final user = streamUser ?? fallbackUser;
+    debugPrint('📊 [HOME SCREEN] Final user: ${user != null ? 'present (${user.id})' : 'NULL'}');
+    debugPrint('');
 
     // Show loading screen if user is not yet loaded
     if (user == null) {
+      debugPrint('🔴 [HOME SCREEN] No user available - showing loading spinner');
+      debugPrint('🔴 [HOME SCREEN] This should NOT happen after successful auth!');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('');
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
@@ -221,6 +254,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     final displayName = user.userMetadata?['full_name'] as String? ?? user.email ?? 'المستخدم';
     final userId = user.id;
+    debugPrint('👤 [HOME SCREEN] User loaded successfully:');
+    debugPrint('   - User ID: $userId');
+    debugPrint('   - Display name: $displayName');
+    debugPrint('   - Email: ${user.email}');
+    debugPrint('✅ [HOME SCREEN] Building home screen UI...');
+    debugPrint('');
+
     final themeColors = ref.watch(themeColorsProvider);
 
     // Listen to gamification events for visual feedback

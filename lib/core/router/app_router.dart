@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -24,11 +25,63 @@ import '../../features/gamification/screens/leaderboard_screen.dart';
 import 'app_routes.dart';
 import 'navigation_service.dart';
 
+/// Custom navigator observer for logging navigation events
+class _AppNavigatorObserver extends NavigatorObserver {
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    if (kDebugMode) {
+      debugPrint('');
+      debugPrint('🧭 [NAVIGATION] didPush');
+      debugPrint('   - New route: ${route.settings.name ?? '(unnamed)'}');
+      debugPrint('   - Previous route: ${previousRoute?.settings.name ?? '(none)'}');
+      debugPrint('');
+    }
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    if (kDebugMode) {
+      debugPrint('');
+      debugPrint('🧭 [NAVIGATION] didPop');
+      debugPrint('   - Popped route: ${route.settings.name ?? '(unnamed)'}');
+      debugPrint('   - Back to route: ${previousRoute?.settings.name ?? '(none)'}');
+      debugPrint('');
+    }
+  }
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didRemove(route, previousRoute);
+    if (kDebugMode) {
+      debugPrint('');
+      debugPrint('🧭 [NAVIGATION] didRemove');
+      debugPrint('   - Removed route: ${route.settings.name ?? '(unnamed)'}');
+      debugPrint('   - Previous route: ${previousRoute?.settings.name ?? '(none)'}');
+      debugPrint('');
+    }
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    if (kDebugMode) {
+      debugPrint('');
+      debugPrint('🧭 [NAVIGATION] didReplace');
+      debugPrint('   - New route: ${newRoute?.settings.name ?? '(unnamed)'}');
+      debugPrint('   - Old route: ${oldRoute?.settings.name ?? '(none)'}');
+      debugPrint('');
+    }
+  }
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: NavigationService.navigatorKey,
     initialLocation: AppRoutes.splash,
-    debugLogDiagnostics: true,
+    debugLogDiagnostics: true, // GoRouter's built-in logging
+    observers: [_AppNavigatorObserver()], // Custom logging observer
     routes: [
       // Splash
       GoRoute(

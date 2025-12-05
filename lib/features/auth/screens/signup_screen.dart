@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -12,6 +14,7 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../core/providers/analytics_provider.dart';
 import '../../../shared/services/auth_service.dart';
 import '../providers/auth_provider.dart';
+import '../../../core/services/app_logger_service.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -40,18 +43,35 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   }
 
   Future<void> _signUp() async {
-    if (!_formKey.currentState!.validate()) return;
+    final logger = AppLoggerService();
+    logger.info('Signup flow started', category: LogCategory.auth, tag: 'SignUpScreen');
 
+    if (!_formKey.currentState!.validate()) {
+      logger.warning('Form validation failed', category: LogCategory.auth, tag: 'SignUpScreen');
+      return;
+    }
+
+    logger.debug('Form validation passed', category: LogCategory.auth, tag: 'SignUpScreen');
     setState(() => _isLoading = true);
 
     try {
       final authService = ref.read(authServiceProvider);
+      logger.debug('AuthService retrieved from provider', category: LogCategory.auth, tag: 'SignUpScreen');
 
-      print('📝 [SIGNUP] Starting sign up process...');
-      print('👤 [SIGNUP] Name: ${_nameController.text.trim()}');
-      print('📧 [SIGNUP] Email: ${_emailController.text.trim()}');
+      logger.debug(
+        'User data prepared',
+        category: LogCategory.auth,
+        tag: 'SignUpScreen',
+        metadata: {
+          'name': _nameController.text.trim(),
+          'email': _emailController.text.trim(),
+        },
+      );
 
-      // Add timeout to prevent infinite hanging
+      logger.info('Calling Supabase signUpWithEmail (30s timeout)...', category: LogCategory.auth, tag: 'SignUpScreen');
+      final startTime = DateTime.now();
+
+      // Add timeout to prevent infinite hanging (increased for iOS networks)
       final credential = await authService
           .signUpWithEmail(
             email: _emailController.text.trim(),
@@ -59,8 +79,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             fullName: _nameController.text.trim(),
           )
           .timeout(
-            const Duration(seconds: 15),
+            const Duration(seconds: 30),  // Increased from 15s for iOS
             onTimeout: () {
+              logger.error('Signup timeout after 30 seconds', category: LogCategory.auth, tag: 'SignUpScreen');
               throw Exception(
                 'Signup is taking longer than expected. This may indicate a '
                 'network issue or service problem. Please try again.'
@@ -68,50 +89,62 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             },
           );
 
-      print('✅ [SIGNUP] Firebase user created successfully!');
-      print('👤 [SIGNUP] User ID: ${credential.user?.id}');
-      print('📧 [SIGNUP] Email: ${credential.user?.email}');
+      final duration = DateTime.now().difference(startTime);
+      logger.info(
+        'Supabase auth completed successfully',
+        category: LogCategory.auth,
+        tag: 'SignUpScreen',
+        metadata: {
+          'durationMs': duration.inMilliseconds,
+          'userId': credential.user?.id,
+          'email': credential.user?.email,
+          'hasSession': credential.session != null,
+          'hasToken': credential.session?.accessToken != null,
+        },
+      );
 
-      // Track signup event
+      // Track signup event (fire and forget - don't block auth flow)
+      logger.debug('Triggering analytics (fire-and-forget)...', category: LogCategory.analytics, tag: 'SignUpScreen');
       final analytics = ref.read(analyticsServiceProvider);
-      await analytics.logSignUp('email');
+      analytics.logSignUp('email').catchError((e) {
+        logger.warning('Analytics failed (non-blocking)', category: LogCategory.analytics, tag: 'SignUpScreen', metadata: {'error': e.toString()});
+      });
 
       if (!mounted) {
-        print('⚠️ [SIGNUP] Widget unmounted, aborting navigation');
+        logger.warning('Widget unmounted, aborting navigation', category: LogCategory.auth, tag: 'SignUpScreen');
         return;
       }
 
-      print('🚀 [SIGNUP] Navigating to home screen...');
+      logger.info('Widget still mounted, attempting navigation to home screen', category: LogCategory.auth, tag: 'SignUpScreen', metadata: {'targetRoute': AppRoutes.home});
 
       // Navigate to home
       context.go(AppRoutes.home);
 
-      print('✅ [SIGNUP] Navigation initiated successfully!');
+      logger.info('Navigation executed successfully - Signup flow completed', category: LogCategory.auth, tag: 'SignUpScreen');
 
       // Don't reset loading state on success - let the new screen take over
-    } catch (e) {
-      print('❌ [SIGNUP] Error occurred: ${e.runtimeType}');
-      print('❌ [SIGNUP] Error message: $e');
+    } on AuthException catch (e, stackTrace) {
+      // Handle Supabase auth errors specifically
+      logger.error(
+        'AuthException during signup',
+        category: LogCategory.auth,
+        tag: 'SignUpScreen',
+        metadata: {
+          'message': e.message,
+          'statusCode': e.statusCode,
+        },
+        stackTrace: stackTrace,
+      );
 
       if (!mounted) {
-        print('⚠️ [SIGNUP] Widget unmounted during error handling');
+        logger.warning('Widget unmounted, cannot show error', category: LogCategory.auth, tag: 'SignUpScreen');
         return;
       }
 
-      // Reset loading state on error
       setState(() => _isLoading = false);
 
-      String errorMessage = AuthService.getErrorMessage(
-        e.toString().contains('email-already-in-use')
-            ? 'email-already-in-use'
-            : e.toString().contains('weak-password')
-                ? 'weak-password'
-                : e.toString().contains('invalid-email')
-                ? 'invalid-email'
-                : e.toString().contains('timeout')
-                ? 'too-many-requests'
-                : 'unknown',
-      );
+      String errorMessage = AuthService.getErrorMessage(e.message);
+      logger.debug('Showing error to user', category: LogCategory.auth, tag: 'SignUpScreen', metadata: {'errorMessage': errorMessage});
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -120,6 +153,41 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           duration: const Duration(seconds: 3),
         ),
       );
+
+      logger.error('Signup failed with auth error', category: LogCategory.auth, tag: 'SignUpScreen');
+    } catch (e, stackTrace) {
+      // Handle other errors
+      logger.error(
+        'Unexpected exception during signup',
+        category: LogCategory.auth,
+        tag: 'SignUpScreen',
+        metadata: {
+          'exceptionType': e.runtimeType.toString(),
+          'exception': e.toString(),
+        },
+        stackTrace: stackTrace,
+      );
+
+      if (!mounted) {
+        logger.warning('Widget unmounted, cannot show error', category: LogCategory.auth, tag: 'SignUpScreen');
+        return;
+      }
+
+      setState(() => _isLoading = false);
+
+      // For non-auth errors, pass the string to getErrorMessage
+      String errorMessage = AuthService.getErrorMessage(e.toString());
+      logger.debug('Showing error to user', category: LogCategory.auth, tag: 'SignUpScreen', metadata: {'errorMessage': errorMessage});
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+
+      logger.error('Signup failed with unexpected error', category: LogCategory.auth, tag: 'SignUpScreen');
     }
   }
 

@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -12,6 +14,7 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../core/providers/analytics_provider.dart';
 import '../../../shared/services/auth_service.dart';
 import '../providers/auth_provider.dart';
+import '../../../core/services/app_logger_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -35,15 +38,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _login() async {
-    if (!_formKey.currentState!.validate()) return;
+    final logger = AppLoggerService();
+    logger.info('Login flow started', category: LogCategory.auth, tag: 'LoginScreen');
 
+    if (!_formKey.currentState!.validate()) {
+      logger.warning('Form validation failed', category: LogCategory.auth, tag: 'LoginScreen');
+      return;
+    }
+
+    logger.debug('Form validation passed', category: LogCategory.auth, tag: 'LoginScreen');
     setState(() => _isLoading = true);
 
     try {
       final authService = ref.read(authServiceProvider);
+      logger.debug('AuthService retrieved from provider', category: LogCategory.auth, tag: 'LoginScreen');
 
-      print('🔐 [LOGIN] Starting login process...');
-      print('📧 [LOGIN] Email: ${_emailController.text.trim()}');
+      logger.debug(
+        'Login attempt',
+        category: LogCategory.auth,
+        tag: 'LoginScreen',
+        metadata: {'email': _emailController.text.trim()},
+      );
+
+      logger.info('Calling Supabase signInWithEmail (30s timeout)...', category: LogCategory.auth, tag: 'LoginScreen');
+      final startTime = DateTime.now();
 
       // Add timeout to prevent infinite hanging
       final credential = await authService
@@ -54,56 +72,67 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           .timeout(
             const Duration(seconds: 30),
             onTimeout: () {
-              throw Exception('Login timeout - Firebase took too long to respond');
+              logger.error('Login timeout after 30 seconds', category: LogCategory.auth, tag: 'LoginScreen');
+              throw Exception('Login timeout - Supabase took too long to respond');
             },
           );
 
-      print('✅ [LOGIN] Supabase authentication successful!');
-      print('👤 [LOGIN] User ID: ${credential.user?.id}');
-      print('📧 [LOGIN] Email: ${credential.user?.email}');
+      final duration = DateTime.now().difference(startTime);
+      logger.info(
+        'Supabase auth completed successfully',
+        category: LogCategory.auth,
+        tag: 'LoginScreen',
+        metadata: {
+          'durationMs': duration.inMilliseconds,
+          'userId': credential.user?.id,
+          'email': credential.user?.email,
+          'hasSession': credential.session != null,
+          'hasToken': credential.session?.accessToken != null,
+        },
+      );
 
-      // Track login event
+      // Track login event (fire and forget - don't block auth flow)
+      logger.debug('Triggering analytics (fire-and-forget)...', category: LogCategory.analytics, tag: 'LoginScreen');
       final analytics = ref.read(analyticsServiceProvider);
-      await analytics.logLogin('email');
+      analytics.logLogin('email').catchError((e) {
+        logger.warning('Analytics failed (non-blocking)', category: LogCategory.analytics, tag: 'LoginScreen', metadata: {'error': e.toString()});
+      });
 
       if (!mounted) {
-        print('⚠️ [LOGIN] Widget unmounted, aborting navigation');
+        logger.warning('Widget unmounted, aborting navigation', category: LogCategory.auth, tag: 'LoginScreen');
         return;
       }
 
-      print('🚀 [LOGIN] Navigating to home screen...');
+      logger.info('Widget still mounted, attempting navigation to home screen', category: LogCategory.auth, tag: 'LoginScreen', metadata: {'targetRoute': AppRoutes.home});
 
       // Navigate to home - use go instead of pushReplacement
       context.go(AppRoutes.home);
 
-      print('✅ [LOGIN] Navigation initiated successfully!');
+      logger.info('Navigation executed successfully - Login flow completed', category: LogCategory.auth, tag: 'LoginScreen');
 
       // Don't reset loading state on success - let the new screen take over
-    } catch (e) {
-      print('❌ [LOGIN] Error occurred: ${e.runtimeType}');
-      print('❌ [LOGIN] Error message: $e');
+    } on AuthException catch (e, stackTrace) {
+      // Handle Supabase auth errors specifically
+      logger.error(
+        'AuthException during login',
+        category: LogCategory.auth,
+        tag: 'LoginScreen',
+        metadata: {
+          'message': e.message,
+          'statusCode': e.statusCode,
+        },
+        stackTrace: stackTrace,
+      );
 
       if (!mounted) {
-        print('⚠️ [LOGIN] Widget unmounted during error handling');
+        logger.warning('Widget unmounted, cannot show error', category: LogCategory.auth, tag: 'LoginScreen');
         return;
       }
 
-      // Reset loading state on error
       setState(() => _isLoading = false);
 
-      String errorMessage = AuthService.getErrorMessage(
-        e.toString().contains('user-not-found')
-            ? 'user-not-found'
-            : e.toString().contains('wrong-password')
-                ? 'wrong-password'
-                : e.toString().contains('invalid-credential')
-                ? 'wrong-password'
-                : e.toString().contains('invalid-email')
-                ? 'invalid-email'
-                : e.toString().contains('timeout')
-                ? 'too-many-requests'
-                : 'unknown',
-      );
+      String errorMessage = AuthService.getErrorMessage(e.message);
+      logger.debug('Showing error to user', category: LogCategory.auth, tag: 'LoginScreen', metadata: {'errorMessage': errorMessage});
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -112,6 +141,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           duration: const Duration(seconds: 3),
         ),
       );
+
+      logger.error('Login failed with auth error', category: LogCategory.auth, tag: 'LoginScreen');
+    } catch (e, stackTrace) {
+      // Handle other errors
+      logger.error(
+        'Unexpected exception during login',
+        category: LogCategory.auth,
+        tag: 'LoginScreen',
+        metadata: {
+          'exceptionType': e.runtimeType.toString(),
+          'exception': e.toString(),
+        },
+        stackTrace: stackTrace,
+      );
+
+      if (!mounted) {
+        logger.warning('Widget unmounted, cannot show error', category: LogCategory.auth, tag: 'LoginScreen');
+        return;
+      }
+
+      setState(() => _isLoading = false);
+
+      // For non-auth errors, pass the string to getErrorMessage
+      String errorMessage = AuthService.getErrorMessage(e.toString());
+      logger.debug('Showing error to user', category: LogCategory.auth, tag: 'LoginScreen', metadata: {'errorMessage': errorMessage});
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+
+      logger.error('Login failed with unexpected error', category: LogCategory.auth, tag: 'LoginScreen');
     }
   }
 

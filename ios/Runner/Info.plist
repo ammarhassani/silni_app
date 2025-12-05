@@ -45,5 +45,27 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs camera access to take photos</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs photo library access to select photos</string>
+	<key>NSContactsUsageDescription</key>
+	<string>This app needs contacts access to connect with relatives</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs microphone access for voice features</string>
+		<key>CFBundleURLTypes</key>
+<array>
+    <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+            <!-- Use your app's Bundle ID (com.silni.app) as the scheme -->
+            <string>com.silni.app</string>
+        </array>
+        <key>CFBundleURLName</key>
+        <string>com.silni.app</string>
+    </dict>
+</array>
 </dict>
 </plist>
