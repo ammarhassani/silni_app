@@ -47,9 +47,7 @@ class GradientBackground extends ConsumerWidget {
     }
 
     return Container(
-      decoration: BoxDecoration(
-        gradient: gradient ?? defaultGradient,
-      ),
+      decoration: BoxDecoration(gradient: gradient ?? defaultGradient),
       child: backgroundChild,
     );
   }
@@ -70,8 +68,7 @@ class AnimatedGradientBackground extends StatefulWidget {
       _AnimatedGradientBackgroundState();
 }
 
-class _AnimatedGradientBackgroundState
-    extends State<AnimatedGradientBackground>
+class _AnimatedGradientBackgroundState extends State<AnimatedGradientBackground>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Color?> _colorAnimation1;
@@ -98,16 +95,23 @@ class _AnimatedGradientBackgroundState
   }
 
   void _updateAnimations() {
+    if (widget.gradient is! LinearGradient) return;
+
     final colors = (widget.gradient as LinearGradient).colors;
+    if (colors.isEmpty) return;
+
+    final color1 = colors[0];
+    final color2 = colors.length > 1 ? colors[1] : color1;
+    final color3 = colors.length > 2 ? colors[2] : color2;
 
     _colorAnimation1 = ColorTween(
-      begin: colors[0],
-      end: colors[1],
+      begin: color1,
+      end: color2,
     ).animate(_controller);
 
     _colorAnimation2 = ColorTween(
-      begin: colors[1],
-      end: colors.length > 2 ? colors[2] : colors[1],
+      begin: color2,
+      end: color3,
     ).animate(_controller);
   }
 
@@ -145,11 +149,7 @@ class DramaticBackground extends StatelessWidget {
   final Widget child;
   final List<Color>? colors;
 
-  const DramaticBackground({
-    super.key,
-    required this.child,
-    this.colors,
-  });
+  const DramaticBackground({super.key, required this.child, this.colors});
 
   @override
   Widget build(BuildContext context) {

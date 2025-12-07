@@ -13,6 +13,7 @@ import 'core/config/app_scroll_behavior.dart'; // Enable mouse drag scrolling fo
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
+import 'features/auth/providers/auth_provider.dart'; // Auth providers
 import 'shared/widgets/floating_points_overlay.dart';
 import 'shared/widgets/logger_host.dart'; // In-app logger
 import 'core/services/app_logger_service.dart'; // Logger service
@@ -28,13 +29,18 @@ void main() async {
 
   // Enable logger for TestFlight builds and debug mode
   logger.setEnabled(
-    kDebugMode || const bool.fromEnvironment('ENABLE_LOGGER', defaultValue: false)
+    kDebugMode ||
+        const bool.fromEnvironment('ENABLE_LOGGER', defaultValue: false),
   );
 
   // ========================================
   // DIAGNOSTIC LOGGING - iOS Debug
   // ========================================
-  logger.info('Silni App Initializing...', category: LogCategory.lifecycle, tag: 'main');
+  logger.info(
+    'Silni App Initializing...',
+    category: LogCategory.lifecycle,
+    tag: 'main',
+  );
 
   // Platform Detection
   logger.info(
@@ -44,7 +50,11 @@ void main() async {
   );
 
   if (kIsWeb) {
-    logger.info('Running on: WEB', category: LogCategory.lifecycle, tag: 'Platform');
+    logger.info(
+      'Running on: WEB',
+      category: LogCategory.lifecycle,
+      tag: 'Platform',
+    );
   } else if (Platform.isIOS) {
     logger.info(
       'Running on: iOS ${Platform.operatingSystemVersion}',
@@ -72,10 +82,18 @@ void main() async {
   ]);
 
   // Load environment variables
-  logger.info('Loading environment variables from .env file...', category: LogCategory.lifecycle, tag: 'ENV');
+  logger.info(
+    'Loading environment variables from .env file...',
+    category: LogCategory.lifecycle,
+    tag: 'ENV',
+  );
   try {
     await dotenv.load(fileName: '.env');
-    logger.info('.env file loaded successfully', category: LogCategory.lifecycle, tag: 'ENV');
+    logger.info(
+      '.env file loaded successfully',
+      category: LogCategory.lifecycle,
+      tag: 'ENV',
+    );
 
     // Log which environment variables are available (without exposing sensitive data)
     final envKeys = dotenv.env.keys.toList();
@@ -135,11 +153,23 @@ void main() async {
   }
 
   // Initialize Supabase (primary backend)
-  logger.info('Starting Supabase initialization...', category: LogCategory.database, tag: 'Supabase');
+  logger.info(
+    'Starting Supabase initialization...',
+    category: LogCategory.database,
+    tag: 'Supabase',
+  );
   try {
     await SupabaseConfig.initialize();
-    logger.info('Supabase initialization completed successfully', category: LogCategory.database, tag: 'Supabase');
-    logger.info('Supabase client is ready', category: LogCategory.database, tag: 'Supabase');
+    logger.info(
+      'Supabase initialization completed successfully',
+      category: LogCategory.database,
+      tag: 'Supabase',
+    );
+    logger.info(
+      'Supabase client is ready',
+      category: LogCategory.database,
+      tag: 'Supabase',
+    );
   } catch (e, stackTrace) {
     logger.critical(
       'Supabase initialization FAILED - Auth will NOT work',
@@ -152,10 +182,18 @@ void main() async {
   }
 
   // Initialize Firebase (for FCM notifications only)
-  logger.info('Starting Firebase initialization...', category: LogCategory.service, tag: 'Firebase');
+  logger.info(
+    'Starting Firebase initialization...',
+    category: LogCategory.service,
+    tag: 'Firebase',
+  );
   try {
     await FirebaseConfig.initialize();
-    logger.info('Firebase initialization completed', category: LogCategory.service, tag: 'Firebase');
+    logger.info(
+      'Firebase initialization completed',
+      category: LogCategory.service,
+      tag: 'Firebase',
+    );
   } catch (e) {
     logger.warning(
       'Firebase initialization failed - FCM notifications may not work',
@@ -166,7 +204,11 @@ void main() async {
   }
 
   // Configure global error handlers with device context
-  logger.info('Configuring error handlers...', category: LogCategory.service, tag: 'ErrorHandling');
+  logger.info(
+    'Configuring error handlers...',
+    category: LogCategory.service,
+    tag: 'ErrorHandling',
+  );
 
   // Enhanced Flutter error handler with device context
   FlutterError.onError = (FlutterErrorDetails details) async {
@@ -183,10 +225,7 @@ void main() async {
     );
 
     // Send to Sentry (will be filtered by beforeSend hook)
-    await Sentry.captureException(
-      details.exception,
-      stackTrace: details.stack,
-    );
+    await Sentry.captureException(details.exception, stackTrace: details.stack);
   };
 
   // Catch errors outside Flutter framework
@@ -203,11 +242,16 @@ void main() async {
   };
 
   // Initialize Sentry and run app
-  logger.info('Initializing error tracking...', category: LogCategory.service, tag: 'Sentry');
+  logger.info(
+    'Initializing error tracking...',
+    category: LogCategory.service,
+    tag: 'Sentry',
+  );
   await SentryFlutter.init(
     (options) {
       options.dsn = dotenv.env['SENTRY_DSN'] ?? '';
-      options.tracesSampleRate = 1.0; // Capture 100% of transactions in debug/staging
+      options.tracesSampleRate =
+          1.0; // Capture 100% of transactions in debug/staging
       options.enableAutoPerformanceTracing = true;
       options.attachThreads = true;
       options.attachStacktrace = true;
@@ -220,16 +264,26 @@ void main() async {
       // Configure beforeSend to enable TestFlight and staging logging
       options.beforeSend = (event, hint) {
         final environment = dotenv.env['ENVIRONMENT'] ?? 'development';
-        final isTestFlight = const String.fromEnvironment('IS_TESTFLIGHT', defaultValue: 'false') == 'true';
+        final isTestFlight =
+            const String.fromEnvironment(
+              'IS_TESTFLIGHT',
+              defaultValue: 'false',
+            ) ==
+            'true';
 
         // Send events from production OR staging/TestFlight builds
         // Block only from local development
-        if (environment == 'production' || environment == 'staging' || isTestFlight) {
+        if (environment == 'production' ||
+            environment == 'staging' ||
+            isTestFlight) {
           logger.debug(
             'Sentry event sent',
             category: LogCategory.service,
             tag: 'Sentry',
-            metadata: {'environment': environment, 'is_testflight': isTestFlight},
+            metadata: {
+              'environment': environment,
+              'is_testflight': isTestFlight,
+            },
           );
 
           // Add custom tags for better debugging
@@ -257,20 +311,29 @@ void main() async {
         tag: 'Sentry',
         metadata: {
           'environment': dotenv.env['ENVIRONMENT'] ?? 'development',
-          'will_send_events': dotenv.env['ENVIRONMENT'] == 'production' ||
+          'will_send_events':
+              dotenv.env['ENVIRONMENT'] == 'production' ||
               dotenv.env['ENVIRONMENT'] == 'staging' ||
-              const String.fromEnvironment('IS_TESTFLIGHT', defaultValue: 'false') == 'true',
+              const String.fromEnvironment(
+                    'IS_TESTFLIGHT',
+                    defaultValue: 'false',
+                  ) ==
+                  'true',
         },
       );
     },
     appRunner: () {
-      logger.info('Sentry initialized successfully', category: LogCategory.service, tag: 'Sentry');
-      logger.info('All services initialized - Starting app', category: LogCategory.lifecycle, tag: 'main');
-      return runApp(
-        const ProviderScope(
-          child: SilniApp(),
-        ),
+      logger.info(
+        'Sentry initialized successfully',
+        category: LogCategory.service,
+        tag: 'Sentry',
       );
+      logger.info(
+        'All services initialized - Starting app',
+        category: LogCategory.lifecycle,
+        tag: 'main',
+      );
+      return runApp(const ProviderScope(child: SilniApp()));
     },
   );
 }
@@ -284,6 +347,9 @@ class SilniApp extends ConsumerWidget {
     // Watch theme provider for dynamic theme changes
     final themeColors = ref.watch(themeColorsProvider);
 
+    // Initialize session persistence
+    final sessionInitialization = ref.watch(sessionInitializationProvider);
+
     // Generate dynamic themes based on selected color scheme
     final lightTheme = AppTheme.fromThemeColors(themeColors, isDark: false);
     final darkTheme = AppTheme.fromThemeColors(themeColors, isDark: true);
@@ -293,19 +359,39 @@ class SilniApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: lightTheme,
       darkTheme: darkTheme,
-      themeMode: ThemeMode.light, // Always use light mode (theme colors change instead)
-      themeAnimationDuration: const Duration(milliseconds: 400), // Smooth theme transitions
+      themeMode: ThemeMode
+          .light, // Always use light mode (theme colors change instead)
+      themeAnimationDuration: const Duration(
+        milliseconds: 400,
+      ), // Smooth theme transitions
       themeAnimationCurve: Curves.easeInOut,
-      scrollBehavior: AppScrollBehavior(), // Enable mouse drag scrolling for web
+      scrollBehavior:
+          AppScrollBehavior(), // Enable mouse drag scrolling for web
       routerConfig: router,
       builder: (context, child) {
         return Directionality(
           textDirection: TextDirection.rtl, // Arabic RTL
           child: LoggerHost(
-            showFAB: true, // Show logger FAB for TestFlight debugging
+            showFAB: false, // Hide logger FAB - not needed anymore
             child: FloatingPointsHost(
               key: floatingPointsHostKey,
-              child: child!,
+              child: sessionInitialization.when(
+                data: (hasValidSession) {
+                  // Session initialization complete
+                  return child!;
+                },
+                loading: () {
+                  // Show loading while checking session
+                  return const Scaffold(
+                    backgroundColor: Colors.transparent,
+                    body: Center(child: CircularProgressIndicator()),
+                  );
+                },
+                error: (error, stack) {
+                  // Session initialization failed, but still show app
+                  return child!;
+                },
+              ),
             ),
           ),
         );

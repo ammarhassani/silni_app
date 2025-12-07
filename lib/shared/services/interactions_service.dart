@@ -10,14 +10,16 @@ class InteractionsService {
   static const String _table = 'interactions';
 
   InteractionsService({GamificationService? gamificationService})
-      : _gamificationService = gamificationService;
+    : _gamificationService = gamificationService;
 
   /// Create a new interaction
   /// Uses RPC function to atomically create interaction and update relative
   Future<String> createInteraction(Interaction interaction) async {
     try {
       if (kDebugMode) {
-        print('📝 [INTERACTIONS] Creating ${interaction.type.arabicName} interaction');
+        print(
+          '📝 [INTERACTIONS] Creating ${interaction.type.arabicName} interaction',
+        );
       }
 
       // Insert interaction directly
@@ -30,10 +32,13 @@ class InteractionsService {
       final id = response['id'] as String;
 
       // Update the relative's interaction count and last contact date
-      await _supabase.rpc('record_interaction_and_update_relative', params: {
-        'p_relative_id': interaction.relativeId,
-        'p_user_id': interaction.userId,
-      });
+      await _supabase.rpc(
+        'record_interaction_and_update_relative',
+        params: {
+          'p_relative_id': interaction.relativeId,
+          'p_user_id': interaction.userId,
+        },
+      );
 
       if (kDebugMode) {
         print('✅ [INTERACTIONS] Created interaction with ID: $id');
@@ -42,18 +47,23 @@ class InteractionsService {
       // Process gamification (points, streaks, badges, levels)
       if (_gamificationService != null) {
         try {
-          final gamificationResult = await _gamificationService.processInteractionGamification(
-            userId: interaction.userId,
-            interaction: interaction.copyWith(id: id),
-          );
+          final gamificationResult = await _gamificationService
+              .processInteractionGamification(
+                userId: interaction.userId,
+                interaction: interaction.copyWith(id: id),
+              );
 
           if (kDebugMode) {
-            print('🎮 [INTERACTIONS] Gamification processed: $gamificationResult');
+            print(
+              '🎮 [INTERACTIONS] Gamification processed: $gamificationResult',
+            );
           }
         } catch (e) {
           // Don't fail interaction creation if gamification fails
           if (kDebugMode) {
-            print('⚠️ [INTERACTIONS] Gamification processing failed (non-critical): $e');
+            print(
+              '⚠️ [INTERACTIONS] Gamification processing failed (non-critical): $e',
+            );
           }
         }
       }
@@ -74,10 +84,7 @@ class InteractionsService {
         print('📡 [INTERACTIONS] Streaming interactions for user: $userId');
       }
 
-      return _supabase
-          .from(_table)
-          .stream(primaryKey: ['id'])
-          .map((data) {
+      return _supabase.from(_table).stream(primaryKey: ['id']).map((data) {
         // Filter for this user's interactions
         final filtered = data
             .where((json) => json['user_id'] == userId)
@@ -100,10 +107,7 @@ class InteractionsService {
   /// Get interactions for a specific relative
   Stream<List<Interaction>> getRelativeInteractionsStream(String relativeId) {
     try {
-      return _supabase
-          .from(_table)
-          .stream(primaryKey: ['id'])
-          .map((data) {
+      return _supabase.from(_table).stream(primaryKey: ['id']).map((data) {
         // Filter for this relative's interactions
         final filtered = data
             .where((json) => json['relative_id'] == relativeId)
@@ -124,7 +128,10 @@ class InteractionsService {
   }
 
   /// Get recent interactions (last N)
-  Future<List<Interaction>> getRecentInteractions(String userId, {int limit = 10}) async {
+  Future<List<Interaction>> getRecentInteractions(
+    String userId, {
+    int limit = 10,
+  }) async {
     try {
       final response = await _supabase
           .from(_table)
@@ -146,23 +153,37 @@ class InteractionsService {
 
   /// Get interactions for today
   Stream<List<Interaction>> getTodayInteractionsStream(String userId) {
-    final today = DateTime.now();
-    final startOfDay = DateTime(today.year, today.month, today.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
-
-    return _supabase
-        .from(_table)
-        .stream(primaryKey: ['id'])
-        .map((data) {
+    return _supabase.from(_table).stream(primaryKey: ['id']).map((data) {
       // Filter for today's interactions for this user
       final filtered = data
           .where((json) {
             if (json['user_id'] != userId) return false;
-            // Convert to local time for accurate comparison
-            final date = DateTime.parse(json['date'] as String).toLocal();
-            return date.isAfter(startOfDay) && date.isBefore(endOfDay);
+
+            // Parse the date and convert to local timezone
+            final utcDate = DateTime.parse(json['date'] as String);
+            final localDate = utcDate.toLocal();
+
+            // Get today's date in local timezone
+            final now = DateTime.now();
+            final localToday = DateTime(now.year, now.month, now.day);
+            final startOfLocalToday = localToday;
+            final endOfLocalToday = localToday.add(const Duration(days: 1));
+
+            // Check if the interaction date is within today's local date range
+            return localDate.isAfter(startOfLocalToday) &&
+                localDate.isBefore(endOfLocalToday);
           })
-          .map((json) => Interaction.fromJson(json))
+          .map((json) {
+            // Create Interaction with proper local timezone handling
+            final interactionJson = Map<String, dynamic>.from(json);
+            final utcDate = DateTime.parse(json['date'] as String);
+            final localDate = utcDate.toLocal();
+
+            // Update the date in the JSON to local time
+            interactionJson['date'] = localDate.toIso8601String();
+
+            return Interaction.fromJson(interactionJson);
+          })
           .toList();
 
       // Sort by date descending (most recent first)
@@ -173,7 +194,11 @@ class InteractionsService {
   }
 
   /// Get interactions count for a date range
-  Future<int> getInteractionsCount(String userId, DateTime startDate, DateTime endDate) async {
+  Future<int> getInteractionsCount(
+    String userId,
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
     try {
       final response = await _supabase
           .from(_table)
@@ -192,7 +217,9 @@ class InteractionsService {
   }
 
   /// Get interactions count by type for a user
-  Future<Map<InteractionType, int>> getInteractionCountsByType(String userId) async {
+  Future<Map<InteractionType, int>> getInteractionCountsByType(
+    String userId,
+  ) async {
     try {
       final response = await _supabase
           .from(_table)
@@ -216,17 +243,17 @@ class InteractionsService {
   }
 
   /// Update an interaction
-  Future<void> updateInteraction(String interactionId, Map<String, dynamic> updates) async {
+  Future<void> updateInteraction(
+    String interactionId,
+    Map<String, dynamic> updates,
+  ) async {
     try {
       if (kDebugMode) {
         print('📝 [INTERACTIONS] Updating interaction: $interactionId');
       }
 
       // Note: updated_at is automatically set by database trigger
-      await _supabase
-          .from(_table)
-          .update(updates)
-          .eq('id', interactionId);
+      await _supabase.from(_table).update(updates).eq('id', interactionId);
 
       if (kDebugMode) {
         print('✅ [INTERACTIONS] Updated interaction: $interactionId');
@@ -246,10 +273,7 @@ class InteractionsService {
         print('🗑️ [INTERACTIONS] Deleting interaction: $interactionId');
       }
 
-      await _supabase
-          .from(_table)
-          .delete()
-          .eq('id', interactionId);
+      await _supabase.from(_table).delete().eq('id', interactionId);
 
       if (kDebugMode) {
         print('✅ [INTERACTIONS] Deleted interaction: $interactionId');

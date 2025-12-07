@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -67,9 +68,7 @@ class _LoggerOverlayState extends ConsumerState<LoggerOverlay> {
 
             // Log list
             Expanded(
-              child: logs.isEmpty
-                  ? _buildEmptyState()
-                  : _buildLogList(logs),
+              child: logs.isEmpty ? _buildEmptyState() : _buildLogList(logs),
             ),
 
             // Action buttons
@@ -91,17 +90,16 @@ class _LoggerOverlayState extends ConsumerState<LoggerOverlay> {
       decoration: const BoxDecoration(
         color: AppColors.islamicGreenDark,
         boxShadow: [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
+          BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
         ],
       ),
       child: Row(
         children: [
-          const Icon(Icons.bug_report, color: Colors.white),
-          const SizedBox(width: AppSpacing.sm),
+          if (kDebugMode) ...[
+            const Icon(Icons.bug_report, color: Colors.white),
+            const SizedBox(width: AppSpacing.sm),
+          ] else
+            ...[],
           Text(
             'App Logger',
             style: AppTypography.headlineSmall.copyWith(color: Colors.white),
@@ -146,7 +144,9 @@ class _LoggerOverlayState extends ConsumerState<LoggerOverlay> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                borderSide: const BorderSide(color: AppColors.islamicGreenPrimary),
+                borderSide: const BorderSide(
+                  color: AppColors.islamicGreenPrimary,
+                ),
               ),
               filled: true,
               fillColor: Colors.black38,
@@ -170,11 +170,15 @@ class _LoggerOverlayState extends ConsumerState<LoggerOverlay> {
                     child: FilterChip(
                       label: Text(level.name.toUpperCase()),
                       selected: isSelected,
-                      backgroundColor: _getLevelColor(level).withValues(alpha: 0.3),
+                      backgroundColor: _getLevelColor(
+                        level,
+                      ).withValues(alpha: 0.3),
                       selectedColor: _getLevelColor(level),
                       labelStyle: TextStyle(
                         color: Colors.white,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                       onSelected: (selected) {
                         ref.read(logFilterLevelProvider.notifier).state =
@@ -189,13 +193,17 @@ class _LoggerOverlayState extends ConsumerState<LoggerOverlay> {
                 // Category filter dropdown
                 DropdownButton<LogCategory?>(
                   value: ref.watch(logFilterCategoryProvider),
-                  hint: const Text('Category', style: TextStyle(color: Colors.white70)),
+                  hint: const Text(
+                    'Category',
+                    style: TextStyle(color: Colors.white70),
+                  ),
                   dropdownColor: Colors.black87,
                   style: const TextStyle(color: Colors.white),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('All')),
-                    ...LogCategory.values.map((cat) =>
-                      DropdownMenuItem(value: cat, child: Text(cat.name))
+                    ...LogCategory.values.map(
+                      (cat) =>
+                          DropdownMenuItem(value: cat, child: Text(cat.name)),
                     ),
                   ],
                   onChanged: (value) {
@@ -235,18 +243,17 @@ class _LoggerOverlayState extends ConsumerState<LoggerOverlay> {
 
   Widget _buildLogItem(LogEntry log) {
     final color = _getLevelColor(log.level);
-    final time = '${log.timestamp.hour.toString().padLeft(2, '0')}:'
-                 '${log.timestamp.minute.toString().padLeft(2, '0')}:'
-                 '${log.timestamp.second.toString().padLeft(2, '0')}';
+    final time =
+        '${log.timestamp.hour.toString().padLeft(2, '0')}:'
+        '${log.timestamp.minute.toString().padLeft(2, '0')}:'
+        '${log.timestamp.second.toString().padLeft(2, '0')}';
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.xs),
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        border: Border(
-          left: BorderSide(color: color, width: 3),
-        ),
+        border: Border(left: BorderSide(color: color, width: 3)),
         borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
       ),
       child: Column(
@@ -290,10 +297,7 @@ class _LoggerOverlayState extends ConsumerState<LoggerOverlay> {
                   log.tag != null
                       ? '${log.category.name}.${log.tag}'
                       : log.category.name,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 10,
-                  ),
+                  style: const TextStyle(color: Colors.white70, fontSize: 10),
                 ),
               ),
 
@@ -315,10 +319,7 @@ class _LoggerOverlayState extends ConsumerState<LoggerOverlay> {
           // Message
           Text(
             log.message,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 13,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 13),
           ),
 
           // Metadata (if any)
@@ -413,9 +414,7 @@ class _LoggerOverlayState extends ConsumerState<LoggerOverlay> {
           ElevatedButton.icon(
             icon: const Icon(Icons.delete),
             label: const Text('Clear'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.warning,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.warning),
             onPressed: () {
               loggerService.clear();
             },

@@ -16,13 +16,18 @@ class DetailedStatsScreen extends ConsumerStatefulWidget {
   const DetailedStatsScreen({super.key});
 
   @override
-  ConsumerState<DetailedStatsScreen> createState() => _DetailedStatsScreenState();
+  ConsumerState<DetailedStatsScreen> createState() =>
+      _DetailedStatsScreenState();
 }
 
 class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
   Map<String, dynamic>? _userStats;
   Map<InteractionType, int>? _interactionCounts;
   List<Map<String, dynamic>>? _recentActivity;
+  List<Map<String, dynamic>>? _monthlyData;
+  List<Map<String, dynamic>>? _topRelatives;
+  Map<String, int>? _timePatterns;
+  List<Map<String, dynamic>>? _achievements;
   bool _isLoading = true;
 
   @override
@@ -39,20 +44,34 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
       // Load user stats
       final userResponse = await SupabaseConfig.client
           .from('users')
-          .select('points, level, current_streak, longest_streak, badges, total_interactions')
+          .select(
+            'points, level, current_streak, longest_streak, badges, total_interactions',
+          )
           .eq('id', user.id)
           .single();
 
       // Load interaction counts by type
       final interactionsResponse = await SupabaseConfig.client
           .from('interactions')
-          .select('type')
+          .select('type, relative_id, date')
           .eq('user_id', user.id);
 
       final Map<InteractionType, int> counts = {};
+      final Map<String, int> relativeCounts = {};
+      final Map<String, int> hourlyPatterns = {};
+
       for (final row in (interactionsResponse as List)) {
         final type = InteractionType.fromString(row['type'] as String);
         counts[type] = (counts[type] ?? 0) + 1;
+
+        final relativeId = row['relative_id'] as String?;
+        if (relativeId != null) {
+          relativeCounts[relativeId] = (relativeCounts[relativeId] ?? 0) + 1;
+        }
+
+        final date = DateTime.parse(row['date'] as String);
+        final hour = date.hour.toString();
+        hourlyPatterns[hour] = (hourlyPatterns[hour] ?? 0) + 1;
       }
 
       // Load recent activity (last 7 days)
@@ -64,11 +83,73 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
           .gte('date', sevenDaysAgo.toIso8601String())
           .order('date', ascending: true);
 
+      // Load monthly data (last 6 months)
+      final sixMonthsAgo = DateTime.now().subtract(const Duration(days: 180));
+      final monthlyResponse = await SupabaseConfig.client
+          .from('interactions')
+          .select('date')
+          .eq('user_id', user.id)
+          .gte('date', sixMonthsAgo.toIso8601String())
+          .order('date', ascending: true);
+
+      // Process monthly data
+      final Map<String, int> monthlyCounts = {};
+      for (final row in (monthlyResponse as List)) {
+        final date = DateTime.parse(row['date'] as String);
+        final monthKey =
+            '${date.year}-${date.month.toString().padLeft(2, '0')}';
+        monthlyCounts[monthKey] = (monthlyCounts[monthKey] ?? 0) + 1;
+      }
+
+      // Get top relatives with names
+      final topRelativesData = <Map<String, dynamic>>[];
+      if (relativeCounts.isNotEmpty) {
+        final sortedRelatives = relativeCounts.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+
+        final topRelativeIds = sortedRelatives
+            .take(5)
+            .map((e) => e.key)
+            .toList();
+
+        if (topRelativeIds.isNotEmpty) {
+          final relativesResponse = await SupabaseConfig.client
+              .from('relatives')
+              .select('id, full_name')
+              .eq('user_id', user.id)
+              .filter('id', 'in', topRelativeIds);
+
+          for (final relative in (relativesResponse as List)) {
+            final relativeId = relative['id'] as String;
+            topRelativesData.add({
+              'id': relativeId,
+              'name': relative['full_name'] as String,
+              'count': relativeCounts[relativeId] ?? 0,
+            });
+          }
+
+          topRelativesData.sort(
+            (a, b) => (b['count'] as int).compareTo(a['count'] as int),
+          );
+        }
+      }
+
       if (mounted) {
         setState(() {
           _userStats = userResponse;
           _interactionCounts = counts;
-          _recentActivity = List<Map<String, dynamic>>.from(recentResponse as List);
+          _recentActivity = List<Map<String, dynamic>>.from(
+            recentResponse as List,
+          );
+          _monthlyData = monthlyCounts.entries
+              .map((e) => {'month': e.key, 'count': e.value})
+              .toList();
+          _topRelatives = topRelativesData;
+          _timePatterns = hourlyPatterns;
+          _achievements =
+              (userResponse['badges'] as List<dynamic>?)
+                  ?.cast<Map<String, dynamic>>() ??
+              [];
           _isLoading = false;
         });
       }
@@ -131,6 +212,22 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
 
                             // Weekly activity
                             _buildWeeklyActivity(),
+                            const SizedBox(height: AppSpacing.lg),
+
+                            // Monthly trend analysis
+                            _buildMonthlyTrend(),
+                            const SizedBox(height: AppSpacing.lg),
+
+                            // Top relatives breakdown
+                            _buildTopRelatives(),
+                            const SizedBox(height: AppSpacing.lg),
+
+                            // Time-based patterns
+                            _buildTimePatterns(),
+                            const SizedBox(height: AppSpacing.lg),
+
+                            // Achievement badges showcase
+                            _buildAchievementsShowcase(),
                             const SizedBox(height: AppSpacing.lg),
 
                             // Milestones progress
@@ -232,10 +329,7 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
       decoration: BoxDecoration(
         color: color.withOpacity(0.15),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 1,
-        ),
+        border: Border.all(color: color.withOpacity(0.3), width: 1),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -255,9 +349,7 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
           Text(
             label,
             textAlign: TextAlign.center,
-            style: AppTypography.bodySmall.copyWith(
-              color: Colors.white70,
-            ),
+            style: AppTypography.bodySmall.copyWith(color: Colors.white70),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -271,7 +363,10 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
       return const SizedBox.shrink();
     }
 
-    final total = _interactionCounts!.values.fold<int>(0, (sum, count) => sum + count);
+    final total = _interactionCounts!.values.fold<int>(
+      0,
+      (sum, count) => sum + count,
+    );
 
     return GlassCard(
       child: Padding(
@@ -292,7 +387,8 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
               child: PieChart(
                 PieChartData(
                   sections: _interactionCounts!.entries.map((entry) {
-                    final percentage = (entry.value / total * 100).toStringAsFixed(1);
+                    final percentage = (entry.value / total * 100)
+                        .toStringAsFixed(1);
                     return PieChartSectionData(
                       value: entry.value.toDouble(),
                       title: '${entry.key.arabicName}\n$percentage%',
@@ -326,7 +422,9 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
                     const SizedBox(width: AppSpacing.sm),
                     Text(
                       '${entry.key.emoji} ${entry.key.arabicName}',
-                      style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: Colors.white,
+                      ),
                     ),
                     const Spacer(),
                     Text(
@@ -353,7 +451,11 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             children: [
-              const Icon(Icons.calendar_today_rounded, color: Colors.white54, size: 48),
+              const Icon(
+                Icons.calendar_today_rounded,
+                color: Colors.white54,
+                size: 48,
+              ),
               const SizedBox(height: AppSpacing.md),
               Text(
                 'لا توجد تفاعلات في الأيام السبعة الماضية',
@@ -393,7 +495,12 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
               child: BarChart(
                 BarChartData(
                   alignment: BarChartAlignment.spaceAround,
-                  maxY: dailyCounts.values.isEmpty ? 10 : dailyCounts.values.reduce((a, b) => a > b ? a : b).toDouble() + 2,
+                  maxY: dailyCounts.values.isEmpty
+                      ? 10
+                      : dailyCounts.values
+                                .reduce((a, b) => a > b ? a : b)
+                                .toDouble() +
+                            2,
                   barTouchData: BarTouchData(enabled: false),
                   titlesData: FlTitlesData(
                     show: true,
@@ -401,7 +508,15 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
                       sideTitles: SideTitles(
                         showTitles: true,
                         getTitlesWidget: (value, meta) {
-                          final days = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+                          final days = [
+                            'السبت',
+                            'الأحد',
+                            'الاثنين',
+                            'الثلاثاء',
+                            'الأربعاء',
+                            'الخميس',
+                            'الجمعة',
+                          ];
                           final now = DateTime.now();
                           final dayIndex = (now.weekday + value.toInt()) % 7;
                           return Padding(
@@ -417,9 +532,15 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
                         },
                       ),
                     ),
-                    leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    leftTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
                   ),
                   gridData: const FlGridData(show: false),
                   borderData: FlBorderData(show: false),
@@ -436,7 +557,9 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
                           toY: count.toDouble(),
                           color: AppColors.islamicGreenPrimary,
                           width: 16,
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(4),
+                          ),
                         ),
                       ],
                     );
@@ -494,7 +617,9 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            ...milestones.map((milestone) => _buildMilestoneProgress(milestone)),
+            ...milestones.map(
+              (milestone) => _buildMilestoneProgress(milestone),
+            ),
           ],
         ),
       ),
@@ -524,9 +649,7 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
               const Spacer(),
               Text(
                 '${milestone.current}/${milestone.target}',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white70,
-                ),
+                style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
               ),
             ],
           ),
@@ -561,6 +684,373 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
     );
   }
 
+  Widget _buildMonthlyTrend() {
+    if (_monthlyData == null || _monthlyData!.isEmpty) {
+      return GlassCard(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            children: [
+              const Icon(
+                Icons.trending_up_rounded,
+                color: Colors.white54,
+                size: 48,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'لا توجد بيانات شهرية',
+                textAlign: TextAlign.center,
+                style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return GlassCard(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'الاتجاه الشهري',
+              style: AppTypography.titleLarge.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            SizedBox(
+              height: 200,
+              child: LineChart(
+                LineChartData(
+                  gridData: const FlGridData(show: false),
+                  titlesData: const FlTitlesData(show: false),
+                  borderData: FlBorderData(show: false),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: _monthlyData!.asMap().entries.map((entry) {
+                        return FlSpot(
+                          entry.key.toDouble(),
+                          entry.value['count'].toDouble(),
+                        );
+                      }).toList(),
+                      isCurved: true,
+                      color: AppColors.premiumGold,
+                      barWidth: 3,
+                      dotData: const FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: AppColors.premiumGold.withOpacity(0.2),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopRelatives() {
+    if (_topRelatives == null || _topRelatives!.isEmpty) {
+      return GlassCard(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            children: [
+              const Icon(Icons.people_rounded, color: Colors.white54, size: 48),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'لا توجد بيانات عن الأقارب',
+                textAlign: TextAlign.center,
+                style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return GlassCard(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'الأقارب الأكثر تواصلاً',
+              style: AppTypography.titleLarge.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ..._topRelatives!.take(5).toList().asMap().entries.map((entry) {
+              final index = entry.key;
+              final relative = entry.value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.islamicGreenPrimary,
+                            AppColors.calmBlue,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${index + 1}',
+                          style: AppTypography.titleMedium.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            relative['name'] as String,
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            '${relative['count']} تفاعل',
+                            style: AppTypography.bodySmall.copyWith(
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimePatterns() {
+    if (_timePatterns == null || _timePatterns!.isEmpty) {
+      return GlassCard(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            children: [
+              const Icon(
+                Icons.schedule_rounded,
+                color: Colors.white54,
+                size: 48,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'لا توجد أنماط زمنية',
+                textAlign: TextAlign.center,
+                style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return GlassCard(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'الأنماط الزمنية للتواصل',
+              style: AppTypography.titleLarge.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(
+              height: 200,
+              child: BarChart(
+                BarChartData(
+                  alignment: BarChartAlignment.spaceAround,
+                  maxY: _timePatterns!.values.isEmpty
+                      ? 10
+                      : _timePatterns!.values
+                                .reduce((a, b) => a > b ? a : b)
+                                .toDouble() +
+                            2,
+                  barTouchData: BarTouchData(enabled: false),
+                  titlesData: FlTitlesData(
+                    show: true,
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          final hour = value.toInt();
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              '${hour.toString().padLeft(2, '0')}:00',
+                              style: AppTypography.bodySmall.copyWith(
+                                color: Colors.white70,
+                                fontSize: 10,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    leftTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                  ),
+                  gridData: const FlGridData(show: false),
+                  borderData: FlBorderData(show: false),
+                  barGroups: List.generate(24, (index) {
+                    final hour = index.toString();
+                    final count = _timePatterns![hour] ?? 0;
+
+                    return BarChartGroupData(
+                      x: index,
+                      barRods: [
+                        BarChartRodData(
+                          toY: count.toDouble(),
+                          color: AppColors.emotionalPurple,
+                          width: 8,
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(4),
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAchievementsShowcase() {
+    if (_achievements == null || _achievements!.isEmpty) {
+      return GlassCard(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            children: [
+              const Icon(
+                Icons.emoji_events_rounded,
+                color: Colors.white54,
+                size: 48,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'لا توجد إنجازات بعد',
+                textAlign: TextAlign.center,
+                style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return GlassCard(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'إنجازاتي',
+              style: AppTypography.titleLarge.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 3,
+              childAspectRatio: 1,
+              crossAxisSpacing: AppSpacing.sm,
+              mainAxisSpacing: AppSpacing.sm,
+              children: _achievements!.take(6).map((achievement) {
+                return Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.joyfulOrange, AppColors.energeticRed],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.joyfulOrange.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.emoji_events_rounded,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        achievement['name'] as String? ?? 'إنجاز',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Color _getColorForInteractionType(InteractionType type) {
     switch (type) {
       case InteractionType.call:
@@ -579,7 +1069,19 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
   }
 
   int _getNextLevelPoints(int currentLevel) {
-    const xpPerLevel = [0, 100, 250, 500, 1000, 2000, 3500, 5500, 8000, 11000, 15000];
+    const xpPerLevel = [
+      0,
+      100,
+      250,
+      500,
+      1000,
+      2000,
+      3500,
+      5500,
+      8000,
+      11000,
+      15000,
+    ];
     if (currentLevel < xpPerLevel.length) {
       return xpPerLevel[currentLevel];
     }

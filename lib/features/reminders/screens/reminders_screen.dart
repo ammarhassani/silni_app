@@ -12,24 +12,13 @@ import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/collapsible_picker.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/models/relative_model.dart';
-import '../../../shared/services/relatives_service.dart';
 import '../../../shared/services/reminder_schedules_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../home/screens/home_screen.dart';
+import '../../../core/providers/realtime_provider.dart';
 
-// Providers
-final reminderSchedulesServiceProvider = Provider((ref) => ReminderSchedulesService());
-
-final reminderSchedulesStreamProvider = StreamProvider.family<List<ReminderSchedule>, String>((ref, userId) {
-  final service = ref.watch(reminderSchedulesServiceProvider);
-  return service.getSchedulesStream(userId);
-});
-
-final relativesServiceProvider = Provider((ref) => RelativesService());
-
-final relativesStreamProvider = StreamProvider.family<List<Relative>, String>((ref, userId) {
-  final service = ref.watch(relativesServiceProvider);
-  return service.getRelativesStream(userId);
-});
+// Providers - Note: reminderSchedulesServiceProvider is imported from shared/services/reminder_schedules_service.dart
+// Note: relativesStreamProvider is imported from features/home/screens/home_screen.dart
 
 class RemindersScreen extends ConsumerStatefulWidget {
   const RemindersScreen({super.key});
@@ -52,6 +41,9 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     final user = ref.watch(currentUserProvider);
     final userId = user?.id ?? '';
 
+    // Initialize real-time subscriptions for this user
+    ref.watch(autoRealtimeSubscriptionsProvider);
+
     final schedulesAsync = ref.watch(reminderSchedulesStreamProvider(userId));
     final relativesAsync = ref.watch(relativesStreamProvider(userId));
 
@@ -66,11 +58,14 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                 Expanded(
                   child: relativesAsync.when(
                     data: (relatives) => schedulesAsync.when(
-                      data: (schedules) => _buildContent(context, relatives, schedules),
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                      data: (schedules) =>
+                          _buildContent(context, relatives, schedules),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
                       error: (_, __) => _buildError(),
                     ),
-                    loading: () => const Center(child: CircularProgressIndicator()),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
                     error: (_, __) => _buildError(),
                   ),
                 ),
@@ -98,7 +93,9 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               children: [
                 Text(
                   'تذكير صلة الرحم',
-                  style: AppTypography.headlineLarge.copyWith(color: Colors.white),
+                  style: AppTypography.headlineLarge.copyWith(
+                    color: Colors.white,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -115,7 +112,11 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     );
   }
 
-  Widget _buildContent(BuildContext context, List<Relative> relatives, List<ReminderSchedule> schedules) {
+  Widget _buildContent(
+    BuildContext context,
+    List<Relative> relatives,
+    List<ReminderSchedule> schedules,
+  ) {
     if (relatives.isEmpty) {
       return _buildEmptyState();
     }
@@ -245,7 +246,10 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     );
   }
 
-  Widget _buildScheduleCards(List<ReminderSchedule> schedules, List<Relative> relatives) {
+  Widget _buildScheduleCards(
+    List<ReminderSchedule> schedules,
+    List<Relative> relatives,
+  ) {
     if (schedules.isEmpty) {
       return GlassCard(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -278,7 +282,10 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     );
   }
 
-  Widget _buildScheduleCard(ReminderSchedule schedule, List<Relative> allRelatives) {
+  Widget _buildScheduleCard(
+    ReminderSchedule schedule,
+    List<Relative> allRelatives,
+  ) {
     // Use theme-aware colors
     final themeColors = ref.watch(themeColorsProvider);
 
@@ -305,7 +312,9 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                   children: [
                     Text(
                       schedule.frequency.arabicName,
-                      style: AppTypography.headlineSmall.copyWith(color: Colors.white),
+                      style: AppTypography.headlineSmall.copyWith(
+                        color: Colors.white,
+                      ),
                     ),
                     Text(
                       schedule.description,
@@ -353,7 +362,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
             children: [
               Expanded(
                 child: GradientButton(
-                  onPressed: () => _showAddRelativesToSchedule(schedule, allRelatives),
+                  onPressed: () =>
+                      _showAddRelativesToSchedule(schedule, allRelatives),
                   text: 'إضافة أقارب',
                   icon: Icons.person_add_rounded,
                   height: 40,
@@ -394,12 +404,19 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         style: AppTypography.bodySmall.copyWith(color: Colors.white),
       ),
       backgroundColor: themeColors.primary.withOpacity(0.3),
-      deleteIcon: const Icon(Icons.close_rounded, size: 18, color: Colors.white70),
+      deleteIcon: const Icon(
+        Icons.close_rounded,
+        size: 18,
+        color: Colors.white70,
+      ),
       onDeleted: () => _removeRelativeFromSchedule(schedule, relative.id),
     );
   }
 
-  Widget _buildUnassignedRelatives(List<Relative> allRelatives, List<ReminderSchedule> schedules) {
+  Widget _buildUnassignedRelatives(
+    List<Relative> allRelatives,
+    List<ReminderSchedule> schedules,
+  ) {
     final unassigned = _getUnassignedRelatives(allRelatives, schedules);
 
     return GlassCard(
@@ -474,7 +491,10 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     );
   }
 
-  List<Relative> _getUnassignedRelatives(List<Relative> allRelatives, List<ReminderSchedule> schedules) {
+  List<Relative> _getUnassignedRelatives(
+    List<Relative> allRelatives,
+    List<ReminderSchedule> schedules,
+  ) {
     final assignedIds = schedules
         .expand((schedule) => schedule.relativeIds)
         .toSet();
@@ -497,7 +517,9 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               const SizedBox(height: AppSpacing.lg),
               Text(
                 'لا يوجد أقارب بعد',
-                style: AppTypography.headlineMedium.copyWith(color: Colors.white),
+                style: AppTypography.headlineMedium.copyWith(
+                  color: Colors.white,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -529,11 +551,35 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline_rounded, color: Colors.white, size: 48),
+            const Icon(
+              Icons.error_outline_rounded,
+              color: Colors.white,
+              size: 48,
+            ),
             const SizedBox(height: AppSpacing.md),
             Text(
               'حدث خطأ في تحميل البيانات',
               style: AppTypography.bodyLarge.copyWith(color: Colors.white),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'يرجى التحقق من الاتصال بالإنترنت والمحاولة مرة أخرى',
+              style: AppTypography.bodySmall.copyWith(
+                color: Colors.white.withOpacity(0.8),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            GradientButton(
+              onPressed: () {
+                // Force refresh by invalidating the provider
+                final user = ref.read(currentUserProvider);
+                if (user != null) {
+                  ref.invalidate(reminderSchedulesStreamProvider(user.id));
+                }
+              },
+              text: 'إعادة المحاولة',
+              icon: Icons.refresh_rounded,
             ),
           ],
         ),
@@ -547,24 +593,23 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => _CreateScheduleDialog(
-        template: template,
-        userId: userId,
-      ),
+      builder: (context) =>
+          _CreateScheduleDialog(template: template, userId: userId),
     );
   }
 
-  void _showAddRelativesToSchedule(ReminderSchedule schedule, List<Relative> allRelatives) {
+  void _showAddRelativesToSchedule(
+    ReminderSchedule schedule,
+    List<Relative> allRelatives,
+  ) {
     final unassigned = allRelatives
         .where((r) => !schedule.relativeIds.contains(r.id))
         .toList();
 
     showDialog(
       context: context,
-      builder: (context) => _AddRelativesDialog(
-        schedule: schedule,
-        relatives: unassigned,
-      ),
+      builder: (context) =>
+          _AddRelativesDialog(schedule: schedule, relatives: unassigned),
     );
   }
 
@@ -577,9 +622,9 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('خطأ: $e')));
       }
     }
   }
@@ -615,21 +660,24 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       try {
         await service.deleteSchedule(schedule.id);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('تم حذف التذكير')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('تم حذف التذكير')));
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('خطأ: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('خطأ: $e')));
         }
       }
     }
   }
 
-  void _removeRelativeFromSchedule(ReminderSchedule schedule, String relativeId) async {
+  void _removeRelativeFromSchedule(
+    ReminderSchedule schedule,
+    String relativeId,
+  ) async {
     final service = ref.read(reminderSchedulesServiceProvider);
     try {
       final updatedRelativeIds = List<String>.from(schedule.relativeIds)
@@ -641,9 +689,50 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       );
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('خطأ: $e')));
+      }
+    }
+  }
+
+  /// Handle drag target for adding relatives to schedule
+  void _handleDragTarget(DragTargetDetails details, ReminderSchedule schedule) {
+    final relative = details.data as Relative;
+
+    if (schedule != null && relative != null) {
+      // Add relative to schedule
+      final updatedRelativeIds = [...schedule.relativeIds, relative.id];
+
+      // Update the schedule
+      _updateScheduleRelativeIds(schedule.id, updatedRelativeIds);
+
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e')),
+          SnackBar(
+            content: Text('تمت إضافة ${relative.fullName} إلى التذكير'),
+            backgroundColor: Colors.green,
+          ),
         );
+      }
+    }
+  }
+
+  /// Update schedule with new relative IDs
+  void _updateScheduleRelativeIds(
+    String scheduleId,
+    List<String> newRelativeIds,
+  ) async {
+    final service = ref.read(reminderSchedulesServiceProvider);
+    try {
+      await service.updateSchedule(scheduleId, {
+        'relative_ids': newRelativeIds,
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('خطأ: $e')));
       }
     }
   }
@@ -654,13 +743,11 @@ class _CreateScheduleDialog extends ConsumerStatefulWidget {
   final ReminderTemplate template;
   final String userId;
 
-  const _CreateScheduleDialog({
-    required this.template,
-    required this.userId,
-  });
+  const _CreateScheduleDialog({required this.template, required this.userId});
 
   @override
-  ConsumerState<_CreateScheduleDialog> createState() => _CreateScheduleDialogState();
+  ConsumerState<_CreateScheduleDialog> createState() =>
+      _CreateScheduleDialogState();
 }
 
 class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
@@ -717,7 +804,9 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
                   ElevatedButton.icon(
                     onPressed: _pickTime,
                     icon: const Icon(Icons.schedule_rounded),
-                    label: Text('تغيير الوقت: ${_selectedTime.format(context)}'),
+                    label: Text(
+                      'تغيير الوقت: ${_selectedTime.format(context)}',
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white.withOpacity(0.2),
                       foregroundColor: Colors.white,
@@ -764,10 +853,7 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('إلغاء'),
         ),
-        TextButton(
-          onPressed: _createSchedule,
-          child: const Text('إنشاء'),
-        ),
+        TextButton(onPressed: _createSchedule, child: const Text('إنشاء')),
       ],
     );
   }
@@ -775,7 +861,15 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
   Widget _buildDaySelector() {
     // Use theme-aware colors
     final themeColors = ref.watch(themeColorsProvider);
-    final days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    final days = [
+      'الأحد',
+      'الاثنين',
+      'الثلاثاء',
+      'الأربعاء',
+      'الخميس',
+      'الجمعة',
+      'السبت',
+    ];
 
     return Wrap(
       spacing: AppSpacing.sm,
@@ -833,7 +927,10 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
               final day = index + 1;
               return DropdownMenuItem(
                 value: day,
-                child: Text('اليوم $day', style: const TextStyle(color: Colors.white)),
+                child: Text(
+                  'اليوم $day',
+                  style: const TextStyle(color: Colors.white),
+                ),
               );
             }),
             onChanged: (value) {
@@ -865,9 +962,14 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
         userId: widget.userId,
         frequency: widget.template.frequency,
         relativeIds: [],
-        time: '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}',
-        customDays: widget.template.frequency == ReminderFrequency.weekly ? _selectedDays : null,
-        dayOfMonth: widget.template.frequency == ReminderFrequency.monthly ? _selectedDayOfMonth : null,
+        time:
+            '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}',
+        customDays: widget.template.frequency == ReminderFrequency.weekly
+            ? _selectedDays
+            : null,
+        dayOfMonth: widget.template.frequency == ReminderFrequency.monthly
+            ? _selectedDayOfMonth
+            : null,
         createdAt: DateTime.now(),
       );
 
@@ -875,15 +977,15 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم إنشاء التذكير بنجاح')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('تم إنشاء التذكير بنجاح')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('خطأ: $e')));
       }
     }
   }
@@ -894,13 +996,11 @@ class _AddRelativesDialog extends ConsumerStatefulWidget {
   final ReminderSchedule schedule;
   final List<Relative> relatives;
 
-  const _AddRelativesDialog({
-    required this.schedule,
-    required this.relatives,
-  });
+  const _AddRelativesDialog({required this.schedule, required this.relatives});
 
   @override
-  ConsumerState<_AddRelativesDialog> createState() => _AddRelativesDialogState();
+  ConsumerState<_AddRelativesDialog> createState() =>
+      _AddRelativesDialogState();
 }
 
 class _AddRelativesDialogState extends ConsumerState<_AddRelativesDialog> {
@@ -944,11 +1044,16 @@ class _AddRelativesDialogState extends ConsumerState<_AddRelativesDialog> {
                     },
                     title: Row(
                       children: [
-                        Text(relative.displayEmoji, style: const TextStyle(fontSize: 24)),
+                        Text(
+                          relative.displayEmoji,
+                          style: const TextStyle(fontSize: 24),
+                        ),
                         const SizedBox(width: AppSpacing.sm),
                         Text(
                           relative.fullName,
-                          style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: Colors.white,
+                          ),
                         ),
                       ],
                     ),
@@ -995,20 +1100,21 @@ class _AddRelativesDialogState extends ConsumerState<_AddRelativesDialog> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('تم إضافة ${_selectedRelativeIds.length} أقارب للتذكير'),
+            content: Text(
+              'تم إضافة ${_selectedRelativeIds.length} أقارب للتذكير',
+            ),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('خطأ: $e')));
       }
     }
   }
 }
-
 
 // Edit Schedule Dialog
 class _EditScheduleDialog extends ConsumerStatefulWidget {
@@ -1017,7 +1123,8 @@ class _EditScheduleDialog extends ConsumerStatefulWidget {
   const _EditScheduleDialog({required this.schedule});
 
   @override
-  ConsumerState<_EditScheduleDialog> createState() => _EditScheduleDialogState();
+  ConsumerState<_EditScheduleDialog> createState() =>
+      _EditScheduleDialogState();
 }
 
 class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
@@ -1047,7 +1154,15 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
   }
 
   Widget _buildDaySelector() {
-    final days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    final days = [
+      'الأحد',
+      'الإثنين',
+      'الثلاثاء',
+      'الأربعاء',
+      'الخميس',
+      'الجمعة',
+      'السبت',
+    ];
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -1058,11 +1173,17 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
           selected: isSelected,
           onSelected: (selected) {
             setState(() {
-              if (selected) _selectedDays.add(index); else _selectedDays.remove(index);
+              if (selected)
+                _selectedDays.add(index);
+              else
+                _selectedDays.remove(index);
             });
           },
           selectedColor: Colors.white.withOpacity(0.3),
-          labelStyle: TextStyle(color: Colors.white, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
+          labelStyle: TextStyle(
+            color: Colors.white,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
         );
       }),
     );
@@ -1078,9 +1199,13 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
         return FilterChip(
           label: Text('$day'),
           selected: isSelected,
-          onSelected: (selected) => setState(() => _selectedDayOfMonth = selected ? day : null),
+          onSelected: (selected) =>
+              setState(() => _selectedDayOfMonth = selected ? day : null),
           selectedColor: Colors.white.withOpacity(0.3),
-          labelStyle: TextStyle(color: Colors.white, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
+          labelStyle: TextStyle(
+            color: Colors.white,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
         );
       }),
     );
@@ -1090,13 +1215,19 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: const Color(0xFF1A1A1A),
-      title: Text('تعديل التذكير', style: AppTypography.headlineMedium.copyWith(color: Colors.white)),
+      title: Text(
+        'تعديل التذكير',
+        style: AppTypography.headlineMedium.copyWith(color: Colors.white),
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('وقت التذكير', style: AppTypography.titleMedium.copyWith(color: Colors.white)),
+            Text(
+              'وقت التذكير',
+              style: AppTypography.titleMedium.copyWith(color: Colors.white),
+            ),
             const SizedBox(height: AppSpacing.sm),
             ElevatedButton.icon(
               onPressed: _pickTime,
@@ -1105,18 +1236,27 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white.withOpacity(0.2),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.md,
+                ),
               ),
             ),
             if (widget.schedule.frequency == ReminderFrequency.weekly) ...[
               const SizedBox(height: AppSpacing.lg),
-              Text('أيام الأسبوع', style: AppTypography.titleMedium.copyWith(color: Colors.white)),
+              Text(
+                'أيام الأسبوع',
+                style: AppTypography.titleMedium.copyWith(color: Colors.white),
+              ),
               const SizedBox(height: AppSpacing.sm),
               _buildDaySelector(),
             ],
             if (widget.schedule.frequency == ReminderFrequency.monthly) ...[
               const SizedBox(height: AppSpacing.lg),
-              Text('يوم من الشهر', style: AppTypography.titleMedium.copyWith(color: Colors.white)),
+              Text(
+                'يوم من الشهر',
+                style: AppTypography.titleMedium.copyWith(color: Colors.white),
+              ),
               const SizedBox(height: AppSpacing.sm),
               _buildMonthDaySelector(),
             ],
@@ -1124,33 +1264,55 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('إلغاء'),
+        ),
         TextButton(onPressed: _saveChanges, child: const Text('حفظ')),
       ],
     );
   }
 
   void _saveChanges() async {
-    if (widget.schedule.frequency == ReminderFrequency.weekly && _selectedDays.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى اختيار يوم واحد على الأقل')));
+    if (widget.schedule.frequency == ReminderFrequency.weekly &&
+        _selectedDays.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('يرجى اختيار يوم واحد على الأقل')),
+      );
       return;
     }
-    if (widget.schedule.frequency == ReminderFrequency.monthly && _selectedDayOfMonth == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى اختيار يوم من الشهر')));
+    if (widget.schedule.frequency == ReminderFrequency.monthly &&
+        _selectedDayOfMonth == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('يرجى اختيار يوم من الشهر')));
       return;
     }
 
     final service = ref.read(reminderSchedulesServiceProvider);
     try {
-      final timeString = '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
-      final updatedSchedule = widget.schedule.copyWith(time: timeString, customDays: _selectedDays, dayOfMonth: _selectedDayOfMonth);
-      await service.updateSchedule(widget.schedule.id, updatedSchedule.toJson());
+      final timeString =
+          '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
+      final updatedSchedule = widget.schedule.copyWith(
+        time: timeString,
+        customDays: _selectedDays,
+        dayOfMonth: _selectedDayOfMonth,
+      );
+      await service.updateSchedule(
+        widget.schedule.id,
+        updatedSchedule.toJson(),
+      );
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث التذكير بنجاح')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('تم تحديث التذكير بنجاح')));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e')));
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('خطأ: $e')));
     }
   }
 }

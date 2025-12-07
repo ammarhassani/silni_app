@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:ui' as ui;
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -12,22 +13,15 @@ import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/swipeable_relative_card.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
-import '../../../shared/services/relatives_service.dart';
-import '../../../shared/services/interactions_service.dart';
+import '../../../shared/providers/interactions_provider.dart';
 import '../../../core/router/app_routes.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../home/screens/home_screen.dart';
+import '../../../core/providers/realtime_provider.dart';
 
-// Provider for relatives service
-final relativesServiceProvider = Provider((ref) => RelativesService());
-
-// Provider for interactions service
-final interactionsServiceProvider = Provider((ref) => InteractionsService());
-
-// Provider for relatives stream
-final relativesStreamProvider = StreamProvider.family<List<Relative>, String>((ref, userId) {
-  final service = ref.watch(relativesServiceProvider);
-  return service.getRelativesStream(userId);
-});
+// Note: relativesServiceProvider is now imported from shared/services/relatives_service.dart
+// Note: interactionsServiceProvider is now imported from shared/providers/interactions_provider.dart
+// Note: relativesStreamProvider is now imported from features/home/screens/home_screen.dart
 
 class RelativesScreen extends ConsumerStatefulWidget {
   const RelativesScreen({super.key});
@@ -77,76 +71,96 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final userId = user?.id ?? '';
+
+    // Initialize real-time subscriptions for this user
+    ref.watch(autoRealtimeSubscriptionsProvider);
+
     final relativesAsync = ref.watch(relativesStreamProvider(userId));
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
+      extendBody: true,
       body: GradientBackground(
         animated: true,
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              _buildHeader(context),
+        child: Stack(
+          children: [
+            // Main content
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  bottom: 120,
+                ), // Space for nav bar
+                child: Column(
+                  children: [
+                    // Header
+                    _buildHeader(context),
 
-              // Search bar
-              _buildSearchBar(),
+                    // Search bar
+                    _buildSearchBar(),
 
-              // Filter chips
-              _buildFilterChips(),
+                    // Filter chips
+                    _buildFilterChips(),
 
-              // Relatives list
-              Expanded(
-                child: relativesAsync.when(
-                  data: (relatives) {
-                    final filteredRelatives = _filterRelatives(relatives);
+                    // Relatives list
+                    Expanded(
+                      child: relativesAsync.when(
+                        data: (relatives) {
+                          final filteredRelatives = _filterRelatives(relatives);
 
-                    if (relatives.isEmpty) {
-                      return _buildEmptyState(context);
-                    }
+                          if (relatives.isEmpty) {
+                            return _buildEmptyState(context);
+                          }
 
-                    if (filteredRelatives.isEmpty) {
-                      return _buildNoResults();
-                    }
+                          if (filteredRelatives.isEmpty) {
+                            return _buildNoResults();
+                          }
 
-                    return _buildRelativesList(filteredRelatives);
-                  },
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          return _buildRelativesList(filteredRelatives);
+                        },
+                        loading: () => const Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        ),
+                        error: (error, stack) =>
+                            _buildErrorState(error.toString()),
+                      ),
                     ),
-                  ),
-                  error: (error, stack) => _buildErrorState(error.toString()),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+            // Glassmorphism FAB positioned on left
+            Positioned(
+              bottom: 100, // Above navigation bar
+              left: 20, // Left side instead of right
+              child: _buildGlassmorphismFAB(context),
+            ),
+          ],
         ),
       ),
-      floatingActionButton: _buildFAB(context),
     );
   }
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-            onPressed: () => context.pop(),
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            children: [
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                'الأقارب',
+                style: AppTypography.headlineMedium.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+            ],
           ),
-          const SizedBox(width: AppSpacing.sm),
-          Text(
-            'الأقارب',
-            style: AppTypography.headlineMedium.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const Spacer(),
-        ],
-      ),
-    )
+        )
         .animate()
         .fadeIn(duration: const Duration(milliseconds: 400))
         .slideY(begin: -0.2, end: 0);
@@ -157,49 +171,49 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
     final themeColors = ref.watch(themeColorsProvider);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      child: GlassCard(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: 4,
-        ),
-        child: TextField(
-          controller: _searchController,
-          onChanged: (value) {
-            setState(() {
-              _searchQuery = value;
-            });
-          },
-          style: AppTypography.bodyMedium.copyWith(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: 'ابحث عن قريب...',
-            hintStyle: AppTypography.bodyMedium.copyWith(
-              color: Colors.white.withOpacity(0.6),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          child: GlassCard(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: 4,
             ),
-            prefixIcon: Icon(
-              Icons.search_rounded,
-              color: themeColors.primary.withOpacity(0.8),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
+              style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'ابحث عن قريب...',
+                hintStyle: AppTypography.bodyMedium.copyWith(
+                  color: Colors.white.withOpacity(0.6),
+                ),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  color: themeColors.primary.withOpacity(0.8),
+                ),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(
+                          Icons.clear_rounded,
+                          color: themeColors.primary.withOpacity(0.8),
+                        ),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchQuery = '';
+                          });
+                        },
+                      )
+                    : null,
+                border: InputBorder.none,
+                filled: false, // Make background transparent
+              ),
             ),
-            suffixIcon: _searchQuery.isNotEmpty
-                ? IconButton(
-                    icon: Icon(
-                      Icons.clear_rounded,
-                      color: themeColors.primary.withOpacity(0.8),
-                    ),
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() {
-                        _searchQuery = '';
-                      });
-                    },
-                  )
-                : null,
-            border: InputBorder.none,
-            filled: false, // Make background transparent
           ),
-        ),
-      ),
-    )
+        )
         .animate(delay: const Duration(milliseconds: 200))
         .fadeIn()
         .slideX(begin: 0.2, end: 0);
@@ -207,17 +221,17 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
 
   Widget _buildFilterChips() {
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Row(
-        children: [
-          _buildFilterChip('الكل', 'all'),
-          const SizedBox(width: AppSpacing.sm),
-          _buildFilterChip('يحتاجون تواصل', 'needs_contact'),
-          const SizedBox(width: AppSpacing.sm),
-          _buildFilterChip('المفضلة', 'favorites'),
-        ],
-      ),
-    )
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            children: [
+              _buildFilterChip('الكل', 'all'),
+              const SizedBox(width: AppSpacing.sm),
+              _buildFilterChip('يحتاجون تواصل', 'needs_contact'),
+              const SizedBox(width: AppSpacing.sm),
+              _buildFilterChip('المفضلة', 'favorites'),
+            ],
+          ),
+        )
         .animate(delay: const Duration(milliseconds: 400))
         .fadeIn()
         .slideY(begin: 0.2, end: 0);
@@ -238,9 +252,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
           vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
-          gradient: isSelected
-              ? AppColors.primaryGradient
-              : null,
+          gradient: isSelected ? AppColors.primaryGradient : null,
           color: isSelected ? null : Colors.white.withOpacity(0.2),
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           border: Border.all(
@@ -284,25 +296,25 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
     final userId = user?.id ?? '';
 
     return SwipeableRelativeCard(
-      relative: relative,
-      onTap: () {
-        context.push('${AppRoutes.relativeDetail}/${relative.id}');
-      },
-      onMarkContacted: () async {
-        final interactionsService = ref.read(interactionsServiceProvider);
-        await interactionsService.createInteraction(
-          Interaction(
-            id: '',
-            userId: userId,
-            relativeId: relative.id,
-            type: InteractionType.call,
-            date: DateTime.now(),
-            notes: 'تواصل سريع',
-            createdAt: DateTime.now(),
-          ),
-        );
-      },
-    )
+          relative: relative,
+          onTap: () {
+            context.push('${AppRoutes.relativeDetail}/${relative.id}');
+          },
+          onMarkContacted: () async {
+            final interactionsService = ref.read(interactionsServiceProvider);
+            await interactionsService.createInteraction(
+              Interaction(
+                id: '',
+                userId: userId,
+                relativeId: relative.id,
+                type: InteractionType.call,
+                date: DateTime.now(),
+                notes: 'تواصل سريع',
+                createdAt: DateTime.now(),
+              ),
+            );
+          },
+        )
         .animate(delay: Duration(milliseconds: 100 * index))
         .fadeIn()
         .slideX(begin: 0.2, end: 0);
@@ -324,51 +336,53 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.people_outline,
-              size: 120,
-              color: Colors.white.withOpacity(0.5),
-            )
-                .animate(
-                  onPlay: (controller) => controller.repeat(reverse: true),
+        child:
+            Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                          Icons.people_outline,
+                          size: 120,
+                          color: Colors.white.withOpacity(0.5),
+                        )
+                        .animate(
+                          onPlay: (controller) =>
+                              controller.repeat(reverse: true),
+                        )
+                        .scale(
+                          duration: const Duration(seconds: 2),
+                          begin: const Offset(1.0, 1.0),
+                          end: const Offset(1.1, 1.1),
+                        ),
+                    const SizedBox(height: AppSpacing.xl),
+                    Text(
+                      'لا يوجد أقارب بعد',
+                      style: AppTypography.headlineSmall.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'ابدأ بإضافة أفراد عائلتك\nوالديك، إخوتك، أجدادك',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    GradientButton(
+                      text: 'إضافة أول قريب',
+                      onPressed: () {
+                        // TODO: Navigate to add relative
+                      },
+                      icon: Icons.person_add,
+                    ),
+                  ],
                 )
-                .scale(
-                  duration: const Duration(seconds: 2),
-                  begin: const Offset(1.0, 1.0),
-                  end: const Offset(1.1, 1.1),
-                ),
-            const SizedBox(height: AppSpacing.xl),
-            Text(
-              'لا يوجد أقارب بعد',
-              style: AppTypography.headlineSmall.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'ابدأ بإضافة أفراد عائلتك\nوالديك، إخوتك، أجدادك',
-              style: AppTypography.bodyMedium.copyWith(
-                color: Colors.white.withOpacity(0.8),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            GradientButton(
-              text: 'إضافة أول قريب',
-              onPressed: () {
-                // TODO: Navigate to add relative
-              },
-              icon: Icons.person_add,
-            ),
-          ],
-        )
-            .animate()
-            .fadeIn(duration: const Duration(milliseconds: 600))
-            .slideY(begin: 0.2, end: 0),
+                .animate()
+                .fadeIn(duration: const Duration(milliseconds: 600))
+                .slideY(begin: 0.2, end: 0),
       ),
     );
   }
@@ -386,9 +400,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
           const SizedBox(height: AppSpacing.md),
           Text(
             'لا توجد نتائج',
-            style: AppTypography.titleLarge.copyWith(
-              color: Colors.white,
-            ),
+            style: AppTypography.titleLarge.copyWith(color: Colors.white),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
@@ -398,10 +410,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
             ),
           ),
         ],
-      )
-          .animate()
-          .fadeIn()
-          .scale(),
+      ).animate().fadeIn().scale(),
     );
   }
 
@@ -418,9 +427,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
           const SizedBox(height: AppSpacing.md),
           Text(
             'حدث خطأ',
-            style: AppTypography.titleLarge.copyWith(
-              color: Colors.white,
-            ),
+            style: AppTypography.titleLarge.copyWith(color: Colors.white),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
@@ -435,41 +442,80 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
     );
   }
 
-  Widget _buildFAB(BuildContext context) {
-    return Container(
-      width: 60,
-      height: 60,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: AppColors.goldenGradient,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.premiumGold.withOpacity(0.5),
-            blurRadius: 20,
-            spreadRadius: 3,
+  Widget _buildGlassmorphismFAB(BuildContext context) {
+    return ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withOpacity(0.15),
+                    Colors.white.withOpacity(0.05),
+                  ],
+                ),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.3),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.2),
+                    blurRadius: 20,
+                    spreadRadius: -5,
+                    offset: const Offset(0, 8),
+                  ),
+                  BoxShadow(
+                    color: AppColors.premiumGold.withOpacity(0.4),
+                    blurRadius: 15,
+                    spreadRadius: -3,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(30),
+                  onTap: () {
+                    context.push(AppRoutes.addRelative);
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColors.premiumGold.withOpacity(0.9),
+                          AppColors.joyfulOrange.withOpacity(0.8),
+                        ],
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.add_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-        ],
-      ),
-      child: FloatingActionButton(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        onPressed: () {
-          context.push(AppRoutes.addRelative);
-        },
-        child: const Icon(
-          Icons.person_add_rounded,
-          size: 28,
-          color: Colors.white,
-        ),
-      ),
-    )
-        .animate(
-          onPlay: (controller) => controller.repeat(reverse: true),
         )
+        .animate(onPlay: (controller) => controller.repeat(reverse: true))
         .scale(
           duration: const Duration(seconds: 2),
           begin: const Offset(1.0, 1.0),
           end: const Offset(1.05, 1.05),
-        );
+        )
+        .animate()
+        .fadeIn(duration: const Duration(milliseconds: 600));
   }
 }

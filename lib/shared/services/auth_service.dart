@@ -1,12 +1,16 @@
 import 'dart:io' show Platform, InternetAddress;
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import '../../core/config/supabase_config.dart';
 import '../../core/services/app_logger_service.dart';
+import 'session_persistence_service.dart';
 
 class AuthService {
   final SupabaseClient _supabase = SupabaseConfig.client;
+  final SessionPersistenceService _sessionPersistence =
+      SessionPersistenceService();
 
   // Get current user stream
   Stream<User?> get authStateChanges {
@@ -21,12 +25,14 @@ class AuthService {
     final logger = AppLoggerService();
 
     // Add to Sentry breadcrumbs for remote debugging
-    Sentry.addBreadcrumb(Breadcrumb(
-      message: message,
-      category: 'auth',
-      level: SentryLevel.info,
-      data: data,
-    ));
+    Sentry.addBreadcrumb(
+      Breadcrumb(
+        message: message,
+        category: 'auth',
+        level: SentryLevel.info,
+        data: data,
+      ),
+    );
 
     // Also log locally
     logger.debug(message, category: LogCategory.auth, metadata: data);
@@ -35,8 +41,9 @@ class AuthService {
   // Check internet connectivity
   Future<bool> _checkInternetConnection() async {
     try {
-      final result = await InternetAddress.lookup('google.com')
-          .timeout(const Duration(seconds: 5));
+      final result = await InternetAddress.lookup(
+        'google.com',
+      ).timeout(const Duration(seconds: 5));
       return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
     } catch (e) {
       return false;
@@ -76,17 +83,22 @@ class AuthService {
     final logger = AppLoggerService();
 
     try {
-      logger.info('Sign up starting', category: LogCategory.auth, tag: 'signUpWithEmail');
+      logger.info(
+        'Sign up starting',
+        category: LogCategory.auth,
+        tag: 'signUpWithEmail',
+      );
       logger.debug(
         'Sign up parameters',
         category: LogCategory.auth,
         tag: 'signUpWithEmail',
-        metadata: {
-          'email': email,
-          'fullName': fullName,
-        },
+        metadata: {'email': email, 'fullName': fullName},
       );
-      logger.debug('Calling Supabase auth.signUp()...', category: LogCategory.auth, tag: 'signUpWithEmail');
+      logger.debug(
+        'Calling Supabase auth.signUp()...',
+        category: LogCategory.auth,
+        tag: 'signUpWithEmail',
+      );
 
       final startTime = DateTime.now();
 
@@ -94,9 +106,7 @@ class AuthService {
       final response = await _supabase.auth.signUp(
         email: email,
         password: password,
-        data: {
-          'full_name': fullName,
-        },
+        data: {'full_name': fullName},
       );
 
       final duration = DateTime.now().difference(startTime);
@@ -116,7 +126,11 @@ class AuthService {
       );
 
       if (response.user == null) {
-        logger.critical('No user returned from signUp()', category: LogCategory.auth, tag: 'signUpWithEmail');
+        logger.critical(
+          'No user returned from signUp()',
+          category: LogCategory.auth,
+          tag: 'signUpWithEmail',
+        );
         throw AuthException('Sign up failed - no user returned');
       }
 
@@ -128,7 +142,7 @@ class AuthService {
           tag: 'signUpWithEmail',
           metadata: {
             'userId': response.user?.id,
-            'platform': Platform.operatingSystem,
+            'platform': kIsWeb ? 'web' : Platform.operatingSystem,
             'userExists': response.user != null,
           },
         );
@@ -147,16 +161,18 @@ class AuthService {
         },
       );
 
+      // Mark user as logged in with persistent session
+      if (response.user != null) {
+        await _sessionPersistence.markUserLoggedIn(response.user!.id);
+      }
+
       return response;
     } on AuthException catch (e, stackTrace) {
       logger.error(
         'AuthException during sign up',
         category: LogCategory.auth,
         tag: 'signUpWithEmail',
-        metadata: {
-          'message': e.message,
-          'statusCode': e.statusCode,
-        },
+        metadata: {'message': e.message, 'statusCode': e.statusCode},
         stackTrace: stackTrace,
       );
       rethrow;
@@ -184,42 +200,89 @@ class AuthService {
 
     try {
       // Step 1: Initial checks and breadcrumb
-      logger.info('Sign in starting', category: LogCategory.auth, tag: 'signInWithEmail');
+      logger.info(
+        'Sign in starting',
+        category: LogCategory.auth,
+        tag: 'signInWithEmail',
+      );
 
       final hasInternet = await _checkInternetConnection();
       final storageAvailable = await _checkStorageAvailability();
 
-      _addAuthBreadcrumb('Starting sign-in', data: {
-        'email': email,
-        'has_internet': hasInternet,
-        'storage_available': storageAvailable,
-        'platform': Platform.operatingSystem,
-      });
+      // Add web-specific debugging
+      logger.debug(
+        'Platform detection',
+        category: LogCategory.auth,
+        tag: 'signInWithEmail',
+        metadata: {
+          'email': email,
+          'has_internet': hasInternet,
+          'storage_available': storageAvailable,
+          'platform': kIsWeb ? 'web' : Platform.operatingSystem,
+          'isWeb': kIsWeb,
+          'supabaseClientExists': _supabase != null,
+          'supabaseAuthExists': _supabase.auth != null,
+        },
+      );
+
+      _addAuthBreadcrumb(
+        'Starting sign-in',
+        data: {
+          'email': email,
+          'has_internet': hasInternet,
+          'storage_available': storageAvailable,
+          'platform': kIsWeb ? 'web' : Platform.operatingSystem,
+          'isWeb': kIsWeb,
+        },
+      );
 
       if (!hasInternet) {
-        logger.warning('No internet connection detected', category: LogCategory.auth, tag: 'signInWithEmail');
+        logger.warning(
+          'No internet connection detected',
+          category: LogCategory.auth,
+          tag: 'signInWithEmail',
+        );
       }
 
       if (!storageAvailable) {
-        logger.warning('Storage not available', category: LogCategory.auth, tag: 'signInWithEmail');
+        logger.warning(
+          'Storage not available',
+          category: LogCategory.auth,
+          tag: 'signInWithEmail',
+        );
       }
 
       // Step 2: iOS-specific checks
-      if (Platform.isIOS) {
+      if (!kIsWeb && Platform.isIOS) {
         final secureStorageAccessible = await _checkSecureStorage();
-        _addAuthBreadcrumb('iOS-specific checks', data: {
-          'ios_version': Platform.operatingSystemVersion,
-          'secure_storage_accessible': secureStorageAccessible,
-        });
+        _addAuthBreadcrumb(
+          'iOS-specific checks',
+          data: {
+            'ios_version': Platform.operatingSystemVersion,
+            'secure_storage_accessible': secureStorageAccessible,
+          },
+        );
 
         if (!secureStorageAccessible) {
-          logger.warning('iOS secure storage not accessible', category: LogCategory.auth, tag: 'signInWithEmail');
+          logger.warning(
+            'iOS secure storage not accessible',
+            category: LogCategory.auth,
+            tag: 'signInWithEmail',
+          );
         }
       }
 
       // Step 3: Call Supabase API
       _addAuthBreadcrumb('Calling Supabase signInWithPassword');
-      logger.debug('Calling Supabase signInWithPassword()...', category: LogCategory.auth, tag: 'signInWithEmail');
+      logger.debug(
+        'Calling Supabase signInWithPassword()...',
+        category: LogCategory.auth,
+        tag: 'signInWithEmail',
+        metadata: {
+          'authFlowType': kIsWeb ? 'PKCE (web)' : 'implicit (mobile)',
+          'platform': kIsWeb ? 'web' : Platform.operatingSystem,
+        },
+      );
 
       final startTime = DateTime.now();
 
@@ -231,12 +294,15 @@ class AuthService {
       final duration = DateTime.now().difference(startTime);
 
       // Step 4: Log successful auth
-      _addAuthBreadcrumb('Supabase auth successful', data: {
-        'duration_ms': duration.inMilliseconds,
-        'has_session': response.session != null,
-        'has_user': response.user != null,
-        'session_expires_at': response.session?.expiresAt,
-      });
+      _addAuthBreadcrumb(
+        'Supabase auth successful',
+        data: {
+          'duration_ms': duration.inMilliseconds,
+          'has_session': response.session != null,
+          'has_user': response.user != null,
+          'session_expires_at': response.session?.expiresAt,
+        },
+      );
 
       logger.info(
         'Supabase signInWithPassword() completed',
@@ -254,18 +320,29 @@ class AuthService {
 
       // Step 5: Verify session storage
       final storedSession = _supabase.auth.currentSession;
-      _addAuthBreadcrumb('Session storage verified', data: {
-        'stored': storedSession != null,
-        'matches': storedSession?.user.id == response.user?.id,
-      });
+      _addAuthBreadcrumb(
+        'Session storage verified',
+        data: {
+          'stored': storedSession != null,
+          'matches': storedSession?.user.id == response.user?.id,
+        },
+      );
 
       if (storedSession == null) {
-        logger.warning('Session not stored in local storage', category: LogCategory.auth, tag: 'signInWithEmail');
+        logger.warning(
+          'Session not stored in local storage',
+          category: LogCategory.auth,
+          tag: 'signInWithEmail',
+        );
       }
 
       // Step 6: Update last login (async)
       if (response.user != null) {
-        logger.debug('Updating last login timestamp (async)...', category: LogCategory.auth, tag: 'signInWithEmail');
+        logger.debug(
+          'Updating last login timestamp (async)...',
+          category: LogCategory.auth,
+          tag: 'signInWithEmail',
+        );
         _updateLastLogin(response.user!.id).catchError((e) {
           logger.warning(
             'Failed to update last login',
@@ -274,6 +351,11 @@ class AuthService {
             metadata: {'error': e.toString()},
           );
         });
+      }
+
+      // Mark user as logged in with persistent session
+      if (response.user != null) {
+        await _sessionPersistence.markUserLoggedIn(response.user!.id);
       }
 
       logger.info(
@@ -286,35 +368,39 @@ class AuthService {
       return response;
     } on AuthException catch (e, stackTrace) {
       // Log auth exception with breadcrumb
-      _addAuthBreadcrumb('Auth exception occurred', data: {
-        'status_code': e.statusCode,
-        'message': e.message,
-      });
+      _addAuthBreadcrumb(
+        'Auth exception occurred',
+        data: {'status_code': e.statusCode, 'message': e.message},
+      );
 
       logger.error(
         'AuthException during sign in',
         category: LogCategory.auth,
         tag: 'signInWithEmail',
-        metadata: {
-          'message': e.message,
-          'statusCode': e.statusCode,
-        },
+        metadata: {'message': e.message, 'statusCode': e.statusCode},
         stackTrace: stackTrace,
       );
 
       // Send to Sentry with full context
-      await Sentry.captureException(e, stackTrace: stackTrace, hint: Hint.withMap({
-        'auth_flow': 'sign_in',
-        'email': email,
-        'platform': Platform.operatingSystem,
-      }));
+      await Sentry.captureException(
+        e,
+        stackTrace: stackTrace,
+        hint: Hint.withMap({
+          'auth_flow': 'sign_in',
+          'email': email,
+          'platform': kIsWeb ? 'web' : Platform.operatingSystem,
+        }),
+      );
       rethrow;
     } catch (e, stackTrace) {
       // Log unexpected exception with breadcrumb
-      _addAuthBreadcrumb('Unexpected exception occurred', data: {
-        'exception_type': e.runtimeType.toString(),
-        'exception': e.toString(),
-      });
+      _addAuthBreadcrumb(
+        'Unexpected exception occurred',
+        data: {
+          'exception_type': e.runtimeType.toString(),
+          'exception': e.toString(),
+        },
+      );
 
       logger.error(
         'Unexpected exception during sign in',
@@ -328,11 +414,15 @@ class AuthService {
       );
 
       // Send to Sentry
-      await Sentry.captureException(e, stackTrace: stackTrace, hint: Hint.withMap({
-        'auth_flow': 'sign_in',
-        'email': email,
-        'platform': Platform.operatingSystem,
-      }));
+      await Sentry.captureException(
+        e,
+        stackTrace: stackTrace,
+        hint: Hint.withMap({
+          'auth_flow': 'sign_in',
+          'email': email,
+          'platform': kIsWeb ? 'web' : Platform.operatingSystem,
+        }),
+      );
 
       rethrow;
     }
@@ -343,9 +433,21 @@ class AuthService {
     final logger = AppLoggerService();
 
     try {
-      logger.info('Sign out starting', category: LogCategory.auth, tag: 'signOut');
+      logger.info(
+        'Sign out starting',
+        category: LogCategory.auth,
+        tag: 'signOut',
+      );
       await _supabase.auth.signOut();
-      logger.info('Sign out successful', category: LogCategory.auth, tag: 'signOut');
+
+      // Mark user as explicitly logged out
+      await _sessionPersistence.markUserLoggedOut();
+
+      logger.info(
+        'Sign out successful',
+        category: LogCategory.auth,
+        tag: 'signOut',
+      );
     } catch (e, stackTrace) {
       logger.error(
         'Sign out error',
@@ -363,9 +465,19 @@ class AuthService {
     final logger = AppLoggerService();
 
     try {
-      logger.info('Password reset starting', category: LogCategory.auth, tag: 'resetPassword', metadata: {'email': email});
+      logger.info(
+        'Password reset starting',
+        category: LogCategory.auth,
+        tag: 'resetPassword',
+        metadata: {'email': email},
+      );
       await _supabase.auth.resetPasswordForEmail(email);
-      logger.info('Password reset email sent', category: LogCategory.auth, tag: 'resetPassword', metadata: {'email': email});
+      logger.info(
+        'Password reset email sent',
+        category: LogCategory.auth,
+        tag: 'resetPassword',
+        metadata: {'email': email},
+      );
     } on AuthException catch (e, stackTrace) {
       logger.error(
         'Password reset error',
@@ -394,22 +506,43 @@ class AuthService {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) {
-        logger.error('No user logged in', category: LogCategory.auth, tag: 'deleteAccount');
+        logger.error(
+          'No user logged in',
+          category: LogCategory.auth,
+          tag: 'deleteAccount',
+        );
         throw Exception('No user logged in');
       }
 
-      logger.info('Deleting user account', category: LogCategory.auth, tag: 'deleteAccount', metadata: {'userId': user.id});
+      logger.info(
+        'Deleting user account',
+        category: LogCategory.auth,
+        tag: 'deleteAccount',
+        metadata: {'userId': user.id},
+      );
 
       // Call RPC function to delete user data and account
       // This triggers cascading deletes for all user data
       await _supabase.rpc('delete_user_account');
 
-      logger.debug('User data deleted from database', category: LogCategory.auth, tag: 'deleteAccount');
+      logger.debug(
+        'User data deleted from database',
+        category: LogCategory.auth,
+        tag: 'deleteAccount',
+      );
 
       // Sign out (Supabase Auth user deletion is handled by RPC or manually via Admin API)
       await _supabase.auth.signOut();
 
-      logger.info('Account deleted successfully', category: LogCategory.auth, tag: 'deleteAccount', metadata: {'userId': user.id});
+      // Mark user as explicitly logged out
+      await _sessionPersistence.markUserLoggedOut();
+
+      logger.info(
+        'Account deleted successfully',
+        category: LogCategory.auth,
+        tag: 'deleteAccount',
+        metadata: {'userId': user.id},
+      );
     } catch (e, stackTrace) {
       logger.error(
         'Delete account error',
@@ -427,12 +560,23 @@ class AuthService {
     final logger = AppLoggerService();
 
     try {
-      logger.debug('Updating last login timestamp', category: LogCategory.auth, tag: '_updateLastLogin', metadata: {'userId': uid});
-      await _supabase.from('users').update({
-        'last_login_at': DateTime.now().toIso8601String(),
-      }).eq('id', uid);
+      logger.debug(
+        'Updating last login timestamp',
+        category: LogCategory.auth,
+        tag: '_updateLastLogin',
+        metadata: {'userId': uid},
+      );
+      await _supabase
+          .from('users')
+          .update({'last_login_at': DateTime.now().toIso8601String()})
+          .eq('id', uid);
 
-      logger.debug('Last login updated successfully', category: LogCategory.auth, tag: '_updateLastLogin', metadata: {'userId': uid});
+      logger.debug(
+        'Last login updated successfully',
+        category: LogCategory.auth,
+        tag: '_updateLastLogin',
+        metadata: {'userId': uid},
+      );
     } catch (e) {
       logger.warning(
         'Failed to update last login (non-critical)',
@@ -473,6 +617,84 @@ class AuthService {
       return 'خطأ في الاتصال بالإنترنت';
     } else {
       return 'حدث خطأ ما. يرجى المحاولة مرة أخرى';
+    }
+  }
+
+  // Check for persistent session on app startup
+  Future<bool> checkPersistentSession() async {
+    final logger = AppLoggerService();
+
+    try {
+      logger.debug(
+        'Checking for persistent session',
+        category: LogCategory.auth,
+        tag: 'checkPersistentSession',
+      );
+
+      final storedSessionData = await _sessionPersistence
+          .getStoredSessionData();
+
+      if (storedSessionData == null) {
+        logger.debug(
+          'No stored session data found',
+          category: LogCategory.auth,
+          tag: 'checkPersistentSession',
+        );
+        return false;
+      }
+
+      final isValid = _sessionPersistence.isStoredSessionValid(
+        storedSessionData,
+      );
+
+      logger.debug(
+        'Stored session validity check',
+        category: LogCategory.auth,
+        tag: 'checkPersistentSession',
+        metadata: {'isValid': isValid, 'sessionData': storedSessionData},
+      );
+
+      if (isValid && _supabase.auth.currentUser == null) {
+        // Try to restore session using Supabase's built-in session recovery
+        logger.debug(
+          'Attempting to restore Supabase session',
+          category: LogCategory.auth,
+          tag: 'checkPersistentSession',
+        );
+
+        // Supabase automatically attempts to restore session on initialization
+        // If currentUser is null but stored session is valid, we may need to refresh
+        try {
+          await _supabase.auth.refreshSession();
+          logger.info(
+            'Session refreshed successfully',
+            category: LogCategory.auth,
+            tag: 'checkPersistentSession',
+          );
+          return true;
+        } catch (e) {
+          logger.warning(
+            'Failed to refresh session',
+            category: LogCategory.auth,
+            tag: 'checkPersistentSession',
+            metadata: {'error': e.toString()},
+          );
+          // Clear invalid session data
+          await _sessionPersistence.markUserLoggedOut();
+          return false;
+        }
+      }
+
+      return isValid && _supabase.auth.currentUser != null;
+    } catch (e, stackTrace) {
+      logger.error(
+        'Error checking persistent session',
+        category: LogCategory.auth,
+        tag: 'checkPersistentSession',
+        metadata: {'error': e.toString()},
+        stackTrace: stackTrace,
+      );
+      return false;
     }
   }
 }

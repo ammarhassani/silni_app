@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Reminder frequency types
 enum ReminderFrequency {
   daily('daily', 'يومي', '📅'),
@@ -48,38 +50,83 @@ class ReminderSchedule {
 
   /// Create from Supabase JSON
   factory ReminderSchedule.fromJson(Map<String, dynamic> json) {
-    return ReminderSchedule(
-      id: json['id'] as String,
-      userId: json['user_id'] as String,
-      frequency: ReminderFrequency.fromString(json['frequency'] as String),
-      relativeIds: json['relative_ids'] != null
-          ? List<String>.from(json['relative_ids'] as List)
-          : [],
-      time: json['reminder_time'] as String,
-      isActive: json['is_active'] as bool? ?? true,
-      customDays: json['custom_days'] != null
-          ? List<int>.from(json['custom_days'] as List)
-          : null,
-      dayOfMonth: json['day_of_month'] as int?,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
-          : null,
-    );
+    try {
+      // Always log regardless of debug mode
+      debugPrint('🔍 [REMINDER_MODEL] fromJson() called with: $json');
+      debugPrint('🔍 [REMINDER_MODEL] Keys available: ${json.keys.toList()}');
+
+      // Check for required fields
+      final id = json['id'];
+      final userId = json['user_id'];
+      final frequency = json['frequency'];
+      // Use 'time' field as that's what database actually has
+      final reminderTime = json['time'];
+      final createdAt = json['created_at'];
+
+      debugPrint('🔍 [REMINDER_MODEL] Field check:');
+      debugPrint('  - id: $id');
+      debugPrint('  - user_id: $userId');
+      debugPrint('  - frequency: $frequency');
+      debugPrint('  - reminder_time: $reminderTime');
+      debugPrint('  - created_at: $createdAt');
+
+      if (id == null ||
+          userId == null ||
+          frequency == null ||
+          reminderTime == null ||
+          createdAt == null) {
+        throw Exception('Missing required fields in ReminderSchedule.fromJson');
+      }
+
+      return ReminderSchedule(
+        id: id as String,
+        userId: userId as String,
+        frequency: ReminderFrequency.fromString(frequency as String),
+        relativeIds: json['relative_ids'] != null
+            ? List<String>.from(json['relative_ids'] as List)
+            : [],
+        time: reminderTime as String,
+        isActive: json['is_active'] as bool? ?? true,
+        customDays: json['custom_days'] != null
+            ? List<int>.from(json['custom_days'] as List)
+            : null,
+        dayOfMonth: json['day_of_month'] as int?,
+        createdAt: DateTime.parse(createdAt as String),
+        updatedAt: json['updated_at'] != null
+            ? DateTime.parse(json['updated_at'] as String)
+            : null,
+      );
+    } catch (e) {
+      debugPrint('❌ [REMINDER_MODEL] fromJson() error: $e');
+      debugPrint('❌ [REMINDER_MODEL] JSON data: $json');
+      debugPrint('❌ [REMINDER_MODEL] Error type: ${e.runtimeType}');
+      rethrow;
+    }
   }
 
   /// Convert to Supabase JSON
   Map<String, dynamic> toJson() {
-    return {
+    final json = {
       'user_id': userId,
       'frequency': frequency.value,
       'relative_ids': relativeIds,
-      'reminder_time': time,
+      'time': time, // Use 'time' field to match database schema
       'is_active': isActive,
       'custom_days': customDays,
       'day_of_month': dayOfMonth,
       // Don't include id, created_at, updated_at - managed by database
     };
+
+    if (kDebugMode) {
+      print('🔔 [REMINDER_MODEL] toJson() called');
+      print('🔔 [REMINDER_MODEL] JSON keys: ${json.keys.toList()}');
+      print(
+        '🔔 [REMINDER_MODEL] reminder_time value: ${json['reminder_time']}',
+      );
+      print('🔔 [REMINDER_MODEL] Full JSON: $json');
+    }
+
+    return json;
   }
 
   /// Copy with method

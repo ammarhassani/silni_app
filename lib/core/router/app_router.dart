@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/constants/app_colors.dart';
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
@@ -24,6 +25,7 @@ import '../../features/gamification/screens/detailed_stats_screen.dart';
 import '../../features/gamification/screens/leaderboard_screen.dart';
 import 'app_routes.dart';
 import 'navigation_service.dart';
+import '../../../shared/widgets/persistent_bottom_nav.dart';
 
 /// Custom navigator observer for logging navigation events
 class _AppNavigatorObserver extends NavigatorObserver {
@@ -34,7 +36,9 @@ class _AppNavigatorObserver extends NavigatorObserver {
       debugPrint('');
       debugPrint('🧭 [NAVIGATION] didPush');
       debugPrint('   - New route: ${route.settings.name ?? '(unnamed)'}');
-      debugPrint('   - Previous route: ${previousRoute?.settings.name ?? '(none)'}');
+      debugPrint(
+        '   - Previous route: ${previousRoute?.settings.name ?? '(none)'}',
+      );
       debugPrint('');
     }
   }
@@ -46,7 +50,9 @@ class _AppNavigatorObserver extends NavigatorObserver {
       debugPrint('');
       debugPrint('🧭 [NAVIGATION] didPop');
       debugPrint('   - Popped route: ${route.settings.name ?? '(unnamed)'}');
-      debugPrint('   - Back to route: ${previousRoute?.settings.name ?? '(none)'}');
+      debugPrint(
+        '   - Back to route: ${previousRoute?.settings.name ?? '(none)'}',
+      );
       debugPrint('');
     }
   }
@@ -58,7 +64,9 @@ class _AppNavigatorObserver extends NavigatorObserver {
       debugPrint('');
       debugPrint('🧭 [NAVIGATION] didRemove');
       debugPrint('   - Removed route: ${route.settings.name ?? '(unnamed)'}');
-      debugPrint('   - Previous route: ${previousRoute?.settings.name ?? '(none)'}');
+      debugPrint(
+        '   - Previous route: ${previousRoute?.settings.name ?? '(none)'}',
+      );
       debugPrint('');
     }
   }
@@ -87,64 +95,46 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.splash,
         name: 'splash',
-        pageBuilder: (context, state) => _buildPageWithTransition(
-          context,
-          state,
-          const SplashScreen(),
-        ),
+        pageBuilder: (context, state) =>
+            _buildPageWithTransition(context, state, const SplashScreen()),
       ),
 
       // Onboarding
       GoRoute(
         path: AppRoutes.onboarding,
         name: 'onboarding',
-        pageBuilder: (context, state) => _buildPageWithTransition(
-          context,
-          state,
-          const OnboardingScreen(),
-        ),
+        pageBuilder: (context, state) =>
+            _buildPageWithTransition(context, state, const OnboardingScreen()),
       ),
 
       // Auth Routes
       GoRoute(
         path: AppRoutes.login,
         name: 'login',
-        pageBuilder: (context, state) => _buildPageWithTransition(
-          context,
-          state,
-          const LoginScreen(),
-        ),
+        pageBuilder: (context, state) =>
+            _buildPageWithTransition(context, state, const LoginScreen()),
       ),
       GoRoute(
         path: AppRoutes.signup,
         name: 'signup',
-        pageBuilder: (context, state) => _buildPageWithTransition(
-          context,
-          state,
-          const SignUpScreen(),
-        ),
+        pageBuilder: (context, state) =>
+            _buildPageWithTransition(context, state, const SignUpScreen()),
       ),
 
       // Main App Routes
       GoRoute(
         path: AppRoutes.home,
         name: 'home',
-        pageBuilder: (context, state) => _buildPageWithTransition(
-          context,
-          state,
-          const HomeScreen(),
-        ),
+        pageBuilder: (context, state) =>
+            _buildPageWithNavigation(context, state, const HomeScreen()),
       ),
 
       // Relatives Routes
       GoRoute(
         path: AppRoutes.relatives,
         name: 'relatives',
-        pageBuilder: (context, state) => _buildPageWithTransition(
-          context,
-          state,
-          const RelativesScreen(),
-        ),
+        pageBuilder: (context, state) =>
+            _buildPageWithNavigation(context, state, const RelativesScreen()),
       ),
       GoRoute(
         path: '${AppRoutes.relativeDetail}/:id',
@@ -161,11 +151,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.addRelative,
         name: 'addRelative',
-        pageBuilder: (context, state) => _buildPageWithTransition(
-          context,
-          state,
-          const AddRelativeScreen(),
-        ),
+        pageBuilder: (context, state) =>
+            _buildPageWithTransition(context, state, const AddRelativeScreen()),
       ),
       GoRoute(
         path: '${AppRoutes.editRelative}/:id',
@@ -184,7 +171,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.achievements,
         name: 'achievements',
-        pageBuilder: (context, state) => _buildPageWithTransition(
+        pageBuilder: (context, state) => _buildPageWithNavigation(
           context,
           state,
           const GamingCenterScreen(),
@@ -195,55 +182,40 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.reminders,
         name: 'reminders',
-        pageBuilder: (context, state) => _buildPageWithTransition(
-          context,
-          state,
-          const RemindersScreen(),
-        ),
+        pageBuilder: (context, state) =>
+            _buildPageWithTransition(context, state, const RemindersScreen()),
       ),
 
       // Family Tree Routes
       GoRoute(
         path: AppRoutes.familyTree,
         name: 'familyTree',
-        pageBuilder: (context, state) => _buildPageWithTransition(
-          context,
-          state,
-          const FamilyTreeScreen(),
-        ),
+        pageBuilder: (context, state) =>
+            _buildPageWithTransition(context, state, const FamilyTreeScreen()),
       ),
 
       // Statistics Routes
       GoRoute(
         path: AppRoutes.statistics,
         name: 'statistics',
-        pageBuilder: (context, state) => _buildPageWithTransition(
-          context,
-          state,
-          const StatisticsScreen(),
-        ),
+        pageBuilder: (context, state) =>
+            _buildPageWithNavigation(context, state, const StatisticsScreen()),
       ),
 
       // Settings Routes
       GoRoute(
         path: AppRoutes.settings,
         name: 'settings',
-        pageBuilder: (context, state) => _buildPageWithTransition(
-          context,
-          state,
-          const SettingsScreen(),
-        ),
+        pageBuilder: (context, state) =>
+            _buildPageWithNavigation(context, state, const SettingsScreen()),
       ),
 
       // Profile Routes
       GoRoute(
         path: AppRoutes.profile,
         name: 'profile',
-        pageBuilder: (context, state) => _buildPageWithTransition(
-          context,
-          state,
-          const ProfileScreen(),
-        ),
+        pageBuilder: (context, state) =>
+            _buildPageWithNavigation(context, state, const ProfileScreen()),
       ),
 
       // Import Contacts Routes
@@ -272,11 +244,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.badges,
         name: 'badges',
-        pageBuilder: (context, state) => _buildPageWithTransition(
-          context,
-          state,
-          const BadgesScreen(),
-        ),
+        pageBuilder: (context, state) =>
+            _buildPageWithTransition(context, state, const BadgesScreen()),
       ),
       GoRoute(
         path: AppRoutes.detailedStats,
@@ -290,11 +259,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.leaderboard,
         name: 'leaderboard',
-        pageBuilder: (context, state) => _buildPageWithTransition(
-          context,
-          state,
-          const LeaderboardScreen(),
-        ),
+        pageBuilder: (context, state) =>
+            _buildPageWithTransition(context, state, const LeaderboardScreen()),
       ),
     ],
   );
@@ -315,23 +281,90 @@ Page<dynamic> _buildPageWithTransition(
       const end = 1.0;
       const curve = Curves.easeInOutCubic;
 
-      final tween = Tween(begin: begin, end: end).chain(
-        CurveTween(curve: curve),
-      );
+      final tween = Tween(
+        begin: begin,
+        end: end,
+      ).chain(CurveTween(curve: curve));
       final fadeAnimation = animation.drive(tween);
 
-      final scaleTween = Tween(begin: 0.95, end: 1.0).chain(
-        CurveTween(curve: curve),
-      );
+      final scaleTween = Tween(
+        begin: 0.95,
+        end: 1.0,
+      ).chain(CurveTween(curve: curve));
       final scaleAnimation = animation.drive(scaleTween);
 
       return FadeTransition(
         opacity: fadeAnimation,
-        child: ScaleTransition(
-          scale: scaleAnimation,
-          child: child,
-        ),
+        child: ScaleTransition(scale: scaleAnimation, child: child),
       );
     },
   );
+}
+
+/// Build page with global navigation for main app routes
+Page<dynamic> _buildPageWithNavigation(
+  BuildContext context,
+  GoRouterState state,
+  Widget child,
+) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: _NavigationWrapper(child: child),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      // Dramatic fade + scale transition
+      const begin = 0.0;
+      const end = 1.0;
+      const curve = Curves.easeInOutCubic;
+
+      final tween = Tween(
+        begin: begin,
+        end: end,
+      ).chain(CurveTween(curve: curve));
+      final fadeAnimation = animation.drive(tween);
+
+      final scaleTween = Tween(
+        begin: 0.95,
+        end: 1.0,
+      ).chain(CurveTween(curve: curve));
+      final scaleAnimation = animation.drive(scaleTween);
+
+      return FadeTransition(
+        opacity: fadeAnimation,
+        child: ScaleTransition(scale: scaleAnimation, child: child),
+      );
+    },
+  );
+}
+
+/// Wrapper widget that combines page content with persistent navigation
+class _NavigationWrapper extends StatelessWidget {
+  const _NavigationWrapper({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        // Main content
+        Positioned.fill(child: child),
+        // Navigation bar at bottom
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: SafeArea(
+            child: Container(
+              decoration: const BoxDecoration(color: Colors.transparent),
+              child: PersistentBottomNav(
+                onNavTapped: (route) {
+                  context.push(route);
+                },
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }

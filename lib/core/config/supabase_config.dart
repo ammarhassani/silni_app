@@ -27,18 +27,26 @@ class SupabaseConfig {
     final logger = AppLoggerService();
 
     if (_initialized) {
-      logger.warning('Supabase already initialized, skipping', category: LogCategory.service, tag: 'SupabaseConfig');
+      logger.warning(
+        'Supabase already initialized, skipping',
+        category: LogCategory.service,
+        tag: 'SupabaseConfig',
+      );
       return;
     }
 
     try {
-      logger.info('Initializing Supabase', category: LogCategory.service, tag: 'SupabaseConfig');
+      logger.info(
+        'Initializing Supabase',
+        category: LogCategory.service,
+        tag: 'SupabaseConfig',
+      );
 
       // Determine environment - check dart-define first, then .env fallback
-      final environment = const String.fromEnvironment('APP_ENV',
-        defaultValue: '') != ''
-        ? const String.fromEnvironment('APP_ENV')
-        : dotenv.env['APP_ENV'] ?? 'staging';
+      final environment =
+          const String.fromEnvironment('APP_ENV', defaultValue: '') != ''
+          ? const String.fromEnvironment('APP_ENV')
+          : dotenv.env['APP_ENV'] ?? 'staging';
       final isProduction = environment == 'production';
 
       logger.info(
@@ -49,7 +57,9 @@ class SupabaseConfig {
       );
 
       // Debug: Show where credentials are coming from
-      final dartDefineUrl = const String.fromEnvironment('SUPABASE_STAGING_URL');
+      final dartDefineUrl = const String.fromEnvironment(
+        'SUPABASE_STAGING_URL',
+      );
       final envUrl = dotenv.env['SUPABASE_STAGING_URL'];
       logger.debug(
         'Credential sources',
@@ -67,23 +77,39 @@ class SupabaseConfig {
       final String supabaseAnonKey;
 
       if (isProduction) {
-        supabaseUrl = const String.fromEnvironment('SUPABASE_PRODUCTION_URL',
-          defaultValue: '') != ''
-          ? const String.fromEnvironment('SUPABASE_PRODUCTION_URL')
-          : dotenv.env['SUPABASE_PRODUCTION_URL'] ?? '';
-        supabaseAnonKey = const String.fromEnvironment('SUPABASE_PRODUCTION_ANON_KEY',
-          defaultValue: '') != ''
-          ? const String.fromEnvironment('SUPABASE_PRODUCTION_ANON_KEY')
-          : dotenv.env['SUPABASE_PRODUCTION_ANON_KEY'] ?? '';
+        supabaseUrl =
+            const String.fromEnvironment(
+                  'SUPABASE_PRODUCTION_URL',
+                  defaultValue: '',
+                ) !=
+                ''
+            ? const String.fromEnvironment('SUPABASE_PRODUCTION_URL')
+            : dotenv.env['SUPABASE_PRODUCTION_URL'] ?? '';
+        supabaseAnonKey =
+            const String.fromEnvironment(
+                  'SUPABASE_PRODUCTION_ANON_KEY',
+                  defaultValue: '',
+                ) !=
+                ''
+            ? const String.fromEnvironment('SUPABASE_PRODUCTION_ANON_KEY')
+            : dotenv.env['SUPABASE_PRODUCTION_ANON_KEY'] ?? '';
       } else {
-        supabaseUrl = const String.fromEnvironment('SUPABASE_STAGING_URL',
-          defaultValue: '') != ''
-          ? const String.fromEnvironment('SUPABASE_STAGING_URL')
-          : dotenv.env['SUPABASE_STAGING_URL'] ?? '';
-        supabaseAnonKey = const String.fromEnvironment('SUPABASE_STAGING_ANON_KEY',
-          defaultValue: '') != ''
-          ? const String.fromEnvironment('SUPABASE_STAGING_ANON_KEY')
-          : dotenv.env['SUPABASE_STAGING_ANON_KEY'] ?? '';
+        supabaseUrl =
+            const String.fromEnvironment(
+                  'SUPABASE_STAGING_URL',
+                  defaultValue: '',
+                ) !=
+                ''
+            ? const String.fromEnvironment('SUPABASE_STAGING_URL')
+            : dotenv.env['SUPABASE_STAGING_URL'] ?? '';
+        supabaseAnonKey =
+            const String.fromEnvironment(
+                  'SUPABASE_STAGING_ANON_KEY',
+                  defaultValue: '',
+                ) !=
+                ''
+            ? const String.fromEnvironment('SUPABASE_STAGING_ANON_KEY')
+            : dotenv.env['SUPABASE_STAGING_ANON_KEY'] ?? '';
       }
 
       // Validate credentials
@@ -106,35 +132,61 @@ class SupabaseConfig {
 
       // Show partial URL for debugging without exposing full endpoint
       final urlPreview = supabaseUrl.length > 20
-        ? '${supabaseUrl.substring(0, 10)}...${supabaseUrl.substring(supabaseUrl.length - 10)}'
-        : supabaseUrl;
+          ? '${supabaseUrl.substring(0, 10)}...${supabaseUrl.substring(supabaseUrl.length - 10)}'
+          : supabaseUrl;
       final keyPreview = supabaseAnonKey.length > 20
-        ? '${supabaseAnonKey.substring(0, 10)}...${supabaseAnonKey.substring(supabaseAnonKey.length - 10)}'
-        : '(hidden)';
+          ? '${supabaseAnonKey.substring(0, 10)}...${supabaseAnonKey.substring(supabaseAnonKey.length - 10)}'
+          : '(hidden)';
 
       logger.info(
         'Credentials validated',
         category: LogCategory.service,
         tag: 'SupabaseConfig',
-        metadata: {
-          'urlPreview': urlPreview,
-          'keyPreview': keyPreview,
-        },
+        metadata: {'urlPreview': urlPreview, 'keyPreview': keyPreview},
       );
-      logger.debug('Starting Supabase.initialize()...', category: LogCategory.service, tag: 'SupabaseConfig');
+      logger.debug(
+        'Starting Supabase.initialize()...',
+        category: LogCategory.service,
+        tag: 'SupabaseConfig',
+      );
 
       // Initialize Supabase with platform-specific options
       // NOTE: Using AuthFlowType.implicit for email/password auth
       // PKCE is designed for OAuth redirect flows and can cause session issues on iOS
+      logger.debug(
+        'Configuring Supabase auth options...',
+        category: LogCategory.service,
+        tag: 'SupabaseConfig',
+        metadata: {
+          'isWeb': kIsWeb,
+          'authFlowType': kIsWeb ? 'pkce' : 'implicit',
+          'platform': kIsWeb ? 'web' : Platform.operatingSystem,
+        },
+      );
+
+      final authOptions = FlutterAuthClientOptions(
+        authFlowType: kIsWeb
+            ? AuthFlowType.pkce
+            : AuthFlowType.implicit, // Use PKCE for web, implicit for mobile
+        autoRefreshToken: true,
+        // NOTE: Removed pkceAsyncStorage - not needed for implicit flow
+      );
+
+      logger.debug(
+        'Final auth options configured',
+        category: LogCategory.service,
+        tag: 'SupabaseConfig',
+        metadata: {
+          'authFlowType': authOptions.authFlowType.toString(),
+          'autoRefreshToken': authOptions.autoRefreshToken,
+        },
+      );
+
       await Supabase.initialize(
         url: supabaseUrl,
         anonKey: supabaseAnonKey,
         debug: kDebugMode,
-        authOptions: const FlutterAuthClientOptions(
-          authFlowType: AuthFlowType.implicit, // Use implicit for email/password auth
-          autoRefreshToken: true,
-          // NOTE: Removed pkceAsyncStorage - not needed for implicit flow
-        ),
+        authOptions: authOptions,
         realtimeClientOptions: const RealtimeClientOptions(
           logLevel: kDebugMode ? RealtimeLogLevel.info : RealtimeLogLevel.error,
         ),
@@ -144,12 +196,17 @@ class SupabaseConfig {
       );
 
       // Verify storage is working on iOS (session persistence)
-      if (Platform.isIOS) {
+      if (!kIsWeb && Platform.isIOS) {
         try {
-          logger.debug('Verifying iOS storage...', category: LogCategory.service, tag: 'SupabaseConfig');
+          logger.debug(
+            'Verifying iOS storage...',
+            category: LogCategory.service,
+            tag: 'SupabaseConfig',
+          );
 
           final prefs = await SharedPreferences.getInstance();
-          final testKey = '_supabase_storage_test_${DateTime.now().millisecondsSinceEpoch}';
+          final testKey =
+              '_supabase_storage_test_${DateTime.now().millisecondsSinceEpoch}';
           await prefs.setString(testKey, 'test_value');
           final retrieved = prefs.getString(testKey);
           await prefs.remove(testKey);
@@ -166,10 +223,16 @@ class SupabaseConfig {
           );
 
           if (retrieved != 'test_value') {
-            throw Exception('iOS storage verification failed - could not read back test value');
+            throw Exception(
+              'iOS storage verification failed - could not read back test value',
+            );
           }
 
-          logger.info('iOS storage verified successfully', category: LogCategory.service, tag: 'SupabaseConfig');
+          logger.info(
+            'iOS storage verified successfully',
+            category: LogCategory.service,
+            tag: 'SupabaseConfig',
+          );
         } catch (e, stackTrace) {
           logger.error(
             'Storage verification failed',
@@ -180,11 +243,15 @@ class SupabaseConfig {
           );
 
           // Send to Sentry for remote debugging
-          await Sentry.captureException(e, stackTrace: stackTrace, hint: Hint.withMap({
-            'context': 'ios_storage_verification',
-            'platform': Platform.operatingSystem,
-            'os_version': Platform.operatingSystemVersion,
-          }));
+          await Sentry.captureException(
+            e,
+            stackTrace: stackTrace,
+            hint: Hint.withMap({
+              'context': 'ios_storage_verification',
+              'platform': kIsWeb ? 'web' : Platform.operatingSystem,
+              'os_version': kIsWeb ? 'web' : Platform.operatingSystemVersion,
+            }),
+          );
 
           // Don't throw - allow app to continue but log the issue
           logger.warning(
@@ -203,8 +270,8 @@ class SupabaseConfig {
         tag: 'SupabaseConfig',
         metadata: {
           'url': supabaseUrl,
-          'authFlow': 'PKCE',
-          'sessionPersistence': 'Enabled',
+          'authFlow': kIsWeb ? 'PKCE' : 'implicit',
+          'sessionPersistence': kIsWeb ? 'Web Storage' : 'Enabled',
         },
       );
     } catch (e, stackTrace) {
@@ -221,7 +288,7 @@ class SupabaseConfig {
       throw Exception(
         'فشل الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.\n\n'
         'Failed to connect to server. Please check your internet connection and try again.\n\n'
-        'Technical details: $e'
+        'Technical details: $e',
       );
     }
   }

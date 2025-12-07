@@ -17,11 +17,12 @@ class StatisticsScreen extends ConsumerWidget {
     if (relatives.isEmpty) return 0;
 
     // Get all contact dates and sort them
-    final contactDates = relatives
-        .where((r) => r.lastContactDate != null)
-        .map((r) => r.lastContactDate!)
-        .toList()
-      ..sort((a, b) => b.compareTo(a)); // Most recent first
+    final contactDates =
+        relatives
+            .where((r) => r.lastContactDate != null)
+            .map((r) => r.lastContactDate!)
+            .toList()
+          ..sort((a, b) => b.compareTo(a)); // Most recent first
 
     if (contactDates.isEmpty) return 0;
 
@@ -67,11 +68,6 @@ class StatisticsScreen extends ConsumerWidget {
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_forward_rounded,
-                          color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
-                    ),
                     const SizedBox(width: AppSpacing.sm),
                     Text(
                       'الإحصائيات',
@@ -90,9 +86,7 @@ class StatisticsScreen extends ConsumerWidget {
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                        ),
+                        child: CircularProgressIndicator(color: Colors.white),
                       );
                     }
 
@@ -139,31 +133,31 @@ class StatisticsScreen extends ConsumerWidget {
                           ).animate().fadeIn().slideY(begin: 0.3, end: 0),
                           const SizedBox(height: AppSpacing.md),
                           GlassCard(
-                            child: Column(
-                              children: [
-                                Text(
-                                  'سلسلة التواصل الحالية',
-                                  style: AppTypography.titleMedium.copyWith(
-                                    color: Colors.white.withOpacity(0.9),
-                                  ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      'سلسلة التواصل الحالية',
+                                      style: AppTypography.titleMedium.copyWith(
+                                        color: Colors.white.withOpacity(0.9),
+                                      ),
+                                    ),
+                                    const SizedBox(height: AppSpacing.sm),
+                                    Text(
+                                      currentStreak.toString(),
+                                      style: AppTypography.numberLarge.copyWith(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      currentStreak == 1 ? 'يوم' : 'أيام',
+                                      style: AppTypography.bodyMedium.copyWith(
+                                        color: Colors.white.withOpacity(0.8),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: AppSpacing.sm),
-                                Text(
-                                  currentStreak.toString(),
-                                  style: AppTypography.numberLarge.copyWith(
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  currentStreak == 1 ? 'يوم' : 'أيام',
-                                  style: AppTypography.bodyMedium.copyWith(
-                                    color: Colors.white.withOpacity(0.8),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
+                              )
                               .animate(delay: const Duration(milliseconds: 100))
                               .fadeIn()
                               .slideY(begin: 0.3, end: 0),

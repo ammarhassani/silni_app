@@ -16,17 +16,16 @@ import '../../../shared/models/interaction_model.dart';
 import '../../../shared/services/relatives_service.dart';
 import '../../../shared/providers/interactions_provider.dart';
 import '../../../shared/services/auth_service.dart';
+import '../../../shared/services/call_verification_service.dart';
 
 class RelativeDetailScreen extends ConsumerStatefulWidget {
   final String relativeId;
 
-  const RelativeDetailScreen({
-    super.key,
-    required this.relativeId,
-  });
+  const RelativeDetailScreen({super.key, required this.relativeId});
 
   @override
-  ConsumerState<RelativeDetailScreen> createState() => _RelativeDetailScreenState();
+  ConsumerState<RelativeDetailScreen> createState() =>
+      _RelativeDetailScreenState();
 }
 
 class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
@@ -49,22 +48,28 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return Center(
-                  child: CircularProgressIndicator(
-                    color: themeColors.primary,
-                  ),
+                  child: CircularProgressIndicator(color: themeColors.primary),
                 );
               }
 
-              if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
+              if (snapshot.hasError ||
+                  !snapshot.hasData ||
+                  snapshot.data == null) {
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.error_outline, size: 64, color: Colors.white70),
+                      const Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: Colors.white70,
+                      ),
                       const SizedBox(height: AppSpacing.lg),
                       Text(
                         'لم يتم العثور على القريب',
-                        style: AppTypography.headlineMedium.copyWith(color: Colors.white),
+                        style: AppTypography.headlineMedium.copyWith(
+                          color: Colors.white,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       ElevatedButton(
@@ -81,9 +86,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
               return CustomScrollView(
                 slivers: [
                   // Header with avatar and name
-                  SliverToBoxAdapter(
-                    child: _buildHeader(relative),
-                  ),
+                  SliverToBoxAdapter(child: _buildHeader(relative)),
 
                   // Contact actions
                   SliverToBoxAdapter(
@@ -96,7 +99,9 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                   // Stats card
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                      ),
                       child: _buildStatsCard(relative),
                     ),
                   ),
@@ -112,10 +117,14 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                   // Recent interactions
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                      ),
                       child: Text(
                         'التفاعلات الأخيرة',
-                        style: AppTypography.headlineSmall.copyWith(color: Colors.white),
+                        style: AppTypography.headlineSmall.copyWith(
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -160,31 +169,43 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
     final priorityColor = relative.priority == 1
         ? Colors.red
         : relative.priority == 2
-            ? Colors.orange
-            : Colors.blue;
+        ? Colors.orange
+        : Colors.blue;
     final priorityLabel = relative.priority == 1
         ? 'عالية'
         : relative.priority == 2
-            ? 'متوسطة'
-            : 'منخفضة';
+        ? 'متوسطة'
+        : 'منخفضة';
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         children: [
-          // Back button and edit button
+          // Back button and action buttons
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white),
+                icon: const Icon(
+                  Icons.arrow_forward_rounded,
+                  color: Colors.white,
+                ),
                 onPressed: () => context.pop(),
               ),
-              IconButton(
-                icon: const Icon(Icons.edit_rounded, color: Colors.white),
-                onPressed: () {
-                  context.push('${AppRoutes.editRelative}/${relative.id}');
-                },
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit_rounded, color: Colors.white),
+                    onPressed: () {
+                      context.push('${AppRoutes.editRelative}/${relative.id}');
+                    },
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  IconButton(
+                    icon: const Icon(Icons.delete_rounded, color: Colors.red),
+                    onPressed: () => _showDeleteConfirmation(relative),
+                  ),
+                ],
               ),
             ],
           ),
@@ -270,7 +291,9 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                   const SizedBox(width: AppSpacing.xs),
                   Text(
                     'مفضل',
-                    style: AppTypography.labelMedium.copyWith(color: Colors.amber),
+                    style: AppTypography.labelMedium.copyWith(
+                      color: Colors.amber,
+                    ),
                   ),
                 ],
               ),
@@ -296,127 +319,64 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
   }
 
   Widget _buildContactActions(Relative relative) {
+    final themeColors = ref.watch(themeColorsProvider);
+    final hasPhone = relative.phoneNumber != null;
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Switch to Column layout on very small screens
-        final useColumn = constraints.maxWidth < 360;
+        // Use grid layout for better organization
+        final crossAxisCount = constraints.maxWidth > 600
+            ? 4
+            : constraints.maxWidth > 400
+            ? 3
+            : 2;
+        final childAspectRatio = constraints.maxWidth > 600 ? 1.2 : 1.0;
 
-        if (useColumn) {
-          return Column(
-            children: [
-              // Call button
-              if (relative.phoneNumber != null)
-                _buildActionButton(
-                  icon: Icons.phone,
-                  label: 'اتصال',
-                  gradient: LinearGradient(
-                    colors: [Colors.green.shade600, Colors.green.shade800],
-                  ),
-                  onTap: () => _makeCall(relative.phoneNumber!),
-                ),
-
-              if (relative.phoneNumber != null) const SizedBox(height: AppSpacing.sm),
-
-              // WhatsApp button
-              if (relative.phoneNumber != null)
-                _buildActionButton(
-                  icon: FontAwesomeIcons.whatsapp,
-                  label: 'واتساب',
-                  gradient: LinearGradient(
-                    colors: [Colors.green.shade400, Colors.green.shade600],
-                  ),
-                  onTap: () => _openWhatsApp(relative.phoneNumber!),
-                ),
-
-              if (relative.phoneNumber != null) const SizedBox(height: AppSpacing.sm),
-
-              // Message button
-              if (relative.phoneNumber != null)
-                _buildActionButton(
-                  icon: Icons.message,
-                  label: 'رسالة',
-                  gradient: LinearGradient(
-                    colors: [Colors.blue.shade600, Colors.blue.shade800],
-                  ),
-                  onTap: () => _sendMessage(relative.phoneNumber!),
-                ),
-
-              // Show placeholder if no phone
-              if (relative.phoneNumber == null)
-                GlassCard(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Text(
-                    'لا يوجد رقم هاتف',
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: Colors.white70,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-            ],
-          );
-        }
-
-        // Use Row for wider screens
-        return Row(
+        return GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: crossAxisCount,
+          childAspectRatio: childAspectRatio,
+          mainAxisSpacing: AppSpacing.sm,
+          crossAxisSpacing: AppSpacing.sm,
           children: [
             // Call button
-            if (relative.phoneNumber != null)
-              Flexible(
-                child: _buildActionButton(
-                  icon: Icons.phone,
-                  label: 'اتصال',
-                  gradient: LinearGradient(
-                    colors: [Colors.green.shade600, Colors.green.shade800],
-                  ),
-                  onTap: () => _makeCall(relative.phoneNumber!),
-                ),
-              ),
-
-            if (relative.phoneNumber != null) const SizedBox(width: AppSpacing.sm),
+            _buildActionCard(
+              icon: Icons.phone,
+              label: 'اتصال',
+              color: Colors.green.shade600,
+              onTap: () => _makeCall(relative.phoneNumber!),
+              isEnabled: hasPhone,
+            ),
 
             // WhatsApp button
-            if (relative.phoneNumber != null)
-              Flexible(
-                child: _buildActionButton(
-                  icon: FontAwesomeIcons.whatsapp,
-                  label: 'واتساب',
-                  gradient: LinearGradient(
-                    colors: [Colors.green.shade400, Colors.green.shade600],
-                  ),
-                  onTap: () => _openWhatsApp(relative.phoneNumber!),
-                ),
-              ),
-
-            if (relative.phoneNumber != null) const SizedBox(width: AppSpacing.sm),
+            _buildActionCard(
+              icon: FontAwesomeIcons.whatsapp,
+              label: 'واتساب',
+              color: Colors.green.shade400,
+              onTap: () => _openWhatsApp(relative.phoneNumber!),
+              isEnabled: hasPhone,
+            ),
 
             // Message button
-            if (relative.phoneNumber != null)
-              Flexible(
-                child: _buildActionButton(
-                  icon: Icons.message,
-                  label: 'رسالة',
-                  gradient: LinearGradient(
-                    colors: [Colors.blue.shade600, Colors.blue.shade800],
-                  ),
-                  onTap: () => _sendMessage(relative.phoneNumber!),
-                ),
-              ),
+            _buildActionCard(
+              icon: Icons.message,
+              label: 'رسالة',
+              color: Colors.blue.shade600,
+              onTap: () => _sendMessage(relative.phoneNumber!),
+              isEnabled: hasPhone,
+            ),
 
-            // Show placeholder if no phone
-            if (relative.phoneNumber == null)
-              Expanded(
-                child: GlassCard(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Text(
-                    'لا يوجد رقم هاتف',
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: Colors.white70,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
+            // Favorite toggle button
+            _buildActionCard(
+              icon: relative.isFavorite ? Icons.star : Icons.star_border,
+              label: relative.isFavorite ? 'مفضل' : 'تفضيل',
+              color: relative.isFavorite
+                  ? AppColors.premiumGold
+                  : Colors.grey.shade600,
+              onTap: () => _toggleFavorite(relative),
+              isEnabled: true,
+            ),
           ],
         );
       },
@@ -474,16 +434,12 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
               value: daysSince == null
                   ? 'لم يتم'
                   : daysSince == 0
-                      ? 'اليوم'
-                      : 'منذ $daysSince يوم',
+                  ? 'اليوم'
+                  : 'منذ $daysSince يوم',
               color: relative.needsContact ? Colors.red : themeColors.primary,
             ),
           ),
-          Container(
-            width: 1,
-            height: 40,
-            color: Colors.white.withOpacity(0.2),
-          ),
+          Container(width: 1, height: 40, color: Colors.white.withOpacity(0.2)),
           Flexible(
             child: _buildStatItem(
               icon: Icons.timeline,
@@ -492,11 +448,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
               color: AppColors.premiumGold,
             ),
           ),
-          Container(
-            width: 1,
-            height: 40,
-            color: Colors.white.withOpacity(0.2),
-          ),
+          Container(width: 1, height: 40, color: Colors.white.withOpacity(0.2)),
           Flexible(
             child: _buildStatItem(
               icon: Icons.access_time,
@@ -533,9 +485,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
         const SizedBox(height: AppSpacing.xs),
         Text(
           label,
-          style: AppTypography.bodySmall.copyWith(
-            color: Colors.white70,
-          ),
+          style: AppTypography.bodySmall.copyWith(color: Colors.white70),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -650,18 +600,14 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
             children: [
               Text(
                 label,
-                style: AppTypography.labelSmall.copyWith(
-                  color: Colors.white70,
-                ),
+                style: AppTypography.labelSmall.copyWith(color: Colors.white70),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
                 value,
-                style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white,
-                ),
+                style: AppTypography.bodyMedium.copyWith(color: Colors.white),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -675,15 +621,15 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
   Widget _buildRecentInteractions(String relativeId) {
     final themeColors = ref.watch(themeColorsProvider);
     return StreamBuilder<List<Interaction>>(
-      stream: ref.read(interactionsServiceProvider).getRelativeInteractionsStream(relativeId),
+      stream: ref
+          .read(interactionsServiceProvider)
+          .getRelativeInteractionsStream(relativeId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: Center(
-              child: CircularProgressIndicator(
-                color: themeColors.primary,
-              ),
+              child: CircularProgressIndicator(color: themeColors.primary),
             ),
           );
         }
@@ -738,7 +684,9 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                         height: 48,
                         decoration: BoxDecoration(
                           gradient: themeColors.primaryGradient,
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusMd,
+                          ),
                         ),
                         child: Center(
                           child: Text(
@@ -824,9 +772,9 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
       await _logInteraction(InteractionType.call, 'مكالمة هاتفية');
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('لا يمكن إجراء المكالمة')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('لا يمكن إجراء المكالمة')));
       }
     }
   }
@@ -844,9 +792,9 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
       await _logInteraction(InteractionType.message, 'رسالة واتساب');
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('لا يمكن فتح واتساب')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('لا يمكن فتح واتساب')));
       }
     }
   }
@@ -859,9 +807,9 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
       await _logInteraction(InteractionType.message, 'رسالة نصية');
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('لا يمكن إرسال رسالة')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('لا يمكن إرسال رسالة')));
       }
     }
   }
@@ -934,7 +882,8 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
         id: '', // Will be generated by Firestore
         userId: user.id,
         relativeId: widget.relativeId,
-        type: InteractionType.call, // Default to call, user can add details later
+        type:
+            InteractionType.call, // Default to call, user can add details later
         date: DateTime.now(),
         notes: 'تواصل سريع',
         createdAt: DateTime.now(),
@@ -959,11 +908,235 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
       setState(() => _isLoading = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('حدث خطأ: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  /// Show delete confirmation dialog
+  Future<void> _showDeleteConfirmation(Relative relative) async {
+    final themeColors = ref.read(themeColorsProvider);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.black87,
+        title: Row(
+          children: [
+            const Icon(Icons.warning_rounded, color: Colors.red),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              'تأكيد الحذف',
+              style: AppTypography.titleLarge.copyWith(color: Colors.white),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'هل أنت متأكد من حذف هذا القريب؟',
+              style: AppTypography.bodyLarge.copyWith(color: Colors.white),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'اسم: ${relative.fullName}',
+              style: AppTypography.bodyMedium.copyWith(
+                color: Colors.white70,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'صلة القرابة: ${relative.relationshipType.arabicName}',
+              style: AppTypography.bodyMedium.copyWith(
+                color: Colors.white70,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                border: Border.all(color: Colors.red.withOpacity(0.3)),
+              ),
+              child: Text(
+                'هذا الإجراء لا يمكن التراجع عنه',
+                style: AppTypography.bodySmall.copyWith(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              'إلغاء',
+              style: AppTypography.labelLarge.copyWith(color: Colors.white70),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(
+              'حذف',
+              style: AppTypography.labelLarge.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _deleteRelative(relative);
+    }
+  }
+
+  /// Delete relative with proper error handling
+  Future<void> _deleteRelative(Relative relative) async {
+    try {
+      setState(() => _isLoading = true);
+
+      // Use the permanently delete method from RelativesService
+      await _relativesService.permanentlyDeleteRelative(relative.id);
+
+      if (!mounted) return;
+
+      setState(() => _isLoading = false);
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('حدث خطأ: $e'),
-          backgroundColor: Colors.red,
+          content: Text('تم حذف ${relative.fullName} بنجاح'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
         ),
       );
+
+      // Navigate back to relatives list
+      context.pop();
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() => _isLoading = false);
+
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('فشل حذف القريب: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  /// Build improved action card for better layout
+  Widget _buildActionCard({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+    required bool isEnabled,
+  }) {
+    final themeColors = ref.watch(themeColorsProvider);
+
+    return Container(
+      height: isEnabled ? 80 : 70,
+      decoration: BoxDecoration(
+        gradient: isEnabled
+            ? LinearGradient(
+                colors: [color.withOpacity(0.8), color],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        color: isEnabled ? null : Colors.grey.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: isEnabled ? Border.all(color: color.withOpacity(0.3)) : null,
+        boxShadow: isEnabled
+            ? [
+                BoxShadow(
+                  color: color.withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isEnabled ? onTap : null,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  color: isEnabled ? Colors.white : Colors.grey,
+                  size: 28,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  label,
+                  style: AppTypography.labelMedium.copyWith(
+                    color: isEnabled ? Colors.white : Colors.grey,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Toggle favorite status
+  Future<void> _toggleFavorite(Relative relative) async {
+    try {
+      await _relativesService.toggleFavorite(relative.id, !relative.isFavorite);
+
+      if (mounted) {
+        HapticFeedback.lightImpact();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              relative.isFavorite ? 'تم إلغاء التفضيل' : 'تمت الإضافة للمفضلة',
+            ),
+            backgroundColor: AppColors.premiumGold,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('حدث خطأ: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 }

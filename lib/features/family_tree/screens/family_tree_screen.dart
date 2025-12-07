@@ -11,16 +11,12 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/services/relatives_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../home/screens/home_screen.dart';
 import '../widgets/tree_node_widget.dart';
 import '../models/tree_node.dart';
+import '../../../core/providers/realtime_provider.dart';
 
-// Providers
-final relativesServiceProvider = Provider((ref) => RelativesService());
-
-final relativesStreamProvider = StreamProvider.family<List<Relative>, String>((ref, userId) {
-  final service = ref.watch(relativesServiceProvider);
-  return service.getRelativesStream(userId);
-});
+// Note: relativesStreamProvider is now imported from features/home/screens/home_screen.dart
 
 class FamilyTreeScreen extends ConsumerStatefulWidget {
   const FamilyTreeScreen({super.key});
@@ -30,7 +26,8 @@ class FamilyTreeScreen extends ConsumerStatefulWidget {
 }
 
 class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
-  final TransformationController _transformationController = TransformationController();
+  final TransformationController _transformationController =
+      TransformationController();
   double _currentScale = 1.0;
   String? _selectedNodeId;
 
@@ -44,9 +41,25 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final userId = user?.id ?? '';
-    final displayName = user?.userMetadata?['full_name'] ?? user?.email ?? 'أنا';
+    final displayName =
+        user?.userMetadata?['full_name'] ?? user?.email ?? 'أنا';
 
+    // Initialize real-time subscriptions for this user
+    ref.watch(autoRealtimeSubscriptionsProvider);
+
+    debugPrint('🌳 [FAMILY TREE] Building family tree for user: $userId');
     final relativesAsync = ref.watch(relativesStreamProvider(userId));
+
+    // Log when relatives data changes
+    relativesAsync.whenData((relatives) {
+      debugPrint(
+        '🌳 [FAMILY TREE] Relatives updated: ${relatives.length} relatives',
+      );
+      final relativeNames = relatives
+          .map((r) => '${r.fullName} (${r.id})')
+          .toList();
+      debugPrint('🌳 [FAMILY TREE] Current relatives in tree: $relativeNames');
+    });
 
     return Scaffold(
       body: Stack(
@@ -58,7 +71,12 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                 _buildHeader(context),
                 Expanded(
                   child: relativesAsync.when(
-                    data: (relatives) => _buildTreeContent(context, relatives, displayName, userId),
+                    data: (relatives) => _buildTreeContent(
+                      context,
+                      relatives,
+                      displayName,
+                      userId,
+                    ),
                     loading: () => const Center(
                       child: CircularProgressIndicator(color: Colors.white),
                     ),
@@ -89,7 +107,9 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
               children: [
                 Text(
                   'شجرة العائلة',
-                  style: AppTypography.headlineLarge.copyWith(color: Colors.white),
+                  style: AppTypography.headlineLarge.copyWith(
+                    color: Colors.white,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -120,7 +140,10 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
               ),
               IconButton(
                 onPressed: _resetZoom,
-                icon: const Icon(Icons.center_focus_strong_rounded, color: Colors.white),
+                icon: const Icon(
+                  Icons.center_focus_strong_rounded,
+                  color: Colors.white,
+                ),
                 tooltip: 'إعادة ضبط',
               ),
             ],
@@ -130,7 +153,12 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     );
   }
 
-  Widget _buildTreeContent(BuildContext context, List<Relative> relatives, String userName, String userId) {
+  Widget _buildTreeContent(
+    BuildContext context,
+    List<Relative> relatives,
+    String userName,
+    String userId,
+  ) {
     if (relatives.isEmpty) {
       return _buildEmptyState();
     }
@@ -174,107 +202,143 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     );
 
     // Separate relatives by generation
-    final parents = relatives.where((r) =>
-        r.relationshipType == RelationshipType.father ||
-        r.relationshipType == RelationshipType.mother).toList();
+    final parents = relatives
+        .where(
+          (r) =>
+              r.relationshipType == RelationshipType.father ||
+              r.relationshipType == RelationshipType.mother,
+        )
+        .toList();
 
-    final grandparents = relatives.where((r) =>
-        r.relationshipType == RelationshipType.grandfather ||
-        r.relationshipType == RelationshipType.grandmother).toList();
+    final grandparents = relatives
+        .where(
+          (r) =>
+              r.relationshipType == RelationshipType.grandfather ||
+              r.relationshipType == RelationshipType.grandmother,
+        )
+        .toList();
 
-    final siblings = relatives.where((r) =>
-        r.relationshipType == RelationshipType.brother ||
-        r.relationshipType == RelationshipType.sister).toList();
+    final siblings = relatives
+        .where(
+          (r) =>
+              r.relationshipType == RelationshipType.brother ||
+              r.relationshipType == RelationshipType.sister,
+        )
+        .toList();
 
-    final children = relatives.where((r) =>
-        r.relationshipType == RelationshipType.son ||
-        r.relationshipType == RelationshipType.daughter).toList();
+    final children = relatives
+        .where(
+          (r) =>
+              r.relationshipType == RelationshipType.son ||
+              r.relationshipType == RelationshipType.daughter,
+        )
+        .toList();
 
-    final spouse = relatives.where((r) =>
-        r.relationshipType == RelationshipType.husband ||
-        r.relationshipType == RelationshipType.wife).toList();
+    final spouse = relatives
+        .where(
+          (r) =>
+              r.relationshipType == RelationshipType.husband ||
+              r.relationshipType == RelationshipType.wife,
+        )
+        .toList();
 
-    final extended = relatives.where((r) =>
-        r.relationshipType == RelationshipType.uncle ||
-        r.relationshipType == RelationshipType.aunt ||
-        r.relationshipType == RelationshipType.cousin ||
-        r.relationshipType == RelationshipType.nephew ||
-        r.relationshipType == RelationshipType.niece ||
-        r.relationshipType == RelationshipType.other).toList();
+    final extended = relatives
+        .where(
+          (r) =>
+              r.relationshipType == RelationshipType.uncle ||
+              r.relationshipType == RelationshipType.aunt ||
+              r.relationshipType == RelationshipType.cousin ||
+              r.relationshipType == RelationshipType.nephew ||
+              r.relationshipType == RelationshipType.niece ||
+              r.relationshipType == RelationshipType.other,
+        )
+        .toList();
 
     // Add parents to root
     for (final parent in parents) {
-      root.addChild(TreeNode(
-        id: parent.id,
-        name: parent.fullName,
-        emoji: parent.displayEmoji,
-        relationship: parent.relationshipType.arabicName,
-        level: -1,
-        priority: parent.priority,
-      ));
+      root.addChild(
+        TreeNode(
+          id: parent.id,
+          name: parent.fullName,
+          emoji: parent.displayEmoji,
+          relationship: parent.relationshipType.arabicName,
+          level: -1,
+          priority: parent.priority,
+        ),
+      );
     }
 
     // Add grandparents to parents
     for (final grandparent in grandparents) {
       if (root.children.isNotEmpty) {
-        root.children.first.addChild(TreeNode(
-          id: grandparent.id,
-          name: grandparent.fullName,
-          emoji: grandparent.displayEmoji,
-          relationship: grandparent.relationshipType.arabicName,
-          level: -2,
-          priority: grandparent.priority,
-        ));
+        root.children.first.addChild(
+          TreeNode(
+            id: grandparent.id,
+            name: grandparent.fullName,
+            emoji: grandparent.displayEmoji,
+            relationship: grandparent.relationshipType.arabicName,
+            level: -2,
+            priority: grandparent.priority,
+          ),
+        );
       }
     }
 
     // Add spouse to root
     for (final s in spouse) {
-      root.addSibling(TreeNode(
-        id: s.id,
-        name: s.fullName,
-        emoji: s.displayEmoji,
-        relationship: s.relationshipType.arabicName,
-        level: 0,
-        priority: s.priority,
-      ));
+      root.addSibling(
+        TreeNode(
+          id: s.id,
+          name: s.fullName,
+          emoji: s.displayEmoji,
+          relationship: s.relationshipType.arabicName,
+          level: 0,
+          priority: s.priority,
+        ),
+      );
     }
 
     // Add siblings to root
     for (final sibling in siblings) {
-      root.addSibling(TreeNode(
-        id: sibling.id,
-        name: sibling.fullName,
-        emoji: sibling.displayEmoji,
-        relationship: sibling.relationshipType.arabicName,
-        level: 0,
-        priority: sibling.priority,
-      ));
+      root.addSibling(
+        TreeNode(
+          id: sibling.id,
+          name: sibling.fullName,
+          emoji: sibling.displayEmoji,
+          relationship: sibling.relationshipType.arabicName,
+          level: 0,
+          priority: sibling.priority,
+        ),
+      );
     }
 
     // Add children to root
     for (final child in children) {
-      root.addChild(TreeNode(
-        id: child.id,
-        name: child.fullName,
-        emoji: child.displayEmoji,
-        relationship: child.relationshipType.arabicName,
-        level: 1,
-        priority: child.priority,
-      ));
+      root.addChild(
+        TreeNode(
+          id: child.id,
+          name: child.fullName,
+          emoji: child.displayEmoji,
+          relationship: child.relationshipType.arabicName,
+          level: 1,
+          priority: child.priority,
+        ),
+      );
     }
 
     // Add extended family to root
     for (final ext in extended) {
-      root.addChild(TreeNode(
-        id: ext.id,
-        name: ext.fullName,
-        emoji: ext.displayEmoji,
-        relationship: ext.relationshipType.arabicName,
-        level: 1,
-        priority: ext.priority,
-        isExtended: true,
-      ));
+      root.addChild(
+        TreeNode(
+          id: ext.id,
+          name: ext.fullName,
+          emoji: ext.displayEmoji,
+          relationship: ext.relationshipType.arabicName,
+          level: 1,
+          priority: ext.priority,
+          isExtended: true,
+        ),
+      );
     }
 
     return root;
@@ -286,18 +350,29 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         // Grandparents (Level -2)
-        if (root.children.isNotEmpty && root.children.first.children.isNotEmpty) ...[
+        if (root.children.isNotEmpty &&
+            root.children.first.children.isNotEmpty) ...[
           _buildGeneration(root.children.first.children, relatives, -2),
           const SizedBox(height: AppSpacing.md),
-          _buildConnectionLines(root.children.first.children.length, vertical: true),
+          _buildConnectionLines(
+            root.children.first.children.length,
+            vertical: true,
+          ),
           const SizedBox(height: AppSpacing.md),
         ],
 
         // Parents (Level -1)
         if (root.children.where((n) => n.level == -1).isNotEmpty) ...[
-          _buildGeneration(root.children.where((n) => n.level == -1).toList(), relatives, -1),
+          _buildGeneration(
+            root.children.where((n) => n.level == -1).toList(),
+            relatives,
+            -1,
+          ),
           const SizedBox(height: AppSpacing.md),
-          _buildConnectionLines(root.children.where((n) => n.level == -1).length, vertical: true),
+          _buildConnectionLines(
+            root.children.where((n) => n.level == -1).length,
+            vertical: true,
+          ),
           const SizedBox(height: AppSpacing.md),
         ],
 
@@ -308,14 +383,18 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
           children: [
             // Siblings before user
             if (root.siblings.isNotEmpty) ...[
-              ...root.siblings.map((sibling) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                child: TreeNodeWidget(
-                  node: sibling,
-                  isSelected: _selectedNodeId == sibling.id,
-                  onTap: () => _onNodeTap(sibling, relatives),
+              ...root.siblings.map(
+                (sibling) => Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                  ),
+                  child: TreeNodeWidget(
+                    node: sibling,
+                    isSelected: _selectedNodeId == sibling.id,
+                    onTap: () => _onNodeTap(sibling, relatives),
+                  ),
                 ),
-              )),
+              ),
               const SizedBox(width: AppSpacing.md),
               _buildConnectionLines(root.siblings.length + 1, vertical: false),
               const SizedBox(width: AppSpacing.md),
@@ -333,15 +412,26 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         // Children + Extended (Level 1+)
         if (root.children.where((n) => n.level >= 1).isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
-          _buildConnectionLines(root.children.where((n) => n.level >= 1).length, vertical: true),
+          _buildConnectionLines(
+            root.children.where((n) => n.level >= 1).length,
+            vertical: true,
+          ),
           const SizedBox(height: AppSpacing.md),
-          _buildGeneration(root.children.where((n) => n.level >= 1).toList(), relatives, 1),
+          _buildGeneration(
+            root.children.where((n) => n.level >= 1).toList(),
+            relatives,
+            1,
+          ),
         ],
       ],
     );
   }
 
-  Widget _buildGeneration(List<TreeNode> nodes, List<Relative> relatives, int level) {
+  Widget _buildGeneration(
+    List<TreeNode> nodes,
+    List<Relative> relatives,
+    int level,
+  ) {
     if (nodes.isEmpty) return const SizedBox.shrink();
 
     return Wrap(
@@ -430,10 +520,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                       : AppColors.primaryGradient,
                 ),
                 child: Center(
-                  child: Text(
-                    node.emoji,
-                    style: const TextStyle(fontSize: 40),
-                  ),
+                  child: Text(node.emoji, style: const TextStyle(fontSize: 40)),
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -441,7 +528,9 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
               // Name
               Text(
                 node.name,
-                style: AppTypography.headlineMedium.copyWith(color: Colors.white),
+                style: AppTypography.headlineMedium.copyWith(
+                  color: Colors.white,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -476,7 +565,9 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                       child: ElevatedButton.icon(
                         onPressed: () {
                           Navigator.pop(context);
-                          context.push('${AppRoutes.relativeDetail}/${relative.id}');
+                          context.push(
+                            '${AppRoutes.relativeDetail}/${relative.id}',
+                          );
                         },
                         icon: const Icon(Icons.visibility_rounded),
                         label: const Text('عرض التفاصيل'),
@@ -529,7 +620,9 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
               const SizedBox(height: AppSpacing.lg),
               Text(
                 'شجرة عائلتك فارغة',
-                style: AppTypography.headlineMedium.copyWith(color: Colors.white),
+                style: AppTypography.headlineMedium.copyWith(
+                  color: Colors.white,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -569,7 +662,11 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline_rounded, color: Colors.white, size: 48),
+            const Icon(
+              Icons.error_outline_rounded,
+              color: Colors.white,
+              size: 48,
+            ),
             const SizedBox(height: AppSpacing.md),
             Text(
               'حدث خطأ في تحميل شجرة العائلة',
@@ -585,14 +682,16 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   void _zoomIn() {
     setState(() {
       _currentScale = (_currentScale * 1.2).clamp(0.5, 3.0);
-      _transformationController.value = Matrix4.identity()..scale(_currentScale);
+      _transformationController.value = Matrix4.identity()
+        ..scale(_currentScale);
     });
   }
 
   void _zoomOut() {
     setState(() {
       _currentScale = (_currentScale / 1.2).clamp(0.5, 3.0);
-      _transformationController.value = Matrix4.identity()..scale(_currentScale);
+      _transformationController.value = Matrix4.identity()
+        ..scale(_currentScale);
     });
   }
 

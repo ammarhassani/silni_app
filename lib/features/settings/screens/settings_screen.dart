@@ -29,11 +29,6 @@ class SettingsScreen extends ConsumerWidget {
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_forward_rounded,
-                          color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
-                    ),
                     const SizedBox(width: AppSpacing.sm),
                     Text(
                       'الإعدادات',
@@ -58,7 +53,10 @@ class SettingsScreen extends ConsumerWidget {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.palette, color: AppColors.premiumGold),
+                              const Icon(
+                                Icons.palette,
+                                color: AppColors.premiumGold,
+                              ),
                               const SizedBox(width: AppSpacing.sm),
                               Text(
                                 'المظهر',
@@ -125,8 +123,10 @@ class SettingsScreen extends ConsumerWidget {
                     // Notifications
                     GlassCard(
                       child: ListTile(
-                        leading:
-                            const Icon(Icons.notifications, color: Colors.white),
+                        leading: const Icon(
+                          Icons.notifications,
+                          color: Colors.white,
+                        ),
                         title: Text(
                           'الإشعارات',
                           style: AppTypography.titleMedium.copyWith(
@@ -198,7 +198,9 @@ class SettingsScreen extends ConsumerWidget {
           gradient: themeColors.primaryGradient,
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           border: Border.all(
-            color: isSelected ? AppColors.premiumGold : Colors.white.withOpacity(0.2),
+            color: isSelected
+                ? AppColors.premiumGold
+                : Colors.white.withOpacity(0.2),
             width: isSelected ? 3 : 1,
           ),
           boxShadow: isSelected
@@ -215,11 +217,7 @@ class SettingsScreen extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (isSelected)
-              const Icon(
-                Icons.check_circle,
-                color: Colors.white,
-                size: 32,
-              )
+              const Icon(Icons.check_circle, color: Colors.white, size: 32)
             else
               Container(
                 width: 32,
@@ -228,11 +226,7 @@ class SettingsScreen extends ConsumerWidget {
                   shape: BoxShape.circle,
                   color: Colors.white.withOpacity(0.3),
                 ),
-                child: Icon(
-                  Icons.palette,
-                  color: Colors.white,
-                  size: 20,
-                ),
+                child: Icon(Icons.palette, color: Colors.white, size: 20),
               ),
             const SizedBox(height: AppSpacing.xs),
             Text(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -22,15 +23,19 @@ import '../../auth/providers/auth_provider.dart';
 // Providers
 final relativesServiceProvider = Provider((ref) => RelativesService());
 
-final userRelativesProvider = StreamProvider.family<List<Relative>, String>((ref, userId) {
+final userRelativesProvider = StreamProvider.family<List<Relative>, String>((
+  ref,
+  userId,
+) {
   final service = ref.watch(relativesServiceProvider);
   return service.getRelativesStream(userId);
 });
 
-final userInteractionsProvider = StreamProvider.family<List<Interaction>, String>((ref, userId) {
-  final service = ref.watch(interactionsServiceProvider);
-  return service.getInteractionsStream(userId);
-});
+final userInteractionsProvider =
+    StreamProvider.family<List<Interaction>, String>((ref, userId) {
+      final service = ref.watch(interactionsServiceProvider);
+      return service.getInteractionsStream(userId);
+    });
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -66,9 +71,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             physics: const BouncingScrollPhysics(),
             slivers: [
               // Header with avatar
-              SliverToBoxAdapter(
-                child: _buildHeader(user, themeColors),
-              ),
+              SliverToBoxAdapter(child: _buildHeader(user, themeColors)),
 
               // User info card
               SliverToBoxAdapter(
@@ -81,7 +84,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               // Statistics
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                  ),
                   child: Text(
                     '📊 إحصائياتي',
                     style: AppTypography.headlineMedium.copyWith(
@@ -97,11 +102,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               // Gamification Stats
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                  child: GamificationStatsCard(
-                    userId: userId,
-                    compact: false,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
                   ),
+                  child: GamificationStatsCard(userId: userId, compact: false),
                 ),
               ),
 
@@ -110,7 +114,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               // Statistics
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                  ),
                   child: Text(
                     '📊 إحصائياتي',
                     style: AppTypography.headlineMedium.copyWith(
@@ -125,14 +131,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                  ),
                   child: relativesAsync.when(
                     data: (relatives) => interactionsAsync.when(
-                      data: (interactions) => _buildStatistics(relatives, interactions, themeColors),
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                      data: (interactions) => _buildStatistics(
+                        relatives,
+                        interactions,
+                        themeColors,
+                      ),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
                       error: (_, __) => const SizedBox.shrink(),
                     ),
-                    loading: () => const Center(child: CircularProgressIndicator()),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
                     error: (_, __) => const SizedBox.shrink(),
                   ),
                 ),
@@ -143,7 +157,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               // Account actions
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                  ),
                   child: Text(
                     '⚙️ إعدادات الحساب',
                     style: AppTypography.headlineMedium.copyWith(
@@ -158,7 +174,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                  ),
                   child: _buildAccountActions(themeColors),
                 ),
               ),
@@ -172,158 +190,169 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildHeader(dynamic user, ThemeColors themeColors) {
-    final displayName = user?.userMetadata?['full_name'] ?? user?.email?.split('@')[0] ?? 'المستخدم';
+    final displayName =
+        user?.userMetadata?['full_name'] ??
+        user?.email?.split('@')[0] ??
+        'المستخدم';
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        children: [
-          // Back button
-          Row(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
             children: [
-              IconButton(
-                onPressed: () => context.pop(),
-                icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white),
-              ),
-              const Spacer(),
-            ],
-          ),
-
-          const SizedBox(height: AppSpacing.md),
-
-          // Avatar with edit button
-          Stack(
-            children: [
-              Hero(
-                tag: 'profile-avatar',
-                child: Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: themeColors.goldenGradient,
-                    boxShadow: [
-                      BoxShadow(
-                        color: themeColors.accent.withOpacity(0.5),
-                        blurRadius: 30,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: user?.userMetadata?['profile_picture_url'] != null
-                      ? ClipOval(
-                          child: Image.network(
-                            user!.userMetadata!['profile_picture_url'] as String,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _buildDefaultAvatar(displayName),
-                          ),
-                        )
-                      : _buildDefaultAvatar(displayName),
-                ),
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: GestureDetector(
-                  onTap: () {
-                    HapticFeedback.mediumImpact();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('تغيير الصورة قريباً')),
-                    );
-                  },
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: themeColors.primaryGradient,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: AppSpacing.md),
-
-          // Name with edit button
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (_isEditingName)
-                ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minWidth: 120,
-                    maxWidth: MediaQuery.of(context).size.width * 0.6,
-                  ),
-                  child: TextField(
-                    controller: _nameController,
-                    autofocus: true,
-                    textAlign: TextAlign.center,
-                    style: AppTypography.headlineLarge.copyWith(
+              // Back button (profile is a subpage of settings)
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () => context.pop(),
+                    icon: const Icon(
+                      Icons.arrow_forward_rounded,
                       color: Colors.white,
-                      fontWeight: FontWeight.bold,
                     ),
-                    decoration: const InputDecoration(
-                      border: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white),
+                  ),
+                  const Spacer(),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+
+              // Avatar with edit button
+              Stack(
+                children: [
+                  Hero(
+                    tag: 'profile-avatar',
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: themeColors.goldenGradient,
+                        boxShadow: [
+                          BoxShadow(
+                            color: themeColors.accent.withOpacity(0.5),
+                            blurRadius: 30,
+                            spreadRadius: 5,
+                          ),
+                        ],
                       ),
-                      enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white60),
-                      ),
-                      focusedBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white),
+                      child: user?.userMetadata?['profile_picture_url'] != null
+                          ? ClipOval(
+                              child: Image.network(
+                                user!.userMetadata!['profile_picture_url']
+                                    as String,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    _buildDefaultAvatar(displayName),
+                              ),
+                            )
+                          : _buildDefaultAvatar(displayName),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('تغيير الصورة قريباً')),
+                        );
+                      },
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: themeColors.primaryGradient,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
                     ),
                   ),
-                )
-              else
-                Text(
-                  displayName,
-                  style: AppTypography.headlineLarge.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                ],
+              ),
+
+              const SizedBox(height: AppSpacing.md),
+
+              // Name with edit button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_isEditingName)
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minWidth: 120,
+                        maxWidth: MediaQuery.of(context).size.width * 0.6,
+                      ),
+                      child: TextField(
+                        controller: _nameController,
+                        autofocus: true,
+                        textAlign: TextAlign.center,
+                        style: AppTypography.headlineLarge.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        decoration: const InputDecoration(
+                          border: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white),
+                          ),
+                          enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white60),
+                          ),
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    Text(
+                      displayName,
+                      style: AppTypography.headlineLarge.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  const SizedBox(width: AppSpacing.sm),
+                  IconButton(
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      setState(() {
+                        if (_isEditingName) {
+                          // Save name
+                          _saveName();
+                        } else {
+                          // Start editing
+                          _nameController.text = displayName;
+                          _isEditingName = true;
+                        }
+                      });
+                    },
+                    icon: Icon(
+                      _isEditingName ? Icons.check_circle : Icons.edit_rounded,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              const SizedBox(width: AppSpacing.sm),
-              IconButton(
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  setState(() {
-                    if (_isEditingName) {
-                      // Save name
-                      _saveName();
-                    } else {
-                      // Start editing
-                      _nameController.text = displayName;
-                      _isEditingName = true;
-                    }
-                  });
-                },
-                icon: Icon(
-                  _isEditingName ? Icons.check_circle : Icons.edit_rounded,
-                  color: Colors.white.withOpacity(0.9),
+                ],
+              ),
+
+              const SizedBox(height: AppSpacing.xs),
+
+              // Email
+              Text(
+                user?.email ?? '',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: Colors.white.withOpacity(0.8),
                 ),
               ),
             ],
           ),
-
-          const SizedBox(height: AppSpacing.xs),
-
-          // Email
-          Text(
-            user?.email ?? '',
-            style: AppTypography.bodyMedium.copyWith(
-              color: Colors.white.withOpacity(0.8),
-            ),
-          ),
-        ],
-      ),
-    )
+        )
         .animate()
         .fadeIn(duration: const Duration(milliseconds: 600))
         .slideY(begin: -0.1, end: 0);
@@ -375,7 +404,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _buildInfoRow(
             icon: Icons.verified_user_outlined,
             label: 'حالة التحقق',
-            value: user?.emailConfirmedAt != null ? 'تم التحقق ✓' : 'لم يتم التحقق',
+            value: user?.emailConfirmedAt != null
+                ? 'تم التحقق ✓'
+                : 'لم يتم التحقق',
             themeColors: themeColors,
           ),
 
@@ -385,7 +416,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             icon: Icons.calendar_today_outlined,
             label: 'تاريخ الانضمام',
             value: user?.createdAt != null
-                ? _formatDate(user!.createdAt)
+                ? _formatDate(_parseDateTime(user!.createdAt))
                 : 'غير متوفر',
             themeColors: themeColors,
           ),
@@ -441,10 +472,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildStatistics(List<Relative> relatives, List<Interaction> interactions, ThemeColors themeColors) {
+  Widget _buildStatistics(
+    List<Relative> relatives,
+    List<Interaction> interactions,
+    ThemeColors themeColors,
+  ) {
     final thisMonth = DateTime.now();
     final monthStart = DateTime(thisMonth.year, thisMonth.month, 1);
-    final thisMonthInteractions = interactions.where((i) => i.date.isAfter(monthStart)).length;
+    final thisMonthInteractions = interactions
+        .where((i) => i.date.isAfter(monthStart))
+        .length;
 
     final needsContact = relatives.where((r) => r.needsContact).length;
 
@@ -490,7 +527,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 icon: Icons.notifications_active_rounded,
                 label: 'يحتاجون تواصل',
                 value: '$needsContact',
-                gradient: needsContact > 0 ? AppColors.streakFire : themeColors.primaryGradient,
+                gradient: needsContact > 0
+                    ? AppColors.streakFire
+                    : themeColors.primaryGradient,
               ),
             ),
           ],
@@ -696,7 +735,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني'),
+                      content: Text(
+                        'تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني',
+                      ),
                       backgroundColor: AppColors.success,
                       duration: Duration(seconds: 4),
                     ),
@@ -747,9 +788,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 showDialog(
                   context: context,
                   barrierDismissible: false,
-                  builder: (context) => const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  builder: (context) =>
+                      const Center(child: CircularProgressIndicator()),
                 );
               }
 
@@ -792,6 +832,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ],
       ),
     );
+  }
+
+  DateTime _parseDateTime(dynamic date) {
+    if (date == null) {
+      return DateTime.now();
+    }
+
+    if (date is DateTime) {
+      return date;
+    }
+
+    if (date is String) {
+      try {
+        return DateTime.parse(date);
+      } catch (e) {
+        if (kDebugMode) {
+          print('Error parsing date string: $date, error: $e');
+        }
+        return DateTime.now();
+      }
+    }
+
+    return DateTime.now();
   }
 
   String _formatDate(DateTime date) {

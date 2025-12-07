@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
+import '../utils/ui_helpers.dart';
 
 class GlassCard extends StatelessWidget {
   final Widget child;
@@ -35,16 +36,13 @@ class GlassCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final defaultColor = isDark
-        ? AppColors.glassWhite.withOpacity(0.1)
-        : AppColors.glassWhite.withOpacity(0.3);
+        ? UIHelpers.withOpacity(AppColors.glassWhite, 0.1)
+        : UIHelpers.withOpacity(AppColors.glassWhite, 0.3);
 
     Widget card = ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: blurStrength,
-          sigmaY: blurStrength,
-        ),
+        filter: ImageFilter.blur(sigmaX: blurStrength, sigmaY: blurStrength),
         child: Container(
           width: width,
           height: height,
@@ -53,27 +51,23 @@ class GlassCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: gradient == null ? (color ?? defaultColor) : null,
             borderRadius: BorderRadius.circular(borderRadius),
-            border: border ??
+            border:
+                border ??
                 Border.all(
-                  color: Colors.white.withOpacity(0.2),
+                  color: UIHelpers.withOpacity(Colors.white, 0.2),
                   width: 1.5,
                 ),
-            gradient: gradient ??
+            gradient:
+                gradient ??
                 LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Colors.white.withOpacity(0.2),
-                    Colors.white.withOpacity(0.05),
+                    UIHelpers.withOpacity(Colors.white, 0.2),
+                    UIHelpers.withOpacity(Colors.white, 0.05),
                   ],
                 ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
+            boxShadow: UIHelpers.softShadow(opacity: 0.1, blurRadius: 20),
           ),
           child: child,
         ),
@@ -81,10 +75,7 @@ class GlassCard extends StatelessWidget {
     );
 
     if (onTap != null) {
-      card = GestureDetector(
-        onTap: onTap,
-        child: card,
-      );
+      card = GestureDetector(onTap: onTap, child: card);
     }
 
     return card;
@@ -121,28 +112,32 @@ class DramaticGlassCard extends StatelessWidget {
           height: height,
           padding: padding ?? const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
-            gradient: gradient ??
+            gradient:
+                gradient ??
                 LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Colors.white.withOpacity(0.25),
-                    Colors.white.withOpacity(0.1),
+                    UIHelpers.withOpacity(Colors.white, 0.25),
+                    UIHelpers.withOpacity(Colors.white, 0.1),
                   ],
                 ),
             borderRadius: BorderRadius.circular(AppSpacing.dramaticRadius),
             border: Border.all(
-              color: Colors.white.withOpacity(0.3),
+              color: UIHelpers.withOpacity(Colors.white, 0.3),
               width: 2,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: UIHelpers.withOpacity(Colors.black, 0.2),
                 blurRadius: 40,
                 offset: const Offset(0, 20),
               ),
               BoxShadow(
-                color: AppColors.islamicGreenPrimary.withOpacity(0.1),
+                color: UIHelpers.withOpacity(
+                  AppColors.islamicGreenPrimary,
+                  0.1,
+                ),
                 blurRadius: 60,
                 offset: const Offset(0, 30),
               ),
@@ -154,10 +149,7 @@ class DramaticGlassCard extends StatelessWidget {
     );
 
     if (onTap != null) {
-      card = GestureDetector(
-        onTap: onTap,
-        child: card,
-      );
+      card = GestureDetector(onTap: onTap, child: card);
     }
 
     return card;

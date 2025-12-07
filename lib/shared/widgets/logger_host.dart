@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/logger_provider.dart';
@@ -9,11 +10,7 @@ class LoggerHost extends ConsumerWidget {
   final Widget child;
   final bool showFAB;
 
-  const LoggerHost({
-    super.key,
-    required this.child,
-    this.showFAB = true,
-  });
+  const LoggerHost({super.key, required this.child, this.showFAB = true});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -24,11 +21,11 @@ class LoggerHost extends ConsumerWidget {
         // App content
         child,
 
-        // Logger overlay (when visible)
-        if (isVisible) const LoggerOverlay(),
+        // Logger overlay (when visible and in debug mode)
+        if (isVisible && kDebugMode) const LoggerOverlay(),
 
-        // FAB to toggle logger
-        if (showFAB) const LoggerFAB(),
+        // FAB to toggle logger (only in debug mode)
+        if (showFAB && kDebugMode) const LoggerFAB(),
       ],
     );
   }
