@@ -305,11 +305,17 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
         ],
       ),
       floatingActionButton: _selectedContactIds.isNotEmpty
-          ? FloatingActionButton.extended(
-              onPressed: _isImporting ? null : _importSelected,
-              backgroundColor: themeColors.primary,
-              icon: _isImporting
-                  ? const SizedBox(
+          ? GlassCard(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              gradient: themeColors.primaryGradient,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_isImporting)
+                    const SizedBox(
                       width: 24,
                       height: 24,
                       child: CircularProgressIndicator(
@@ -317,12 +323,18 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
                         color: Colors.white,
                       ),
                     )
-                  : const Icon(Icons.download_rounded),
-              label: Text(
-                _isImporting
-                    ? 'جاري الاستيراد...'
-                    : 'استيراد (${_selectedContactIds.length})',
-                style: AppTypography.labelLarge.copyWith(color: Colors.white),
+                  else
+                    const Icon(Icons.download_rounded, color: Colors.white),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    _isImporting
+                        ? 'جاري الاستيراد...'
+                        : 'استيراد (${_selectedContactIds.length})',
+                    style: AppTypography.labelLarge.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
               ),
             )
           : null,

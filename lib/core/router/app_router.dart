@@ -234,7 +234,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.notifications,
         name: 'notifications',
-        pageBuilder: (context, state) => _buildPageWithTransition(
+        pageBuilder: (context, state) => _buildPageWithNavigation(
           context,
           state,
           const NotificationsScreen(),

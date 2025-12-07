@@ -17,10 +17,7 @@ import '../../../shared/services/cloudinary_service.dart';
 class EditRelativeScreen extends ConsumerStatefulWidget {
   final String relativeId;
 
-  const EditRelativeScreen({
-    super.key,
-    required this.relativeId,
-  });
+  const EditRelativeScreen({super.key, required this.relativeId});
 
   @override
   ConsumerState<EditRelativeScreen> createState() => _EditRelativeScreenState();
@@ -37,6 +34,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
 
   RelationshipType _selectedRelationship = RelationshipType.brother;
   Gender? _selectedGender;
+  AvatarType? _selectedAvatar;
   XFile? _selectedImage;
   bool _isLoading = false;
   bool _isFavorite = false;
@@ -65,6 +63,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
         _notesController.text = relative.notes ?? '';
         _selectedRelationship = relative.relationshipType;
         _selectedGender = relative.gender;
+        _selectedAvatar = relative.avatarType;
         _priority = relative.priority;
         _isFavorite = relative.isFavorite;
       });
@@ -125,40 +124,44 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
       // Upload photo if selected
       String? photoUrl = _relative!.photoUrl;
       if (_selectedImage != null) {
-        photoUrl = await _cloudinaryService.uploadProfilePicture(_selectedImage!);
+        photoUrl = await _cloudinaryService.uploadProfilePicture(
+          _selectedImage!,
+        );
       }
 
-      // Auto-suggest avatar based on relationship
-      final avatarType = AvatarType.suggestFromRelationship(_selectedRelationship, _selectedGender);
+      // Use selected avatar or auto-suggest based on relationship
+      final avatarType =
+          _selectedAvatar ??
+          AvatarType.suggestFromRelationship(
+            _selectedRelationship,
+            _selectedGender,
+          );
 
       // Update relative
-      await _relativesService.updateRelative(
-        widget.relativeId,
-        {
-          'fullName': _nameController.text.trim(),
-          'relationshipType': _selectedRelationship.value,
-          'gender': _selectedGender?.value,
-          'avatarType': avatarType.value,
-          'phoneNumber': _phoneController.text.trim().isEmpty
-              ? null
-              : _phoneController.text.trim(),
-          'email': _emailController.text.trim().isEmpty
-              ? null
-              : _emailController.text.trim(),
-          'address': _addressController.text.trim().isEmpty
-              ? null
-              : _addressController.text.trim(),
-          'city': _cityController.text.trim().isEmpty
-              ? null
-              : _cityController.text.trim(),
-          'notes': _notesController.text.trim().isEmpty
-              ? null
-              : _notesController.text.trim(),
-          if (photoUrl != null) 'photoUrl': photoUrl,
-          'priority': _priority,
-          'isFavorite': _isFavorite,
-        },
-      );
+      await _relativesService.updateRelative(widget.relativeId, {
+        'full_name': _nameController.text.trim(),
+        'relationship_type': _selectedRelationship.value,
+        'gender': _selectedGender?.value,
+        'avatar_type': avatarType.value,
+        'phone_number': _phoneController.text.trim().isEmpty
+            ? null
+            : _phoneController.text.trim(),
+        'email': _emailController.text.trim().isEmpty
+            ? null
+            : _emailController.text.trim(),
+        'address': _addressController.text.trim().isEmpty
+            ? null
+            : _addressController.text.trim(),
+        'city': _cityController.text.trim().isEmpty
+            ? null
+            : _cityController.text.trim(),
+        'notes': _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
+        if (photoUrl != null) 'photo_url': photoUrl,
+        'priority': _priority,
+        'is_favorite': _isFavorite,
+      });
 
       if (!mounted) return;
 
@@ -182,9 +185,9 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('خطأ: $e')));
     }
   }
 
@@ -217,8 +220,10 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
                   child: Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_forward_rounded,
-                            color: Colors.white),
+                        icon: const Icon(
+                          Icons.arrow_forward_rounded,
+                          color: Colors.white,
+                        ),
                         onPressed: () => context.pop(),
                       ),
                       const Spacer(),
@@ -244,6 +249,10 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
                       children: [
                         // Profile photo
                         _buildProfilePhoto(),
+                        const SizedBox(height: AppSpacing.lg),
+
+                        // Avatar picker
+                        _buildAvatarPicker(),
                         const SizedBox(height: AppSpacing.lg),
 
                         // Name field
@@ -432,7 +441,9 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                 borderSide: const BorderSide(
-                    color: AppColors.islamicGreenPrimary, width: 2),
+                  color: AppColors.islamicGreenPrimary,
+                  width: 2,
+                ),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
@@ -453,8 +464,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.family_restroom,
-                  color: Colors.white.withOpacity(0.7)),
+              Icon(Icons.family_restroom, color: Colors.white.withOpacity(0.7)),
               const SizedBox(width: AppSpacing.sm),
               Text(
                 'صلة القرابة',
@@ -476,7 +486,9 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                 borderSide: const BorderSide(
-                    color: AppColors.islamicGreenPrimary, width: 2),
+                  color: AppColors.islamicGreenPrimary,
+                  width: 2,
+                ),
               ),
             ),
             items: RelationshipType.values.map((type) {
@@ -504,8 +516,11 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
   }
 
   Widget _buildPriorityPicker() {
-    String priorityLabel =
-        _priority == 1 ? 'عالية 🔥' : _priority == 2 ? 'متوسطة ⭐' : 'منخفضة 📌';
+    String priorityLabel = _priority == 1
+        ? 'عالية 🔥'
+        : _priority == 2
+        ? 'متوسطة ⭐'
+        : 'منخفضة 📌';
 
     return GlassCard(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -514,8 +529,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.priority_high,
-                  color: AppColors.premiumGold),
+              const Icon(Icons.priority_high, color: AppColors.premiumGold),
               const SizedBox(width: AppSpacing.sm),
               Text(
                 'الأولوية',
@@ -534,9 +548,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
-              Expanded(
-                child: _buildPriorityButton(1, 'عالية 🔥', Colors.red),
-              ),
+              Expanded(child: _buildPriorityButton(1, 'عالية 🔥', Colors.red)),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: _buildPriorityButton(2, 'متوسطة ⭐', Colors.orange),
@@ -560,7 +572,9 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.3) : Colors.white.withOpacity(0.1),
+          color: isSelected
+              ? color.withOpacity(0.3)
+              : Colors.white.withOpacity(0.1),
           border: Border.all(
             color: isSelected ? color : Colors.white.withOpacity(0.3),
             width: isSelected ? 2 : 1,
@@ -599,6 +613,163 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
             value: _isFavorite,
             onChanged: (value) => setState(() => _isFavorite = value),
             activeColor: AppColors.islamicGreenPrimary,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatarPicker() {
+    // Get auto-suggested avatar
+    final suggestedAvatar = AvatarType.suggestFromRelationship(
+      _selectedRelationship,
+      _selectedGender,
+    );
+
+    return GlassCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.face_rounded, color: Colors.white.withOpacity(0.7)),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'اختر الأفاتار',
+                      style: AppTypography.titleMedium.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      'اختياري - سيتم اقتراح أفاتار تلقائياً',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: Colors.white.withOpacity(0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // Use a more flexible layout to prevent overflow
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // Calculate optimal crossAxisCount based on available width
+              int crossAxisCount = (constraints.maxWidth / 60).floor();
+              crossAxisCount = crossAxisCount.clamp(
+                3,
+                8,
+              ); // Between 3 and 8 items per row
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: AppSpacing.xs,
+                  mainAxisSpacing: AppSpacing.xs,
+                  childAspectRatio: 1,
+                ),
+                itemCount: AvatarType.values.length,
+                itemBuilder: (context, index) {
+                  final avatar = AvatarType.values[index];
+                  final isSelected = _selectedAvatar == avatar;
+                  final isSuggested =
+                      avatar == suggestedAvatar && _selectedAvatar == null;
+
+                  return GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      setState(() {
+                        // Toggle: if already selected, deselect to use auto-suggest
+                        _selectedAvatar = isSelected ? null : avatar;
+                      });
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: isSelected || isSuggested
+                            ? AppColors.primaryGradient
+                            : null,
+                        color: isSelected || isSuggested
+                            ? null
+                            : Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
+                        border: Border.all(
+                          color: isSuggested && !isSelected
+                              ? AppColors.premiumGold
+                              : Colors.white.withOpacity(
+                                  isSelected ? 0.6 : 0.2,
+                                ),
+                          width: isSuggested && !isSelected ? 2 : 1,
+                        ),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.islamicGreenPrimary
+                                      .withOpacity(0.4),
+                                  blurRadius: 8,
+                                  spreadRadius: 1,
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            avatar.emoji,
+                            style: const TextStyle(
+                              fontSize: 24,
+                            ), // Slightly smaller to fit better
+                          ),
+                          if (isSuggested && !isSelected)
+                            Container(
+                              margin: const EdgeInsets.only(top: 1),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 3,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.premiumGold,
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                              child: Text(
+                                'مقترح',
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: Colors.white,
+                                  fontSize: 7,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            _selectedAvatar != null
+                ? 'الأفاتار المختار: ${_selectedAvatar!.arabicName}'
+                : 'الأفاتار المقترح: ${suggestedAvatar.arabicName}',
+            style: AppTypography.labelSmall.copyWith(
+              color: Colors.white.withOpacity(0.8),
+              fontStyle: FontStyle.italic,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2, // Allow text to wrap if needed
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

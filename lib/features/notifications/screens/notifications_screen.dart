@@ -34,11 +34,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
 
-    return Scaffold(
-      backgroundColor: themeColors.background1,
-      body: GradientBackground(
-        animated: true,
-        child: SafeArea(
+    return GradientBackground(
+      animated: true,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        extendBody: true,
+        body: SafeArea(
           child: Column(
             children: [
               _buildHeader(),
@@ -90,20 +91,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       onChanged: (value) {
                         HapticFeedback.selectionClick();
                         setState(() => _weeklyRemindersEnabled = value);
-                      },
-                      themeColors: themeColors,
-                      enabled: _remindersEnabled,
-                    ),
-
-                    const SizedBox(height: AppSpacing.sm),
-
-                    _buildSwitchTile(
-                      title: 'تذكيرات أعياد الميلاد',
-                      subtitle: 'تذكير بأعياد ميلاد الأقارب',
-                      value: _birthdayRemindersEnabled,
-                      onChanged: (value) {
-                        HapticFeedback.selectionClick();
-                        setState(() => _birthdayRemindersEnabled = value);
                       },
                       themeColors: themeColors,
                       enabled: _remindersEnabled,
@@ -180,8 +167,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                           ),
                           const SizedBox(height: AppSpacing.md),
                           Text(
-                            _notificationService.fcmToken ??
-                                'لم يتم الحصول على المعرّف',
+                            _notificationService.fcmToken != null
+                                ? 'تم الحصول على المعرّف'
+                                : 'لم يتم الحصول على المعرّف',
                             style: AppTypography.bodySmall.copyWith(
                               color: Colors.white.withOpacity(0.7),
                             ),

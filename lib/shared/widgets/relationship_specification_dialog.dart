@@ -267,23 +267,21 @@ class _RelationshipSpecificationDialogState
             ),
             const SizedBox(height: AppSpacing.xs),
             TextField(
-              style: const TextStyle(color: Colors.white),
+              style: AppTypography.bodyMedium.copyWith(color: Colors.white),
               decoration: InputDecoration(
                 hintText: 'مثال: صديق، جار، زميل عمل...',
-                hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+                hintStyle: AppTypography.bodyMedium.copyWith(
+                  color: Colors.white.withOpacity(0.6),
+                ),
                 filled: true,
-                fillColor: themeColors.background2.withOpacity(0.3),
+                fillColor: Colors.white.withOpacity(0.1),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  borderSide: BorderSide(
-                    color: themeColors.primary.withOpacity(0.3),
-                  ),
+                  borderSide: BorderSide.none,
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  borderSide: BorderSide(
-                    color: themeColors.primary.withOpacity(0.3),
-                  ),
+                  borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
@@ -308,21 +306,31 @@ class _RelationshipSpecificationDialogState
       runSpacing: AppSpacing.xs,
       children: RelationshipType.values.map((type) {
         final isSelected = type == currentType;
-        return FilterChip(
-          label: Text(
+        return Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.xs,
+          ),
+          decoration: BoxDecoration(
+            gradient: isSelected ? themeColors.primaryGradient : null,
+            color: isSelected ? null : Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            border: Border.all(
+              color: isSelected
+                  ? Colors.transparent
+                  : Colors.white.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Text(
             type == RelationshipType.other
                 ? 'أخرى'
                 : _getRelationshipArabicName(type),
             style: AppTypography.bodySmall.copyWith(
-              color: isSelected ? Colors.black : Colors.white,
+              color: isSelected ? Colors.white : Colors.white.withOpacity(0.8),
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
           ),
-          selected: isSelected,
-          backgroundColor: themeColors.background2.withOpacity(0.3),
-          selectedColor: themeColors.primary,
-          onSelected: (selected) {
-            if (selected) _updateRelationship(index, type);
-          },
         );
       }).toList(),
     );
@@ -336,40 +344,84 @@ class _RelationshipSpecificationDialogState
     return Row(
       children: [
         Expanded(
-          child: FilterChip(
-            label: Text(
-              'ذكر',
-              style: AppTypography.bodySmall.copyWith(
+          child: GestureDetector(
+            onTap: () => _updateGender(
+              index,
+              currentGender == Gender.male ? null : Gender.male,
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                gradient: currentGender == Gender.male
+                    ? themeColors.primaryGradient
+                    : null,
                 color: currentGender == Gender.male
-                    ? Colors.black
-                    : Colors.white,
+                    ? null
+                    : Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                border: Border.all(
+                  color: currentGender == Gender.male
+                      ? Colors.transparent
+                      : Colors.white.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                'ذكر',
+                style: AppTypography.bodySmall.copyWith(
+                  color: currentGender == Gender.male
+                      ? Colors.white
+                      : Colors.white.withOpacity(0.8),
+                  fontWeight: currentGender == Gender.male
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                ),
               ),
             ),
-            selected: currentGender == Gender.male,
-            backgroundColor: themeColors.background2.withOpacity(0.3),
-            selectedColor: themeColors.primary,
-            onSelected: (selected) {
-              _updateGender(index, selected ? Gender.male : null);
-            },
           ),
         ),
         const SizedBox(width: AppSpacing.xs),
         Expanded(
-          child: FilterChip(
-            label: Text(
-              'أنثى',
-              style: AppTypography.bodySmall.copyWith(
+          child: GestureDetector(
+            onTap: () => _updateGender(
+              index,
+              currentGender == Gender.female ? null : Gender.female,
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                gradient: currentGender == Gender.female
+                    ? themeColors.primaryGradient
+                    : null,
                 color: currentGender == Gender.female
-                    ? Colors.black
-                    : Colors.white,
+                    ? null
+                    : Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                border: Border.all(
+                  color: currentGender == Gender.female
+                      ? Colors.transparent
+                      : Colors.white.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                'أنثى',
+                style: AppTypography.bodySmall.copyWith(
+                  color: currentGender == Gender.female
+                      ? Colors.white
+                      : Colors.white.withOpacity(0.8),
+                  fontWeight: currentGender == Gender.female
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                ),
               ),
             ),
-            selected: currentGender == Gender.female,
-            backgroundColor: themeColors.background2.withOpacity(0.3),
-            selectedColor: themeColors.primary,
-            onSelected: (selected) {
-              _updateGender(index, selected ? Gender.female : null);
-            },
           ),
         ),
       ],
@@ -390,12 +442,26 @@ class _RelationshipSpecificationDialogState
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           // Cancel button
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'إلغاء',
-              style: AppTypography.labelLarge.copyWith(
-                color: Colors.white.withOpacity(0.8),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: Text(
+                'إلغاء',
+                style: AppTypography.labelLarge.copyWith(
+                  color: Colors.white.withOpacity(0.8),
+                ),
               ),
             ),
           ),

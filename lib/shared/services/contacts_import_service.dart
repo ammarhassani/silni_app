@@ -115,8 +115,7 @@ class ContactsImportService {
       return RelationshipType.sister;
     }
 
-    if (lowerName.contains('عم') ||
-        lowerName.contains('uncle')) {
+    if (lowerName.contains('عم') || lowerName.contains('uncle')) {
       return RelationshipType.uncle;
     }
 
@@ -126,8 +125,7 @@ class ContactsImportService {
       return RelationshipType.aunt;
     }
 
-    if (lowerName.contains('ابن') ||
-        lowerName.contains('son')) {
+    if (lowerName.contains('ابن') || lowerName.contains('son')) {
       return RelationshipType.son;
     }
 
@@ -137,13 +135,11 @@ class ContactsImportService {
       return RelationshipType.daughter;
     }
 
-    if (lowerName.contains('زوج') ||
-        lowerName.contains('husband')) {
+    if (lowerName.contains('زوج') || lowerName.contains('husband')) {
       return RelationshipType.husband;
     }
 
-    if (lowerName.contains('زوجة') ||
-        lowerName.contains('wife')) {
+    if (lowerName.contains('زوجة') || lowerName.contains('wife')) {
       return RelationshipType.wife;
     }
 
@@ -213,15 +209,15 @@ class ContactsImportService {
     }
 
     return {
-      'userId': userId,
-      'fullName': name,
-      'relationshipType': relationship,
+      'user_id': userId,
+      'full_name': name,
+      'relationship_type': relationship,
       'gender': gender,
-      'phoneNumber': phoneNumber,
+      'phone_number': phoneNumber,
       'email': email,
       'priority': priority,
       'contactId': contact.id, // Store original contact ID
-      'avatarType': AvatarType.suggestFromRelationship(relationship, gender),
+      'avatar_type': AvatarType.suggestFromRelationship(relationship, gender),
     };
   }
 
@@ -236,14 +232,13 @@ class ContactsImportService {
       }
 
       final suggestions = contacts.map((contact) {
-        return createSuggestedRelative(
-          userId: userId,
-          contact: contact,
-        );
+        return createSuggestedRelative(userId: userId, contact: contact);
       }).toList();
 
       if (kDebugMode) {
-        print('✅ [CONTACTS] Created ${suggestions.length} relative suggestions');
+        print(
+          '✅ [CONTACTS] Created ${suggestions.length} relative suggestions',
+        );
       }
 
       return suggestions;
@@ -267,7 +262,9 @@ class ContactsImportService {
       }).toList();
 
       if (kDebugMode) {
-        print('👨‍👩‍👧‍👦 [CONTACTS] Found ${familyContacts.length} potential family members');
+        print(
+          '👨‍👩‍👧‍👦 [CONTACTS] Found ${familyContacts.length} potential family members',
+        );
       }
 
       return familyContacts;
