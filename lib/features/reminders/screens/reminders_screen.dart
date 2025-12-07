@@ -767,8 +767,9 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = ref.watch(themeColorsProvider);
     return AlertDialog(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: themeColors.background1.withOpacity(0.95),
       title: Text(
         'إنشاء ${widget.template.title}',
         style: AppTypography.headlineMedium.copyWith(color: Colors.white),
@@ -1012,7 +1013,7 @@ class _AddRelativesDialogState extends ConsumerState<_AddRelativesDialog> {
     final themeColors = ref.watch(themeColorsProvider);
 
     return AlertDialog(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: themeColors.background1.withOpacity(0.95),
       title: Text(
         'إضافة أقارب للتذكير',
         style: AppTypography.headlineMedium.copyWith(color: Colors.white),
@@ -1213,8 +1214,9 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = ref.watch(themeColorsProvider);
     return AlertDialog(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: themeColors.background1.withOpacity(0.95),
       title: Text(
         'تعديل التذكير',
         style: AppTypography.headlineMedium.copyWith(color: Colors.white),

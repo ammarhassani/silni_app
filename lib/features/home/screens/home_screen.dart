@@ -346,9 +346,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           true, // Extend body behind bottom nav for glassmorphism effect
       body: Stack(
         children: [
-          // Animated background
-          const GradientBackground(animated: true, child: SizedBox.expand()),
-
           // Confetti overlay
           Align(
             alignment: Alignment.topCenter,

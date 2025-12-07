@@ -16,7 +16,8 @@ class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
 
   @override
-  ConsumerState<NotificationsScreen> createState() => _NotificationsScreenState();
+  ConsumerState<NotificationsScreen> createState() =>
+      _NotificationsScreenState();
 }
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
@@ -34,6 +35,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final themeColors = ref.watch(themeColorsProvider);
 
     return Scaffold(
+      backgroundColor: themeColors.background1,
       body: GradientBackground(
         animated: true,
         child: SafeArea(
@@ -162,7 +164,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.info_outline, color: themeColors.accent),
+                              Icon(
+                                Icons.info_outline,
+                                color: themeColors.accent,
+                              ),
                               const SizedBox(width: AppSpacing.sm),
                               Text(
                                 'معرّف الإشعارات',
@@ -175,7 +180,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                           ),
                           const SizedBox(height: AppSpacing.md),
                           Text(
-                            _notificationService.fcmToken ?? 'لم يتم الحصول على المعرّف',
+                            _notificationService.fcmToken ??
+                                'لم يتم الحصول على المعرّف',
                             style: AppTypography.bodySmall.copyWith(
                               color: Colors.white.withOpacity(0.7),
                             ),
@@ -189,7 +195,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     // Test Notification Button
                     GlassCard(
                       child: ListTile(
-                        leading: Icon(Icons.send_rounded, color: themeColors.accent),
+                        leading: Icon(
+                          Icons.send_rounded,
+                          color: themeColors.accent,
+                        ),
                         title: Text(
                           'إرسال إشعار تجريبي',
                           style: AppTypography.titleMedium.copyWith(
@@ -278,7 +287,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 Text(
                   title,
                   style: AppTypography.titleMedium.copyWith(
-                    color: enabled ? Colors.white : Colors.white.withOpacity(0.5),
+                    color: enabled
+                        ? Colors.white
+                        : Colors.white.withOpacity(0.5),
                     fontWeight: FontWeight.bold,
                   ),
                 ),

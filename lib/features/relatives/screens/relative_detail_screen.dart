@@ -920,7 +920,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.black87,
+        backgroundColor: themeColors.background1.withOpacity(0.95),
         title: Row(
           children: [
             const Icon(Icons.warning_rounded, color: Colors.red),

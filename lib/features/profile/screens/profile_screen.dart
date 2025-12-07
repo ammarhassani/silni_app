@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
@@ -17,6 +18,7 @@ import '../../../shared/widgets/gamification_stats_card.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../../shared/services/relatives_service.dart';
+import '../../../shared/services/cloudinary_service.dart';
 import '../../../shared/providers/interactions_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 
@@ -37,6 +39,9 @@ final userInteractionsProvider =
       return service.getInteractionsStream(userId);
     });
 
+// Provider for CloudinaryService
+final cloudinaryServiceProvider = Provider((ref) => CloudinaryService());
+
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
@@ -47,6 +52,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _nameController = TextEditingController();
   bool _isEditingName = false;
+  bool _isUploadingPicture = false;
 
   @override
   void dispose() {
@@ -252,9 +258,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: GestureDetector(
                       onTap: () {
                         HapticFeedback.mediumImpact();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('تغيير الصورة قريباً')),
-                        );
+                        _showImageSourceDialog();
                       },
                       child: Container(
                         width: 40,
@@ -264,11 +268,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           gradient: themeColors.primaryGradient,
                           border: Border.all(color: Colors.white, width: 2),
                         ),
-                        child: const Icon(
-                          Icons.camera_alt,
-                          color: Colors.white,
-                          size: 20,
-                        ),
+                        child: _isUploadingPicture
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Icon(
+                                Icons.camera_alt,
+                                color: Colors.white,
+                                size: 20,
+                              ),
                       ),
                     ),
                   ),
@@ -638,6 +653,118 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       ],
     );
+  }
+
+  /// Show image source selection dialog
+  void _showImageSourceDialog() {
+    final themeColors = ref.read(themeColorsProvider);
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: themeColors.background1.withOpacity(0.95),
+          title: Text(
+            'اختر مصدر الصورة',
+            style: AppTypography.headlineSmall.copyWith(color: Colors.white),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.photo_library, color: themeColors.primary),
+                title: Text(
+                  'المعرض',
+                  style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImageFromSource(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.camera_alt, color: themeColors.primary),
+                title: Text(
+                  'الكاميرا',
+                  style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImageFromSource(ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'إلغاء',
+                style: AppTypography.buttonMedium.copyWith(
+                  color: themeColors.primary,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Pick image from gallery or camera
+  Future<void> _pickImageFromSource(ImageSource source) async {
+    try {
+      final cloudinaryService = ref.read(cloudinaryServiceProvider);
+      final XFile? image = await cloudinaryService.pickImage(source: source);
+
+      if (image != null) {
+        setState(() => _isUploadingPicture = true);
+
+        try {
+          // Upload to Cloudinary
+          final imageUrl = await cloudinaryService.uploadProfilePicture(image);
+
+          // Update user profile in Supabase
+          final user = SupabaseConfig.client.auth.currentUser;
+          if (user != null) {
+            await SupabaseConfig.client
+                .from('users')
+                .update({'profile_picture_url': imageUrl})
+                .eq('id', user.id);
+          }
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('تم تحديث الصورة الشخصية بنجاح! ✅'),
+                backgroundColor: AppColors.success,
+              ),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('فشل تحديث الصورة: $e'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+        } finally {
+          if (mounted) {
+            setState(() => _isUploadingPicture = false);
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('فشل اختيار الصورة: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _saveName() async {

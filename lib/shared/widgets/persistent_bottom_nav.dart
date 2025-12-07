@@ -13,7 +13,10 @@ import '../utils/ui_helpers.dart';
 // Provider to persist the current navigation selection
 final navigationIndexProvider = StateProvider<int>((ref) => 0);
 
-/// Simple persistent bottom navigation bar
+// Provider to control bottom navigation visibility
+final bottomNavVisibilityProvider = StateProvider<bool>((ref) => true);
+
+/// Simple persistent bottom navigation bar with auto-hide functionality
 class PersistentBottomNav extends ConsumerStatefulWidget {
   const PersistentBottomNav({super.key, required this.onNavTapped});
 
@@ -24,15 +27,76 @@ class PersistentBottomNav extends ConsumerStatefulWidget {
       _PersistentBottomNavState();
 }
 
-class _PersistentBottomNavState extends ConsumerState<PersistentBottomNav> {
+class _PersistentBottomNavState extends ConsumerState<PersistentBottomNav>
+    with TickerProviderStateMixin {
+  late AnimationController _hideController;
+  late Animation<double> _hideAnimation;
+  bool _isScrollingDown = false;
+  double _lastScrollOffset = 0.0;
+
   @override
   void initState() {
     super.initState();
+
+    // Initialize animation controller for hide/show behavior
+    _hideController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _hideAnimation = CurvedAnimation(
+      parent: _hideController,
+      curve: Curves.easeInOutCubic,
+    );
+
+    // Show navigation initially
+    _hideController.forward();
+
     // Initialize the navigation index based on current route
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final initialIndex = _getCurrentIndex(context);
       ref.read(navigationIndexProvider.notifier).state = initialIndex;
     });
+  }
+
+  @override
+  void dispose() {
+    _hideController.dispose();
+    super.dispose();
+  }
+
+  /// Handle scroll events to show/hide navigation
+  void handleScrollUpdate(ScrollNotification scrollNotification) {
+    if (scrollNotification is ScrollUpdateNotification) {
+      final currentScrollOffset = scrollNotification.metrics.pixels;
+
+      // Only hide/show if user is actually scrolling (not just bounce effects)
+      if (scrollNotification.metrics.axis == Axis.vertical) {
+        if (currentScrollOffset > _lastScrollOffset) {
+          // Scrolling down
+          if (!_isScrollingDown && currentScrollOffset > 50) {
+            _isScrollingDown = true;
+            _hideNavigation();
+          }
+        } else {
+          // Scrolling up
+          if (_isScrollingDown) {
+            _isScrollingDown = false;
+            _showNavigation();
+          }
+        }
+        _lastScrollOffset = currentScrollOffset;
+      }
+    }
+  }
+
+  void _hideNavigation() {
+    ref.read(bottomNavVisibilityProvider.notifier).state = false;
+    _hideController.reverse();
+  }
+
+  void _showNavigation() {
+    ref.read(bottomNavVisibilityProvider.notifier).state = true;
+    _hideController.forward();
   }
 
   @override
@@ -121,114 +185,127 @@ class _PersistentBottomNavState extends ConsumerState<PersistentBottomNav> {
       ),
     ];
 
-    return Container(
-      height: 75,
-      margin: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            UIHelpers.withOpacity(Colors.black, 0.15),
-            UIHelpers.withOpacity(Colors.black, 0.25),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(
-          color: UIHelpers.withOpacity(Colors.white, 0.4),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: UIHelpers.withOpacity(themeColors.primary, 0.5),
-            blurRadius: 50,
-            spreadRadius: -5,
-          ),
-          BoxShadow(
-            color: UIHelpers.withOpacity(AppColors.premiumGold, 0.4),
-            blurRadius: 40,
-            spreadRadius: -10,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(30),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(items.length, (index) {
-              final isSelected = index == currentIndex;
-              final item = items[index];
+    return AnimatedBuilder(
+      animation: _hideAnimation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, (1 - _hideAnimation.value) * 100),
+          child: Opacity(
+            opacity: _hideAnimation.value,
+            child: Container(
+              height: 75,
+              margin: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(
+                  0.1,
+                ), // Semi-transparent background
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: themeColors.primary.withOpacity(0.3),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: UIHelpers.withOpacity(themeColors.primary, 0.5),
+                    blurRadius: 50,
+                    spreadRadius: -5,
+                  ),
+                  BoxShadow(
+                    color: UIHelpers.withOpacity(AppColors.premiumGold, 0.4),
+                    blurRadius: 40,
+                    spreadRadius: -10,
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(30),
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: List.generate(items.length, (index) {
+                      final isSelected = index == currentIndex;
+                      final item = items[index];
 
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    // Update the persisted navigation index
-                    ref.read(navigationIndexProvider.notifier).state = index;
-                    widget.onNavTapped(item.route);
-                  },
-                  behavior: HitTestBehavior.opaque,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOutCubic,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        AnimatedScale(
-                          scale: isSelected ? 1.2 : 1.0,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeOutCubic,
-                          child: Icon(
-                            item.icon,
-                            color: isSelected
-                                ? Colors.white
-                                : UIHelpers.withOpacity(Colors.white, 0.5),
-                            size: 26,
-                            shadows: isSelected
-                                ? [
-                                    Shadow(
-                                      color: themeColors.primary,
-                                      blurRadius: 20,
-                                    ),
-                                  ]
-                                : null,
+                      return Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            // Update the persisted navigation index
+                            ref.read(navigationIndexProvider.notifier).state =
+                                index;
+                            widget.onNavTapped(item.route);
+                          },
+                          behavior: HitTestBehavior.opaque,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeOutCubic,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                AnimatedScale(
+                                  scale: isSelected ? 1.2 : 1.0,
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeOutCubic,
+                                  child: Icon(
+                                    item.icon,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : UIHelpers.withOpacity(
+                                            Colors.white,
+                                            0.5,
+                                          ),
+                                    size: 26,
+                                    shadows: isSelected
+                                        ? [
+                                            Shadow(
+                                              color: themeColors.primary,
+                                              blurRadius: 20,
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                AnimatedDefaultTextStyle(
+                                  duration: const Duration(milliseconds: 300),
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : UIHelpers.withOpacity(
+                                            Colors.white,
+                                            0.5,
+                                          ),
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    shadows: isSelected
+                                        ? [
+                                            Shadow(
+                                              color: themeColors.primary,
+                                              blurRadius: 10,
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  child: Text(
+                                    item.label,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        AnimatedDefaultTextStyle(
-                          duration: const Duration(milliseconds: 300),
-                          style: AppTypography.labelSmall.copyWith(
-                            color: isSelected
-                                ? Colors.white
-                                : UIHelpers.withOpacity(Colors.white, 0.5),
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            shadows: isSelected
-                                ? [
-                                    Shadow(
-                                      color: themeColors.primary,
-                                      blurRadius: 10,
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                          child: Text(
-                            item.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
+                      );
+                    }),
                   ),
                 ),
-              );
-            }),
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

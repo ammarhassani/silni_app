@@ -19,156 +19,155 @@ class SettingsScreen extends ConsumerWidget {
     final currentTheme = ref.watch(themeProvider);
 
     return Scaffold(
-      body: GradientBackground(
-        animated: true,
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Row(
-                  children: [
-                    const SizedBox(width: AppSpacing.sm),
-                    Text(
-                      'الإعدادات',
-                      style: AppTypography.headlineMedium.copyWith(
-                        color: Colors.white,
-                      ),
+      backgroundColor: Colors.transparent,
+      extendBody: true,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Row(
+                children: [
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    'الإعدادات',
+                    style: AppTypography.headlineMedium.copyWith(
+                      color: Colors.white,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+            ),
 
-              // Settings list
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  children: [
-                    // Theme Selector
-                    GlassCard(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.palette,
-                                color: AppColors.premiumGold,
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              Text(
-                                'المظهر',
-                                style: AppTypography.titleLarge.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Text(
-                            'اختر المظهر المفضل لديك',
-                            style: AppTypography.bodyMedium.copyWith(
-                              color: Colors.white70,
+            // Settings list
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                children: [
+                  // Theme Selector
+                  GlassCard(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.palette,
+                              color: AppColors.premiumGold,
                             ),
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
-
-                          // Theme Grid
-                          GridView.count(
-                            crossAxisCount: 3,
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            crossAxisSpacing: AppSpacing.sm,
-                            mainAxisSpacing: AppSpacing.sm,
-                            children: AppThemeType.values.map((theme) {
-                              return _buildThemeCard(
-                                context,
-                                ref,
-                                theme,
-                                currentTheme == theme,
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.sm),
-
-                    // Profile
-                    GlassCard(
-                      child: ListTile(
-                        leading: const Icon(Icons.person, color: Colors.white),
-                        title: Text(
-                          'الملف الشخصي',
-                          style: AppTypography.titleMedium.copyWith(
-                            color: Colors.white,
+                            const SizedBox(width: AppSpacing.sm),
+                            Text(
+                              'المظهر',
+                              style: AppTypography.titleLarge.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          'اختر المظهر المفضل لديك',
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: Colors.white70,
                           ),
                         ),
-                        trailing: Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          color: Colors.white.withOpacity(0.5),
-                          size: 20,
-                        ),
-                        onTap: () {
-                          context.push(AppRoutes.profile);
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
+                        const SizedBox(height: AppSpacing.lg),
 
-                    // Notifications
-                    GlassCard(
-                      child: ListTile(
-                        leading: const Icon(
-                          Icons.notifications,
+                        // Theme Grid
+                        GridView.count(
+                          crossAxisCount: 3,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisSpacing: AppSpacing.sm,
+                          mainAxisSpacing: AppSpacing.sm,
+                          children: AppThemeType.values.map((theme) {
+                            return _buildThemeCard(
+                              context,
+                              ref,
+                              theme,
+                              currentTheme == theme,
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: AppSpacing.sm),
+
+                  // Profile
+                  GlassCard(
+                    child: ListTile(
+                      leading: const Icon(Icons.person, color: Colors.white),
+                      title: Text(
+                        'الملف الشخصي',
+                        style: AppTypography.titleMedium.copyWith(
                           color: Colors.white,
                         ),
-                        title: Text(
-                          'الإشعارات',
-                          style: AppTypography.titleMedium.copyWith(
-                            color: Colors.white,
-                          ),
-                        ),
-                        trailing: Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          color: Colors.white.withOpacity(0.5),
-                          size: 20,
-                        ),
-                        onTap: () {
-                          context.push(AppRoutes.notifications);
-                        },
                       ),
+                      trailing: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: Colors.white.withOpacity(0.5),
+                        size: 20,
+                      ),
+                      onTap: () {
+                        context.push(AppRoutes.profile);
+                      },
                     ),
-                    const SizedBox(height: AppSpacing.sm),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
 
-                    // Logout
-                    GlassCard(
-                      child: ListTile(
-                        leading: const Icon(Icons.logout, color: Colors.white),
-                        title: Text(
-                          'تسجيل الخروج',
-                          style: AppTypography.titleMedium.copyWith(
-                            color: Colors.white,
-                          ),
-                        ),
-                        onTap: () async {
-                          final authService = ref.read(authServiceProvider);
-                          await authService.signOut();
-                          if (context.mounted) {
-                            context.go(AppRoutes.login);
-                          }
-                        },
+                  // Notifications
+                  GlassCard(
+                    child: ListTile(
+                      leading: const Icon(
+                        Icons.notifications,
+                        color: Colors.white,
                       ),
+                      title: Text(
+                        'الإشعارات',
+                        style: AppTypography.titleMedium.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                      trailing: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: Colors.white.withOpacity(0.5),
+                        size: 20,
+                      ),
+                      onTap: () {
+                        context.push(AppRoutes.notifications);
+                      },
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  // Logout
+                  GlassCard(
+                    child: ListTile(
+                      leading: const Icon(Icons.logout, color: Colors.white),
+                      title: Text(
+                        'تسجيل الخروج',
+                        style: AppTypography.titleMedium.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                      onTap: () async {
+                        final authService = ref.read(authServiceProvider);
+                        await authService.signOut();
+                        if (context.mounted) {
+                          context.go(AppRoutes.login);
+                        }
+                      },
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../shared/widgets/gradient_background.dart';
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
@@ -337,34 +338,70 @@ Page<dynamic> _buildPageWithNavigation(
 }
 
 /// Wrapper widget that combines page content with persistent navigation
-class _NavigationWrapper extends StatelessWidget {
+class _NavigationWrapper extends ConsumerStatefulWidget {
   const _NavigationWrapper({required this.child});
 
   final Widget child;
 
   @override
+  ConsumerState<_NavigationWrapper> createState() => _NavigationWrapperState();
+}
+
+class _NavigationWrapperState extends ConsumerState<_NavigationWrapper> {
+  final GlobalKey _childKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // Main content
-        Positioned.fill(child: child),
-        // Navigation bar at bottom
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: SafeArea(
-            child: Container(
-              decoration: const BoxDecoration(color: Colors.transparent),
-              child: PersistentBottomNav(
-                onNavTapped: (route) {
-                  context.push(route);
-                },
+    final isNavVisible = ref.watch(bottomNavVisibilityProvider);
+
+    return NotificationListener<ScrollNotification>(
+      onNotification: (scrollNotification) {
+        // For now, we'll use a simpler approach with a global key
+        // The auto-hide functionality will be implemented directly in the navigation wrapper
+        return false; // Don't consume notification
+      },
+      child: GradientBackground(
+        animated: true,
+        child: Stack(
+          children: [
+            // Main content with bottom padding to prevent overlap
+            Positioned.fill(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: isNavVisible
+                      ? 95
+                      : 20, // Account for nav bar height + margin
+                ),
+                child: KeyedSubtree(key: _childKey, child: widget.child),
               ),
             ),
-          ),
+
+            // Navigation bar at bottom
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                child: PersistentBottomNav(
+                  onNavTapped: (route) {
+                    context.push(route);
+                  },
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

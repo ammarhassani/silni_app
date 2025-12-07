@@ -80,66 +80,61 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
-      body: GradientBackground(
-        animated: true,
-        child: Stack(
-          children: [
-            // Main content
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.only(
-                  bottom: 120,
-                ), // Space for nav bar
-                child: Column(
-                  children: [
-                    // Header
-                    _buildHeader(context),
+      body: Stack(
+        children: [
+          // Main content
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 120), // Space for nav bar
+              child: Column(
+                children: [
+                  // Header
+                  _buildHeader(context),
 
-                    // Search bar
-                    _buildSearchBar(),
+                  // Search bar
+                  _buildSearchBar(),
 
-                    // Filter chips
-                    _buildFilterChips(),
+                  // Filter chips
+                  _buildFilterChips(),
 
-                    // Relatives list
-                    Expanded(
-                      child: relativesAsync.when(
-                        data: (relatives) {
-                          final filteredRelatives = _filterRelatives(relatives);
+                  // Relatives list
+                  Expanded(
+                    child: relativesAsync.when(
+                      data: (relatives) {
+                        final filteredRelatives = _filterRelatives(relatives);
 
-                          if (relatives.isEmpty) {
-                            return _buildEmptyState(context);
-                          }
+                        if (relatives.isEmpty) {
+                          return _buildEmptyState(context);
+                        }
 
-                          if (filteredRelatives.isEmpty) {
-                            return _buildNoResults();
-                          }
+                        if (filteredRelatives.isEmpty) {
+                          return _buildNoResults();
+                        }
 
-                          return _buildRelativesList(filteredRelatives);
-                        },
-                        loading: () => const Center(
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
+                        return _buildRelativesList(filteredRelatives);
+                      },
+                      loading: () => const Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
                           ),
                         ),
-                        error: (error, stack) =>
-                            _buildErrorState(error.toString()),
                       ),
+                      error: (error, stack) =>
+                          _buildErrorState(error.toString()),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-            // Glassmorphism FAB positioned on left
-            Positioned(
-              bottom: 100, // Above navigation bar
-              left: 20, // Left side instead of right
-              child: _buildGlassmorphismFAB(context),
-            ),
-          ],
-        ),
+          ),
+          // Glassmorphism FAB positioned on left
+          Positioned(
+            bottom: 100, // Above navigation bar
+            left: 20, // Left side instead of right
+            child: _buildGlassmorphismFAB(context),
+          ),
+        ],
       ),
     );
   }

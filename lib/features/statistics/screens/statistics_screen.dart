@@ -58,117 +58,116 @@ class StatisticsScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      body: GradientBackground(
-        animated: true,
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Row(
-                  children: [
-                    const SizedBox(width: AppSpacing.sm),
-                    Text(
-                      'الإحصائيات',
-                      style: AppTypography.headlineMedium.copyWith(
-                        color: Colors.white,
-                      ),
+      backgroundColor: Colors.transparent,
+      extendBody: true,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Row(
+                children: [
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    'الإحصائيات',
+                    style: AppTypography.headlineMedium.copyWith(
+                      color: Colors.white,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+            ),
 
-              // Stats with real data
-              Expanded(
-                child: StreamBuilder<List<Relative>>(
-                  stream: relativesService.getRelativesStream(user.id),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
-                      );
-                    }
-
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Text(
-                          'خطأ: ${snapshot.error}',
-                          style: AppTypography.bodyMedium.copyWith(
-                            color: Colors.white,
-                          ),
-                        ),
-                      );
-                    }
-
-                    final relatives = snapshot.data ?? [];
-                    final totalContacts = relatives.fold<int>(
-                      0,
-                      (sum, r) => sum + r.interactionCount,
+            // Stats with real data
+            Expanded(
+              child: StreamBuilder<List<Relative>>(
+                stream: relativesService.getRelativesStream(user.id),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
                     );
-                    final currentStreak = _calculateCurrentStreak(relatives);
+                  }
 
-                    return SingleChildScrollView(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      child: Column(
-                        children: [
-                          GlassCard(
-                            child: Column(
-                              children: [
-                                Text(
-                                  'إجمالي التواصل',
-                                  style: AppTypography.titleMedium.copyWith(
-                                    color: Colors.white.withOpacity(0.9),
-                                  ),
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                Text(
-                                  totalContacts.toString(),
-                                  style: AppTypography.numberLarge.copyWith(
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ).animate().fadeIn().slideY(begin: 0.3, end: 0),
-                          const SizedBox(height: AppSpacing.md),
-                          GlassCard(
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      'سلسلة التواصل الحالية',
-                                      style: AppTypography.titleMedium.copyWith(
-                                        color: Colors.white.withOpacity(0.9),
-                                      ),
-                                    ),
-                                    const SizedBox(height: AppSpacing.sm),
-                                    Text(
-                                      currentStreak.toString(),
-                                      style: AppTypography.numberLarge.copyWith(
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      currentStreak == 1 ? 'يوم' : 'أيام',
-                                      style: AppTypography.bodyMedium.copyWith(
-                                        color: Colors.white.withOpacity(0.8),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                              .animate(delay: const Duration(milliseconds: 100))
-                              .fadeIn()
-                              .slideY(begin: 0.3, end: 0),
-                        ],
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'خطأ: ${snapshot.error}',
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: Colors.white,
+                        ),
                       ),
                     );
-                  },
-                ),
+                  }
+
+                  final relatives = snapshot.data ?? [];
+                  final totalContacts = relatives.fold<int>(
+                    0,
+                    (sum, r) => sum + r.interactionCount,
+                  );
+                  final currentStreak = _calculateCurrentStreak(relatives);
+
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Column(
+                      children: [
+                        GlassCard(
+                          child: Column(
+                            children: [
+                              Text(
+                                'إجمالي التواصل',
+                                style: AppTypography.titleMedium.copyWith(
+                                  color: Colors.white.withOpacity(0.9),
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              Text(
+                                totalContacts.toString(),
+                                style: AppTypography.numberLarge.copyWith(
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ).animate().fadeIn().slideY(begin: 0.3, end: 0),
+                        const SizedBox(height: AppSpacing.md),
+                        GlassCard(
+                              child: Column(
+                                children: [
+                                  Text(
+                                    'سلسلة التواصل الحالية',
+                                    style: AppTypography.titleMedium.copyWith(
+                                      color: Colors.white.withOpacity(0.9),
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Text(
+                                    currentStreak.toString(),
+                                    style: AppTypography.numberLarge.copyWith(
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    currentStreak == 1 ? 'يوم' : 'أيام',
+                                    style: AppTypography.bodyMedium.copyWith(
+                                      color: Colors.white.withOpacity(0.8),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                            .animate(delay: const Duration(milliseconds: 100))
+                            .fadeIn()
+                            .slideY(begin: 0.3, end: 0),
+                      ],
+                    ),
+                  );
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -73,11 +73,10 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
+      extendBody: true,
       body: Stack(
         children: [
-          // Animated gradient background
-          const GradientBackground(animated: true, child: SizedBox.expand()),
-
           // Confetti for celebrations
           Align(
             alignment: Alignment.topCenter,
