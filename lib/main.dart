@@ -5,9 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-// NOTE: Firebase Analytics removed - was causing issues on iOS without GoogleService-Info.plist
-// import 'package:firebase_analytics/firebase_analytics.dart';
-import 'core/config/firebase_config.dart'; // Still needed for FCM
+// NOTE: Firebase Analytics completely removed - now using Supabase for everything including notifications
 import 'core/config/supabase_config.dart'; // NEW: Supabase configuration
 import 'core/config/app_scroll_behavior.dart'; // Enable mouse drag scrolling for web
 import 'core/theme/app_theme.dart';
@@ -18,8 +16,7 @@ import 'shared/widgets/floating_points_overlay.dart';
 import 'shared/widgets/logger_host.dart'; // In-app logger
 import 'core/services/app_logger_service.dart'; // Logger service
 
-// NOTE: Firebase Analytics instance removed - not needed, was causing iOS issues
-// final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
+// NOTE: Firebase Analytics completely removed - not needed, was causing iOS issues
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -181,27 +178,12 @@ void main() async {
     // Don't rethrow - let app start so we can see logs
   }
 
-  // Initialize Firebase (for FCM notifications only)
+  // NOTE: Firebase completely removed - now using Supabase for everything including notifications
   logger.info(
-    'Starting Firebase initialization...',
+    'Firebase completely removed - using Supabase for all services',
     category: LogCategory.service,
-    tag: 'Firebase',
+    tag: 'Migration',
   );
-  try {
-    await FirebaseConfig.initialize();
-    logger.info(
-      'Firebase initialization completed',
-      category: LogCategory.service,
-      tag: 'Firebase',
-    );
-  } catch (e) {
-    logger.warning(
-      'Firebase initialization failed - FCM notifications may not work',
-      category: LogCategory.service,
-      tag: 'Firebase',
-      metadata: {'error': e.toString()},
-    );
-  }
 
   // Configure global error handlers with device context
   logger.info(

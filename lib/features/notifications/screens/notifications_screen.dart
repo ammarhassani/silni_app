@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,7 +11,7 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
-import '../../../shared/services/notification_service.dart';
+import '../../../shared/services/supabase_notification_service.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -21,7 +22,10 @@ class NotificationsScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
-  final NotificationService _notificationService = NotificationService();
+  final SupabaseNotificationService _notificationService =
+      SupabaseNotificationService();
+  bool _isInitialized = false;
+  String? _initError;
 
   bool _remindersEnabled = true;
   bool _dailyRemindersEnabled = true;
@@ -29,6 +33,40 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   bool _birthdayRemindersEnabled = true;
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeNotificationService();
+  }
+
+  Future<void> _initializeNotificationService() async {
+    try {
+      if (kDebugMode) {
+        print(
+          '🔔 [NOTIFICATIONS_SCREEN] Initializing Supabase notification service...',
+        );
+      }
+      await _notificationService.initialize();
+      setState(() {
+        _isInitialized = true;
+      });
+      if (kDebugMode) {
+        print(
+          '🔔 [NOTIFICATIONS_SCREEN] Notification service initialized successfully',
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _initError = e.toString();
+      });
+      if (kDebugMode) {
+        print(
+          '❌ [NOTIFICATIONS_SCREEN] Error initializing notification service: $e',
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -166,13 +204,30 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                             ],
                           ),
                           const SizedBox(height: AppSpacing.md),
-                          Text(
-                            _notificationService.fcmToken != null
-                                ? 'تم الحصول على المعرّف'
-                                : 'لم يتم الحصول على المعرّف',
-                            style: AppTypography.bodySmall.copyWith(
-                              color: Colors.white.withOpacity(0.7),
-                            ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _isInitialized
+                                    ? (_notificationService.deviceId != null
+                                          ? 'تم الحصول على المعرّف'
+                                          : 'لم يتم الحصول على المعرّف')
+                                    : 'جاري التهيئة...',
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: Colors.white.withOpacity(0.7),
+                                ),
+                              ),
+                              if (_initError != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: Text(
+                                    'خطأ: $_initError',
+                                    style: AppTypography.bodySmall.copyWith(
+                                      color: Colors.red.withOpacity(0.8),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ],
                       ),
@@ -303,7 +358,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     ).animate().fadeIn().slideX(begin: -0.1, end: 0);
   }
 
-  void _sendTestNotification() {
+  void _sendTestNotification() async {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('تم إرسال إشعار تجريبي! 🔔'),
@@ -311,12 +366,35 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       ),
     );
 
-    // TODO: Actually send a test local notification
-    // _notificationService.scheduleReminderNotification(
-    //   id: DateTime.now().millisecondsSinceEpoch,
-    //   title: 'إشعار تجريبي',
-    //   body: 'هذا إشعار تجريبي من تطبيق صلني',
-    //   scheduledTime: DateTime.now().add(const Duration(seconds: 5)),
-    // );
+    // Send a test local notification using Supabase notification service
+    // Use immediate notification instead of scheduled to avoid Android alarm permission issues
+    final testId = DateTime.now().millisecondsSinceEpoch % 2147483647;
+
+    try {
+      _notificationService.scheduleReminderNotification(
+        id: testId,
+        title: 'إشعار تجريبي',
+        body: 'هذا إشعار تجريبي من تطبيق صلني',
+        scheduledTime: DateTime.now().add(const Duration(seconds: 5)),
+      );
+
+      if (kDebugMode) {
+        print(
+          '✅ [NOTIFICATIONS_SCREEN] Test notification scheduled successfully',
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print(
+          '❌ [NOTIFICATIONS_SCREEN] Error scheduling test notification: $e',
+        );
+      }
+
+      // Fallback: show immediate notification
+      await _notificationService.showImmediateNotification(
+        title: 'إشعار تجريبي',
+        body: 'هذا إشعار تجريبي من تطبيق صلني',
+      );
+    }
   }
 }

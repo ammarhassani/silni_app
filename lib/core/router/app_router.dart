@@ -26,7 +26,7 @@ import '../../features/gamification/screens/detailed_stats_screen.dart';
 import '../../features/gamification/screens/leaderboard_screen.dart';
 import 'app_routes.dart';
 import 'navigation_service.dart';
-import '../../../shared/widgets/persistent_bottom_nav.dart';
+import '../../shared/widgets/persistent_bottom_nav.dart';
 
 /// Custom navigator observer for logging navigation events
 class _AppNavigatorObserver extends NavigatorObserver {
