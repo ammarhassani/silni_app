@@ -42,8 +42,12 @@ dependencies:
   # Supabase (NEW - replaces Firebase Auth & Firestore)
   supabase_flutter: ^2.9.0
 
-  # Local notifications (replaces Firebase Cloud Messaging)
+  # Local notifications (keep existing)
   flutter_local_notifications: ^18.0.1
+
+  # Firebase Cloud Messaging (NEW - for push notifications)
+  firebase_core: ^3.10.0
+  firebase_messaging: ^15.1.5
 
   # Monitoring & Analytics
   sentry_flutter: ^9.8.0

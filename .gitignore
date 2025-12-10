@@ -52,6 +52,7 @@ app.*.map.json
 google-services.json
 GoogleService-Info.plist
 firebase_options.dart
+*firebase-adminsdk*.json
 
 # Android signing keys (CRITICAL - contains release signing credentials!)
 /android/key.properties

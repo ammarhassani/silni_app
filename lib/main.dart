@@ -5,8 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-// NOTE: Firebase Analytics completely removed - now using Supabase for everything including notifications
-import 'core/config/supabase_config.dart'; // NEW: Supabase configuration
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'core/config/supabase_config.dart';
 import 'core/config/app_scroll_behavior.dart'; // Enable mouse drag scrolling for web
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
@@ -15,8 +16,17 @@ import 'features/auth/providers/auth_provider.dart'; // Auth providers
 import 'shared/widgets/floating_points_overlay.dart';
 import 'shared/widgets/logger_host.dart'; // In-app logger
 import 'core/services/app_logger_service.dart'; // Logger service
+import 'shared/services/fcm_notification_service.dart';
+import 'shared/services/unified_notification_service.dart';
 
-// NOTE: Firebase Analytics completely removed - not needed, was causing iOS issues
+// Top-level background message handler for FCM
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  if (kDebugMode) {
+    print('🔔 [FCM] Background message: ${message.notification?.title}');
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -178,12 +188,58 @@ void main() async {
     // Don't rethrow - let app start so we can see logs
   }
 
-  // NOTE: Firebase completely removed - now using Supabase for everything including notifications
+  // Initialize Firebase for FCM (push notifications only)
   logger.info(
-    'Firebase completely removed - using Supabase for all services',
+    'Initializing Firebase for FCM...',
     category: LogCategory.service,
-    tag: 'Migration',
+    tag: 'Firebase',
   );
+  try {
+    await Firebase.initializeApp();
+
+    // Set up background message handler
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+    logger.info(
+      'Firebase initialized successfully',
+      category: LogCategory.service,
+      tag: 'Firebase',
+    );
+  } catch (e, stackTrace) {
+    logger.error(
+      'Firebase initialization failed',
+      category: LogCategory.service,
+      tag: 'Firebase',
+      metadata: {'error': e.toString()},
+      stackTrace: stackTrace,
+    );
+    // Don't rethrow - app can work without push notifications
+  }
+
+  // Initialize unified notification service (FCM + local notifications)
+  logger.info(
+    'Initializing notification services...',
+    category: LogCategory.service,
+    tag: 'Notifications',
+  );
+  try {
+    final unifiedNotifications = UnifiedNotificationService();
+    await unifiedNotifications.initialize();
+    logger.info(
+      'Notification services initialized successfully',
+      category: LogCategory.service,
+      tag: 'Notifications',
+    );
+  } catch (e, stackTrace) {
+    logger.error(
+      'Notification services initialization failed',
+      category: LogCategory.service,
+      tag: 'Notifications',
+      metadata: {'error': e.toString()},
+      stackTrace: stackTrace,
+    );
+    // Don't rethrow - app can work without notifications
+  }
 
   // Configure global error handlers with device context
   logger.info(

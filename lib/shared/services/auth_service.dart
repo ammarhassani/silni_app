@@ -6,6 +6,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import '../../core/config/supabase_config.dart';
 import '../../core/services/app_logger_service.dart';
 import 'session_persistence_service.dart';
+import 'unified_notification_service.dart';
 
 class AuthService {
   final SupabaseClient _supabase = SupabaseConfig.client;
@@ -438,6 +439,27 @@ class AuthService {
         category: LogCategory.auth,
         tag: 'signOut',
       );
+
+      // Deactivate FCM token before signing out
+      try {
+        final UnifiedNotificationService unifiedNotifications =
+            UnifiedNotificationService();
+        await unifiedNotifications.onLogout();
+        logger.debug(
+          'FCM token deactivated',
+          category: LogCategory.auth,
+          tag: 'signOut',
+        );
+      } catch (e) {
+        logger.warning(
+          'Failed to deactivate FCM token (non-critical)',
+          category: LogCategory.auth,
+          tag: 'signOut',
+          metadata: {'error': e.toString()},
+        );
+        // Non-critical error - continue with sign out
+      }
+
       await _supabase.auth.signOut();
 
       // Mark user as explicitly logged out
