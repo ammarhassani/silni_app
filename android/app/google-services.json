@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1049917341546",
+    "project_id": "silni-31811",
+    "storage_bucket": "silni-31811.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1049917341546:android:30a617a6d6dddf1d412f13",
+        "android_client_info": {
+          "package_name": "com.silni.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAkD1WixdndkawQbtg0bkCgixZcnR583kA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
