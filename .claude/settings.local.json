@@ -27,7 +27,10 @@
       "Bash(git commit:*)",
       "Bash(git push)",
       "Bash(grep:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(git rm:*)",
+      "Bash(git push:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []
