@@ -51,16 +51,3 @@ else
 fi
 
 echo "✅ All Firebase configuration files verified"
-
-echo ""
-echo "🔧 Adding GoogleService-Info.plist to Xcode project..."
-
-# Run the script to add Firebase file to Xcode project
-if [ -f ".codemagic/scripts/add-firebase-to-xcode.sh" ]; then
-    chmod +x .codemagic/scripts/add-firebase-to-xcode.sh
-    .codemagic/scripts/add-firebase-to-xcode.sh
-else
-    echo "⚠️ WARNING: add-firebase-to-xcode.sh not found, skipping Xcode project update"
-fi
-
-echo "✅ Pre-build setup complete"
