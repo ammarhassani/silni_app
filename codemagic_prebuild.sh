@@ -51,3 +51,23 @@ else
 fi
 
 echo "✅ All Firebase configuration files verified"
+
+echo ""
+echo "🔧 Adding GoogleService-Info.plist to Xcode project using Ruby..."
+
+# Install xcodeproj gem if not present
+if ! gem list xcodeproj -i > /dev/null 2>&1; then
+    echo "📦 Installing xcodeproj gem..."
+    gem install xcodeproj --no-document
+fi
+
+# Run the Ruby script to add Firebase file to Xcode project
+if [ -f "add_firebase_to_xcode.rb" ]; then
+    echo "📝 Running Xcode project update script..."
+    ruby add_firebase_to_xcode.rb
+else
+    echo "⚠️ WARNING: add_firebase_to_xcode.rb not found"
+    exit 1
+fi
+
+echo "✅ Pre-build setup complete"
