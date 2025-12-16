@@ -1,8 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/constants/app_colors.dart';
 import '../../shared/widgets/gradient_background.dart';
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/onboarding_screen.dart';
@@ -14,83 +12,28 @@ import '../../features/relatives/screens/relative_detail_screen.dart';
 import '../../features/relatives/screens/add_relative_screen.dart';
 import '../../features/relatives/screens/edit_relative_screen.dart';
 import '../../features/reminders/screens/reminders_screen.dart';
+import '../../features/reminders/screens/reminders_due_screen.dart';
 import '../../features/family_tree/screens/family_tree_screen.dart';
 import '../../features/statistics/screens/statistics_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/contacts/screens/contact_import_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
+import '../../features/notifications/screens/notification_history_screen.dart';
 import '../../features/gamification/screens/gaming_center_screen.dart';
 import '../../features/gamification/screens/badges_screen.dart';
 import '../../features/gamification/screens/detailed_stats_screen.dart';
 import '../../features/gamification/screens/leaderboard_screen.dart';
 import 'app_routes.dart';
 import 'navigation_service.dart';
+import '../services/analytics_service.dart';
 import '../../shared/widgets/persistent_bottom_nav.dart';
-
-/// Custom navigator observer for logging navigation events
-class _AppNavigatorObserver extends NavigatorObserver {
-  @override
-  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    super.didPush(route, previousRoute);
-    if (kDebugMode) {
-      debugPrint('');
-      debugPrint('🧭 [NAVIGATION] didPush');
-      debugPrint('   - New route: ${route.settings.name ?? '(unnamed)'}');
-      debugPrint(
-        '   - Previous route: ${previousRoute?.settings.name ?? '(none)'}',
-      );
-      debugPrint('');
-    }
-  }
-
-  @override
-  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    super.didPop(route, previousRoute);
-    if (kDebugMode) {
-      debugPrint('');
-      debugPrint('🧭 [NAVIGATION] didPop');
-      debugPrint('   - Popped route: ${route.settings.name ?? '(unnamed)'}');
-      debugPrint(
-        '   - Back to route: ${previousRoute?.settings.name ?? '(none)'}',
-      );
-      debugPrint('');
-    }
-  }
-
-  @override
-  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    super.didRemove(route, previousRoute);
-    if (kDebugMode) {
-      debugPrint('');
-      debugPrint('🧭 [NAVIGATION] didRemove');
-      debugPrint('   - Removed route: ${route.settings.name ?? '(unnamed)'}');
-      debugPrint(
-        '   - Previous route: ${previousRoute?.settings.name ?? '(none)'}',
-      );
-      debugPrint('');
-    }
-  }
-
-  @override
-  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
-    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
-    if (kDebugMode) {
-      debugPrint('');
-      debugPrint('🧭 [NAVIGATION] didReplace');
-      debugPrint('   - New route: ${newRoute?.settings.name ?? '(unnamed)'}');
-      debugPrint('   - Old route: ${oldRoute?.settings.name ?? '(none)'}');
-      debugPrint('');
-    }
-  }
-}
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: NavigationService.navigatorKey,
     initialLocation: AppRoutes.splash,
-    debugLogDiagnostics: true, // GoRouter's built-in logging
-    observers: [_AppNavigatorObserver()], // Custom logging observer
+    observers: [AnalyticsService.observer],
     routes: [
       // Splash
       GoRoute(
@@ -185,6 +128,31 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'reminders',
         pageBuilder: (context, state) =>
             _buildPageWithTransition(context, state, const RemindersScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.remindersDue,
+        name: 'remindersDue',
+        pageBuilder: (context, state) {
+          // Parse relative IDs from query parameters if provided
+          final idsParam = state.uri.queryParameters['ids'];
+          final relativeIds = idsParam?.split(',').where((id) => id.isNotEmpty).toList();
+          return _buildPageWithTransition(
+            context,
+            state,
+            RemindersDueScreen(relativeIds: relativeIds),
+          );
+        },
+      ),
+
+      // Notification History Route
+      GoRoute(
+        path: AppRoutes.notificationHistory,
+        name: 'notificationHistory',
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          context,
+          state,
+          const NotificationHistoryScreen(),
+        ),
       ),
 
       // Family Tree Routes

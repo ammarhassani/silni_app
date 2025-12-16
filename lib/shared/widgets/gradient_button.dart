@@ -151,7 +151,7 @@ class _GradientButtonState extends State<GradientButton>
   }
 }
 
-/// Outlined Gradient Button
+/// Outlined Gradient Button with glass effect, glow, and animation
 class OutlinedGradientButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
@@ -180,12 +180,32 @@ class OutlinedGradientButton extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: gradient,
         borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.islamicGreenPrimary.withValues(alpha: 0.4),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+          BoxShadow(
+            color: AppColors.islamicGreenLight.withValues(alpha: 0.2),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Container(
         margin: const EdgeInsets.all(2),
         decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
+          color: Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(AppSpacing.buttonRadius - 2),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withValues(alpha: 0.15),
+              Colors.white.withValues(alpha: 0.05),
+            ],
+          ),
         ),
         child: Material(
           color: Colors.transparent,
@@ -200,23 +220,17 @@ class OutlinedGradientButton extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (icon != null) ...[
-                    ShaderMask(
-                      shaderCallback: (bounds) => gradient.createShader(bounds),
-                      child: Icon(
-                        icon,
-                        color: Colors.white,
-                        size: AppSpacing.iconMd,
-                      ),
+                    Icon(
+                      icon,
+                      color: Colors.white,
+                      size: AppSpacing.iconMd,
                     ),
                     const SizedBox(width: AppSpacing.sm),
                   ],
-                  ShaderMask(
-                    shaderCallback: (bounds) => gradient.createShader(bounds),
-                    child: Text(
-                      text,
-                      style: AppTypography.buttonLarge.copyWith(
-                        color: Colors.white,
-                      ),
+                  Text(
+                    text,
+                    style: AppTypography.buttonLarge.copyWith(
+                      color: Colors.white,
                     ),
                   ),
                 ],
@@ -225,6 +239,13 @@ class OutlinedGradientButton extends StatelessWidget {
           ),
         ),
       ),
-    );
+    )
+        .animate(
+          onPlay: (controller) => controller.repeat(reverse: true),
+        )
+        .shimmer(
+          duration: const Duration(seconds: 2),
+          color: Colors.white.withValues(alpha: 0.3),
+        );
   }
 }

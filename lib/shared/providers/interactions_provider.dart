@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/providers/gamification_provider.dart';
 import '../services/interactions_service.dart';
 
@@ -6,4 +7,30 @@ import '../services/interactions_service.dart';
 final interactionsServiceProvider = Provider<InteractionsService>((ref) {
   final gamificationService = ref.watch(gamificationServiceProvider);
   return InteractionsService(gamificationService: gamificationService);
+});
+
+/// Provider that streams today's contacted relative IDs
+/// Used to derive "contacted" status in reminders screen
+final todayContactedRelativesProvider =
+    StreamProvider.family<Set<String>, String>((ref, userId) {
+  final now = DateTime.now();
+  final startOfDay = DateTime(now.year, now.month, now.day);
+
+  return Supabase.instance.client
+      .from('interactions')
+      .stream(primaryKey: ['id'])
+      .eq('user_id', userId)
+      .map((data) {
+        // Filter to today's interactions and extract relative IDs
+        final todayInteractions = data.where((interaction) {
+          final dateStr = interaction['date'] as String?;
+          if (dateStr == null) return false;
+          final date = DateTime.parse(dateStr);
+          return date.isAfter(startOfDay) ||
+              date.isAtSameMomentAs(startOfDay);
+        });
+        return todayInteractions
+            .map((i) => i['relative_id'] as String)
+            .toSet();
+      });
 });

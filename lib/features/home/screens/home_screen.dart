@@ -1,10 +1,15 @@
+import 'dart:async';
 import 'dart:ui';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:confetti/confetti.dart';
 import 'package:intl/intl.dart' as intl;
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -17,7 +22,6 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/widgets/avatar_carousel.dart';
-import '../../../shared/widgets/gamification_stats_card.dart';
 import '../../../shared/widgets/floating_points_overlay.dart';
 import '../../../shared/widgets/level_up_modal.dart';
 import '../../../shared/widgets/badge_unlock_modal.dart';
@@ -30,6 +34,7 @@ import '../../../shared/services/relatives_service.dart';
 import '../../../shared/services/interactions_service.dart';
 import '../../../shared/services/hadith_service.dart';
 import '../../../shared/services/reminder_schedules_service.dart';
+import '../../../shared/services/notification_history_service.dart';
 import '../../../shared/providers/interactions_provider.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -49,30 +54,8 @@ final relativesStreamProvider = StreamProvider.family<List<Relative>, String>((
   // Keep provider alive to cache data
   ref.keepAlive();
 
-  debugPrint(
-    '🔄 [HOME] Creating/Recreating relatives stream provider for user: $userId',
-  );
-  debugPrint(
-    '🔄 [HOME] Provider creation timestamp: ${DateTime.now().toIso8601String()}',
-  );
-
   final service = ref.watch(relativesServiceProvider);
-  final stream = service.getRelativesStream(userId);
-
-  debugPrint('📡 [HOME] Relatives stream created, listening for updates...');
-  return stream.map((relatives) {
-    debugPrint(
-      '📊 [HOME] Relatives stream updated: ${relatives.length} relatives at ${DateTime.now().toIso8601String()}',
-    );
-
-    // Log relative names for debugging
-    final relativeNames = relatives
-        .map((r) => '${r.fullName} (${r.id})')
-        .toList();
-    debugPrint('📊 [HOME] Current relatives: $relativeNames');
-
-    return relatives;
-  });
+  return service.getRelativesStream(userId);
 });
 
 final todayInteractionsStreamProvider =
@@ -80,21 +63,8 @@ final todayInteractionsStreamProvider =
       // Keep provider alive to cache data
       ref.keepAlive();
 
-      debugPrint(
-        '📡 [HOME] Creating today interactions stream provider for user: $userId',
-      );
       final service = ref.watch(interactionsServiceProvider);
-      final stream = service.getTodayInteractionsStream(userId);
-
-      debugPrint(
-        '📡 [HOME] Today interactions stream created, listening for updates...',
-      );
-      return stream.map((interactions) {
-        debugPrint(
-          '📡 [HOME] Today interactions stream updated: ${interactions.length} interactions',
-        );
-        return interactions;
-      });
+      return service.getTodayInteractionsStream(userId);
     });
 
 final reminderSchedulesStreamProvider =
@@ -102,22 +72,41 @@ final reminderSchedulesStreamProvider =
       // Keep provider alive to cache data
       ref.keepAlive();
 
-      debugPrint(
-        '📡 [HOME] Creating reminder schedules stream provider for user: $userId',
-      );
       final service = ref.watch(reminderSchedulesServiceProvider);
-      final stream = service.getSchedulesStream(userId);
-
-      debugPrint(
-        '📡 [HOME] Reminder schedules stream created, listening for updates...',
-      );
-      return stream.map((schedules) {
-        debugPrint(
-          '📡 [HOME] Reminder schedules stream updated: ${schedules.length} schedules',
-        );
-        return schedules;
-      });
+      return service.getSchedulesStream(userId);
     });
+
+/// Provider for today's due relatives based on reminder schedules
+/// Returns relatives with ALL their applicable frequencies (e.g., daily + friday)
+final todayDueRelativesProvider = Provider.family<List<DueRelativeWithFrequencies>, ({
+  List<ReminderSchedule> schedules,
+  List<Relative> relatives,
+})>((ref, data) {
+  final schedules = data.schedules;
+  final relatives = data.relatives;
+
+  // Map: relativeId -> Set<ReminderFrequency>
+  // This tracks ALL frequencies that apply to each relative
+  final relativeFrequencies = <String, Set<ReminderFrequency>>{};
+
+  for (final schedule in schedules) {
+    if (schedule.isActive && schedule.shouldFireToday()) {
+      for (final relativeId in schedule.relativeIds) {
+        relativeFrequencies.putIfAbsent(relativeId, () => <ReminderFrequency>{});
+        relativeFrequencies[relativeId]!.add(schedule.frequency);
+      }
+    }
+  }
+
+  // Build the result list with frequency info
+  return relatives
+      .where((r) => relativeFrequencies.containsKey(r.id))
+      .map((r) => DueRelativeWithFrequencies(
+            relative: r,
+            frequencies: relativeFrequencies[r.id]!,
+          ))
+      .toList();
+});
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -134,18 +123,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   bool _isLoadingHadith = true;
   final List<GamificationEvent> _pendingEvents = [];
 
+  // Carousel state for frequency slides
+  final PageController _frequencyPageController = PageController();
+  Timer? _frequencyAutoSlideTimer;
+  int _currentFrequencyPage = 0;
+
   @override
   void initState() {
     super.initState();
-    debugPrint('');
-    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    debugPrint('🏠 [HOME SCREEN] initState() called');
-    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    debugPrint('✅ [HOME SCREEN] Adding lifecycle observer');
 
     WidgetsBinding.instance.addObserver(this);
 
-    debugPrint('✅ [HOME SCREEN] Initializing animation controllers');
     _floatingController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
@@ -155,10 +143,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       duration: const Duration(seconds: 2),
     );
 
-    debugPrint('🔄 [HOME SCREEN] Loading daily hadith...');
     _loadDailyHadith();
-    debugPrint('✅ [HOME SCREEN] initState() completed');
-    debugPrint('');
   }
 
   @override
@@ -195,6 +180,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     WidgetsBinding.instance.removeObserver(this);
     _floatingController.dispose();
     _confettiController.dispose();
+    _frequencyAutoSlideTimer?.cancel();
+    _frequencyPageController.dispose();
     super.dispose();
   }
 
@@ -252,58 +239,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('');
-    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    debugPrint('🏠 [HOME SCREEN] build() called');
-    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
     // Try to get user from stream first
-    debugPrint('🔍 [HOME SCREEN] Checking currentUserProvider stream...');
     final streamUser = ref.watch(currentUserProvider);
-    debugPrint(
-      '📊 [HOME SCREEN] Stream user: ${streamUser != null ? 'present (${streamUser.id})' : 'NULL'}',
-    );
 
     // Fallback to synchronous check if stream hasn't emitted yet
     // This fixes the race condition on iOS where navigation happens before stream emits
-    debugPrint(
-      '🔍 [HOME SCREEN] Checking SupabaseConfig.currentUser fallback...',
-    );
     final fallbackUser = SupabaseConfig.currentUser;
-    debugPrint(
-      '📊 [HOME SCREEN] Fallback user: ${fallbackUser != null ? 'present (${fallbackUser.id})' : 'NULL'}',
-    );
 
     final user = streamUser ?? fallbackUser;
-    debugPrint(
-      '📊 [HOME SCREEN] Final user: ${user != null ? 'present (${user.id})' : 'NULL'}',
-    );
-    debugPrint('');
 
     // Show loading screen if user is not yet loaded
     if (user == null) {
-      debugPrint(
-        '🔴 [HOME SCREEN] No user available - showing loading spinner',
-      );
-      debugPrint(
-        '🔴 [HOME SCREEN] This should NOT happen after successful auth!',
-      );
-      debugPrint(
-        '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-      );
-      debugPrint('');
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final displayName =
         user.userMetadata?['full_name'] as String? ?? user.email ?? 'المستخدم';
     final userId = user.id;
-    debugPrint('👤 [HOME SCREEN] User loaded successfully:');
-    debugPrint('   - User ID: $userId');
-    debugPrint('   - Display name: $displayName');
-    debugPrint('   - Email: ${user.email}');
-    debugPrint('✅ [HOME SCREEN] Building home screen UI...');
-    debugPrint('');
 
     final themeColors = ref.watch(themeColorsProvider);
 
@@ -339,6 +291,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final todayInteractionsAsync = ref.watch(
       todayInteractionsStreamProvider(userId),
     );
+    final schedulesAsync = ref.watch(reminderSchedulesStreamProvider(userId));
+    final todayContactedAsync = ref.watch(todayContactedRelativesProvider(userId));
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -378,7 +332,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Islamic greeting header
-                    _buildIslamicHeader(displayName),
+                    _buildIslamicHeader(displayName, userId),
                     const SizedBox(height: AppSpacing.xl),
 
                     // Hadith/Islamic reminder of the day
@@ -397,14 +351,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ),
                     const SizedBox(height: AppSpacing.xl),
 
-                    // Gamification Stats
-                    GamificationStatsCard(userId: userId, compact: true),
-                    const SizedBox(height: AppSpacing.xl),
+                    // REMINDERS SECTION
+                    // Frequency carousel for tomorrow/yesterday reminders
+                    _buildFrequencyCarousel(
+                      relativesAsync,
+                      schedulesAsync,
+                    ),
 
-                    // Today's connections
-                    todayInteractionsAsync.when(
-                      data: (interactions) =>
-                          _buildTodaysActivity(interactions),
+                    // Due Reminders Card - today's reminders as tasks
+                    _buildDueRemindersCard(
+                      userId,
+                      relativesAsync,
+                      schedulesAsync,
+                      todayContactedAsync,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // Today's connections (with relative names)
+                    relativesAsync.when(
+                      data: (relatives) => todayInteractionsAsync.when(
+                        data: (interactions) =>
+                            _buildTodaysActivity(interactions, relatives),
+                        loading: () => const SizedBox.shrink(),
+                        error: (_, __) => const SizedBox.shrink(),
+                      ),
                       loading: () => const SizedBox.shrink(),
                       error: (_, __) => const SizedBox.shrink(),
                     ),
@@ -427,8 +397,838 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildIslamicHeader(String displayName) {
+  Widget _buildDueRemindersCard(
+    String userId,
+    AsyncValue<List<Relative>> relativesAsync,
+    AsyncValue<List<ReminderSchedule>> schedulesAsync,
+    AsyncValue<Set<String>> todayContactedAsync,
+  ) {
     final themeColors = ref.watch(themeColorsProvider);
+
+    // Wait for all data to load
+    return relativesAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (relatives) => schedulesAsync.when(
+        loading: () => const SizedBox.shrink(),
+        error: (_, __) => const SizedBox.shrink(),
+        data: (schedules) {
+          // Get today's due relatives
+          final dueRelatives = ref.watch(todayDueRelativesProvider((
+            schedules: schedules,
+            relatives: relatives,
+          )));
+
+          // Get contacted relatives set
+          final contactedSet = todayContactedAsync.valueOrNull ?? <String>{};
+
+          // If no reminders exist at all, show "add reminders" prompt
+          if (schedules.isEmpty) {
+            return GlassCard(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.grey.withOpacity(0.3),
+                  Colors.grey.withOpacity(0.1),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.notifications_none,
+                    size: 48,
+                    color: Colors.white.withOpacity(0.6),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'لا توجد تذكيرات',
+                    style: AppTypography.titleMedium.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'أضف تذكيرات لتبقى على تواصل مع أقاربك',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: Colors.white.withOpacity(0.7),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  GestureDetector(
+                    onTap: () => context.push(AppRoutes.reminders),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.sm,
+                      ),
+                      decoration: BoxDecoration(
+                        color: themeColors.primary.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                      ),
+                      child: Text(
+                        'إضافة تذكير',
+                        style: AppTypography.labelMedium.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ).animate().fadeIn();
+          }
+
+          // If no due reminders today
+          if (dueRelatives.isEmpty) {
+            return GlassCard(
+              gradient: LinearGradient(
+                colors: [
+                  themeColors.primaryLight.withOpacity(0.3),
+                  AppColors.premiumGold.withOpacity(0.2),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const Text('✅', style: TextStyle(fontSize: 40)),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'أنت على تواصل جيد!',
+                          style: AppTypography.titleMedium.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'لا توجد تذكيرات لليوم',
+                          style: AppTypography.bodySmall.copyWith(
+                            color: Colors.white.withOpacity(0.8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ).animate().fadeIn();
+          }
+
+          // Count contacted vs total
+          final contactedCount = dueRelatives.where(
+            (r) => contactedSet.contains(r.relative.id)
+          ).length;
+          final totalCount = dueRelatives.length;
+          final allContacted = contactedCount == totalCount;
+
+          // All relatives contacted - show celebration
+          if (allContacted) {
+            return GlassCard(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.premiumGold.withOpacity(0.4),
+                  themeColors.primaryLight.withOpacity(0.3),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const Text('🎉', style: TextStyle(fontSize: 40)),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'أحسنت! أكملت مهامك',
+                          style: AppTypography.titleMedium.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'تواصلت مع جميع الأقارب في تذكيراتك اليوم',
+                          style: AppTypography.bodySmall.copyWith(
+                            color: Colors.white.withOpacity(0.8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ).animate().fadeIn().scale(begin: const Offset(0.95, 0.95));
+          }
+
+          // Show due reminders as tasks
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with progress
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'تذكيرات اليوم',
+                    style: AppTypography.headlineSmall.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: AppSpacing.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: themeColors.primary.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                    ),
+                    child: Text(
+                      '$contactedCount / $totalCount',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+
+              // Progress bar
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: totalCount > 0 ? contactedCount / totalCount : 0,
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    AppColors.premiumGold,
+                  ),
+                  minHeight: 6,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+
+              // Due relatives list
+              ...dueRelatives.take(5).map((dueRelative) {
+                final isContacted = contactedSet.contains(dueRelative.relative.id);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: _buildDueRelativeCard(dueRelative, isContacted, userId),
+                );
+              }),
+
+              // Show more button if more than 5
+              if (dueRelatives.length > 5)
+                GestureDetector(
+                  onTap: () => context.push(AppRoutes.remindersDue),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                    child: Text(
+                      'عرض ${dueRelatives.length - 5} المزيد...',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ).animate().fadeIn().slideY(begin: 0.1, end: 0);
+        },
+      ),
+    );
+  }
+
+  /// Helper to check if a schedule fires on a specific date
+  bool _shouldFireOnDate(ReminderSchedule schedule, DateTime date) {
+    switch (schedule.frequency) {
+      case ReminderFrequency.daily:
+        return true;
+      case ReminderFrequency.weekly:
+        if (schedule.customDays != null && schedule.customDays!.isNotEmpty) {
+          return schedule.customDays!.contains(date.weekday);
+        }
+        return true;
+      case ReminderFrequency.monthly:
+        if (schedule.dayOfMonth != null) {
+          return date.day == schedule.dayOfMonth;
+        }
+        return false;
+      case ReminderFrequency.friday:
+        return date.weekday == 5;
+      case ReminderFrequency.custom:
+        return false;
+    }
+  }
+
+  /// Build hint text showing first 3 relatives + count
+  String _buildRelativesHint(List<Relative> relatives) {
+    if (relatives.isEmpty) return '';
+    if (relatives.length <= 3) {
+      return relatives.map((r) => r.fullName.split(' ').first).join('، ');
+    }
+    final firstThree = relatives.take(3).map((r) => r.fullName.split(' ').first).join('، ');
+    return '$firstThree +${relatives.length - 3}';
+  }
+
+  /// Get unique frequencies for schedules firing on a date (Friday first)
+  List<ReminderFrequency> _getFrequenciesOnDate(List<ReminderSchedule> schedules, DateTime date) {
+    final activeSchedules = schedules.where((s) =>
+      s.isActive && _shouldFireOnDate(s, date)
+    ).toList();
+
+    if (activeSchedules.isEmpty) return [];
+
+    // Get unique frequencies and sort (Friday first)
+    final frequencies = activeSchedules.map((s) => s.frequency).toSet().toList();
+    frequencies.sort((a, b) {
+      if (a == ReminderFrequency.friday) return -1;
+      if (b == ReminderFrequency.friday) return 1;
+      return a.arabicName.compareTo(b.arabicName);
+    });
+
+    return frequencies;
+  }
+
+  /// Get relatives due on a specific date for a specific frequency
+  List<Relative> _getRelativesByFrequencyOnDate(
+    List<ReminderSchedule> schedules,
+    List<Relative> relatives,
+    DateTime date,
+    ReminderFrequency frequency,
+  ) {
+    final dueRelativeIds = <String>{};
+    for (final schedule in schedules) {
+      if (schedule.isActive &&
+          schedule.frequency == frequency &&
+          _shouldFireOnDate(schedule, date)) {
+        dueRelativeIds.addAll(schedule.relativeIds);
+      }
+    }
+    return relatives.where((r) => dueRelativeIds.contains(r.id)).toList();
+  }
+
+  /// Start auto-slide timer for frequency carousel
+  void _startFrequencyAutoSlide(int totalPages) {
+    _frequencyAutoSlideTimer?.cancel();
+    if (totalPages <= 1) return;
+
+    _frequencyAutoSlideTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (timer) {
+        if (!mounted) {
+          timer.cancel();
+          return;
+        }
+        final nextPage = (_currentFrequencyPage + 1) % totalPages;
+        _frequencyPageController.animateToPage(
+          nextPage,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
+      },
+    );
+  }
+
+  /// Build the frequency carousel for tomorrow/yesterday reminders
+  Widget _buildFrequencyCarousel(
+    AsyncValue<List<Relative>> relativesAsync,
+    AsyncValue<List<ReminderSchedule>> schedulesAsync,
+  ) {
+    return relativesAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (relatives) => schedulesAsync.when(
+        loading: () => const SizedBox.shrink(),
+        error: (_, __) => const SizedBox.shrink(),
+        data: (schedules) {
+          final tomorrow = DateTime.now().add(const Duration(days: 1));
+          final yesterday = DateTime.now().subtract(const Duration(days: 1));
+
+          // Get all unique frequencies that have reminders on tomorrow or yesterday
+          final tomorrowFreqs = _getFrequenciesOnDate(schedules, tomorrow);
+          final yesterdayFreqs = _getFrequenciesOnDate(schedules, yesterday);
+          final allFrequencies = {...tomorrowFreqs, ...yesterdayFreqs}.toList();
+
+          // Sort frequencies (Friday first)
+          allFrequencies.sort((a, b) {
+            if (a == ReminderFrequency.friday) return -1;
+            if (b == ReminderFrequency.friday) return 1;
+            return a.arabicName.compareTo(b.arabicName);
+          });
+
+          if (allFrequencies.isEmpty) return const SizedBox.shrink();
+
+          // Start auto-slide timer
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _startFrequencyAutoSlide(allFrequencies.length);
+          });
+
+          return Column(
+            children: [
+              SizedBox(
+                height: 140,
+                child: PageView.builder(
+                  controller: _frequencyPageController,
+                  itemCount: allFrequencies.length,
+                  onPageChanged: (index) {
+                    setState(() => _currentFrequencyPage = index);
+                  },
+                  itemBuilder: (context, index) {
+                    final frequency = allFrequencies[index];
+                    return _buildFrequencySlide(
+                      frequency,
+                      schedules,
+                      relatives,
+                      tomorrow,
+                      yesterday,
+                    );
+                  },
+                ),
+              ),
+              // Dot indicators
+              if (allFrequencies.length > 1)
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.sm),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      allFrequencies.length,
+                      (index) => AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        width: _currentFrequencyPage == index ? 20 : 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(4),
+                          color: _currentFrequencyPage == index
+                              ? _getFrequencyColor(allFrequencies[index])
+                              : Colors.white.withOpacity(0.3),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ).animate().fadeIn(delay: const Duration(milliseconds: 100));
+        },
+      ),
+    );
+  }
+
+  /// Get color for a frequency type
+  Color _getFrequencyColor(ReminderFrequency frequency) {
+    switch (frequency) {
+      case ReminderFrequency.friday:
+        return const Color(0xFF1B5E20); // Islamic green
+      case ReminderFrequency.daily:
+        return const Color(0xFF1976D2); // Blue
+      case ReminderFrequency.weekly:
+        return const Color(0xFF7B1FA2); // Purple
+      case ReminderFrequency.monthly:
+        return const Color(0xFFE64A19); // Deep orange
+      case ReminderFrequency.custom:
+        return const Color(0xFF455A64); // Blue grey
+    }
+  }
+
+  /// Build a single frequency slide showing tomorrow and yesterday
+  Widget _buildFrequencySlide(
+    ReminderFrequency frequency,
+    List<ReminderSchedule> schedules,
+    List<Relative> relatives,
+    DateTime tomorrow,
+    DateTime yesterday,
+  ) {
+    final tomorrowRelatives = _getRelativesByFrequencyOnDate(
+      schedules,
+      relatives,
+      tomorrow,
+      frequency,
+    );
+    final yesterdayRelatives = _getRelativesByFrequencyOnDate(
+      schedules,
+      relatives,
+      yesterday,
+      frequency,
+    );
+
+    final color = _getFrequencyColor(frequency);
+    final isFriday = frequency == ReminderFrequency.friday;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+      child: GlassCard(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        gradient: LinearGradient(
+          colors: [
+            color.withOpacity(0.25),
+            color.withOpacity(0.08),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with frequency name and emoji
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: color.withOpacity(0.3),
+                  ),
+                  child: Center(
+                    child: Text(
+                      isFriday ? '🕌' : frequency.emoji,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  frequency.arabicName,
+                  style: AppTypography.titleSmall.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            // Tomorrow row
+            if (tomorrowRelatives.isNotEmpty)
+              _buildFrequencyRow(
+                label: 'غداً',
+                relatives: tomorrowRelatives,
+                color: color,
+                isPast: false,
+              ),
+            // Yesterday row
+            if (yesterdayRelatives.isNotEmpty)
+              _buildFrequencyRow(
+                label: 'أمس',
+                relatives: yesterdayRelatives,
+                color: color,
+                isPast: true,
+              ),
+            // Empty state if no relatives in either
+            if (tomorrowRelatives.isEmpty && yesterdayRelatives.isEmpty)
+              Center(
+                child: Text(
+                  'لا يوجد تذكيرات',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: Colors.white.withOpacity(0.5),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build a row for tomorrow or yesterday in frequency slide
+  Widget _buildFrequencyRow({
+    required String label,
+    required List<Relative> relatives,
+    required Color color,
+    required bool isPast,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+      child: Row(
+        children: [
+          Icon(
+            isPast ? Icons.history : Icons.schedule,
+            color: color.withOpacity(isPast ? 0.5 : 0.8),
+            size: 14,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: AppTypography.labelSmall.copyWith(
+              color: Colors.white.withOpacity(isPast ? 0.5 : 0.8),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _buildRelativesHint(relatives),
+              style: AppTypography.labelSmall.copyWith(
+                color: Colors.white.withOpacity(isPast ? 0.4 : 0.7),
+                decoration: isPast ? TextDecoration.lineThrough : null,
+                decorationColor: Colors.white.withOpacity(0.3),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: color.withOpacity(isPast ? 0.2 : 0.4),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '${relatives.length}',
+              style: AppTypography.labelSmall.copyWith(
+                color: Colors.white.withOpacity(isPast ? 0.6 : 1.0),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDueRelativeCard(DueRelativeWithFrequencies dueRelative, bool isContacted, String userId) {
+    final relative = dueRelative.relative;
+    final hasPhone = relative.phoneNumber != null && relative.phoneNumber!.isNotEmpty;
+    final hasFriday = dueRelative.hasFridayReminder;
+
+    // Friday special green color
+    const fridayGreen = Color(0xFF1B5E20);
+    const fridayGreenLight = Color(0xFF4CAF50);
+
+    return GlassCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      gradient: isContacted
+          ? LinearGradient(
+              colors: [
+                Colors.green.withOpacity(0.3),
+                Colors.green.withOpacity(0.1),
+              ],
+            )
+          : hasFriday
+              ? LinearGradient(
+                  colors: [
+                    fridayGreen.withOpacity(0.3),
+                    fridayGreenLight.withOpacity(0.15),
+                  ],
+                )
+              : null,
+      child: Row(
+        children: [
+          // Checkbox/status indicator
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isContacted
+                  ? Colors.green
+                  : Colors.white.withOpacity(0.2),
+              border: isContacted
+                  ? null
+                  : Border.all(color: Colors.white.withOpacity(0.5), width: 2),
+            ),
+            child: isContacted
+                ? const Icon(Icons.check, color: Colors.white, size: 18)
+                : null,
+          ),
+          const SizedBox(width: AppSpacing.md),
+
+          // Relative info
+          Expanded(
+            child: GestureDetector(
+              onTap: () => context.push('${AppRoutes.relativeDetail}/${relative.id}'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    relative.fullName,
+                    style: AppTypography.titleSmall.copyWith(
+                      color: Colors.white,
+                      decoration: isContacted ? TextDecoration.lineThrough : null,
+                      decorationColor: Colors.white.withOpacity(0.5),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Text(
+                        relative.relationshipType.arabicName,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: Colors.white.withOpacity(0.7),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Frequency badges
+                      ..._buildFrequencyBadges(dueRelative.sortedFrequencies),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Quick action buttons (only show if not contacted and has phone)
+          if (!isContacted && hasPhone) ...[
+            _buildMiniActionButton(
+              icon: Icons.phone,
+              color: Colors.green.shade600,
+              onTap: () => _makeCall(relative.phoneNumber!, relative.id, userId),
+            ),
+            const SizedBox(width: 8),
+            _buildMiniActionButton(
+              icon: FontAwesomeIcons.whatsapp,
+              color: const Color(0xFF25D366),
+              onTap: () => _openWhatsApp(relative.phoneNumber!, relative.id, userId),
+              useFaIcon: true,
+            ),
+          ],
+
+          // Show contacted badge if contacted
+          if (isContacted)
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              ),
+              child: Text(
+                'تم',
+                style: AppTypography.labelSmall.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Build frequency badges for a relative (e.g., [🕌 جمعة] [يومي])
+  List<Widget> _buildFrequencyBadges(List<ReminderFrequency> frequencies) {
+    return frequencies.map((freq) => Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: _buildFrequencyBadge(freq),
+    )).toList();
+  }
+
+  /// Build a single frequency badge with special styling for Friday
+  Widget _buildFrequencyBadge(ReminderFrequency frequency) {
+    final isFriday = frequency == ReminderFrequency.friday;
+
+    // Friday special green styling
+    const fridayGreen = Color(0xFF1B5E20);
+    const fridayGreenLight = Color(0xFF4CAF50);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: isFriday
+            ? fridayGreen.withOpacity(0.6)
+            : Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(4),
+        border: isFriday
+            ? Border.all(color: fridayGreenLight.withOpacity(0.5), width: 1)
+            : null,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isFriday) ...[
+            const Text('🕌', style: TextStyle(fontSize: 10)),
+            const SizedBox(width: 2),
+          ],
+          Text(
+            frequency.arabicName,
+            style: AppTypography.labelSmall.copyWith(
+              color: Colors.white,
+              fontSize: 9,
+              fontWeight: isFriday ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniActionButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+    bool useFaIcon = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Center(
+          child: useFaIcon
+              ? FaIcon(icon, color: Colors.white, size: 16)
+              : Icon(icon, color: Colors.white, size: 18),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _makeCall(String phoneNumber, String relativeId, String userId) async {
+    HapticFeedback.mediumImpact();
+    final uri = Uri.parse('tel:$phoneNumber');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+      await _logInteraction(relativeId, userId, InteractionType.call);
+    }
+  }
+
+  Future<void> _openWhatsApp(String phoneNumber, String relativeId, String userId) async {
+    HapticFeedback.mediumImpact();
+    // Remove any non-digit characters except +
+    final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+    final uri = Uri.parse('https://wa.me/$cleanNumber');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      await _logInteraction(relativeId, userId, InteractionType.message);
+    }
+  }
+
+  Future<void> _logInteraction(String relativeId, String userId, InteractionType type) async {
+    try {
+      final service = ref.read(interactionsServiceProvider);
+      final now = DateTime.now();
+      final interaction = Interaction(
+        id: '',
+        relativeId: relativeId,
+        userId: userId,
+        type: type,
+        date: now,
+        createdAt: now,
+      );
+      await service.createInteraction(interaction);
+    } catch (e) {
+      debugPrint('❌ [HOME] Failed to log interaction: $e');
+    }
+  }
+
+  Widget _buildIslamicHeader(String displayName, String userId) {
+    final themeColors = ref.watch(themeColorsProvider);
+    final unreadCountAsync = ref.watch(unreadNotificationCountProvider(userId));
     final hour = DateTime.now().hour;
     String greeting = 'السلام عليكم';
     if (hour < 12) {
@@ -463,6 +1263,61 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
+                  ),
+                ),
+                // Notification bell icon with unread badge
+                GestureDetector(
+                  onTap: () => context.push(AppRoutes.notificationHistory),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(0.15),
+                    ),
+                    child: Stack(
+                      children: [
+                        const Center(
+                          child: Icon(
+                            Icons.notifications_outlined,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        // Unread badge
+                        unreadCountAsync.when(
+                          data: (count) => count > 0
+                              ? Positioned(
+                                  right: 6,
+                                  top: 6,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 18,
+                                      minHeight: 18,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        count > 99 ? '99+' : count.toString(),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : const SizedBox.shrink(),
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => const SizedBox.shrink(),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -832,8 +1687,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildTodaysActivity(List<Interaction> interactions) {
+  Widget _buildTodaysActivity(List<Interaction> interactions, List<Relative> relatives) {
     if (interactions.isEmpty) return const SizedBox.shrink();
+
+    // Create a map for quick relative lookup
+    final relativeMap = {for (var r in relatives) r.id: r};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -853,56 +1711,125 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
           itemBuilder: (context, index) {
             final interaction = interactions[index];
-            return _buildInteractionCard(interaction);
+            final relative = relativeMap[interaction.relativeId];
+            return _buildInteractionCard(interaction, relative);
           },
         ),
       ],
     );
   }
 
-  Widget _buildInteractionCard(Interaction interaction) {
-    return GlassCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.2),
+  Widget _buildInteractionCard(Interaction interaction, Relative? relative) {
+    final relativeName = relative?.fullName ?? 'قريب';
+
+    return GestureDetector(
+      onTap: relative != null
+          ? () => context.push('${AppRoutes.relativeDetail}/${relative.id}')
+          : null,
+      child: GlassCard(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          children: [
+            // Relative avatar or emoji
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.2),
+              ),
+              child: relative?.photoUrl != null && relative!.photoUrl!.isNotEmpty
+                  ? ClipOval(
+                      child: CachedNetworkImage(
+                        imageUrl: relative.photoUrl!,
+                        fit: BoxFit.cover,
+                        width: 48,
+                        height: 48,
+                        placeholder: (context, url) => Center(
+                          child: Text(
+                            relativeName.isNotEmpty ? relativeName[0] : '؟',
+                            style: AppTypography.titleMedium.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Center(
+                          child: Text(
+                            relativeName.isNotEmpty ? relativeName[0] : '؟',
+                            style: AppTypography.titleMedium.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  : Center(
+                      child: Text(
+                        relativeName.isNotEmpty ? relativeName[0] : '؟',
+                        style: AppTypography.titleMedium.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
             ),
-            child: Center(
-              child: Text(
-                interaction.type.emoji,
-                style: const TextStyle(fontSize: 24),
+            const SizedBox(width: AppSpacing.md),
+            // Name and details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    relativeName,
+                    style: AppTypography.titleSmall.copyWith(color: Colors.white),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Text(
+                        interaction.type.arabicName,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: Colors.white.withOpacity(0.8),
+                        ),
+                      ),
+                      Text(
+                        ' • ',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: Colors.white.withOpacity(0.5),
+                        ),
+                      ),
+                      Text(
+                        interaction.relativeTime,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: Colors.white.withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  interaction.type.arabicName,
-                  style: AppTypography.titleSmall.copyWith(color: Colors.white),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+            // Interaction type emoji
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.1),
+              ),
+              child: Center(
+                child: Text(
+                  interaction.type.emoji,
+                  style: const TextStyle(fontSize: 18),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  interaction.relativeTime,
-                  style: AppTypography.bodySmall.copyWith(
-                    color: Colors.white.withOpacity(0.7),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1003,12 +1930,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 shape: BoxShape.circle,
                 gradient: AppColors.streakFire,
               ),
-              child: relative.photoUrl != null
+              child: relative.photoUrl != null && relative.photoUrl!.isNotEmpty
                   ? ClipOval(
-                      child: Image.network(
-                        relative.photoUrl!,
+                      child: CachedNetworkImage(
+                        imageUrl: relative.photoUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
+                        width: 60,
+                        height: 60,
+                        placeholder: (context, url) =>
+                            _buildDefaultAvatar(relative),
+                        errorWidget: (context, url, error) =>
                             _buildDefaultAvatar(relative),
                       ),
                     )

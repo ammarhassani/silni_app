@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
@@ -12,18 +14,65 @@ import '../../core/services/app_logger_service.dart';
 /// Must be a top-level function for Firebase to call it
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  final logger = AppLoggerService();
+  // Initialize Firebase in background isolate
+  await Firebase.initializeApp();
 
-  logger.info(
-    'Background FCM message received',
-    category: LogCategory.service,
-    tag: 'FCM',
-    metadata: {
-      'title': message.notification?.title,
-      'body': message.notification?.body,
-      'data': message.data,
-    },
-  );
+  if (kDebugMode) {
+    print('🔔 [FCM] Background message received: ${message.notification?.title}');
+  }
+
+  // Show notification when app is in background
+  final notification = message.notification;
+  if (notification != null) {
+    final localNotifications = FlutterLocalNotificationsPlugin();
+
+    // Initialize with minimal settings for background
+    await localNotifications.initialize(
+      const InitializationSettings(
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        iOS: DarwinInitializationSettings(),
+      ),
+    );
+
+    const androidDetails = AndroidNotificationDetails(
+      'silni_channel',
+      'Silni Notifications',
+      channelDescription: 'Notifications for Silni app',
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    // Use unique ID combining timestamp and random to prevent notification collisions
+    final uniqueId = DateTime.now().millisecondsSinceEpoch % 100000 + Random().nextInt(1000);
+
+    // Encode data payload for navigation when notification is tapped
+    final payload = message.data.entries
+        .map((e) => '${e.key}=${e.value}')
+        .join('&');
+
+    if (kDebugMode) {
+      print('🔔 [FCM] Payload for navigation: $payload');
+    }
+
+    await localNotifications.show(
+      uniqueId,
+      notification.title ?? 'تذكير',
+      notification.body ?? 'لديك إشعار جديد',
+      const NotificationDetails(android: androidDetails, iOS: iosDetails),
+      payload: payload, // Enable navigation on tap
+    );
+
+    if (kDebugMode) {
+      print('🔔 [FCM] Background notification displayed with payload');
+    }
+  }
 }
 
 /// Service for handling Firebase Cloud Messaging push notifications
@@ -380,25 +429,45 @@ class FCMNotificationService {
       metadata: {'type': type, 'relativeId': relativeId},
     );
 
+    // First navigate to home to establish base, then push the target screen
+    // This ensures back button works properly
     switch (type) {
       case 'reminder':
-        if (relativeId != null) {
-          NavigationService.navigateTo('${AppRoutes.relativeDetail}/$relativeId');
+        // Navigate to reminders due screen with relative IDs
+        final relativeIds = data['relative_ids']?.toString();
+        if (relativeIds != null && relativeIds.isNotEmpty) {
+          NavigationService.navigateTo(AppRoutes.home);
+          Future.delayed(const Duration(milliseconds: 100), () {
+            NavigationService.pushTo('${AppRoutes.remindersDue}?ids=$relativeIds');
+          });
+        } else if (relativeId != null) {
+          NavigationService.navigateTo(AppRoutes.home);
+          Future.delayed(const Duration(milliseconds: 100), () {
+            NavigationService.pushTo('${AppRoutes.remindersDue}?ids=$relativeId');
+          });
         } else {
-          NavigationService.navigateTo(AppRoutes.relatives);
+          NavigationService.navigateTo(AppRoutes.home);
+          Future.delayed(const Duration(milliseconds: 100), () {
+            NavigationService.pushTo(AppRoutes.remindersDue);
+          });
         }
         break;
 
       case 'streak':
-        NavigationService.navigateTo(AppRoutes.statistics);
+        NavigationService.navigateTo(AppRoutes.home);
+        Future.delayed(const Duration(milliseconds: 100), () {
+          NavigationService.pushTo(AppRoutes.statistics);
+        });
         break;
 
       case 'achievement':
-        NavigationService.navigateTo(AppRoutes.profile);
+        NavigationService.navigateTo(AppRoutes.home);
+        Future.delayed(const Duration(milliseconds: 100), () {
+          NavigationService.pushTo(AppRoutes.profile);
+        });
         break;
 
       case 'announcement':
-        // Navigate to home or announcements screen
         NavigationService.navigateTo(AppRoutes.home);
         break;
 
@@ -429,21 +498,41 @@ class FCMNotificationService {
         metadata: {'type': type, 'relativeId': relativeId},
       );
 
+      // First navigate to home to establish base, then push the target screen
       switch (type) {
         case 'reminder':
-          if (relativeId != null) {
-            NavigationService.navigateTo('${AppRoutes.relativeDetail}/$relativeId');
+          // Navigate to reminders due screen with relative IDs
+          final relativeIds = data['relative_ids']?.toString();
+          if (relativeIds != null && relativeIds.isNotEmpty) {
+            NavigationService.navigateTo(AppRoutes.home);
+            Future.delayed(const Duration(milliseconds: 100), () {
+              NavigationService.pushTo('${AppRoutes.remindersDue}?ids=$relativeIds');
+            });
+          } else if (relativeId != null) {
+            NavigationService.navigateTo(AppRoutes.home);
+            Future.delayed(const Duration(milliseconds: 100), () {
+              NavigationService.pushTo('${AppRoutes.remindersDue}?ids=$relativeId');
+            });
           } else {
-            NavigationService.navigateTo(AppRoutes.relatives);
+            NavigationService.navigateTo(AppRoutes.home);
+            Future.delayed(const Duration(milliseconds: 100), () {
+              NavigationService.pushTo(AppRoutes.remindersDue);
+            });
           }
           break;
 
         case 'streak':
-          NavigationService.navigateTo(AppRoutes.statistics);
+          NavigationService.navigateTo(AppRoutes.home);
+          Future.delayed(const Duration(milliseconds: 100), () {
+            NavigationService.pushTo(AppRoutes.statistics);
+          });
           break;
 
         case 'achievement':
-          NavigationService.navigateTo(AppRoutes.profile);
+          NavigationService.navigateTo(AppRoutes.home);
+          Future.delayed(const Duration(milliseconds: 100), () {
+            NavigationService.pushTo(AppRoutes.profile);
+          });
           break;
 
         case 'announcement':
@@ -481,6 +570,38 @@ class FCMNotificationService {
     }
 
     return map;
+  }
+
+  /// Re-register FCM token after login
+  /// Call this after successful authentication to ensure token is stored
+  Future<void> registerTokenForCurrentUser() async {
+    try {
+      if (_fcmToken == null) {
+        _logger.warning(
+          'No FCM token available to register',
+          category: LogCategory.service,
+          tag: 'FCM',
+        );
+        // Try to get a new token
+        _fcmToken = await _firebaseMessaging.getToken();
+      }
+
+      if (_fcmToken != null) {
+        await _storeFCMToken(_fcmToken!);
+        _logger.info(
+          'FCM token registered for current user',
+          category: LogCategory.service,
+          tag: 'FCM',
+        );
+      }
+    } catch (e, stackTrace) {
+      _logger.error(
+        'Error registering FCM token for current user',
+        category: LogCategory.service,
+        tag: 'FCM',
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   /// Deactivate FCM token on logout

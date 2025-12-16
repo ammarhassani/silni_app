@@ -18,15 +18,10 @@ import 'shared/widgets/logger_host.dart'; // In-app logger
 import 'core/services/app_logger_service.dart'; // Logger service
 import 'shared/services/fcm_notification_service.dart';
 import 'shared/services/unified_notification_service.dart';
+import 'core/services/analytics_service.dart';
 
-// Top-level background message handler for FCM
-@pragma('vm:entry-point')
-Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-  if (kDebugMode) {
-    print('🔔 [FCM] Background message: ${message.notification?.title}');
-  }
-}
+// Background handler is now in fcm_notification_service.dart
+// It's imported and used via FirebaseMessaging.onBackgroundMessage()
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -205,6 +200,25 @@ void main() async {
       category: LogCategory.service,
       tag: 'Firebase',
     );
+
+    // Initialize Firebase Analytics
+    try {
+      final analytics = AnalyticsService();
+      await analytics.logAppOpen();
+      logger.info(
+        'Firebase Analytics initialized',
+        category: LogCategory.service,
+        tag: 'Analytics',
+      );
+    } catch (e) {
+      logger.warning(
+        'Firebase Analytics initialization failed',
+        category: LogCategory.service,
+        tag: 'Analytics',
+        metadata: {'error': e.toString()},
+      );
+      // Don't rethrow - app can work without analytics
+    }
   } catch (e, stackTrace) {
     logger.error(
       'Firebase initialization failed',

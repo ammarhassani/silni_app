@@ -167,6 +167,25 @@ class AuthService {
         await _sessionPersistence.markUserLoggedIn(response.user!.id);
       }
 
+      // Register FCM token for push notifications
+      try {
+        final unifiedNotifications = UnifiedNotificationService();
+        await unifiedNotifications.onLogin();
+        logger.debug(
+          'FCM token registered on signup',
+          category: LogCategory.auth,
+          tag: 'signUpWithEmail',
+        );
+      } catch (e) {
+        logger.warning(
+          'Failed to register FCM token on signup (non-critical)',
+          category: LogCategory.auth,
+          tag: 'signUpWithEmail',
+          metadata: {'error': e.toString()},
+        );
+        // Non-critical error - continue with sign up
+      }
+
       return response;
     } on AuthException catch (e, stackTrace) {
       logger.error(
@@ -357,6 +376,25 @@ class AuthService {
       // Mark user as logged in with persistent session
       if (response.user != null) {
         await _sessionPersistence.markUserLoggedIn(response.user!.id);
+      }
+
+      // Register FCM token for push notifications
+      try {
+        final unifiedNotifications = UnifiedNotificationService();
+        await unifiedNotifications.onLogin();
+        logger.debug(
+          'FCM token registered on login',
+          category: LogCategory.auth,
+          tag: 'signInWithEmail',
+        );
+      } catch (e) {
+        logger.warning(
+          'Failed to register FCM token on login (non-critical)',
+          category: LogCategory.auth,
+          tag: 'signInWithEmail',
+          metadata: {'error': e.toString()},
+        );
+        // Non-critical error - continue with sign in
       }
 
       logger.info(
@@ -693,21 +731,82 @@ class AuthService {
             category: LogCategory.auth,
             tag: 'checkPersistentSession',
           );
+
+          // Register FCM token for restored session
+          try {
+            final unifiedNotifications = UnifiedNotificationService();
+            await unifiedNotifications.onLogin();
+            logger.debug(
+              'FCM token registered on session restore',
+              category: LogCategory.auth,
+              tag: 'checkPersistentSession',
+            );
+          } catch (e) {
+            logger.warning(
+              'Failed to register FCM token on session restore (non-critical)',
+              category: LogCategory.auth,
+              tag: 'checkPersistentSession',
+              metadata: {'error': e.toString()},
+            );
+          }
+
           return true;
         } catch (e) {
+          final errorStr = e.toString().toLowerCase();
+          // Only logout on explicit authentication failures
+          // Network errors or temporary failures should NOT logout the user
+          final isAuthError = errorStr.contains('401') ||
+              errorStr.contains('refresh_token_not_found') ||
+              errorStr.contains('invalid_grant') ||
+              errorStr.contains('token is expired') ||
+              errorStr.contains('session_not_found');
+
+          if (isAuthError) {
+            logger.warning(
+              'Session refresh failed with auth error - logging out',
+              category: LogCategory.auth,
+              tag: 'checkPersistentSession',
+              metadata: {'error': e.toString()},
+            );
+            await _sessionPersistence.markUserLoggedOut();
+            return false;
+          } else {
+            // Network error or temporary failure - keep session valid
+            logger.info(
+              'Session refresh failed (likely network) - keeping session valid',
+              category: LogCategory.auth,
+              tag: 'checkPersistentSession',
+              metadata: {'error': e.toString()},
+            );
+            // Return true to keep user "logged in" - session will retry on next action
+            return true;
+          }
+        }
+      }
+
+      final hasValidSession = isValid && _supabase.auth.currentUser != null;
+
+      // Register FCM token if session is valid
+      if (hasValidSession) {
+        try {
+          final unifiedNotifications = UnifiedNotificationService();
+          await unifiedNotifications.onLogin();
+          logger.debug(
+            'FCM token registered for existing session',
+            category: LogCategory.auth,
+            tag: 'checkPersistentSession',
+          );
+        } catch (e) {
           logger.warning(
-            'Failed to refresh session',
+            'Failed to register FCM token for existing session (non-critical)',
             category: LogCategory.auth,
             tag: 'checkPersistentSession',
             metadata: {'error': e.toString()},
           );
-          // Clear invalid session data
-          await _sessionPersistence.markUserLoggedOut();
-          return false;
         }
       }
 
-      return isValid && _supabase.auth.currentUser != null;
+      return hasValidSession;
     } catch (e, stackTrace) {
       logger.error(
         'Error checking persistent session',

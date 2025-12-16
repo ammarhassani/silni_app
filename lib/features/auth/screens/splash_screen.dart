@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_typography.dart';
-import '../../../core/router/app_routes.dart';
-import '../../../shared/widgets/gradient_background.dart';
-import '../providers/auth_provider.dart';
+import 'package:silni_app/core/constants/app_typography.dart';
+import 'package:silni_app/core/router/app_routes.dart';
+import 'package:silni_app/core/theme/theme_provider.dart';
+import 'package:silni_app/shared/widgets/gradient_background.dart';
+import 'package:silni_app/features/auth/providers/auth_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -16,26 +17,58 @@ class SplashScreen extends ConsumerStatefulWidget {
   ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends ConsumerState<SplashScreen> {
+class _SplashScreenState extends ConsumerState<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _glowController;
+  bool _fontLoaded = false;
+
   @override
   void initState() {
     super.initState();
+    _glowController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat(reverse: true);
+    _loadFontAndNavigate();
+  }
+
+  Future<void> _loadFontAndNavigate() async {
+    // Preload the fonts
+    await GoogleFonts.pendingFonts([
+      GoogleFonts.reemKufiFun(),
+      GoogleFonts.cairo(),
+    ]);
+
+    if (mounted) {
+      setState(() => _fontLoaded = true);
+    }
+
+    // Wait for animations to play
+    await Future.delayed(const Duration(seconds: 3));
     _navigateToNextScreen();
   }
 
+  @override
+  void dispose() {
+    _glowController.dispose();
+    super.dispose();
+  }
+
   Future<void> _navigateToNextScreen() async {
-    // Wait for dramatic animation
-    await Future.delayed(const Duration(seconds: 3));
+    if (!mounted) return;
+
+    // IMPORTANT: First try to restore persistent session
+    // This calls checkPersistentSession() which handles session recovery after app kill
+    final sessionRestored = await ref.read(sessionInitializationProvider.future);
 
     if (!mounted) return;
 
-    // Check if user is authenticated
-    final isAuthenticated = ref.read(isAuthenticatedProvider);
+    // Check if user is authenticated (after session restoration attempt)
+    final isAuthenticated = sessionRestored || ref.read(isAuthenticatedProvider);
 
     if (isAuthenticated) {
       if (mounted) context.go(AppRoutes.home);
     } else {
-      // Check if user has seen onboarding
       final prefs = await SharedPreferences.getInstance();
       final hasSeenOnboarding = prefs.getBool('onboarding_completed') ?? false;
 
@@ -51,107 +84,103 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = ref.watch(themeColorsProvider);
+
     return Scaffold(
       body: GradientBackground(
         animated: true,
         child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Logo with dramatic entrance
-              Container(
-                width: 150,
-                height: 150,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: AppColors.goldenGradient,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.premiumGold.withOpacity(0.5),
-                      blurRadius: 40,
-                      spreadRadius: 10,
+          child: AnimatedOpacity(
+            opacity: _fontLoaded ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 300),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // App Name with animated glow - using Reem Kufi Fun
+                AnimatedBuilder(
+                animation: _glowController,
+                builder: (context, child) {
+                  final glowValue = _glowController.value;
+                  return Text(
+                    'صِـلْـنِـي',
+                    style: GoogleFonts.reemKufiFun(
+                      fontSize: 80,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      shadows: [
+                        Shadow(
+                          color: themeColors.secondary.withValues(alpha: 0.6 + glowValue * 0.4),
+                          blurRadius: 25 + glowValue * 30,
+                        ),
+                        Shadow(
+                          color: themeColors.primary.withValues(alpha: 0.4 + glowValue * 0.4),
+                          blurRadius: 50 + glowValue * 35,
+                        ),
+                        Shadow(
+                          color: themeColors.accent.withValues(alpha: 0.3 + glowValue * 0.3),
+                          blurRadius: 80 + glowValue * 25,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.people_alt_rounded,
-                    size: 80,
-                    color: Colors.white,
-                  ),
-                ),
+                  );
+                },
               )
                   .animate()
+                  // Blur to clear reveal
+                  .blur(begin: const Offset(20, 20), end: Offset.zero, duration: 600.ms, curve: Curves.easeOut)
+                  .fadeIn(duration: 400.ms)
+                  // Scale with bounce
                   .scale(
-                    duration: const Duration(milliseconds: 800),
+                    begin: const Offset(0.5, 0.5),
+                    end: const Offset(1, 1),
+                    duration: 800.ms,
                     curve: Curves.elasticOut,
                   )
-                  .fadeIn(duration: const Duration(milliseconds: 400))
+                  // Slight float up
+                  .moveY(begin: 30, end: 0, duration: 600.ms, curve: Curves.easeOutCubic)
+                  .then(delay: 200.ms)
+                  // Shimmer sweep
                   .shimmer(
-                    duration: const Duration(seconds: 2),
-                    color: Colors.white.withOpacity(0.5),
+                    duration: 2000.ms,
+                    color: Colors.white.withValues(alpha: 0.4),
                   ),
 
-              const SizedBox(height: 40),
+              const SizedBox(height: 48),
 
-              // App Name - Arabic
+              // Tagline with app font (Cairo)
               Text(
-                'صِلْني',
-                style: AppTypography.hero.copyWith(
-                  color: Colors.white,
-                  fontSize: 64,
-                  shadows: [
-                    Shadow(
-                      color: Colors.black.withOpacity(0.3),
-                      offset: const Offset(0, 4),
-                      blurRadius: 10,
-                    ),
-                  ],
-                ),
-              )
-                  .animate(delay: const Duration(milliseconds: 400))
-                  .fadeIn(duration: const Duration(milliseconds: 600))
-                  .slideY(begin: 0.3, end: 0, curve: Curves.easeOut),
-
-              const SizedBox(height: 16),
-
-              // Tagline
-              Text(
-                'صِلْ رَحِمَك بِحُبّ',
+                'صِلْ رَحِمَكَ بِحُبٍّ',
                 style: AppTypography.titleLarge.copyWith(
-                  color: Colors.white.withOpacity(0.9),
-                  fontWeight: FontWeight.w500,
+                  color: Colors.white.withValues(alpha: 0.9),
                 ),
               )
-                  .animate(delay: const Duration(milliseconds: 800))
-                  .fadeIn(duration: const Duration(milliseconds: 600))
-                  .slideY(begin: 0.3, end: 0, curve: Curves.easeOut),
+                  .animate(delay: 900.ms)
+                  // Typewriter-like letter spacing animation
+                  .fadeIn(duration: 500.ms)
+                  .blur(begin: const Offset(8, 0), end: Offset.zero, duration: 500.ms)
+                  .slideY(begin: 0.5, end: 0, duration: 600.ms, curve: Curves.easeOutBack),
 
-              const SizedBox(height: 60),
+              const SizedBox(height: 100),
 
-              // Loading indicator with glow
+              // Loading with pulse
               SizedBox(
-                width: 50,
-                height: 50,
+                width: 36,
+                height: 36,
                 child: CircularProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    Colors.white.withOpacity(0.8),
+                    themeColors.secondary.withValues(alpha: 0.8),
                   ),
-                  strokeWidth: 3,
+                  strokeWidth: 2.5,
                 ),
               )
-                  .animate(
-                    onPlay: (controller) => controller.repeat(),
-                  )
-                  .fadeIn(
-                    delay: const Duration(milliseconds: 1200),
-                    duration: const Duration(milliseconds: 400),
-                  )
-                  .shimmer(
-                    duration: const Duration(seconds: 1),
-                    color: Colors.white.withOpacity(0.3),
-                  ),
-            ],
+                  .animate(delay: 1500.ms)
+                  .fadeIn(duration: 400.ms)
+                  .scale(begin: const Offset(0, 0), end: const Offset(1, 1), duration: 500.ms, curve: Curves.easeOutBack)
+                  .then()
+                  .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                  .scale(begin: const Offset(1, 1), end: const Offset(1.1, 1.1), duration: 800.ms),
+              ],
+            ),
           ),
         ),
       ),

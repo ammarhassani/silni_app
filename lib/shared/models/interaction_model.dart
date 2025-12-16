@@ -93,7 +93,7 @@ class Interaction {
       'user_id': userId,
       'relative_id': relativeId,
       'type': type.value,
-      'date': date.toIso8601String(),
+      'date': date.toUtc().toIso8601String(),
       'duration': duration,
       'location': location,
       'notes': notes,
@@ -167,6 +167,11 @@ class Interaction {
     // Convert date to local timezone for accurate comparison
     final localDate = date.toLocal();
     final difference = now.difference(localDate);
+
+    // Handle edge case where date might be slightly in the future
+    if (difference.isNegative) {
+      return 'الآن';
+    }
 
     if (difference.inDays == 0) {
       if (difference.inHours == 0) {

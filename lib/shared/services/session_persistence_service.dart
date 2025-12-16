@@ -14,10 +14,13 @@ class SessionPersistenceService {
   static const String _sessionActiveKey = 'session_active';
   static const String _sessionTimestampKey = 'session_timestamp';
   static const String _userIdKey = 'user_id';
+  static const String _biometricEnabledKey = 'biometric_enabled';
+  static const String _storedEmailKey = 'stored_email';
+  static const String _storedPasswordKey = 'stored_password';
 
   /// Initialize session persistence service
   Future<void> initialize() async {
-    print('Session persistence service initialized');
+    // Service initialized
   }
 
   /// Mark user as logged in with persistent session
@@ -28,10 +31,10 @@ class SessionPersistenceService {
         timestamp: DateTime.now().toIso8601String(),
         userId: userId,
       );
-
-      print('User marked as logged in with persistent session');
     } catch (e) {
-      print('Failed to mark user as logged in: $e');
+      if (kDebugMode) {
+        print('❌ [SESSION] Failed to mark logged in: $e');
+      }
     }
   }
 
@@ -39,9 +42,10 @@ class SessionPersistenceService {
   Future<void> markUserLoggedOut() async {
     try {
       await _clearSessionData();
-      print('User marked as logged out');
     } catch (e) {
-      print('Failed to mark user as logged out: $e');
+      if (kDebugMode) {
+        print('❌ [SESSION] Failed to mark logged out: $e');
+      }
     }
   }
 
@@ -97,7 +101,6 @@ class SessionPersistenceService {
         };
       }
     } catch (e) {
-      print('Error reading stored session data: $e');
       return null;
     }
   }
@@ -120,6 +123,77 @@ class SessionPersistenceService {
       return difference.inDays < 30;
     } catch (e) {
       return false;
+    }
+  }
+
+  /// Save credentials for biometric login
+  Future<void> saveBiometricCredentials({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      if (kIsWeb) {
+        // Don't store credentials on web for security
+        return;
+      }
+      final storage = FlutterSecureStorage();
+      await storage.write(key: _storedEmailKey, value: email);
+      await storage.write(key: _storedPasswordKey, value: password);
+      await storage.write(key: _biometricEnabledKey, value: 'true');
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ [SESSION] Failed to save biometric: $e');
+      }
+    }
+  }
+
+  /// Get stored biometric credentials
+  Future<Map<String, String?>?> getBiometricCredentials() async {
+    try {
+      if (kIsWeb) return null;
+
+      final storage = FlutterSecureStorage();
+      final enabled = await storage.read(key: _biometricEnabledKey);
+
+      if (enabled != 'true') return null;
+
+      final email = await storage.read(key: _storedEmailKey);
+      final password = await storage.read(key: _storedPasswordKey);
+
+      if (email == null || password == null) return null;
+
+      return {'email': email, 'password': password};
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Check if biometric login is enabled
+  Future<bool> isBiometricLoginEnabled() async {
+    try {
+      if (kIsWeb) return false;
+
+      final storage = FlutterSecureStorage();
+      final enabled = await storage.read(key: _biometricEnabledKey);
+      return enabled == 'true';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Clear biometric credentials
+  Future<void> clearBiometricCredentials() async {
+    try {
+      if (kIsWeb) return;
+
+      final storage = FlutterSecureStorage();
+      await storage.delete(key: _storedEmailKey);
+      await storage.delete(key: _storedPasswordKey);
+      await storage.delete(key: _biometricEnabledKey);
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ [SESSION] Failed to clear biometric: $e');
+      }
     }
   }
 }

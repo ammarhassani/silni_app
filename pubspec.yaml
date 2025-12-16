@@ -1,7 +1,7 @@
 name: silni_app
 description: "A dramatic Islamic family connection tracker with stunning UI/UX"
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+32
 
 environment:
   sdk: ^3.10.1
@@ -51,8 +51,7 @@ dependencies:
 
   # Monitoring & Analytics
   sentry_flutter: ^9.8.0
-  # NOTE: firebase_analytics removed - was causing iOS issues without GoogleService-Info.plist
-  # firebase_analytics: ^11.6.0
+  firebase_analytics: ^11.6.0
 
   # Internationalization
   intl: ^0.20.2
@@ -115,6 +114,7 @@ flutter:
   assets:
     - assets/animations/
     - assets/images/
+    - assets/sounds/
     - .env
 
   # Fonts are loaded from Google Fonts - no need for local files

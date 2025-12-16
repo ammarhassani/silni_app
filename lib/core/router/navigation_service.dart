@@ -23,6 +23,22 @@ class NavigationService {
     }
   }
 
+  /// Push a route (preserves back stack for back button to work)
+  static void pushTo(String path, {Map<String, String>? pathParameters}) {
+    final context = navigatorKey.currentContext;
+    if (context == null) return;
+
+    if (pathParameters != null && pathParameters.isNotEmpty) {
+      String fullPath = path;
+      pathParameters.forEach((key, value) {
+        fullPath = fullPath.replaceAll(':$key', value);
+      });
+      context.push(fullPath);
+    } else {
+      context.push(path);
+    }
+  }
+
   /// Push a named route
   static void pushNamed(String name, {Map<String, String>? pathParameters}) {
     final context = navigatorKey.currentContext;

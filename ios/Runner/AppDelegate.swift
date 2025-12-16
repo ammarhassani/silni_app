@@ -9,6 +9,9 @@ import FirebaseMessaging
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    // Enable Firebase debug logging
+    FirebaseConfiguration.shared.setLoggerLevel(.debug)
+
     // Initialize Firebase
     FirebaseApp.configure()
 

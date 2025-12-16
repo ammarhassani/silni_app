@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
@@ -18,7 +19,7 @@ import '../../../shared/widgets/gamification_stats_card.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../../shared/services/relatives_service.dart';
-import '../../../shared/services/cloudinary_service.dart';
+import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/providers/interactions_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 
@@ -39,8 +40,8 @@ final userInteractionsProvider =
       return service.getInteractionsStream(userId);
     });
 
-// Provider for CloudinaryService
-final cloudinaryServiceProvider = Provider((ref) => CloudinaryService());
+// Provider for SupabaseStorageService
+final supabaseStorageServiceProvider = Provider((ref) => SupabaseStorageService());
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -310,15 +311,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
-                        decoration: const InputDecoration(
-                          border: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white),
+                        cursorColor: Colors.white,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.1),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.sm,
                           ),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white60),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                            borderSide: BorderSide.none,
                           ),
-                          focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                            borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                            borderSide: const BorderSide(color: Colors.white, width: 2),
                           ),
                         ),
                       ),
@@ -713,32 +724,44 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   /// Pick image from gallery or camera
   Future<void> _pickImageFromSource(ImageSource source) async {
     try {
-      final cloudinaryService = ref.read(cloudinaryServiceProvider);
-      final XFile? image = await cloudinaryService.pickImage(source: source);
+      final storageService = ref.read(supabaseStorageServiceProvider);
+      final XFile? image = await storageService.pickImage(source: source);
 
       if (image != null) {
         setState(() => _isUploadingPicture = true);
 
         try {
-          // Upload to Cloudinary
-          final imageUrl = await cloudinaryService.uploadProfilePicture(image);
-
-          // Update user profile in Supabase
+          // Upload to Supabase Storage
           final user = SupabaseConfig.client.auth.currentUser;
           if (user != null) {
+            final imageUrl = await storageService.uploadUserProfilePicture(
+              image,
+              user.id,
+            );
+
+            // Update user profile in Supabase database
             await SupabaseConfig.client
                 .from('users')
                 .update({'profile_picture_url': imageUrl})
                 .eq('id', user.id);
-          }
 
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('تم تحديث الصورة الشخصية بنجاح! ✅'),
-                backgroundColor: AppColors.success,
+            // Also update auth user metadata so UI reflects immediately
+            await SupabaseConfig.client.auth.updateUser(
+              UserAttributes(
+                data: {'profile_picture_url': imageUrl},
               ),
             );
+
+            if (mounted) {
+              // Force rebuild to show new image
+              setState(() {});
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('تم تحديث الصورة الشخصية بنجاح! ✅'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            }
           }
         } catch (e) {
           if (mounted) {
@@ -798,6 +821,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           .from('users')
           .update({'full_name': newName})
           .eq('id', user.id);
+
+      // Also update auth user metadata so UI reflects immediately
+      await SupabaseConfig.client.auth.updateUser(
+        UserAttributes(
+          data: {'full_name': newName},
+        ),
+      );
 
       if (mounted) {
         setState(() => _isEditingName = false);

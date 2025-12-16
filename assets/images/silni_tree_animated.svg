@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Tree of Life - Clean stroke paths for animation -->
+
+  <!-- Trunk - draws from bottom up -->
+  <path d="M100 170 Q102 140 100 85"
+        fill="none" stroke="#4A8B5C" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- Left main branch -->
+  <path d="M100 85 Q80 80 55 70"
+        fill="none" stroke="#5A9B6C" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- Right main branch -->
+  <path d="M100 85 Q120 80 145 70"
+        fill="none" stroke="#5A9B6C" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- Left upward curve (part of heart) -->
+  <path d="M55 70 Q35 55 45 35 Q55 20 75 25"
+        fill="none" stroke="#6BA368" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Right upward curve (part of heart) -->
+  <path d="M145 70 Q165 55 155 35 Q145 20 125 25"
+        fill="none" stroke="#6BA368" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Heart top left curve -->
+  <path d="M75 25 Q85 15 100 30"
+        fill="none" stroke="#7DB87F" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Heart top right curve -->
+  <path d="M125 25 Q115 15 100 30"
+        fill="none" stroke="#7DB87F" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Celtic cross left (inner branch) -->
+  <path d="M75 75 Q90 60 115 55"
+        fill="none" stroke="#8BC47D" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Celtic cross right (inner branch) -->
+  <path d="M125 75 Q110 60 85 55"
+        fill="none" stroke="#8BC47D" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Leaves - left side -->
+  <path d="M40 65 Q35 55 45 50 Q55 55 50 65 Q45 70 40 65"
+        fill="none" stroke="#9ACD6B" stroke-width="2"/>
+  <path d="M35 45 Q30 35 40 30 Q50 35 45 45 Q40 50 35 45"
+        fill="none" stroke="#9ACD6B" stroke-width="2"/>
+  <path d="M55 30 Q50 20 60 15 Q70 20 65 30 Q60 35 55 30"
+        fill="none" stroke="#9ACD6B" stroke-width="2"/>
+
+  <!-- Leaves - top -->
+  <path d="M85 20 Q80 10 90 5 Q100 10 95 20 Q90 25 85 20"
+        fill="none" stroke="#B5D98A" stroke-width="2"/>
+  <path d="M100 15 Q95 5 105 0 Q115 5 110 15 Q105 20 100 15"
+        fill="none" stroke="#B5D98A" stroke-width="2"/>
+  <path d="M115 20 Q110 10 120 5 Q130 10 125 20 Q120 25 115 20"
+        fill="none" stroke="#B5D98A" stroke-width="2"/>
+
+  <!-- Leaves - right side -->
+  <path d="M145 30 Q140 20 150 15 Q160 20 155 30 Q150 35 145 30"
+        fill="none" stroke="#9ACD6B" stroke-width="2"/>
+  <path d="M165 45 Q160 35 170 30 Q180 35 175 45 Q170 50 165 45"
+        fill="none" stroke="#9ACD6B" stroke-width="2"/>
+  <path d="M160 65 Q155 55 165 50 Q175 55 170 65 Q165 70 160 65"
+        fill="none" stroke="#9ACD6B" stroke-width="2"/>
+
+  <!-- Extra leaves on branches -->
+  <path d="M70 55 Q65 45 75 40 Q85 45 80 55 Q75 60 70 55"
+        fill="none" stroke="#A5D97A" stroke-width="2"/>
+  <path d="M130 55 Q125 45 135 40 Q145 45 140 55 Q135 60 130 55"
+        fill="none" stroke="#A5D97A" stroke-width="2"/>
+
+  <!-- Small accent leaves -->
+  <path d="M60 50 Q58 45 63 43 Q68 45 66 50 Q63 52 60 50"
+        fill="none" stroke="#C5E89A" stroke-width="1.5"/>
+  <path d="M140 50 Q138 45 143 43 Q148 45 146 50 Q143 52 140 50"
+        fill="none" stroke="#C5E89A" stroke-width="1.5"/>
+</svg>

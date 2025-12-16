@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:ui' as ui;
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -84,9 +83,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
         children: [
           // Main content
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 120), // Space for nav bar
-              child: Column(
+            child: Column(
                 children: [
                   // Header
                   _buildHeader(context),
@@ -125,7 +122,6 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
                     ),
                   ),
                 ],
-              ),
             ),
           ),
           // Glassmorphism FAB positioned on left
@@ -438,67 +434,40 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
   }
 
   Widget _buildGlassmorphismFAB(BuildContext context) {
-    return ClipRRect(
-          borderRadius: BorderRadius.circular(30),
-          child: BackdropFilter(
-            filter: ui.ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white.withOpacity(0.15),
-                    Colors.white.withOpacity(0.05),
-                  ],
-                ),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.3),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.white.withOpacity(0.2),
-                    blurRadius: 20,
-                    spreadRadius: -5,
-                    offset: const Offset(0, 8),
-                  ),
-                  BoxShadow(
-                    color: AppColors.premiumGold.withOpacity(0.4),
-                    blurRadius: 15,
-                    spreadRadius: -3,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
+    return Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.premiumGold,
+                AppColors.joyfulOrange,
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.premiumGold.withValues(alpha: 0.5),
+                blurRadius: 16,
+                spreadRadius: 2,
+                offset: const Offset(0, 4),
               ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(30),
-                  onTap: () {
-                    context.push(AppRoutes.addRelative);
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          AppColors.premiumGold.withOpacity(0.9),
-                          AppColors.joyfulOrange.withOpacity(0.8),
-                        ],
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.add_rounded,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(28),
+              onTap: () {
+                context.push(AppRoutes.addRelative);
+              },
+              child: const Center(
+                child: Icon(
+                  Icons.add_rounded,
+                  color: Colors.white,
+                  size: 28,
                 ),
               ),
             ),

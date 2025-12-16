@@ -1,9 +1,10 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/config/supabase_config.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -12,7 +13,7 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/services/relatives_service.dart';
-import '../../../shared/services/cloudinary_service.dart';
+import '../../../shared/services/supabase_storage_service.dart';
 
 class EditRelativeScreen extends ConsumerStatefulWidget {
   final String relativeId;
@@ -42,7 +43,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
   Relative? _relative;
 
   final RelativesService _relativesService = RelativesService();
-  final CloudinaryService _cloudinaryService = CloudinaryService();
+  final SupabaseStorageService _storageService = SupabaseStorageService();
 
   @override
   void initState() {
@@ -82,7 +83,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
   }
 
   Future<void> _pickImage() async {
-    final image = await _cloudinaryService.pickImage();
+    final image = await _storageService.pickImage();
     if (image != null) {
       setState(() {
         _selectedImage = image;
@@ -124,9 +125,14 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
       // Upload photo if selected
       String? photoUrl = _relative!.photoUrl;
       if (_selectedImage != null) {
-        photoUrl = await _cloudinaryService.uploadProfilePicture(
-          _selectedImage!,
-        );
+        final userId = SupabaseConfig.currentUserId;
+        if (userId != null) {
+          photoUrl = await _storageService.uploadRelativePhoto(
+            _selectedImage!,
+            userId,
+            widget.relativeId,
+          );
+        }
       }
 
       // Use selected avatar or auto-suggest based on relationship
@@ -343,6 +349,10 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
   }
 
   Widget _buildProfilePhoto() {
+    // Determine what to show: selected image, existing photo, or emoji
+    final hasSelectedImage = _selectedImage != null;
+    final hasExistingPhoto = _relative!.photoUrl != null && _relative!.photoUrl!.isNotEmpty;
+
     return Center(
       child: Stack(
         children: [
@@ -360,11 +370,27 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
                 ),
               ],
             ),
-            child: Center(
-              child: Text(
-                _relative!.displayEmoji,
-                style: const TextStyle(fontSize: 64),
-              ),
+            child: ClipOval(
+              child: hasSelectedImage
+                  ? FutureBuilder<Widget>(
+                      future: _buildSelectedImagePreview(),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasData) {
+                          return snapshot.data!;
+                        }
+                        return _buildEmojiAvatar();
+                      },
+                    )
+                  : hasExistingPhoto
+                      ? CachedNetworkImage(
+                          imageUrl: _relative!.photoUrl!,
+                          fit: BoxFit.cover,
+                          width: 120,
+                          height: 120,
+                          placeholder: (context, url) => _buildEmojiAvatar(),
+                          errorWidget: (context, url, error) => _buildEmojiAvatar(),
+                        )
+                      : _buildEmojiAvatar(),
             ),
           ),
           Positioned(
@@ -390,6 +416,25 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildEmojiAvatar() {
+    return Center(
+      child: Text(
+        _relative!.displayEmoji,
+        style: const TextStyle(fontSize: 64),
+      ),
+    );
+  }
+
+  Future<Widget> _buildSelectedImagePreview() async {
+    final bytes = await _selectedImage!.readAsBytes();
+    return Image.memory(
+      bytes,
+      fit: BoxFit.cover,
+      width: 120,
+      height: 120,
     );
   }
 

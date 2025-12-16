@@ -103,12 +103,15 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         },
       );
 
-      // Track signup event (fire and forget - don't block auth flow)
+      // Track signup event and set user ID (fire and forget - don't block auth flow)
       logger.debug('Triggering analytics (fire-and-forget)...', category: LogCategory.analytics, tag: 'SignUpScreen');
       final analytics = ref.read(analyticsServiceProvider);
       analytics.logSignUp('email').catchError((e) {
         logger.warning('Analytics failed (non-blocking)', category: LogCategory.analytics, tag: 'SignUpScreen', metadata: {'error': e.toString()});
       });
+      if (credential.user != null) {
+        analytics.setUserId(credential.user!.id).catchError((e) {});
+      }
 
       if (!mounted) {
         logger.warning('Widget unmounted, aborting navigation', category: LogCategory.auth, tag: 'SignUpScreen');

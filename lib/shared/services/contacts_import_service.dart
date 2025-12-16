@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import '../models/relative_model.dart';
 
@@ -6,15 +5,8 @@ class ContactsImportService {
   /// Request contacts permission
   Future<bool> requestPermission() async {
     try {
-      final permission = await FlutterContacts.requestPermission();
-      if (kDebugMode) {
-        print('📇 [CONTACTS] Permission: $permission');
-      }
-      return permission;
+      return await FlutterContacts.requestPermission();
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [CONTACTS] Permission error: $e');
-      }
       return false;
     }
   }
@@ -22,24 +14,11 @@ class ContactsImportService {
   /// Get all contacts from device
   Future<List<Contact>> getAllContacts() async {
     try {
-      if (kDebugMode) {
-        print('📇 [CONTACTS] Fetching all contacts...');
-      }
-
-      final contacts = await FlutterContacts.getContacts(
+      return await FlutterContacts.getContacts(
         withProperties: true,
         withPhoto: true,
       );
-
-      if (kDebugMode) {
-        print('✅ [CONTACTS] Found ${contacts.length} contacts');
-      }
-
-      return contacts;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [CONTACTS] Error fetching contacts: $e');
-      }
       return [];
     }
   }
@@ -48,20 +27,11 @@ class ContactsImportService {
   Future<List<Contact>> searchContacts(String query) async {
     try {
       final allContacts = await getAllContacts();
-      final filtered = allContacts.where((contact) {
+      return allContacts.where((contact) {
         final name = contact.displayName.toLowerCase();
         return name.contains(query.toLowerCase());
       }).toList();
-
-      if (kDebugMode) {
-        print('🔍 [CONTACTS] Found ${filtered.length} matches for "$query"');
-      }
-
-      return filtered;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [CONTACTS] Search error: $e');
-      }
       return [];
     }
   }
@@ -227,25 +197,10 @@ class ContactsImportService {
     required List<Contact> contacts,
   }) async {
     try {
-      if (kDebugMode) {
-        print('📦 [CONTACTS] Batch importing ${contacts.length} contacts...');
-      }
-
-      final suggestions = contacts.map((contact) {
+      return contacts.map((contact) {
         return createSuggestedRelative(userId: userId, contact: contact);
       }).toList();
-
-      if (kDebugMode) {
-        print(
-          '✅ [CONTACTS] Created ${suggestions.length} relative suggestions',
-        );
-      }
-
-      return suggestions;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [CONTACTS] Batch import error: $e');
-      }
       return [];
     }
   }
@@ -256,22 +211,11 @@ class ContactsImportService {
       final allContacts = await getAllContacts();
 
       // Filter for potential family members based on name keywords
-      final familyContacts = allContacts.where((contact) {
+      return allContacts.where((contact) {
         final relationship = detectRelationship(contact.displayName);
         return relationship != RelationshipType.other;
       }).toList();
-
-      if (kDebugMode) {
-        print(
-          '👨‍👩‍👧‍👦 [CONTACTS] Found ${familyContacts.length} potential family members',
-        );
-      }
-
-      return familyContacts;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [CONTACTS] Family filter error: $e');
-      }
       return [];
     }
   }

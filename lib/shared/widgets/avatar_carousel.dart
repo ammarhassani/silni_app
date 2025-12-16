@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -188,13 +189,35 @@ class _AvatarCarouselState extends State<AvatarCarousel> {
                   ),
                   child: Stack(
                     children: [
-                      // Avatar content
-                      Center(
-                        child: Text(
-                          relative.displayEmoji,
-                          style: const TextStyle(fontSize: 48),
+                      // Avatar content - shows photo if available
+                      if (relative.photoUrl != null && relative.photoUrl!.isNotEmpty)
+                        ClipOval(
+                          child: CachedNetworkImage(
+                            imageUrl: relative.photoUrl!,
+                            fit: BoxFit.cover,
+                            width: 85,
+                            height: 85,
+                            placeholder: (context, url) => Center(
+                              child: Text(
+                                relative.displayEmoji,
+                                style: const TextStyle(fontSize: 48),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => Center(
+                              child: Text(
+                                relative.displayEmoji,
+                                style: const TextStyle(fontSize: 48),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Center(
+                          child: Text(
+                            relative.displayEmoji,
+                            style: const TextStyle(fontSize: 48),
+                          ),
                         ),
-                      ),
 
                       // Notification badge
                       if (needsAttention)

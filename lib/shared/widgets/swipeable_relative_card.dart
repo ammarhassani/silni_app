@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -126,12 +127,15 @@ class SwipeableRelativeCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: relative.photoUrl != null
+                    child: relative.photoUrl != null && relative.photoUrl!.isNotEmpty
                         ? ClipOval(
-                            child: Image.network(
-                              relative.photoUrl!,
+                            child: CachedNetworkImage(
+                              imageUrl: relative.photoUrl!,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
+                              width: 60,
+                              height: 60,
+                              placeholder: (context, url) => _buildDefaultAvatar(),
+                              errorWidget: (context, url, error) => _buildDefaultAvatar(),
                             ),
                           )
                         : _buildDefaultAvatar(),

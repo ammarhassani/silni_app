@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// App theme options with beautiful Islamic-inspired color schemes
 enum AppThemeType {
-  defaultGreen('default', 'الأخضر الإسلامي', 'Default Islamic Green'),
+  defaultGreen('default', 'صِلني', 'Silni Green'),
   lavenderPurple('lavender', 'خزامى', 'Lavender Purple'),
   royalBlue('royal', 'الأزرق الملكي', 'Royal Blue'),
   sunsetOrange('sunset', 'غروب الشمس', 'Sunset Orange'),
@@ -53,7 +53,7 @@ class ThemeColors {
     required this.streakFire,
   });
 
-  /// Default Islamic Green Theme
+  /// Silni Green Theme (Default)
   static const defaultGreen = ThemeColors(
     primary: Color(0xFF2E7D32),
     primaryLight: Color(0xFF60AD5E),

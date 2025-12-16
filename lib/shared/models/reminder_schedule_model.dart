@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:silni_app/shared/models/relative_model.dart';
 
 /// Reminder frequency types
 enum ReminderFrequency {
@@ -120,9 +121,7 @@ class ReminderSchedule {
     if (kDebugMode) {
       print('🔔 [REMINDER_MODEL] toJson() called');
       print('🔔 [REMINDER_MODEL] JSON keys: ${json.keys.toList()}');
-      print(
-        '🔔 [REMINDER_MODEL] reminder_time value: ${json['reminder_time']}',
-      );
+      print('🔔 [REMINDER_MODEL] time value: ${json['time']}');
       print('🔔 [REMINDER_MODEL] Full JSON: $json');
     }
 
@@ -226,6 +225,32 @@ class ReminderSchedule {
       case ReminderFrequency.custom:
         return false;
     }
+  }
+}
+
+/// A relative paired with the reminder frequencies that triggered them today/tomorrow
+class DueRelativeWithFrequencies {
+  final Relative relative;
+  final Set<ReminderFrequency> frequencies;
+
+  const DueRelativeWithFrequencies({
+    required this.relative,
+    required this.frequencies,
+  });
+
+  /// Check if this relative has Friday reminder
+  bool get hasFridayReminder => frequencies.contains(ReminderFrequency.friday);
+
+  /// Get sorted frequencies for display (Friday first, then by arabic name)
+  List<ReminderFrequency> get sortedFrequencies {
+    final list = frequencies.toList();
+    list.sort((a, b) {
+      // Friday first (special religious significance)
+      if (a == ReminderFrequency.friday) return -1;
+      if (b == ReminderFrequency.friday) return 1;
+      return a.arabicName.compareTo(b.arabicName);
+    });
+    return list;
   }
 }
 

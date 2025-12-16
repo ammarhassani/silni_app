@@ -168,24 +168,23 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
 
     return InteractiveViewer(
       transformationController: _transformationController,
-      boundaryMargin: const EdgeInsets.all(100),
-      minScale: 0.5,
+      boundaryMargin: const EdgeInsets.all(double.infinity),
+      constrained: false,
+      minScale: 0.1,
       maxScale: 3.0,
       onInteractionUpdate: (details) {
-        setState(() {
-          _currentScale = _transformationController.value.getMaxScaleOnAxis();
-        });
+        // Read scale directly from matrix entry (0,0) instead of getMaxScaleOnAxis()
+        // getMaxScaleOnAxis() returns 1.0 when zoomed out because Z axis is always 1.0
+        final matrixScale = _transformationController.value.entry(0, 0);
+        if (matrixScale != _currentScale) {
+          setState(() {
+            _currentScale = matrixScale;
+          });
+        }
       },
-      child: Center(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              child: _buildTreeLayout(treeData, relatives),
-            ),
-          ),
-        ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: _buildTreeLayout(treeData, relatives),
       ),
     );
   }
@@ -680,18 +679,35 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   }
 
   void _zoomIn() {
-    setState(() {
-      _currentScale = (_currentScale * 1.2).clamp(0.5, 3.0);
-      _transformationController.value = Matrix4.identity()
-        ..scale(_currentScale);
-    });
+    final newScale = (_currentScale * 1.2).clamp(0.1, 3.0);
+    _applyZoom(newScale);
   }
 
   void _zoomOut() {
+    final newScale = (_currentScale / 1.2).clamp(0.1, 3.0);
+    _applyZoom(newScale);
+  }
+
+  void _applyZoom(double newScale) {
+    // Preserve current translation while changing scale
+    final currentMatrix = _transformationController.value;
+    final translation = currentMatrix.getTranslation();
+
+    // Adjust translation to zoom towards center
+    final scaleFactor = newScale / _currentScale;
+    final newTranslationX = translation.x * scaleFactor;
+    final newTranslationY = translation.y * scaleFactor;
+
+    // Build new matrix with scale and adjusted translation
+    final newMatrix = Matrix4.identity();
+    newMatrix.setEntry(0, 0, newScale); // scaleX
+    newMatrix.setEntry(1, 1, newScale); // scaleY
+    newMatrix.setEntry(0, 3, newTranslationX); // translateX
+    newMatrix.setEntry(1, 3, newTranslationY); // translateY
+
     setState(() {
-      _currentScale = (_currentScale / 1.2).clamp(0.5, 3.0);
-      _transformationController.value = Matrix4.identity()
-        ..scale(_currentScale);
+      _currentScale = newScale;
+      _transformationController.value = newMatrix;
     });
   }
 

@@ -1,10 +1,9 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/constants/app_colors.dart';
+import 'package:just_audio/just_audio.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
@@ -24,15 +23,13 @@ class NotificationsScreen extends ConsumerStatefulWidget {
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   final SupabaseNotificationService _notificationService =
       SupabaseNotificationService();
-  bool _isInitialized = false;
-  String? _initError;
 
   bool _remindersEnabled = true;
   bool _dailyRemindersEnabled = true;
   bool _weeklyRemindersEnabled = true;
-  bool _birthdayRemindersEnabled = true;
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
+  String _selectedSound = 'default';
 
   @override
   void initState() {
@@ -42,29 +39,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   Future<void> _initializeNotificationService() async {
     try {
-      if (kDebugMode) {
-        print(
-          '🔔 [NOTIFICATIONS_SCREEN] Initializing Supabase notification service...',
-        );
-      }
       await _notificationService.initialize();
-      setState(() {
-        _isInitialized = true;
-      });
-      if (kDebugMode) {
-        print(
-          '🔔 [NOTIFICATIONS_SCREEN] Notification service initialized successfully',
-        );
-      }
     } catch (e) {
-      setState(() {
-        _initError = e.toString();
-      });
-      if (kDebugMode) {
-        print(
-          '❌ [NOTIFICATIONS_SCREEN] Error initializing notification service: $e',
-        );
-      }
+      // Initialization error handled silently
     }
   }
 
@@ -170,101 +147,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       themeColors: themeColors,
                     ),
 
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // Device Info
-                    Text(
-                      '📱 معلومات الجهاز',
-                      style: AppTypography.headlineMedium.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                     const SizedBox(height: AppSpacing.md),
 
-                    GlassCard(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                color: themeColors.accent,
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              Text(
-                                'معرّف الإشعارات',
-                                style: AppTypography.titleMedium.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _isInitialized
-                                    ? (_notificationService.deviceId != null
-                                          ? 'تم الحصول على المعرّف'
-                                          : 'لم يتم الحصول على المعرّف')
-                                    : 'جاري التهيئة...',
-                                style: AppTypography.bodySmall.copyWith(
-                                  color: Colors.white.withOpacity(0.7),
-                                ),
-                              ),
-                              if (_initError != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 8.0),
-                                  child: Text(
-                                    'خطأ: $_initError',
-                                    style: AppTypography.bodySmall.copyWith(
-                                      color: Colors.red.withOpacity(0.8),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                    // Sound Picker
+                    _buildSoundPicker(themeColors),
 
                     const SizedBox(height: AppSpacing.xl),
-
-                    // Test Notification Button
-                    GlassCard(
-                      child: ListTile(
-                        leading: Icon(
-                          Icons.send_rounded,
-                          color: themeColors.accent,
-                        ),
-                        title: Text(
-                          'إرسال إشعار تجريبي',
-                          style: AppTypography.titleMedium.copyWith(
-                            color: Colors.white,
-                          ),
-                        ),
-                        subtitle: Text(
-                          'اختبر الإشعارات على جهازك',
-                          style: AppTypography.bodySmall.copyWith(
-                            color: Colors.white.withOpacity(0.7),
-                          ),
-                        ),
-                        trailing: Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          color: Colors.white.withOpacity(0.5),
-                          size: 20,
-                        ),
-                        onTap: () {
-                          HapticFeedback.mediumImpact();
-                          _sendTestNotification();
-                        },
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -300,7 +188,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 Text(
                   'تخصيص التذكيرات والإشعارات',
                   style: AppTypography.bodySmall.copyWith(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -332,7 +220,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   style: AppTypography.titleMedium.copyWith(
                     color: enabled
                         ? Colors.white
-                        : Colors.white.withOpacity(0.5),
+                        : Colors.white.withValues(alpha: 0.5),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -341,8 +229,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   subtitle,
                   style: AppTypography.bodySmall.copyWith(
                     color: enabled
-                        ? Colors.white.withOpacity(0.7)
-                        : Colors.white.withOpacity(0.3),
+                        ? Colors.white.withValues(alpha: 0.7)
+                        : Colors.white.withValues(alpha: 0.3),
                   ),
                 ),
               ],
@@ -351,50 +239,142 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           Switch(
             value: value,
             onChanged: enabled ? onChanged : null,
-            activeColor: themeColors.primary,
+            activeTrackColor: themeColors.primary,
+            activeThumbColor: Colors.white,
           ),
         ],
       ),
     ).animate().fadeIn().slideX(begin: -0.1, end: 0);
   }
 
-  void _sendTestNotification() async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('تم إرسال إشعار تجريبي! 🔔'),
-        backgroundColor: AppColors.islamicGreenPrimary,
-      ),
-    );
+  Widget _buildSoundPicker(ThemeColors themeColors) {
+    final sounds = [
+      {'id': 'default', 'name': 'صِلني (افتراضي)', 'icon': Icons.notifications_active},
+      {'id': 'gentle', 'name': 'رنين ناعم', 'icon': Icons.music_note},
+      {'id': 'chime', 'name': 'جرس كلاسيكي', 'icon': Icons.doorbell},
+      {'id': 'family', 'name': 'نغمة عائلية', 'icon': Icons.family_restroom},
+      {'id': 'silent', 'name': 'صامت', 'icon': Icons.notifications_off},
+    ];
 
-    // Send a test local notification using Supabase notification service
-    // Use immediate notification instead of scheduled to avoid Android alarm permission issues
-    final testId = DateTime.now().millisecondsSinceEpoch % 2147483647;
+    return GlassCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.audiotrack, color: themeColors.accent),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                'نغمة الإشعارات',
+                style: AppTypography.titleMedium.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ...sounds.map((sound) {
+            final isSelected = _selectedSound == sound['id'];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: GestureDetector(
+                onTap: _soundEnabled
+                    ? () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _selectedSound = sound['id'] as String);
+                        // Play preview sound
+                        _playPreviewSound(sound['id'] as String);
+                      }
+                    : null,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: isSelected ? themeColors.primaryGradient : null,
+                    color: isSelected ? null : Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    border: Border.all(
+                      color: isSelected
+                          ? Colors.white.withValues(alpha: 0.5)
+                          : Colors.white.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        sound['icon'] as IconData,
+                        color: _soundEnabled
+                            ? Colors.white
+                            : Colors.white.withValues(alpha: 0.4),
+                        size: 20,
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Text(
+                        sound['name'] as String,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: _soundEnabled
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: 0.4),
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (isSelected)
+                        Icon(
+                          Icons.check_circle,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    ).animate().fadeIn().slideX(begin: -0.1, end: 0);
+  }
+
+  bool _isPlayingPreview = false;
+
+  Future<void> _playPreviewSound(String soundId) async {
+    if (soundId == 'silent' || _isPlayingPreview) return;
+
+    HapticFeedback.mediumImpact();
+
+    _isPlayingPreview = true;
 
     try {
-      _notificationService.scheduleReminderNotification(
-        id: testId,
-        title: 'إشعار تجريبي',
-        body: 'هذا إشعار تجريبي من تطبيق صلني',
-        scheduledTime: DateTime.now().add(const Duration(seconds: 5)),
-      );
+      // Map sound IDs to asset files
+      final soundAssets = {
+        'default': 'assets/sounds/silni_default.wav',
+        'gentle': 'assets/sounds/gentle_chime.wav',
+        'chime': 'assets/sounds/classic_bell.wav',
+        'family': 'assets/sounds/family_tone.wav',
+      };
 
-      if (kDebugMode) {
-        print(
-          '✅ [NOTIFICATIONS_SCREEN] Test notification scheduled successfully',
-        );
+      final assetPath = soundAssets[soundId];
+      if (assetPath != null) {
+        // Create fresh player for each preview to avoid state issues
+        final player = AudioPlayer();
+        await player.setAsset(assetPath);
+        await player.play();
+        // Dispose after playing
+        player.playerStateStream.listen((state) {
+          if (state.processingState == ProcessingState.completed) {
+            player.dispose();
+          }
+        });
       }
     } catch (e) {
-      if (kDebugMode) {
-        print(
-          '❌ [NOTIFICATIONS_SCREEN] Error scheduling test notification: $e',
-        );
-      }
-
-      // Fallback: show immediate notification
-      await _notificationService.showImmediateNotification(
-        title: 'إشعار تجريبي',
-        body: 'هذا إشعار تجريبي من تطبيق صلني',
-      );
+      debugPrint('Sound preview error: $e');
+    } finally {
+      _isPlayingPreview = false;
     }
   }
 }

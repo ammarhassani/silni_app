@@ -69,6 +69,33 @@ class UnifiedNotificationService {
     }
   }
 
+  /// Handle login - register FCM token for user
+  Future<void> onLogin() async {
+    try {
+      _logger.info(
+        'Registering FCM token on login',
+        category: LogCategory.service,
+        tag: 'UnifiedNotifications',
+      );
+
+      await _fcmService.registerTokenForCurrentUser();
+
+      _logger.info(
+        'FCM token registered successfully',
+        category: LogCategory.service,
+        tag: 'UnifiedNotifications',
+      );
+    } catch (e, stackTrace) {
+      _logger.error(
+        'Error registering FCM token on login',
+        category: LogCategory.service,
+        tag: 'UnifiedNotifications',
+        stackTrace: stackTrace,
+      );
+      // Don't rethrow - login should succeed even if token registration fails
+    }
+  }
+
   /// Handle logout - deactivate FCM token
   Future<void> onLogout() async {
     try {

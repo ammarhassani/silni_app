@@ -116,9 +116,6 @@ class HadithService {
           .timeout(
             const Duration(seconds: 20),  // Increased from 10s for iOS
             onTimeout: () {
-              if (kDebugMode) {
-                print('⏱️ [HADITH] Query timed out, using fallback hadith');
-              }
               throw TimeoutException('Supabase query timed out');
             },
           );
@@ -126,9 +123,6 @@ class HadithService {
       final hadithData = response as List;
 
       if (hadithData.isEmpty) {
-        if (kDebugMode) {
-          print('📿 [HADITH] Collection empty, using fallback hadith');
-        }
         return _getDefaultHadithFallback();
       }
 
@@ -146,20 +140,12 @@ class HadithService {
       // Save the new index
       await prefs.setInt(_lastIndexKey, nextIndex);
 
-      if (kDebugMode) {
-        print('📿 [HADITH] Showing hadith ${nextIndex + 1} of ${hadithList.length}');
-      }
-
       return hadithList[nextIndex];
-    } on TimeoutException catch (e) {
-      if (kDebugMode) {
-        print('⏱️ [HADITH] Timeout: $e - Using fallback hadith');
-      }
+    } on TimeoutException {
       return _getDefaultHadithFallback();
     } catch (e) {
       if (kDebugMode) {
-        print('❌ [HADITH] Error getting daily hadith: $e');
-        print('📿 [HADITH] Using fallback hadith');
+        print('❌ [HADITH] Error: $e');
       }
       return _getDefaultHadithFallback();
     }
@@ -183,37 +169,27 @@ class HadithService {
         'createdAt': DateTime.now(),
       });
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [HADITH] Error creating fallback hadith: $e');
-      }
       return null;
     }
   }
 
   /// Get all hadith stream (for admin/management)
   Stream<List<Hadith>> getAllHadithStream() {
-    try {
-      return _supabase
-          .from(_table)
-          .stream(primaryKey: ['id'])
-          .map((data) {
-        // Filter for silat_rahim topic and sort by display order
-        final filtered = data
-            .where((json) => json['topic'] == 'silat_rahim')
-            .map((json) => Hadith.fromJson(json))
-            .toList();
+    return _supabase
+        .from(_table)
+        .stream(primaryKey: ['id'])
+        .map((data) {
+      // Filter for silat_rahim topic and sort by display order
+      final filtered = data
+          .where((json) => json['topic'] == 'silat_rahim')
+          .map((json) => Hadith.fromJson(json))
+          .toList();
 
-        // Sort by display order
-        filtered.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+      // Sort by display order
+      filtered.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
 
-        return filtered;
-      });
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ [HADITH] Error streaming hadith: $e');
-      }
-      rethrow;
-    }
+      return filtered;
+    });
   }
 
   /// Add new hadith (for future admin functionality)
@@ -225,15 +201,10 @@ class HadithService {
           .select('id')
           .single();
 
-      final id = response['id'] as String;
-
-      if (kDebugMode) {
-        print('✅ [HADITH] Added new hadith: $id');
-      }
-      return id;
+      return response['id'] as String;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ [HADITH] Error adding hadith: $e');
+        print('❌ [HADITH] Error adding: $e');
       }
       rethrow;
     }
@@ -247,13 +218,9 @@ class HadithService {
           .from(_table)
           .update(updates)
           .eq('id', hadithId);
-
-      if (kDebugMode) {
-        print('✅ [HADITH] Updated hadith: $hadithId');
-      }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ [HADITH] Error updating hadith: $e');
+        print('❌ [HADITH] Error updating: $e');
       }
       rethrow;
     }
@@ -266,13 +233,9 @@ class HadithService {
           .from(_table)
           .delete()
           .eq('id', hadithId);
-
-      if (kDebugMode) {
-        print('✅ [HADITH] Deleted hadith: $hadithId');
-      }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ [HADITH] Error deleting hadith: $e');
+        print('❌ [HADITH] Error deleting: $e');
       }
       rethrow;
     }
@@ -282,8 +245,5 @@ class HadithService {
   Future<void> resetRotation() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_lastIndexKey);
-    if (kDebugMode) {
-      print('🔄 [HADITH] Rotation reset');
-    }
   }
 }

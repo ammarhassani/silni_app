@@ -20,10 +20,12 @@ class AppRoutes {
   static const String editRelative = '/edit-relative';
   static const String addInteraction = '/add-interaction';
   static const String reminders = '/reminders';
+  static const String remindersDue = '/reminders-due';
   static const String familyTree = '/family-tree';
   static const String profile = '/profile';
   static const String importContacts = '/import-contacts';
   static const String notifications = '/notifications';
+  static const String notificationHistory = '/notification-history';
 
   // Gamification routes
   static const String badges = '/badges';

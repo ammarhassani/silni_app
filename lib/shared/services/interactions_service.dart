@@ -16,12 +16,6 @@ class InteractionsService {
   /// Uses RPC function to atomically create interaction and update relative
   Future<String> createInteraction(Interaction interaction) async {
     try {
-      if (kDebugMode) {
-        print(
-          '📝 [INTERACTIONS] Creating ${interaction.type.arabicName} interaction',
-        );
-      }
-
       // Insert interaction directly
       final response = await _supabase
           .from(_table)
@@ -40,30 +34,17 @@ class InteractionsService {
         },
       );
 
-      if (kDebugMode) {
-        print('✅ [INTERACTIONS] Created interaction with ID: $id');
-      }
-
       // Process gamification (points, streaks, badges, levels)
       if (_gamificationService != null) {
         try {
-          final gamificationResult = await _gamificationService
-              .processInteractionGamification(
-                userId: interaction.userId,
-                interaction: interaction.copyWith(id: id),
-              );
-
-          if (kDebugMode) {
-            print(
-              '🎮 [INTERACTIONS] Gamification processed: $gamificationResult',
-            );
-          }
+          await _gamificationService.processInteractionGamification(
+            userId: interaction.userId,
+            interaction: interaction.copyWith(id: id),
+          );
         } catch (e) {
           // Don't fail interaction creation if gamification fails
           if (kDebugMode) {
-            print(
-              '⚠️ [INTERACTIONS] Gamification processing failed (non-critical): $e',
-            );
+            print('❌ [INTERACTIONS] Gamification failed: $e');
           }
         }
       }
@@ -71,7 +52,7 @@ class InteractionsService {
       return id;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ [INTERACTIONS] Error creating interaction: $e');
+        print('❌ [INTERACTIONS] Error creating: $e');
       }
       rethrow;
     }
@@ -79,52 +60,34 @@ class InteractionsService {
 
   /// Get all interactions for a user
   Stream<List<Interaction>> getInteractionsStream(String userId) {
-    try {
-      if (kDebugMode) {
-        print('📡 [INTERACTIONS] Streaming interactions for user: $userId');
-      }
+    return _supabase.from(_table).stream(primaryKey: ['id']).map((data) {
+      // Filter for this user's interactions
+      final filtered = data
+          .where((json) => json['user_id'] == userId)
+          .map((json) => Interaction.fromJson(json))
+          .toList();
 
-      return _supabase.from(_table).stream(primaryKey: ['id']).map((data) {
-        // Filter for this user's interactions
-        final filtered = data
-            .where((json) => json['user_id'] == userId)
-            .map((json) => Interaction.fromJson(json))
-            .toList();
+      // Sort by date descending (most recent first)
+      filtered.sort((a, b) => b.date.compareTo(a.date));
 
-        // Sort by date descending (most recent first)
-        filtered.sort((a, b) => b.date.compareTo(a.date));
-
-        return filtered;
-      });
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ [INTERACTIONS] Error streaming interactions: $e');
-      }
-      rethrow;
-    }
+      return filtered;
+    });
   }
 
   /// Get interactions for a specific relative
   Stream<List<Interaction>> getRelativeInteractionsStream(String relativeId) {
-    try {
-      return _supabase.from(_table).stream(primaryKey: ['id']).map((data) {
-        // Filter for this relative's interactions
-        final filtered = data
-            .where((json) => json['relative_id'] == relativeId)
-            .map((json) => Interaction.fromJson(json))
-            .toList();
+    return _supabase.from(_table).stream(primaryKey: ['id']).map((data) {
+      // Filter for this relative's interactions
+      final filtered = data
+          .where((json) => json['relative_id'] == relativeId)
+          .map((json) => Interaction.fromJson(json))
+          .toList();
 
-        // Sort by date descending (most recent first)
-        filtered.sort((a, b) => b.date.compareTo(a.date));
+      // Sort by date descending (most recent first)
+      filtered.sort((a, b) => b.date.compareTo(a.date));
 
-        return filtered;
-      });
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ [INTERACTIONS] Error streaming relative interactions: $e');
-      }
-      rethrow;
-    }
+      return filtered;
+    });
   }
 
   /// Get recent interactions (last N)
@@ -144,9 +107,6 @@ class InteractionsService {
           .map((json) => Interaction.fromJson(json))
           .toList();
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [INTERACTIONS] Error getting recent interactions: $e');
-      }
       return [];
     }
   }
@@ -209,9 +169,6 @@ class InteractionsService {
 
       return (response as List).length;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [INTERACTIONS] Error counting interactions: $e');
-      }
       return 0;
     }
   }
@@ -235,9 +192,6 @@ class InteractionsService {
 
       return counts;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [INTERACTIONS] Error counting by type: $e');
-      }
       return {};
     }
   }
@@ -248,19 +202,11 @@ class InteractionsService {
     Map<String, dynamic> updates,
   ) async {
     try {
-      if (kDebugMode) {
-        print('📝 [INTERACTIONS] Updating interaction: $interactionId');
-      }
-
       // Note: updated_at is automatically set by database trigger
       await _supabase.from(_table).update(updates).eq('id', interactionId);
-
-      if (kDebugMode) {
-        print('✅ [INTERACTIONS] Updated interaction: $interactionId');
-      }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ [INTERACTIONS] Error updating interaction: $e');
+        print('❌ [INTERACTIONS] Error updating: $e');
       }
       rethrow;
     }
@@ -269,18 +215,10 @@ class InteractionsService {
   /// Delete an interaction
   Future<void> deleteInteraction(String interactionId) async {
     try {
-      if (kDebugMode) {
-        print('🗑️ [INTERACTIONS] Deleting interaction: $interactionId');
-      }
-
       await _supabase.from(_table).delete().eq('id', interactionId);
-
-      if (kDebugMode) {
-        print('✅ [INTERACTIONS] Deleted interaction: $interactionId');
-      }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ [INTERACTIONS] Error deleting interaction: $e');
+        print('❌ [INTERACTIONS] Error deleting: $e');
       }
       rethrow;
     }
@@ -303,9 +241,6 @@ class InteractionsService {
 
       return (response as List).isNotEmpty;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [INTERACTIONS] Error checking today interaction: $e');
-      }
       return false;
     }
   }
@@ -320,9 +255,6 @@ class InteractionsService {
 
       return (response as List).length;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [INTERACTIONS] Error getting total count: $e');
-      }
       return 0;
     }
   }

@@ -18,49 +18,16 @@ class ReminderSchedulesService {
   /// Create a new reminder schedule
   Future<String> createSchedule(Map<String, dynamic> scheduleData) async {
     try {
-      if (kDebugMode) {
-        print('🔔 [SCHEDULES] Creating schedule...');
-        print(
-          '🔔 [SCHEDULES] Schedule data keys: ${scheduleData.keys.toList()}',
-        );
-        print('🔔 [SCHEDULES] Schedule data: $scheduleData');
-      }
-
-      // Debug: Check if reminder_time key exists in data
-      if (scheduleData.containsKey('reminder_time')) {
-        if (kDebugMode) {
-          print(
-            '✅ [SCHEDULES] reminder_time key found: ${scheduleData['reminder_time']}',
-          );
-        }
-      } else {
-        if (kDebugMode) {
-          print('❌ [SCHEDULES] reminder_time key MISSING in schedule data!');
-        }
-      }
-
       final response = await _supabase
           .from(_table)
           .insert(scheduleData)
           .select('id')
           .single();
 
-      final id = response['id'] as String;
-
-      if (kDebugMode) {
-        print('✅ [SCHEDULES] Schedule created: $id');
-      }
-
-      return id;
+      return response['id'] as String;
     } catch (e) {
       if (kDebugMode) {
         print('❌ [SCHEDULES] Create error: $e');
-        print('❌ [SCHEDULES] Error type: ${e.runtimeType}');
-        if (e is PostgrestException) {
-          print('❌ [SCHEDULES] Postgrest details: ${e.details}');
-          print('❌ [SCHEDULES] Postgrest hint: ${e.hint}');
-          print('❌ [SCHEDULES] Postgrest code: ${e.code}');
-        }
       }
       rethrow;
     }
@@ -69,50 +36,32 @@ class ReminderSchedulesService {
   /// Get all schedules for a user as a stream
   Stream<List<ReminderSchedule>> getSchedulesStream(String userId) {
     try {
-      // Always log regardless of debug mode
-      debugPrint('📡 [SCHEDULES] Streaming schedules for user: $userId');
-      debugPrint('📡 [SCHEDULES] Table name: $_table');
-
       return _supabase.from(_table).stream(primaryKey: ['id']).map((data) {
-        debugPrint('📊 [SCHEDULES] Raw data received: ${data.length} records');
-
         // Filter for this user's schedules
         final filtered = data
             .where((json) => json['user_id'] == userId)
             .toList();
 
-        debugPrint(
-          '🔍 [SCHEDULES] Filtered for user $userId: ${filtered.length} records',
-        );
-
         List<ReminderSchedule> schedules;
         try {
           schedules = filtered.map((json) {
-            debugPrint('🔄 [SCHEDULES] Parsing schedule: $json');
             return ReminderSchedule.fromJson(json);
           }).toList();
         } catch (e) {
-          debugPrint('❌ [SCHEDULES] Model parsing error: $e');
-          debugPrint('❌ [SCHEDULES] Problematic data: $filtered');
+          if (kDebugMode) {
+            print('❌ [SCHEDULES] Model parsing error: $e');
+          }
           rethrow;
         }
 
         // Sort by created_at descending (most recent first)
         schedules.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-        debugPrint(
-          '📋 [SCHEDULES] Successfully loaded ${schedules.length} schedules',
-        );
-
         return schedules;
       });
     } catch (e) {
-      debugPrint('❌ [SCHEDULES] Stream setup error: $e');
-      debugPrint('❌ [SCHEDULES] Error type: ${e.runtimeType}');
-      if (e is PostgrestException) {
-        debugPrint('❌ [SCHEDULES] Postgrest details: ${e.details}');
-        debugPrint('❌ [SCHEDULES] Postgrest hint: ${e.hint}');
-        debugPrint('❌ [SCHEDULES] Postgrest code: ${e.code}');
+      if (kDebugMode) {
+        print('❌ [SCHEDULES] Stream setup error: $e');
       }
       rethrow;
     }
@@ -121,10 +70,6 @@ class ReminderSchedulesService {
   /// Get active schedules for a user
   Stream<List<ReminderSchedule>> getActiveSchedulesStream(String userId) {
     try {
-      if (kDebugMode) {
-        print('📡 [SCHEDULES] Streaming active schedules for user: $userId');
-      }
-
       return _supabase.from(_table).stream(primaryKey: ['id']).map((data) {
         // Filter for this user's active schedules
         final filtered = data
@@ -150,10 +95,6 @@ class ReminderSchedulesService {
   /// Get a specific schedule
   Future<ReminderSchedule?> getSchedule(String scheduleId) async {
     try {
-      if (kDebugMode) {
-        print('🔍 [SCHEDULES] Getting schedule: $scheduleId');
-      }
-
       final response = await _supabase
           .from(_table)
           .select()
@@ -161,9 +102,6 @@ class ReminderSchedulesService {
           .maybeSingle();
 
       if (response == null) {
-        if (kDebugMode) {
-          print('⚠️ [SCHEDULES] Schedule not found: $scheduleId');
-        }
         return null;
       }
 
@@ -182,16 +120,8 @@ class ReminderSchedulesService {
     Map<String, dynamic> data,
   ) async {
     try {
-      if (kDebugMode) {
-        print('✏️ [SCHEDULES] Updating schedule: $scheduleId');
-      }
-
       // Note: updated_at is automatically set by database trigger
       await _supabase.from(_table).update(data).eq('id', scheduleId);
-
-      if (kDebugMode) {
-        print('✅ [SCHEDULES] Schedule updated successfully');
-      }
     } catch (e) {
       if (kDebugMode) {
         print('❌ [SCHEDULES] Update error: $e');
@@ -203,15 +133,7 @@ class ReminderSchedulesService {
   /// Delete a schedule
   Future<void> deleteSchedule(String scheduleId) async {
     try {
-      if (kDebugMode) {
-        print('🗑️ [SCHEDULES] Deleting schedule: $scheduleId');
-      }
-
       await _supabase.from(_table).delete().eq('id', scheduleId);
-
-      if (kDebugMode) {
-        print('✅ [SCHEDULES] Schedule deleted successfully');
-      }
     } catch (e) {
       if (kDebugMode) {
         print('❌ [SCHEDULES] Delete error: $e');
@@ -223,12 +145,6 @@ class ReminderSchedulesService {
   /// Toggle schedule active status
   Future<void> toggleScheduleStatus(String scheduleId, bool isActive) async {
     try {
-      if (kDebugMode) {
-        print(
-          '🔄 [SCHEDULES] Toggling schedule status: $scheduleId to $isActive',
-        );
-      }
-
       await updateSchedule(scheduleId, {'is_active': isActive});
     } catch (e) {
       if (kDebugMode) {
@@ -244,10 +160,6 @@ class ReminderSchedulesService {
     List<String> relativeIds,
   ) async {
     try {
-      if (kDebugMode) {
-        print('➕ [SCHEDULES] Adding relatives to schedule: $scheduleId');
-      }
-
       final schedule = await getSchedule(scheduleId);
       if (schedule == null) {
         throw Exception('Schedule not found');
@@ -256,10 +168,6 @@ class ReminderSchedulesService {
       final updatedRelativeIds = [...schedule.relativeIds, ...relativeIds];
 
       await updateSchedule(scheduleId, {'relative_ids': updatedRelativeIds});
-
-      if (kDebugMode) {
-        print('✅ [SCHEDULES] Added ${relativeIds.length} relatives');
-      }
     } catch (e) {
       if (kDebugMode) {
         print('❌ [SCHEDULES] Add relatives error: $e');
@@ -274,10 +182,6 @@ class ReminderSchedulesService {
     String relativeId,
   ) async {
     try {
-      if (kDebugMode) {
-        print('➖ [SCHEDULES] Removing relative from schedule: $scheduleId');
-      }
-
       final schedule = await getSchedule(scheduleId);
       if (schedule == null) {
         throw Exception('Schedule not found');
@@ -288,10 +192,6 @@ class ReminderSchedulesService {
           .toList();
 
       await updateSchedule(scheduleId, {'relative_ids': updatedRelativeIds});
-
-      if (kDebugMode) {
-        print('✅ [SCHEDULES] Relative removed');
-      }
     } catch (e) {
       if (kDebugMode) {
         print('❌ [SCHEDULES] Remove relative error: $e');
@@ -303,10 +203,6 @@ class ReminderSchedulesService {
   /// Get schedules that should fire today
   Future<List<ReminderSchedule>> getTodaySchedules(String userId) async {
     try {
-      if (kDebugMode) {
-        print('📅 [SCHEDULES] Getting today\'s schedules for user: $userId');
-      }
-
       final response = await _supabase
           .from(_table)
           .select()
@@ -321,12 +217,6 @@ class ReminderSchedulesService {
       final todaySchedules = allSchedules.where((schedule) {
         return schedule.shouldFireToday();
       }).toList();
-
-      if (kDebugMode) {
-        print(
-          '✅ [SCHEDULES] Found ${todaySchedules.length} schedules for today',
-        );
-      }
 
       return todaySchedules;
     } catch (e) {
@@ -343,12 +233,6 @@ class ReminderSchedulesService {
     String frequency,
   ) {
     try {
-      if (kDebugMode) {
-        print(
-          '📡 [SCHEDULES] Streaming $frequency schedules for user: $userId',
-        );
-      }
-
       return _supabase.from(_table).stream(primaryKey: ['id']).map((data) {
         // Filter for this user's schedules with specified frequency
         final filtered = data

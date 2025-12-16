@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:confetti/confetti.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -16,7 +17,7 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/services/relatives_service.dart';
-import '../../../shared/services/cloudinary_service.dart';
+import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/services/contacts_import_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
@@ -43,7 +44,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   AvatarType? _selectedAvatar; // User-selected avatar
 
   final RelativesService _relativesService = RelativesService();
-  final CloudinaryService _cloudinaryService = CloudinaryService();
+  final SupabaseStorageService _storageService = SupabaseStorageService();
   final ContactsImportService _contactsService = ContactsImportService();
 
   // Confetti controller for celebration animation
@@ -65,7 +66,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   }
 
   Future<void> _pickImage() async {
-    final image = await _cloudinaryService.pickImage();
+    final image = await _storageService.pickImage();
     if (image != null) {
       setState(() {
         _selectedImage = image;
@@ -93,10 +94,17 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
       final user = ref.read(currentUserProvider);
       if (user == null) throw Exception('User not authenticated');
 
+      // Generate a UUID for the new relative (needed for photo upload path)
+      final relativeId = const Uuid().v4();
+
       // Upload photo if selected
       String? photoUrl;
       if (_selectedImage != null) {
-        photoUrl = await _cloudinaryService.uploadProfilePicture(_selectedImage!);
+        photoUrl = await _storageService.uploadRelativePhoto(
+          _selectedImage!,
+          user.id,
+          relativeId,
+        );
       }
 
       // Use selected avatar or auto-suggest based on relationship
@@ -754,7 +762,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
               maxCrossAxisExtent: 60,
               crossAxisSpacing: AppSpacing.sm,
               mainAxisSpacing: AppSpacing.sm,
-              childAspectRatio: 1,
+              childAspectRatio: 0.85,
             ),
             itemCount: AvatarType.values.length,
             itemBuilder: (context, index) {

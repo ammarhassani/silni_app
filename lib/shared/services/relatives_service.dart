@@ -16,23 +16,13 @@ class RelativesService {
   /// Create a new relative
   Future<String> createRelative(Relative relative) async {
     try {
-      if (kDebugMode) {
-        print('📝 [RELATIVES] Creating relative: ${relative.fullName}');
-      }
-
       final response = await _supabase
           .from(_table)
           .insert(relative.toJson())
           .select('id')
           .single();
 
-      final id = response['id'] as String;
-
-      if (kDebugMode) {
-        print('✅ [RELATIVES] Created relative with ID: $id');
-      }
-
-      return id;
+      return response['id'] as String;
     } catch (e) {
       if (kDebugMode) {
         print('❌ [RELATIVES] Error creating relative: $e');
@@ -44,41 +34,7 @@ class RelativesService {
   /// Get all relatives for a user
   Stream<List<Relative>> getRelativesStream(String userId) {
     try {
-      if (kDebugMode) {
-        print('📡 [RELATIVES] Streaming relatives for user: $userId');
-        print(
-          '📡 [RELATIVES] Stream created at: ${DateTime.now().toIso8601String()}',
-        );
-      }
-
       return _supabase.from(_table).stream(primaryKey: ['id']).map((data) {
-        if (kDebugMode) {
-          print(
-            '📊 [RELATIVES] Raw data received: ${data.length} total records from Supabase',
-          );
-          print(
-            '📊 [RELATIVES] Stream update timestamp: ${DateTime.now().toIso8601String()}',
-          );
-
-          // Log all record IDs for debugging
-          final allIds = data
-              .map((json) => json['id'] as String?)
-              .where((id) => id != null)
-              .toList();
-          print('📊 [RELATIVES] All record IDs in stream: $allIds');
-
-          // Log archived status
-          final archivedCount = data
-              .where((json) => json['is_archived'] == true)
-              .length;
-          final userCount = data
-              .where((json) => json['user_id'] == userId)
-              .length;
-          print(
-            '📊 [RELATIVES] Archived records: $archivedCount, User records: $userCount',
-          );
-        }
-
         // Filter for this user's non-archived relatives
         final filtered = data
             .where(
@@ -95,30 +51,11 @@ class RelativesService {
           return a.fullName.compareTo(b.fullName);
         });
 
-        if (kDebugMode) {
-          print(
-            '📊 [RELATIVES] Filtered to ${filtered.length} active relatives for user $userId',
-          );
-
-          // Log filtered relative names and IDs
-          final filteredInfo = filtered
-              .map((r) => '${r.fullName} (${r.id})')
-              .toList();
-          print('📊 [RELATIVES] Filtered relatives: $filteredInfo');
-
-          print(
-            '📊 [RELATIVES] Stream processing completed at: ${DateTime.now().toIso8601String()}',
-          );
-        }
-
         return filtered;
       });
     } catch (e) {
       if (kDebugMode) {
         print('❌ [RELATIVES] Error streaming relatives: $e');
-        print(
-          '❌ [RELATIVES] Error timestamp: ${DateTime.now().toIso8601String()}',
-        );
       }
       rethrow;
     }
@@ -127,10 +64,6 @@ class RelativesService {
   /// Get a single relative by ID
   Future<Relative?> getRelative(String relativeId) async {
     try {
-      if (kDebugMode) {
-        print('📖 [RELATIVES] Fetching relative: $relativeId');
-      }
-
       final response = await _supabase
           .from(_table)
           .select()
@@ -138,9 +71,6 @@ class RelativesService {
           .maybeSingle();
 
       if (response == null) {
-        if (kDebugMode) {
-          print('⚠️ [RELATIVES] Relative not found: $relativeId');
-        }
         return null;
       }
 
@@ -156,19 +86,12 @@ class RelativesService {
   /// Get a single relative by ID as stream (for real-time updates)
   Stream<Relative?> getRelativeStream(String relativeId) {
     try {
-      if (kDebugMode) {
-        print('📡 [RELATIVES] Streaming relative: $relativeId');
-      }
-
       return _supabase
           .from(_table)
           .stream(primaryKey: ['id'])
           .eq('id', relativeId)
           .map((data) {
             if (data.isEmpty) {
-              if (kDebugMode) {
-                print('⚠️ [RELATIVES] Relative not found: $relativeId');
-              }
               return null;
             }
             return Relative.fromJson(data.first);
@@ -187,16 +110,8 @@ class RelativesService {
     Map<String, dynamic> updates,
   ) async {
     try {
-      if (kDebugMode) {
-        print('📝 [RELATIVES] Updating relative: $relativeId');
-      }
-
       // Note: updated_at is automatically set by database trigger
       await _supabase.from(_table).update(updates).eq('id', relativeId);
-
-      if (kDebugMode) {
-        print('✅ [RELATIVES] Updated relative: $relativeId');
-      }
     } catch (e) {
       if (kDebugMode) {
         print('❌ [RELATIVES] Error updating relative: $e');
@@ -208,10 +123,6 @@ class RelativesService {
   /// Delete (archive) a relative
   Future<void> deleteRelative(String relativeId) async {
     try {
-      if (kDebugMode) {
-        print('🗑️ [RELATIVES] Archiving relative: $relativeId');
-      }
-
       await _supabase
           .from(_table)
           .update({
@@ -219,10 +130,6 @@ class RelativesService {
             // updated_at handled by trigger
           })
           .eq('id', relativeId);
-
-      if (kDebugMode) {
-        print('✅ [RELATIVES] Archived relative: $relativeId');
-      }
     } catch (e) {
       if (kDebugMode) {
         print('❌ [RELATIVES] Error archiving relative: $e');
@@ -234,51 +141,17 @@ class RelativesService {
   /// Permanently delete a relative
   Future<void> permanentlyDeleteRelative(String relativeId) async {
     try {
-      if (kDebugMode) {
-        print('🗑️ [RELATIVES] Permanently deleting relative: $relativeId');
-        print(
-          '🗑️ [RELATIVES] Delete operation started at: ${DateTime.now().toIso8601String()}',
-        );
-      }
-
-      // First, get the relative info before deletion for logging
-      final relativeInfo = await getRelative(relativeId);
-      if (kDebugMode && relativeInfo != null) {
-        print(
-          '🗑️ [RELATIVES] Deleting relative: ${relativeInfo.fullName} (${relativeInfo.id})',
-        );
-      }
-
       // First, delete all interactions for this relative
-      if (kDebugMode) {
-        print(
-          '🗑️ [RELATIVES] Deleting interactions for relative: $relativeId',
-        );
-      }
       await _supabase
           .from('interactions')
           .delete()
           .eq('relative_id', relativeId);
 
       // Then delete the relative
-      if (kDebugMode) {
-        print('🗑️ [RELATIVES] Deleting relative record: $relativeId');
-      }
       await _supabase.from(_table).delete().eq('id', relativeId);
-
-      if (kDebugMode) {
-        print('✅ [RELATIVES] Permanently deleted relative: $relativeId');
-        print(
-          '✅ [RELATIVES] Delete operation completed at: ${DateTime.now().toIso8601String()}',
-        );
-        print('✅ [RELATIVES] Real-time update should trigger automatically');
-      }
     } catch (e) {
       if (kDebugMode) {
         print('❌ [RELATIVES] Error permanently deleting relative: $e');
-        print(
-          '❌ [RELATIVES] Error timestamp: ${DateTime.now().toIso8601String()}',
-        );
       }
       rethrow;
     }
@@ -294,10 +167,6 @@ class RelativesService {
             // updated_at handled by trigger
           })
           .eq('id', relativeId);
-
-      if (kDebugMode) {
-        print('⭐ [RELATIVES] Toggled favorite for $relativeId: $isFavorite');
-      }
     } catch (e) {
       if (kDebugMode) {
         print('❌ [RELATIVES] Error toggling favorite: $e');
@@ -318,10 +187,6 @@ class RelativesService {
               null, // null means only update relative, no interaction record
         },
       );
-
-      if (kDebugMode) {
-        print('📊 [RELATIVES] Recorded interaction for: $relativeId');
-      }
     } catch (e) {
       if (kDebugMode) {
         print('❌ [RELATIVES] Error recording interaction: $e');

@@ -14,6 +14,7 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../core/providers/analytics_provider.dart';
 import '../../../shared/services/auth_service.dart';
 import '../../../shared/services/biometric_service.dart';
+import '../../../shared/services/session_persistence_service.dart';
 import '../providers/auth_provider.dart';
 import '../../../core/services/app_logger_service.dart';
 import '../../../core/config/supabase_config.dart';
@@ -32,6 +33,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _biometricAvailable = false;
+  bool _hasSavedCredentials = false;
 
   @override
   void dispose() {
@@ -48,23 +50,48 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _checkBiometricAvailability() async {
     final biometricService = BiometricService();
+    final sessionService = SessionPersistenceService();
+
     final isSupported = await biometricService.isDeviceSupported();
     final isEnrolled = await biometricService.areBiometricsEnrolled();
+    final hasCreds = await sessionService.isBiometricLoginEnabled();
 
     if (mounted) {
       setState(() {
         _biometricAvailable = isSupported && isEnrolled;
+        _hasSavedCredentials = hasCreds;
       });
     }
   }
 
   Future<void> _authenticateWithBiometrics() async {
     final biometricService = BiometricService();
+    final sessionService = SessionPersistenceService();
+
+    // First verify biometrics
     final result = await biometricService.authenticate();
 
     if (result.success) {
-      // Biometric auth successful, proceed with login
-      _login();
+      // Get stored credentials
+      final credentials = await sessionService.getBiometricCredentials();
+
+      if (credentials == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('لم يتم العثور على بيانات تسجيل الدخول المحفوظة'),
+              backgroundColor: AppColors.error,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Set credentials and login
+      _emailController.text = credentials['email']!;
+      _passwordController.text = credentials['password']!;
+      _loginWithCredentials(credentials['email']!, credentials['password']!);
     } else if (result.error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -75,6 +102,71 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _loginWithCredentials(String email, String password) async {
+    final logger = AppLoggerService();
+    logger.info(
+      'Biometric login flow started',
+      category: LogCategory.auth,
+      tag: 'LoginScreen',
+    );
+
+    setState(() => _isLoading = true);
+
+    try {
+      if (!SupabaseConfig.isInitialized) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('فشل تهيئة الاتصال بالخادم. يرجى إعادة تشغيل التطبيق.'),
+            backgroundColor: AppColors.error,
+            duration: Duration(seconds: 5),
+          ),
+        );
+        return;
+      }
+
+      final authService = ref.read(authServiceProvider);
+      final credential = await authService
+          .signInWithEmail(email: email, password: password)
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              throw Exception('Login timeout');
+            },
+          );
+
+      logger.info(
+        'Biometric login successful',
+        category: LogCategory.auth,
+        tag: 'LoginScreen',
+        metadata: {'userId': credential.user?.id},
+      );
+
+      // Track login and set user ID
+      final analytics = ref.read(analyticsServiceProvider);
+      analytics.logLogin('biometric').catchError((e) {});
+      if (credential.user != null) {
+        analytics.setUserId(credential.user!.id).catchError((e) {});
+      }
+
+      if (!mounted) return;
+      context.go(AppRoutes.home);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      String errorMessage = AuthService.getErrorMessage(e.toString());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -201,7 +293,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         },
       );
 
-      // Track login event (fire and forget - don't block auth flow)
+      // Save credentials for biometric login (fire and forget)
+      SessionPersistenceService().saveBiometricCredentials(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      // Track login event and set user ID (fire and forget - don't block auth flow)
       logger.debug(
         'Triggering analytics (fire-and-forget)...',
         category: LogCategory.analytics,
@@ -216,6 +314,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           metadata: {'error': e.toString()},
         );
       });
+      if (credential.user != null) {
+        analytics.setUserId(credential.user!.id).catchError((e) {});
+      }
 
       if (!mounted) {
         logger.warning(
@@ -367,17 +468,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   labelText: 'البريد الإلكتروني',
                   labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
                   prefixIcon: const Icon(Icons.email, color: Colors.white70),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.1),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.white24),
+                    borderSide: BorderSide.none,
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.white24),
+                    borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.white),
+                    borderSide: const BorderSide(color: Colors.white, width: 2),
                   ),
                 ),
                 validator: (value) {
@@ -675,6 +778,66 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 isLoading: _isLoading,
                                 icon: Icons.login_rounded,
                               ),
+
+                              // Face ID / Biometric button
+                              if (_biometricAvailable && _hasSavedCredentials) ...[
+                                const SizedBox(height: AppSpacing.md),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Divider(
+                                        color: Colors.white.withOpacity(0.3),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: AppSpacing.sm,
+                                      ),
+                                      child: Text(
+                                        'أو',
+                                        style: AppTypography.bodySmall.copyWith(
+                                          color: Colors.white.withOpacity(0.7),
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Divider(
+                                        color: Colors.white.withOpacity(0.3),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: _isLoading ? null : _authenticateWithBiometrics,
+                                    icon: const Icon(
+                                      Icons.face,
+                                      color: Colors.white,
+                                    ),
+                                    label: Text(
+                                      'تسجيل الدخول بـ Face ID',
+                                      style: AppTypography.labelLarge.copyWith(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(
+                                        color: Colors.white.withOpacity(0.5),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: AppSpacing.md,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                          AppSpacing.radiusLg,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         )

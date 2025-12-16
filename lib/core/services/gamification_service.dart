@@ -85,9 +85,6 @@ class GamificationService {
 
       // Apply daily cap
       if (pointsEarnedToday >= _dailyPointCap) {
-        if (kDebugMode) {
-          print('⚠️ [Gamification] Daily point cap reached ($pointsEarnedToday/$_dailyPointCap)');
-        }
         return;
       }
 
@@ -109,10 +106,6 @@ class GamificationService {
         points: pointsToAward,
         source: 'interaction',
       ));
-
-      if (kDebugMode) {
-        print('🎉 [Gamification] Awarded $pointsToAward points to user');
-      }
     } catch (e) {
       if (kDebugMode) {
         print('❌ [Gamification] Failed to award points: $e');
@@ -128,72 +121,71 @@ class GamificationService {
   /// Update user's streak after an interaction
   Future<Map<String, dynamic>> updateStreak(String userId) async {
     try {
-      // Get user's current streak data
+      // Get user's current streak data and last interaction date
       final userData = await _supabase
           .from('users')
-          .select('current_streak, longest_streak')
+          .select('current_streak, longest_streak, last_streak_date')
           .eq('id', userId)
           .single();
 
       final int currentStreak = userData['current_streak'] ?? 0;
       final int longestStreak = userData['longest_streak'] ?? 0;
+      final String? lastStreakDateStr = userData['last_streak_date'];
 
-      // Get interactions from the last 2 days to check continuity
       final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
       final yesterday = DateTime(now.year, now.month, now.day - 1);
-      final twoDaysAgo = DateTime(now.year, now.month, now.day - 2);
 
-      final recentInteractions = await _supabase
-          .from('interactions')
-          .select('date')
-          .eq('user_id', userId)
-          .gte('date', twoDaysAgo.toIso8601String())
-          .order('date', ascending: false);
-
-      // Check if user had interaction yesterday
-      bool hadInteractionYesterday = recentInteractions.any((i) {
-        final date = DateTime.parse(i['date'] as String);
-        return date.year == yesterday.year &&
-            date.month == yesterday.month &&
-            date.day == yesterday.day;
-      });
-
-      // Check if user had interaction today
-      bool hadInteractionToday = recentInteractions.any((i) {
-        final date = DateTime.parse(i['date'] as String);
-        return date.year == now.year &&
-            date.month == now.month &&
-            date.day == now.day;
-      });
+      // Parse last streak date if available
+      DateTime? lastStreakDate;
+      if (lastStreakDateStr != null) {
+        final parsed = DateTime.parse(lastStreakDateStr);
+        lastStreakDate = DateTime(parsed.year, parsed.month, parsed.day);
+      }
 
       int newStreak = currentStreak;
       bool streakIncreased = false;
+      bool shouldUpdateDate = false;
 
-      // If this is first interaction today
-      if (hadInteractionToday && recentInteractions.length == 1) {
-        // Start new streak
+      // Check if we already processed streak today
+      if (lastStreakDate != null && lastStreakDate.isAtSameMomentAs(today)) {
+        // Already counted today's interaction - no streak change needed
+        return {
+          'current_streak': currentStreak,
+          'longest_streak': longestStreak,
+          'streak_increased': false,
+        };
+      }
+
+      // First interaction today - determine streak behavior
+      if (lastStreakDate == null) {
+        // No previous streak date - start fresh
         newStreak = 1;
         streakIncreased = true;
-      } else if (hadInteractionToday && hadInteractionYesterday) {
-        // Continue streak
+        shouldUpdateDate = true;
+      } else if (lastStreakDate.isAtSameMomentAs(yesterday)) {
+        // Had interaction yesterday - continue streak
         newStreak = currentStreak + 1;
         streakIncreased = true;
-      } else if (!hadInteractionYesterday && currentStreak > 0) {
-        // Streak broken - reset to 1
+        shouldUpdateDate = true;
+      } else if (lastStreakDate.isBefore(yesterday)) {
+        // Streak broken (missed a day) - reset to 1
         newStreak = 1;
-        if (kDebugMode) {
-          print('💔 [Gamification] Streak broken! Starting fresh.');
-        }
+        streakIncreased = true; // New streak starts
+        shouldUpdateDate = true;
       }
 
       // Update longest streak if necessary
       final newLongestStreak = newStreak > longestStreak ? newStreak : longestStreak;
 
-      // Update database
-      await _supabase.from('users').update({
-        'current_streak': newStreak,
-        'longest_streak': newLongestStreak,
-      }).eq('id', userId);
+      // Update database with streak and last_streak_date
+      if (shouldUpdateDate) {
+        await _supabase.from('users').update({
+          'current_streak': newStreak,
+          'longest_streak': newLongestStreak,
+          'last_streak_date': today.toIso8601String().split('T')[0], // Store as date only
+        }).eq('id', userId);
+      }
 
       // Emit streak events
       if (streakIncreased) {
@@ -211,10 +203,6 @@ class GamificationService {
           ));
           _analytics?.logStreakMilestone(newStreak);
         }
-      }
-
-      if (kDebugMode) {
-        print('🔥 [Gamification] Streak updated: $newStreak days (longest: $newLongestStreak)');
       }
 
       return {
@@ -380,10 +368,6 @@ class GamificationService {
           ));
           _analytics?.logBadgeUnlocked(badge);
         }
-
-        if (kDebugMode) {
-          print('🏆 [Gamification] New badges unlocked: $newBadges');
-        }
       }
 
       return newBadges;
@@ -513,10 +497,6 @@ class GamificationService {
         // Log analytics
         _analytics?.logLevelUp(newLevel);
 
-        if (kDebugMode) {
-          print('⬆️ [Gamification] Level up! New level: $newLevel');
-        }
-
         return {
           'leveled_up': true,
           'old_level': currentLevel,
@@ -558,9 +538,6 @@ class GamificationService {
       final progress = (points - currentLevelXP) / (nextLevelXP - currentLevelXP);
       return progress.clamp(0.0, 1.0);
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [Gamification] Failed to get level progress: $e');
-      }
       return 0.0;
     }
   }
@@ -575,10 +552,6 @@ class GamificationService {
     required Interaction interaction,
   }) async {
     try {
-      if (kDebugMode) {
-        print('🎮 [Gamification] Processing interaction gamification...');
-      }
-
       // 1. Award points
       final points = calculateInteractionPoints(interaction);
       await awardPoints(userId: userId, points: points);
@@ -592,10 +565,6 @@ class GamificationService {
       // 4. Check level
       final levelResult = await checkAndUpdateLevel(userId);
 
-      if (kDebugMode) {
-        print('✅ [Gamification] Processing complete!');
-      }
-
       return {
         'points_earned': points,
         'streak': streakResult,
@@ -604,7 +573,7 @@ class GamificationService {
       };
     } catch (e) {
       if (kDebugMode) {
-        print('❌ [Gamification] Failed to process gamification: $e');
+        print('❌ [Gamification] Failed to process: $e');
       }
       rethrow;
     }

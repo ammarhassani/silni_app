@@ -293,123 +293,199 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         .where((r) => schedule.relativeIds.contains(r.id))
         .toList();
 
-    return GlassCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      margin: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                schedule.frequency.emoji,
-                style: const TextStyle(fontSize: 32),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return DragTarget<Relative>(
+      onWillAcceptWithDetails: (details) =>
+          !schedule.relativeIds.contains(details.data.id),
+      onAcceptWithDetails: (details) => _handleDragTarget(details, schedule),
+      builder: (context, candidateData, rejectedData) {
+        final isHovering = candidateData.isNotEmpty;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: isHovering
+              ? BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                  boxShadow: [
+                    BoxShadow(
+                      color: themeColors.primary.withOpacity(0.4),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                )
+              : null,
+          child: GlassCard(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            margin: const EdgeInsets.only(bottom: AppSpacing.md),
+            gradient: isHovering
+                ? LinearGradient(
+                    colors: [
+                      themeColors.primary.withOpacity(0.3),
+                      themeColors.primary.withOpacity(0.1),
+                    ],
+                  )
+                : null,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
                     Text(
-                      schedule.frequency.arabicName,
-                      style: AppTypography.headlineSmall.copyWith(
-                        color: Colors.white,
+                      schedule.frequency.emoji,
+                      style: const TextStyle(fontSize: 32),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            schedule.frequency.arabicName,
+                            style: AppTypography.headlineSmall.copyWith(
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            schedule.description,
+                            style: AppTypography.bodySmall.copyWith(
+                              color: Colors.white.withOpacity(0.7),
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ),
-                    Text(
-                      schedule.description,
-                      style: AppTypography.bodySmall.copyWith(
-                        color: Colors.white.withOpacity(0.7),
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    Switch(
+                      value: schedule.isActive,
+                      onChanged: (value) => _toggleSchedule(schedule, value),
+                      activeColor: themeColors.primary,
                     ),
                   ],
                 ),
-              ),
-              Switch(
-                value: schedule.isActive,
-                onChanged: (value) => _toggleSchedule(schedule, value),
-                activeColor: themeColors.primary,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          const Divider(color: Colors.white24),
-          const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: AppSpacing.md),
+                const Divider(color: Colors.white24),
+                const SizedBox(height: AppSpacing.md),
 
-          // Relatives in this schedule
-          if (scheduledRelatives.isEmpty)
-            Text(
-              'لا يوجد أقارب في هذا التذكير',
-              style: AppTypography.bodySmall.copyWith(
-                color: Colors.white.withOpacity(0.5),
-              ),
-            )
-          else
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: scheduledRelatives.map((relative) {
-                return _buildRelativeChip(relative, schedule);
-              }).toList(),
-            ),
+                // Drag hint when hovering
+                if (isHovering)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: Text(
+                      '✨ أفلت هنا للإضافة',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: themeColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
 
-          const SizedBox(height: AppSpacing.md),
+                // Relatives in this schedule
+                if (scheduledRelatives.isEmpty)
+                  Text(
+                    'لا يوجد أقارب في هذا التذكير',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: Colors.white.withOpacity(0.5),
+                    ),
+                  )
+                else
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: scheduledRelatives.map((relative) {
+                      return _buildRelativeChip(relative, schedule);
+                    }).toList(),
+                  ),
 
-          // Actions
-          Row(
-            children: [
-              Expanded(
-                child: GradientButton(
-                  onPressed: () =>
-                      _showAddRelativesToSchedule(schedule, allRelatives),
-                  text: 'إضافة أقارب',
-                  icon: Icons.person_add_rounded,
-                  height: 40,
+                const SizedBox(height: AppSpacing.md),
+
+                // Actions
+                Row(
+                  children: [
+                    Expanded(
+                      child: GradientButton(
+                        onPressed: () =>
+                            _showAddRelativesToSchedule(schedule, allRelatives),
+                        text: 'إضافة أقارب',
+                        icon: Icons.person_add_rounded,
+                        height: 40,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    GradientButton(
+                      onPressed: () => _editSchedule(schedule),
+                      text: '',
+                      icon: Icons.edit_rounded,
+                      height: 40,
+                      width: 50,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    GradientButton(
+                      onPressed: () => _deleteSchedule(schedule),
+                      text: '',
+                      icon: Icons.delete_rounded,
+                      height: 40,
+                      width: 50,
+                      gradient: AppColors.streakFire,
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              GradientButton(
-                onPressed: () => _editSchedule(schedule),
-                text: '',
-                icon: Icons.edit_rounded,
-                height: 40,
-                width: 50,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              GradientButton(
-                onPressed: () => _deleteSchedule(schedule),
-                text: '',
-                icon: Icons.delete_rounded,
-                height: 40,
-                width: 50,
-                gradient: AppColors.streakFire,
-              ),
-            ],
+              ],
+            ),
           ),
-        ],
-      ),
-    ).animate().fadeIn().slideX();
+        ).animate().fadeIn().slideX();
+      },
+    );
   }
 
   Widget _buildRelativeChip(Relative relative, ReminderSchedule schedule) {
     // Use theme-aware colors for chips
     final themeColors = ref.watch(themeColorsProvider);
 
-    return Chip(
-      avatar: Text(relative.displayEmoji, style: const TextStyle(fontSize: 18)),
-      label: Text(
-        relative.fullName,
-        style: AppTypography.bodySmall.copyWith(color: Colors.white),
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
       ),
-      backgroundColor: themeColors.primary.withOpacity(0.3),
-      deleteIcon: const Icon(
-        Icons.close_rounded,
-        size: 18,
-        color: Colors.white70,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            themeColors.primary.withOpacity(0.3),
+            themeColors.primary.withOpacity(0.15),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.2),
+          width: 1,
+        ),
       ),
-      onDeleted: () => _removeRelativeFromSchedule(schedule, relative.id),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(relative.displayEmoji, style: const TextStyle(fontSize: 18)),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            relative.fullName,
+            style: AppTypography.bodySmall.copyWith(color: Colors.white),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          GestureDetector(
+            onTap: () => _removeRelativeFromSchedule(schedule, relative.id),
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.close_rounded,
+                size: 14,
+                color: Colors.white70,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -765,6 +841,23 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
     );
   }
 
+  String _getDayName(int dayNumber) {
+    const days = [
+      '', // 0 - not used
+      'الاثنين',
+      'الثلاثاء',
+      'الأربعاء',
+      'الخميس',
+      'الجمعة',
+      'السبت',
+      'الأحد',
+    ];
+    if (dayNumber >= 1 && dayNumber <= 7) {
+      return days[dayNumber];
+    }
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
@@ -825,11 +918,11 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
             if (widget.template.frequency == ReminderFrequency.weekly) ...[
               const SizedBox(height: AppSpacing.md),
               CollapsiblePicker(
-                title: 'أيام الأسبوع',
+                title: 'يوم الأسبوع',
                 icon: Icons.calendar_view_week_rounded,
                 summaryText: _selectedDays.isEmpty
-                    ? 'لم يتم اختيار أيام بعد'
-                    : '${_selectedDays.length} أيام محددة',
+                    ? 'لم يتم اختيار يوم بعد'
+                    : _getDayName(_selectedDays.first),
                 expandedContent: _buildDaySelector(),
               ),
             ],
@@ -872,29 +965,63 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
       'السبت',
     ];
 
-    return Wrap(
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.sm,
-      children: List.generate(7, (index) {
-        final dayNumber = index == 6 ? 7 : index + 1;
-        final isSelected = _selectedDays.contains(dayNumber);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'اختر يوم واحد للتذكير الأسبوعي',
+          style: AppTypography.bodySmall.copyWith(
+            color: Colors.white.withOpacity(0.7),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: List.generate(7, (index) {
+            final dayNumber = index == 6 ? 7 : index + 1;
+            // Single selection: check if this is the only selected day
+            final isSelected = _selectedDays.length == 1 && _selectedDays.contains(dayNumber);
 
-        return FilterChip(
-          label: Text(days[index]),
-          selected: isSelected,
-          onSelected: (selected) {
-            setState(() {
-              if (selected) {
-                _selectedDays.add(dayNumber);
-              } else {
-                _selectedDays.remove(dayNumber);
-              }
-            });
-          },
-          selectedColor: themeColors.primary,
-          checkmarkColor: Colors.white,
-        );
-      }),
+            return GestureDetector(
+              onTap: () {
+                setState(() {
+                  // Single selection: clear and set only this day
+                  _selectedDays.clear();
+                  _selectedDays.add(dayNumber);
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  gradient: isSelected
+                      ? themeColors.primaryGradient
+                      : LinearGradient(
+                          colors: [
+                            Colors.white.withOpacity(0.1),
+                            Colors.white.withOpacity(0.05),
+                          ],
+                        ),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  border: Border.all(
+                    color: isSelected
+                        ? themeColors.primary
+                        : Colors.white.withOpacity(0.2),
+                    width: isSelected ? 2 : 1,
+                  ),
+                ),
+                child: Text(
+                  days[index],
+                  style: AppTypography.bodySmall.copyWith(
+                    color: Colors.white,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+      ],
     );
   }
 
@@ -1155,6 +1282,7 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
   }
 
   Widget _buildDaySelector() {
+    final themeColors = ref.watch(themeColorsProvider);
     final days = [
       'الأحد',
       'الإثنين',
@@ -1164,48 +1292,103 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
       'الجمعة',
       'السبت',
     ];
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: List.generate(7, (index) {
-        final isSelected = _selectedDays.contains(index);
-        return FilterChip(
-          label: Text(days[index]),
-          selected: isSelected,
-          onSelected: (selected) {
-            setState(() {
-              if (selected)
-                _selectedDays.add(index);
-              else
-                _selectedDays.remove(index);
-            });
-          },
-          selectedColor: Colors.white.withOpacity(0.3),
-          labelStyle: TextStyle(
-            color: Colors.white,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'اختر يوم واحد للتذكير الأسبوعي',
+          style: AppTypography.bodySmall.copyWith(
+            color: Colors.white.withOpacity(0.7),
           ),
-        );
-      }),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: List.generate(7, (index) {
+            // Single selection: check if this day is the only selected day
+            final isSelected = _selectedDays.length == 1 && _selectedDays.contains(index);
+            return GestureDetector(
+              onTap: () {
+                setState(() {
+                  // Single selection: clear and set only this day
+                  _selectedDays.clear();
+                  _selectedDays.add(index);
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  gradient: isSelected
+                      ? themeColors.primaryGradient
+                      : LinearGradient(
+                          colors: [
+                            Colors.white.withOpacity(0.1),
+                            Colors.white.withOpacity(0.05),
+                          ],
+                        ),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  border: Border.all(
+                    color: isSelected
+                        ? themeColors.primary
+                        : Colors.white.withOpacity(0.2),
+                    width: isSelected ? 2 : 1,
+                  ),
+                ),
+                child: Text(
+                  days[index],
+                  style: AppTypography.bodySmall.copyWith(
+                    color: Colors.white,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+      ],
     );
   }
 
   Widget _buildMonthDaySelector() {
+    final themeColors = ref.watch(themeColorsProvider);
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: 6,
+      runSpacing: 6,
       children: List.generate(31, (index) {
         final day = index + 1;
         final isSelected = _selectedDayOfMonth == day;
-        return FilterChip(
-          label: Text('$day'),
-          selected: isSelected,
-          onSelected: (selected) =>
-              setState(() => _selectedDayOfMonth = selected ? day : null),
-          selectedColor: Colors.white.withOpacity(0.3),
-          labelStyle: TextStyle(
-            color: Colors.white,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        return GestureDetector(
+          onTap: () => setState(() => _selectedDayOfMonth = day),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              gradient: isSelected
+                  ? themeColors.primaryGradient
+                  : LinearGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.1),
+                        Colors.white.withOpacity(0.05),
+                      ],
+                    ),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              border: Border.all(
+                color: isSelected
+                    ? themeColors.primary
+                    : Colors.white.withOpacity(0.2),
+                width: isSelected ? 2 : 1,
+              ),
+            ),
+            child: Center(
+              child: Text(
+                '$day',
+                style: AppTypography.bodySmall.copyWith(
+                  color: Colors.white,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ),
           ),
         );
       }),
@@ -1247,7 +1430,7 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
             if (widget.schedule.frequency == ReminderFrequency.weekly) ...[
               const SizedBox(height: AppSpacing.lg),
               Text(
-                'أيام الأسبوع',
+                'يوم الأسبوع',
                 style: AppTypography.titleMedium.copyWith(color: Colors.white),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -1279,7 +1462,7 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
     if (widget.schedule.frequency == ReminderFrequency.weekly &&
         _selectedDays.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى اختيار يوم واحد على الأقل')),
+        const SnackBar(content: Text('يرجى اختيار يوم للتذكير الأسبوعي')),
       );
       return;
     }

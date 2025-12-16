@@ -78,7 +78,8 @@ serve(async (req) => {
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    // Use SERVICE_ROLE_JWT as primary since reserved SUPABASE_SERVICE_ROLE_KEY has issues
+    const supabaseKey = Deno.env.get("SERVICE_ROLE_JWT") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get user's active FCM tokens
@@ -111,6 +112,7 @@ serve(async (req) => {
     const accessToken = await getFirebaseAccessToken(firebaseCredentials);
 
     // Send notification to each device
+    const errors: string[] = [];
     const results = await Promise.allSettled(
       tokens.map(async ({ fcm_token, platform }) => {
         const fcmMessage: FCMMessage = {
@@ -156,6 +158,7 @@ serve(async (req) => {
         if (!response.ok) {
           const errorText = await response.text();
           console.error(`❌ FCM error for ${platform}:`, errorText);
+          errors.push(`${platform}: ${errorText}`);
           throw new Error(`FCM error: ${errorText}`);
         }
 
@@ -168,6 +171,10 @@ serve(async (req) => {
     // Log notification history
     const successCount = results.filter((r) => r.status === "fulfilled").length;
     const failureCount = results.filter((r) => r.status === "rejected").length;
+
+    if (errors.length > 0) {
+      console.error("FCM Errors:", errors);
+    }
 
     await supabase.from("notification_history").insert({
       user_id: userId,
@@ -187,6 +194,7 @@ serve(async (req) => {
         sent: successCount,
         failed: failureCount,
         message: `Notification sent to ${successCount} device(s)`,
+        errors: errors.length > 0 ? errors : undefined,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
@@ -200,21 +208,43 @@ serve(async (req) => {
 });
 
 /**
+ * URL-safe base64 encoding for JWT
+ */
+function base64UrlEncode(str: string): string {
+  return btoa(str)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+function arrayBufferToBase64Url(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+/**
  * Get Firebase access token using service account credentials
  */
 async function getFirebaseAccessToken(credentials: any): Promise<string> {
-  const jwtHeader = btoa(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const header = { alg: "RS256", typ: "JWT" };
   const now = Math.floor(Date.now() / 1000);
-  const jwtClaimSet = btoa(
-    JSON.stringify({
-      iss: credentials.client_email,
-      scope: "https://www.googleapis.com/auth/firebase.messaging",
-      aud: "https://oauth2.googleapis.com/token",
-      exp: now + 3600,
-      iat: now,
-    })
-  );
+  const claimSet = {
+    iss: credentials.client_email,
+    scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: "https://oauth2.googleapis.com/token",
+    exp: now + 3600,
+    iat: now,
+  };
 
+  const jwtHeader = base64UrlEncode(JSON.stringify(header));
+  const jwtClaimSet = base64UrlEncode(JSON.stringify(claimSet));
   const signatureInput = `${jwtHeader}.${jwtClaimSet}`;
 
   // Import private key
@@ -233,7 +263,8 @@ async function getFirebaseAccessToken(credentials: any): Promise<string> {
     new TextEncoder().encode(signatureInput)
   );
 
-  const jwt = `${signatureInput}.${btoa(String.fromCharCode(...new Uint8Array(signature)))}`;
+  const jwtSignature = arrayBufferToBase64Url(signature);
+  const jwt = `${signatureInput}.${jwtSignature}`;
 
   // Exchange JWT for access token
   const response = await fetch("https://oauth2.googleapis.com/token", {
@@ -243,6 +274,12 @@ async function getFirebaseAccessToken(credentials: any): Promise<string> {
   });
 
   const result = await response.json();
+
+  if (!result.access_token) {
+    console.error("Failed to get access token:", result);
+    throw new Error(`OAuth error: ${JSON.stringify(result)}`);
+  }
+
   return result.access_token;
 }
 

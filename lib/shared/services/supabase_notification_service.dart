@@ -30,23 +30,11 @@ class SupabaseNotificationService {
   /// Initialize notification service
   Future<void> initialize() async {
     try {
-      if (kDebugMode) {
-        print(
-          '🔔 [SUPABASE_NOTIFICATIONS] Starting Supabase notification service...',
-        );
-      }
-
       // Initialize timezone data
       tz.initializeTimeZones();
       tz.setLocalLocation(
         tz.getLocation('Asia/Riyadh'),
       ); // Default to Saudi Arabia timezone
-
-      if (kDebugMode) {
-        print(
-          '🔔 [SUPABASE_NOTIFICATIONS] Timezone initialized: ${tz.local.name}',
-        );
-      }
 
       // Initialize local notifications
       await _initializeLocalNotifications();
@@ -54,24 +42,13 @@ class SupabaseNotificationService {
       // Get or generate device ID for this device
       _deviceId = await _getOrCreateDeviceId();
 
-      if (kDebugMode) {
-        print('🔔 [SUPABASE_NOTIFICATIONS] Device ID: $_deviceId');
-      }
-
       // Subscribe to Supabase realtime notifications
       await _subscribeToNotifications();
 
       _isInitialized = true;
-
+    } catch (e) {
       if (kDebugMode) {
-        print(
-          '✅ [SUPABASE_NOTIFICATIONS] Notification service initialized successfully',
-        );
-      }
-    } catch (e, stackTrace) {
-      if (kDebugMode) {
-        print('❌ [SUPABASE_NOTIFICATIONS] Error initializing: $e');
-        print('❌ [SUPABASE_NOTIFICATIONS] Stack trace: $stackTrace');
+        print('❌ [NOTIFICATIONS] Error initializing: $e');
       }
       rethrow;
     }
@@ -96,11 +73,6 @@ class SupabaseNotificationService {
     await _localNotifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        if (kDebugMode) {
-          print(
-            '🔔 [SUPABASE_NOTIFICATIONS] Local notification tapped: ${response.payload}',
-          );
-        }
         _handleNotificationTap(response.payload);
       },
     );
@@ -129,28 +101,14 @@ class SupabaseNotificationService {
             table: 'notifications',
             callback: (payload) async {
               final notification = payload.newRecord;
-              if (kDebugMode) {
-                print(
-                  '🔔 [SUPABASE_NOTIFICATIONS] Received notification: $notification',
-                );
-              }
-
               _messageStreamController.add(notification);
               await _showLocalNotification(notification);
             },
           )
           .subscribe();
-
-      if (kDebugMode) {
-        print(
-          '🔔 [SUPABASE_NOTIFICATIONS] Subscribed to realtime notifications',
-        );
-      }
     } catch (e) {
       if (kDebugMode) {
-        print(
-          '❌ [SUPABASE_NOTIFICATIONS] Error subscribing to notifications: $e',
-        );
+        print('❌ [NOTIFICATIONS] Error subscribing: $e');
       }
       rethrow;
     }
@@ -189,15 +147,9 @@ class SupabaseNotificationService {
         details,
         payload: notification.toString(),
       );
-
-      if (kDebugMode) {
-        print('✅ [SUPABASE_NOTIFICATIONS] Local notification shown');
-      }
     } catch (e) {
       if (kDebugMode) {
-        print(
-          '❌ [SUPABASE_NOTIFICATIONS] Error showing local notification: $e',
-        );
+        print('❌ [NOTIFICATIONS] Error showing notification: $e');
       }
     }
   }
@@ -222,12 +174,6 @@ class SupabaseNotificationService {
             ),
       );
 
-      if (kDebugMode) {
-        print(
-          '🔔 [SUPABASE_NOTIFICATIONS] Handling notification tap with data: $data',
-        );
-      }
-
       // Navigate based on notification type
       final type = data['type'];
       final relativeId = data['relativeId'];
@@ -236,19 +182,16 @@ class SupabaseNotificationService {
       Future.delayed(const Duration(milliseconds: 500), () {
         switch (type) {
           case 'reminder':
-            // Navigate to relative detail if relativeId is provided
             if (relativeId != null && relativeId.isNotEmpty) {
               NavigationService.navigateTo(
                 '${AppRoutes.relativeDetail}/$relativeId',
               );
             } else {
-              // Otherwise navigate to reminders screen
               NavigationService.navigateTo(AppRoutes.reminders);
             }
             break;
 
           case 'relative':
-            // Navigate to relative detail
             if (relativeId != null && relativeId.isNotEmpty) {
               NavigationService.navigateTo(
                 '${AppRoutes.relativeDetail}/$relativeId',
@@ -257,31 +200,21 @@ class SupabaseNotificationService {
             break;
 
           case 'achievement':
-            // Navigate to profile/achievements
             NavigationService.navigateTo(AppRoutes.profile);
             break;
 
           case 'streak':
-            // Navigate to statistics screen
             NavigationService.navigateTo(AppRoutes.statistics);
             break;
 
           default:
-            // Navigate to home by default
             NavigationService.navigateTo(AppRoutes.home);
-        }
-
-        if (kDebugMode) {
-          print(
-            '✅ [SUPABASE_NOTIFICATIONS] Navigated to appropriate screen for type: $type',
-          );
         }
       });
     } catch (e) {
       if (kDebugMode) {
-        print('❌ [SUPABASE_NOTIFICATIONS] Error handling notification tap: $e');
+        print('❌ [NOTIFICATIONS] Error handling tap: $e');
       }
-      // Fallback to home screen
       NavigationService.navigateTo(AppRoutes.home);
     }
   }
@@ -320,12 +253,6 @@ class SupabaseNotificationService {
       // Convert DateTime to TZDateTime with local timezone
       final tzScheduledTime = tz.TZDateTime.from(scheduledTime, tz.local);
 
-      if (kDebugMode) {
-        print(
-          '🔔 [SUPABASE_NOTIFICATIONS] Scheduling notification for $tzScheduledTime (${tz.local.name})',
-        );
-      }
-
       // Schedule the notification with timezone support
       await _localNotifications.zonedSchedule(
         id,
@@ -338,15 +265,9 @@ class SupabaseNotificationService {
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: payload,
       );
-
-      if (kDebugMode) {
-        print(
-          '✅ [SUPABASE_NOTIFICATIONS] Notification scheduled successfully for $tzScheduledTime',
-        );
-      }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ [SUPABASE_NOTIFICATIONS] Error scheduling notification: $e');
+        print('❌ [NOTIFICATIONS] Error scheduling: $e');
       }
       rethrow;
     }
@@ -395,15 +316,9 @@ class SupabaseNotificationService {
         details,
         payload: 'immediate_notification',
       );
-
-      if (kDebugMode) {
-        print('✅ [SUPABASE_NOTIFICATIONS] Immediate notification shown');
-      }
     } catch (e) {
       if (kDebugMode) {
-        print(
-          '❌ [SUPABASE_NOTIFICATIONS] Error showing immediate notification: $e',
-        );
+        print('❌ [NOTIFICATIONS] Error showing immediate: $e');
       }
     }
   }

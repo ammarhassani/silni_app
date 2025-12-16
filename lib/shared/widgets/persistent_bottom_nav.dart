@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:ui' as ui;
 import '../../core/constants/app_colors.dart';
@@ -107,59 +106,25 @@ class _PersistentBottomNavState extends ConsumerState<PersistentBottomNav>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Debug logging
-    if (kDebugMode) {
-      print('🧭 [NAV] didChangeDependencies called');
-      print(
-        '🧭 [NAV] Current route: ${GoRouter.of(context).routeInformationProvider.value.uri.toString()}',
-      );
-      final newIndex = _getCurrentIndex(context);
-      print('🧭 [NAV] Calculated new index: $newIndex');
-      print(
-        '🧭 [NAV] Current provider state: ${ref.read(navigationIndexProvider.notifier).state}',
-      );
 
-      // Use Future.microtask to safely update state after widget tree is built
-      Future.microtask(() {
-        if (mounted) {
-          final currentState = ref.read(navigationIndexProvider.notifier).state;
-          if (currentState != newIndex) {
-            print(
-              '🧭 [NAV] Updating navigation index from $currentState to $newIndex (delayed)',
-            );
-            ref.read(navigationIndexProvider.notifier).state = newIndex;
-          }
-        }
-      });
-    } else {
-      // Use Future.microtask to safely update state after widget tree is built
-      Future.microtask(() {
-        if (mounted) {
-          final newIndex = _getCurrentIndex(context);
-          final currentState = ref.read(navigationIndexProvider.notifier).state;
-          if (currentState != newIndex) {
-            ref.read(navigationIndexProvider.notifier).state = newIndex;
-          }
-        }
-      });
-    }
+    // Capture context values before the callback
+    final newIndex = _getCurrentIndex(context);
+
+    // Use addPostFrameCallback for more reliable timing on real iOS devices
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final currentState = ref.read(navigationIndexProvider.notifier).state;
+      if (currentState != newIndex) {
+        ref.read(navigationIndexProvider.notifier).state = newIndex;
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
     final currentIndex = ref.watch(navigationIndexProvider);
-
-    // Debug logging
-    if (kDebugMode) {
-      print('🧭 [NAV] build called');
-      print(
-        '🧭 [NAV] Current route: ${GoRouter.of(context).routeInformationProvider.value.uri.toString()}',
-      );
-      print('🧭 [NAV] Using provider currentIndex: $currentIndex');
-      final calculatedIndex = _getCurrentIndex(context);
-      print('🧭 [NAV] Calculated index for comparison: $calculatedIndex');
-    }
 
     final items = [
       (icon: Icons.home_rounded, label: 'الرئيسية', route: AppRoutes.home),
@@ -314,60 +279,36 @@ class _PersistentBottomNavState extends ConsumerState<PersistentBottomNav>
     final router = GoRouter.of(context);
     final location = router.routeInformationProvider.value.uri.toString();
 
-    // Debug logging
-    if (kDebugMode) {
-      print('🧭 [NAV] _getCurrentIndex called with location: $location');
-    }
-
     // Use location-based matching for accurate state detection
     if (location.startsWith(AppRoutes.home)) {
-      if (kDebugMode) print('🧭 [NAV] Matched home route, returning 0');
       return 0;
     }
     if (location.startsWith(AppRoutes.relatives)) {
-      if (kDebugMode) print('🧭 [NAV] Matched relatives route, returning 1');
       return 1;
     }
     if (location.startsWith(AppRoutes.achievements)) {
-      if (kDebugMode) print('🧭 [NAV] Matched achievements route, returning 2');
       return 2;
     }
     if (location.startsWith(AppRoutes.statistics)) {
-      if (kDebugMode) print('🧭 [NAV] Matched statistics route, returning 3');
       return 3;
     }
     if (location.startsWith(AppRoutes.settings)) {
-      if (kDebugMode) print('🧭 [NAV] Matched settings route, returning 4');
       return 4;
     }
 
     // Check for parent routes (for subpages, show parent as active)
     if (location.startsWith('${AppRoutes.relativeDetail}/')) {
-      if (kDebugMode)
-        print(
-          '🧭 [NAV] Matched relative detail route, returning 1 (relatives parent)',
-        );
       return 1; // Show relatives tab for relative detail pages
     }
     if (location.startsWith('${AppRoutes.editRelative}/')) {
-      if (kDebugMode)
-        print(
-          '🧭 [NAV] Matched edit relative route, returning 1 (relatives parent)',
-        );
       return 1; // Show relatives tab for edit relative pages
     }
     if (location.startsWith('${AppRoutes.addRelative}')) {
-      if (kDebugMode)
-        print(
-          '🧭 [NAV] Matched add relative route, returning 1 (relatives parent)',
-        );
       return 1; // Show relatives tab for add relative page
     }
 
     // Profile is a subpage of settings, so it should show settings tab as parent
     if (location.startsWith(AppRoutes.profile)) {
-      if (kDebugMode)
-        print('🧭 [NAV] Matched profile route, returning 4 (settings parent)');
       return 4;
     }
 
@@ -377,13 +318,9 @@ class _PersistentBottomNavState extends ConsumerState<PersistentBottomNav>
         location.startsWith('${AppRoutes.badges}/') ||
         location.startsWith('${AppRoutes.detailedStats}/') ||
         location.startsWith('${AppRoutes.leaderboard}/')) {
-      if (kDebugMode)
-        print('🧭 [NAV] Matched special route, returning 0 (home default)');
       return 0; // Show home tab for routes without navigation
     }
 
-    if (kDebugMode)
-      print('🧭 [NAV] No route matched, returning 0 (home default)');
     return 0; // Default to home
   }
 }
