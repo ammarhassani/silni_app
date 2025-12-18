@@ -14,12 +14,8 @@ import '../../../shared/models/interaction_model.dart';
 import '../../../shared/providers/interactions_provider.dart';
 import '../../../core/router/app_routes.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../home/screens/home_screen.dart';
+import '../../home/providers/home_providers.dart';
 import '../../../core/providers/realtime_provider.dart';
-
-// Note: relativesServiceProvider is now imported from shared/services/relatives_service.dart
-// Note: interactionsServiceProvider is now imported from shared/providers/interactions_provider.dart
-// Note: relativesStreamProvider is now imported from features/home/screens/home_screen.dart
 
 class RelativesScreen extends ConsumerStatefulWidget {
   const RelativesScreen({super.key});
