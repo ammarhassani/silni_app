@@ -19,14 +19,14 @@ dependencies:
 
   # Biometric Authentication
   local_auth: ^2.3.0
-  flutter_secure_storage: ^9.2.2
+  flutter_secure_storage: ^9.2.4
   universal_html: ^2.2.4
 
   # Navigation & Routing
-  go_router: ^14.6.2
+  go_router: ^14.8.1
 
   # Advanced Animations
-  rive: ^0.13.19
+  rive: ^0.13.20
   lottie: ^3.2.1
   flutter_animate: ^4.5.0
   confetti: ^0.8.0
@@ -40,19 +40,19 @@ dependencies:
   font_awesome_flutter: ^10.7.0
 
   # Supabase (NEW - replaces Firebase Auth & Firestore)
-  supabase_flutter: ^2.9.0
+  supabase_flutter: ^2.12.0
 
   # Local notifications (keep existing)
   flutter_local_notifications: ^18.0.1
 
   # Firebase Cloud Messaging (NEW - for push notifications)
-  firebase_core: ^3.10.0
-  firebase_messaging: ^15.1.5
+  firebase_core: ^3.15.2
+  firebase_messaging: ^15.2.10
 
   # Monitoring & Analytics
-  sentry_flutter: ^9.8.0
+  sentry_flutter: ^9.9.0
   firebase_analytics: ^11.6.0
-  firebase_performance: ^0.10.0+12
+  firebase_performance: ^0.10.1+10
 
   # Internationalization
   intl: ^0.20.2
@@ -68,7 +68,7 @@ dependencies:
   flutter_contacts: ^1.1.9
 
   # Charts & Visualization
-  fl_chart: ^0.70.1
+  fl_chart: ^0.70.2
 
   # Audio
   just_audio: ^0.9.40
@@ -82,14 +82,14 @@ dependencies:
   uuid: ^4.5.1
   path_provider: ^2.1.5
   share_plus: ^10.1.2
-  shared_preferences: ^2.3.4
+  shared_preferences: ^2.5.4
   url_launcher: ^6.3.1
   package_info_plus: ^8.1.2
   flutter_dotenv: ^5.2.1
   timezone: ^0.9.4
 
   # Environment Configuration (type-safe, compile-time)
-  envied: ^1.1.0
+  envied: ^1.1.1
 
   # HTTP & Networking
   http: ^1.2.2
@@ -98,7 +98,7 @@ dependencies:
   # UI Helpers
   flutter_svg: ^2.0.16
   flutter_slidable: ^3.1.1
-  google_fonts: ^6.2.1
+  google_fonts: ^6.3.3
 
 dev_dependencies:
   flutter_test:
@@ -107,7 +107,7 @@ dev_dependencies:
   riverpod_generator: ^2.6.2
   build_runner: ^2.4.14
   riverpod_lint: ^2.6.3
-  envied_generator: ^1.1.0
+  envied_generator: ^1.1.1
 
   # Testing tools
   mocktail: ^1.0.0
