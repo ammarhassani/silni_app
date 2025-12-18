@@ -49,7 +49,7 @@ class RelativeAvatar extends StatelessWidget {
                 color: (needsAttention
                         ? AppColors.joyfulOrange
                         : AppColors.islamicGreenPrimary)
-                    .withOpacity(0.3),
+                    .withValues(alpha: 0.3),
                 blurRadius: 8,
                 spreadRadius: 1,
               ),
@@ -181,7 +181,7 @@ class UserAvatar extends StatelessWidget {
             gradient: effectiveGradient,
             boxShadow: [
               BoxShadow(
-                color: AppColors.premiumGold.withOpacity(0.3),
+                color: AppColors.premiumGold.withValues(alpha: 0.3),
                 blurRadius: 8,
                 spreadRadius: 1,
               ),

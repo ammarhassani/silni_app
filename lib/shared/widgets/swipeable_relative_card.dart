@@ -96,8 +96,8 @@ class SwipeableRelativeCard extends StatelessWidget {
         gradient: needsAttention
             ? LinearGradient(
                 colors: [
-                  AppColors.joyfulOrange.withOpacity(0.2),
-                  AppColors.islamicGreenPrimary.withOpacity(0.1),
+                  AppColors.joyfulOrange.withValues(alpha: 0.2),
+                  AppColors.islamicGreenPrimary.withValues(alpha: 0.1),
                 ],
               )
             : null,
@@ -121,7 +121,7 @@ class SwipeableRelativeCard extends StatelessWidget {
                           color: (needsAttention
                                   ? AppColors.joyfulOrange
                                   : AppColors.islamicGreenPrimary)
-                              .withOpacity(0.3),
+                              .withValues(alpha: 0.3),
                           blurRadius: 8,
                           spreadRadius: 1,
                         ),
@@ -227,7 +227,7 @@ class SwipeableRelativeCard extends StatelessWidget {
                   Text(
                     relative.relationshipType.arabicName,
                     style: AppTypography.bodySmall.copyWith(
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                     ),
                   ),
                   if (needsAttention) ...[
@@ -258,7 +258,7 @@ class SwipeableRelativeCard extends StatelessWidget {
             // Arrow icon
             Icon(
               Icons.arrow_forward_ios_rounded,
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withValues(alpha: 0.5),
               size: 16,
             ),
           ],

@@ -242,8 +242,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppColors.premiumGold.withOpacity(0.3),
-              AppColors.premiumGoldDark.withOpacity(0.2),
+              AppColors.premiumGold.withValues(alpha: 0.3),
+              AppColors.premiumGoldDark.withValues(alpha: 0.2),
             ],
           ),
           borderRadius: BorderRadius.circular(12),
@@ -320,8 +320,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               ? BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.islamicGreenPrimary.withOpacity(0.2),
-                      AppColors.islamicGreenLight.withOpacity(0.1),
+                      AppColors.islamicGreenPrimary.withValues(alpha: 0.2),
+                      AppColors.islamicGreenLight.withValues(alpha: 0.1),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(12),
@@ -336,7 +336,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               // Avatar
               CircleAvatar(
                 radius: 20,
-                backgroundColor: _getRankColor(rank).withOpacity(0.3),
+                backgroundColor: _getRankColor(rank).withValues(alpha: 0.3),
                 child: Text(
                   _getInitials(userData['full_name'] as String? ?? userData['email'] as String),
                   style: AppTypography.bodyMedium.copyWith(
@@ -400,7 +400,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
       badgeColor = Colors.brown[400]!;
       icon = const Icon(Icons.emoji_events_rounded, color: Colors.white, size: 16);
     } else {
-      badgeColor = Colors.white.withOpacity(0.2);
+      badgeColor = Colors.white.withValues(alpha: 0.2);
     }
 
     return Container(
@@ -412,7 +412,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         boxShadow: rank <= 3
             ? [
                 BoxShadow(
-                  color: badgeColor.withOpacity(0.5),
+                  color: badgeColor.withValues(alpha: 0.5),
                   blurRadius: 8,
                   spreadRadius: 2,
                 ),
@@ -461,10 +461,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: color.withOpacity(0.5),
+          color: color.withValues(alpha: 0.5),
           width: 1,
         ),
       ),

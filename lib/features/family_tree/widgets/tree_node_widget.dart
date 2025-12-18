@@ -41,8 +41,8 @@ class TreeNodeWidget extends StatelessWidget {
                     boxShadow: [
                       BoxShadow(
                         color: node.isRoot
-                            ? AppColors.premiumGold.withOpacity(0.6)
-                            : AppColors.islamicGreenPrimary.withOpacity(0.6),
+                            ? AppColors.premiumGold.withValues(alpha: 0.6)
+                            : AppColors.islamicGreenPrimary.withValues(alpha: 0.6),
                         blurRadius: 20,
                         spreadRadius: 5,
                       ),
@@ -62,14 +62,14 @@ class TreeNodeWidget extends StatelessWidget {
                   border: Border.all(
                     color: isSelected
                         ? Colors.white
-                        : Colors.white.withOpacity(0.3),
+                        : Colors.white.withValues(alpha: 0.3),
                     width: isSelected ? 3 : 2,
                   ),
                   boxShadow: [
                     BoxShadow(
                       color: node.isRoot
-                          ? AppColors.premiumGold.withOpacity(0.3)
-                          : AppColors.islamicGreenPrimary.withOpacity(0.3),
+                          ? AppColors.premiumGold.withValues(alpha: 0.3)
+                          : AppColors.islamicGreenPrimary.withValues(alpha: 0.3),
                       blurRadius: 12,
                       spreadRadius: 2,
                     ),
@@ -147,7 +147,7 @@ class TreeNodeWidget extends StatelessWidget {
           Text(
             node.relationship,
             style: AppTypography.labelSmall.copyWith(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -170,8 +170,8 @@ class TreeNodeWidget extends StatelessWidget {
         // High priority - golden
         return LinearGradient(
           colors: [
-            AppColors.premiumGold.withOpacity(0.8),
-            AppColors.joyfulOrange.withOpacity(0.6),
+            AppColors.premiumGold.withValues(alpha: 0.8),
+            AppColors.joyfulOrange.withValues(alpha: 0.6),
           ],
         );
       case 2:
@@ -181,8 +181,8 @@ class TreeNodeWidget extends StatelessWidget {
         // Low priority - blue/purple
         return LinearGradient(
           colors: [
-            AppColors.calmBlue.withOpacity(0.6),
-            AppColors.emotionalPurple.withOpacity(0.4),
+            AppColors.calmBlue.withValues(alpha: 0.6),
+            AppColors.emotionalPurple.withValues(alpha: 0.4),
           ],
         );
       default:

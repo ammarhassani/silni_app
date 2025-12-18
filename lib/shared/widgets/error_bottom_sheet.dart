@@ -147,13 +147,13 @@ class _ErrorBottomSheetContent extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      UIHelpers.withOpacity(Colors.white, 0.15),
-                      UIHelpers.withOpacity(Colors.white, 0.05),
+                      UIHelpers.withValues(alpha: Colors.white, 0.15),
+                      UIHelpers.withValues(alpha: Colors.white, 0.05),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(AppSpacing.cardRadiusLarge),
                   border: Border.all(
-                    color: UIHelpers.withOpacity(Colors.white, 0.2),
+                    color: UIHelpers.withValues(alpha: Colors.white, 0.2),
                     width: 1.5,
                   ),
                 ),

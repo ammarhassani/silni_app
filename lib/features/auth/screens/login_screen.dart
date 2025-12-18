@@ -442,7 +442,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.cardDark.withOpacity(0.95),
+        backgroundColor: AppColors.cardDark.withValues(alpha: 0.95),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
           'إعادة تعيين كلمة المرور',
@@ -466,17 +466,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   labelText: 'البريد الإلكتروني',
-                  labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                  labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
                   prefixIcon: const Icon(Icons.email, color: Colors.white70),
                   filled: true,
-                  fillColor: Colors.white.withOpacity(0.1),
+                  fillColor: Colors.white.withValues(alpha: 0.1),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -566,7 +566,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             gradient: AppColors.goldenGradient,
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.premiumGold.withOpacity(0.5),
+                                color: AppColors.premiumGold.withValues(alpha: 0.5),
                                 blurRadius: 30,
                                 spreadRadius: 5,
                               ),
@@ -605,7 +605,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Text(
                           'سجّل الدخول للمتابعة',
                           style: AppTypography.bodyLarge.copyWith(
-                            color: Colors.white.withOpacity(0.8),
+                            color: Colors.white.withValues(alpha: 0.8),
                           ),
                         )
                         .animate(delay: const Duration(milliseconds: 400))
@@ -629,24 +629,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 decoration: InputDecoration(
                                   labelText: 'البريد الإلكتروني',
                                   labelStyle: AppTypography.bodyMedium.copyWith(
-                                    color: Colors.white.withOpacity(0.8),
+                                    color: Colors.white.withValues(alpha: 0.8),
                                   ),
                                   hintText: 'example@email.com',
                                   hintStyle: AppTypography.bodyMedium.copyWith(
-                                    color: Colors.white.withOpacity(0.5),
+                                    color: Colors.white.withValues(alpha: 0.5),
                                   ),
                                   prefixIcon: Icon(
                                     Icons.email_outlined,
-                                    color: Colors.white.withOpacity(0.7),
+                                    color: Colors.white.withValues(alpha: 0.7),
                                   ),
                                   filled: true,
-                                  fillColor: Colors.white.withOpacity(0.1),
+                                  fillColor: Colors.white.withValues(alpha: 0.1),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(
                                       AppSpacing.radiusLg,
                                     ),
                                     borderSide: BorderSide(
-                                      color: Colors.white.withOpacity(0.3),
+                                      color: Colors.white.withValues(alpha: 0.3),
                                     ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
@@ -654,7 +654,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       AppSpacing.radiusLg,
                                     ),
                                     borderSide: BorderSide(
-                                      color: Colors.white.withOpacity(0.3),
+                                      color: Colors.white.withValues(alpha: 0.3),
                                     ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
@@ -691,22 +691,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 decoration: InputDecoration(
                                   labelText: 'كلمة المرور',
                                   labelStyle: AppTypography.bodyMedium.copyWith(
-                                    color: Colors.white.withOpacity(0.8),
+                                    color: Colors.white.withValues(alpha: 0.8),
                                   ),
                                   hintText: '••••••••',
                                   hintStyle: AppTypography.bodyMedium.copyWith(
-                                    color: Colors.white.withOpacity(0.5),
+                                    color: Colors.white.withValues(alpha: 0.5),
                                   ),
                                   prefixIcon: Icon(
                                     Icons.lock_outline,
-                                    color: Colors.white.withOpacity(0.7),
+                                    color: Colors.white.withValues(alpha: 0.7),
                                   ),
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       _obscurePassword
                                           ? Icons.visibility_outlined
                                           : Icons.visibility_off_outlined,
-                                      color: Colors.white.withOpacity(0.7),
+                                      color: Colors.white.withValues(alpha: 0.7),
                                     ),
                                     onPressed: () {
                                       setState(() {
@@ -715,13 +715,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     },
                                   ),
                                   filled: true,
-                                  fillColor: Colors.white.withOpacity(0.1),
+                                  fillColor: Colors.white.withValues(alpha: 0.1),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(
                                       AppSpacing.radiusLg,
                                     ),
                                     borderSide: BorderSide(
-                                      color: Colors.white.withOpacity(0.3),
+                                      color: Colors.white.withValues(alpha: 0.3),
                                     ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
@@ -729,7 +729,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       AppSpacing.radiusLg,
                                     ),
                                     borderSide: BorderSide(
-                                      color: Colors.white.withOpacity(0.3),
+                                      color: Colors.white.withValues(alpha: 0.3),
                                     ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
@@ -763,7 +763,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   child: Text(
                                     'نسيت كلمة المرور؟',
                                     style: AppTypography.labelMedium.copyWith(
-                                      color: Colors.white.withOpacity(0.8),
+                                      color: Colors.white.withValues(alpha: 0.8),
                                     ),
                                   ),
                                 ),
@@ -786,7 +786,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   children: [
                                     Expanded(
                                       child: Divider(
-                                        color: Colors.white.withOpacity(0.3),
+                                        color: Colors.white.withValues(alpha: 0.3),
                                       ),
                                     ),
                                     Padding(
@@ -796,13 +796,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       child: Text(
                                         'أو',
                                         style: AppTypography.bodySmall.copyWith(
-                                          color: Colors.white.withOpacity(0.7),
+                                          color: Colors.white.withValues(alpha: 0.7),
                                         ),
                                       ),
                                     ),
                                     Expanded(
                                       child: Divider(
-                                        color: Colors.white.withOpacity(0.3),
+                                        color: Colors.white.withValues(alpha: 0.3),
                                       ),
                                     ),
                                   ],
@@ -824,7 +824,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     ),
                                     style: OutlinedButton.styleFrom(
                                       side: BorderSide(
-                                        color: Colors.white.withOpacity(0.5),
+                                        color: Colors.white.withValues(alpha: 0.5),
                                       ),
                                       padding: const EdgeInsets.symmetric(
                                         vertical: AppSpacing.md,
@@ -854,7 +854,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             Text(
                               'ليس لديك حساب؟',
                               style: AppTypography.bodyMedium.copyWith(
-                                color: Colors.white.withOpacity(0.8),
+                                color: Colors.white.withValues(alpha: 0.8),
                               ),
                             ),
                             TextButton(

@@ -217,7 +217,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         gradient: AppColors.primaryGradient,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.islamicGreenPrimary.withOpacity(0.5),
+                            color: AppColors.islamicGreenPrimary.withValues(alpha: 0.5),
                             blurRadius: 30,
                             spreadRadius: 5,
                           ),
@@ -256,7 +256,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     Text(
                       'ابدأ رحلتك في صلة الرحم',
                       style: AppTypography.bodyLarge.copyWith(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                       ),
                     )
                         .animate(delay: const Duration(milliseconds: 400))
@@ -322,7 +322,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                                 _obscurePassword
                                     ? Icons.visibility_outlined
                                     : Icons.visibility_off_outlined,
-                                color: Colors.white.withOpacity(0.7),
+                                color: Colors.white.withValues(alpha: 0.7),
                               ),
                               onPressed: () {
                                 setState(() {
@@ -356,7 +356,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                                 _obscureConfirmPassword
                                     ? Icons.visibility_outlined
                                     : Icons.visibility_off_outlined,
-                                color: Colors.white.withOpacity(0.7),
+                                color: Colors.white.withValues(alpha: 0.7),
                               ),
                               onPressed: () {
                                 setState(() {
@@ -402,7 +402,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         Text(
                           'لديك حساب بالفعل؟',
                           style: AppTypography.bodyMedium.copyWith(
-                            color: Colors.white.withOpacity(0.8),
+                            color: Colors.white.withValues(alpha: 0.8),
                           ),
                         ),
                         TextButton(
@@ -453,29 +453,29 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: AppTypography.bodyMedium.copyWith(
-          color: Colors.white.withOpacity(0.8),
+          color: Colors.white.withValues(alpha: 0.8),
         ),
         hintText: hint,
         hintStyle: AppTypography.bodyMedium.copyWith(
-          color: Colors.white.withOpacity(0.5),
+          color: Colors.white.withValues(alpha: 0.5),
         ),
         prefixIcon: Icon(
           icon,
-          color: Colors.white.withOpacity(0.7),
+          color: Colors.white.withValues(alpha: 0.7),
         ),
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: Colors.white.withOpacity(0.1),
+        fillColor: Colors.white.withValues(alpha: 0.1),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           borderSide: BorderSide(
-            color: Colors.white.withOpacity(0.3),
+            color: Colors.white.withValues(alpha: 0.3),
           ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           borderSide: BorderSide(
-            color: Colors.white.withOpacity(0.3),
+            color: Colors.white.withValues(alpha: 0.3),
           ),
         ),
         focusedBorder: OutlineInputBorder(

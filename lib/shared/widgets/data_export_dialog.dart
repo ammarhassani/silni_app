@@ -73,7 +73,7 @@ class _DataExportDialogState extends ConsumerState<DataExportDialog> {
     final progress = exportState.progress;
 
     return Dialog(
-      backgroundColor: themeColors.background1.withOpacity(0.95),
+      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
       ),
@@ -121,7 +121,7 @@ class _DataExportDialogState extends ConsumerState<DataExportDialog> {
               CircularProgressIndicator(
                 value: progress.progress,
                 strokeWidth: 6,
-                backgroundColor: Colors.white.withOpacity(0.2),
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
                 valueColor: AlwaysStoppedAnimation<Color>(themeColors.primary),
               ),
               Text(
@@ -137,7 +137,7 @@ class _DataExportDialogState extends ConsumerState<DataExportDialog> {
         Text(
           progress.currentStepAr,
           style: AppTypography.bodyMedium.copyWith(
-            color: Colors.white.withOpacity(0.8),
+            color: Colors.white.withValues(alpha: 0.8),
           ),
           textAlign: TextAlign.center,
         ),
@@ -154,7 +154,7 @@ class _DataExportDialogState extends ConsumerState<DataExportDialog> {
           height: 80,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: themeColors.primary.withOpacity(0.2),
+            color: themeColors.primary.withValues(alpha: 0.2),
           ),
           child: Icon(
             Icons.check_circle_outline,
@@ -174,7 +174,7 @@ class _DataExportDialogState extends ConsumerState<DataExportDialog> {
           Text(
             'تم تصدير ${result.totalRecords} سجل',
             style: AppTypography.bodySmall.copyWith(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -198,10 +198,10 @@ class _DataExportDialogState extends ConsumerState<DataExportDialog> {
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: themeColors.accent.withOpacity(0.2),
+        color: themeColors.accent.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(AppSpacing.xs),
         border: Border.all(
-          color: themeColors.accent.withOpacity(0.5),
+          color: themeColors.accent.withValues(alpha: 0.5),
         ),
       ),
       child: Text(
@@ -222,7 +222,7 @@ class _DataExportDialogState extends ConsumerState<DataExportDialog> {
           height: 80,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.red.withOpacity(0.2),
+            color: Colors.red.withValues(alpha: 0.2),
           ),
           child: const Icon(
             Icons.error_outline,
@@ -242,7 +242,7 @@ class _DataExportDialogState extends ConsumerState<DataExportDialog> {
           Text(
             progress.error!,
             style: AppTypography.bodySmall.copyWith(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
             maxLines: 3,
@@ -267,7 +267,7 @@ class _DataExportDialogState extends ConsumerState<DataExportDialog> {
               child: Text(
                 'إغلاق',
                 style: AppTypography.buttonMedium.copyWith(
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                 ),
               ),
             ),
@@ -305,7 +305,7 @@ class _DataExportDialogState extends ConsumerState<DataExportDialog> {
               child: Text(
                 'إغلاق',
                 style: AppTypography.buttonMedium.copyWith(
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                 ),
               ),
             ),
@@ -344,7 +344,7 @@ class _DataExportDialogState extends ConsumerState<DataExportDialog> {
       child: Text(
         'إلغاء',
         style: AppTypography.buttonMedium.copyWith(
-          color: Colors.white.withOpacity(0.7),
+          color: Colors.white.withValues(alpha: 0.7),
         ),
       ),
     );
@@ -359,7 +359,7 @@ Future<bool?> showDataExportConfirmationDialog(
   return showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      backgroundColor: themeColors.background1.withOpacity(0.95),
+      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
       ),
@@ -374,7 +374,7 @@ Future<bool?> showDataExportConfirmationDialog(
           Text(
             'هل تريد تصدير جميع بياناتك؟ سيتم إنشاء ملف يحتوي على:',
             style: AppTypography.bodyMedium.copyWith(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -387,10 +387,10 @@ Future<bool?> showDataExportConfirmationDialog(
           Container(
             padding: const EdgeInsets.all(AppSpacing.sm),
             decoration: BoxDecoration(
-              color: themeColors.accent.withOpacity(0.1),
+              color: themeColors.accent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppSpacing.xs),
               border: Border.all(
-                color: themeColors.accent.withOpacity(0.3),
+                color: themeColors.accent.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
@@ -443,13 +443,13 @@ Widget _buildDataItem(IconData icon, String text) {
     padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
     child: Row(
       children: [
-        Icon(icon, size: 18, color: Colors.white.withOpacity(0.7)),
+        Icon(icon, size: 18, color: Colors.white.withValues(alpha: 0.7)),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Text(
             text,
             style: AppTypography.bodySmall.copyWith(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
             ),
           ),
         ),

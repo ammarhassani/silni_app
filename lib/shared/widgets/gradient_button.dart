@@ -89,7 +89,7 @@ class _GradientButtonState extends State<GradientButton>
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.islamicGreenPrimary.withOpacity(_isPressed ? 0.3 : 0.5),
+              color: AppColors.islamicGreenPrimary.withValues(alpha: _isPressed ? 0.3 : 0.5),
               blurRadius: _isPressed ? 10 : 20,
               offset: Offset(0, _isPressed ? 5 : 10),
             ),
@@ -146,7 +146,7 @@ class _GradientButtonState extends State<GradientButton>
         )
         .shimmer(
           duration: const Duration(seconds: 2),
-          color: Colors.white.withOpacity(0.3),
+          color: Colors.white.withValues(alpha: 0.3),
         );
   }
 }

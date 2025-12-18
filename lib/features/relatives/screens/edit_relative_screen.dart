@@ -392,7 +392,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
               gradient: AppColors.primaryGradient,
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.islamicGreenPrimary.withOpacity(0.3),
+                  color: AppColors.islamicGreenPrimary.withValues(alpha: 0.3),
                   blurRadius: 20,
                   spreadRadius: 5,
                 ),
@@ -481,7 +481,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
         children: [
           Row(
             children: [
-              Icon(icon, color: Colors.white.withOpacity(0.7), size: 20),
+              Icon(icon, color: Colors.white.withValues(alpha: 0.7), size: 20),
               const SizedBox(width: AppSpacing.sm),
               Text(
                 label,
@@ -499,17 +499,17 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
             decoration: InputDecoration(
               hintText: label,
               hintStyle: AppTypography.bodyMedium.copyWith(
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white.withValues(alpha: 0.5),
               ),
               filled: true,
               fillColor: Colors.transparent,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
@@ -537,7 +537,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.family_restroom, color: Colors.white.withOpacity(0.7)),
+              Icon(Icons.family_restroom, color: Colors.white.withValues(alpha: 0.7)),
               const SizedBox(width: AppSpacing.sm),
               Text(
                 'صلة القرابة',
@@ -551,10 +551,10 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
             dropdownColor: const Color(0xFF1A1A1A),
             decoration: InputDecoration(
               filled: true,
-              fillColor: Colors.white.withOpacity(0.1),
+              fillColor: Colors.white.withValues(alpha: 0.1),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
@@ -646,10 +646,10 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
         decoration: BoxDecoration(
           color: isSelected
-              ? color.withOpacity(0.3)
-              : Colors.white.withOpacity(0.1),
+              ? color.withValues(alpha: 0.3)
+              : Colors.white.withValues(alpha: 0.1),
           border: Border.all(
-            color: isSelected ? color : Colors.white.withOpacity(0.3),
+            color: isSelected ? color : Colors.white.withValues(alpha: 0.3),
             width: isSelected ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
@@ -673,7 +673,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
         children: [
           Icon(
             Icons.star,
-            color: _isFavorite ? Colors.amber : Colors.white.withOpacity(0.7),
+            color: _isFavorite ? Colors.amber : Colors.white.withValues(alpha: 0.7),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
@@ -706,7 +706,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.face_rounded, color: Colors.white.withOpacity(0.7)),
+              Icon(Icons.face_rounded, color: Colors.white.withValues(alpha: 0.7)),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
@@ -721,7 +721,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
                     Text(
                       'اختياري - سيتم اقتراح أفاتار تلقائياً',
                       style: AppTypography.labelSmall.copyWith(
-                        color: Colors.white.withOpacity(0.6),
+                        color: Colors.white.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -771,15 +771,15 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
                             : null,
                         color: isSelected || isSuggested
                             ? null
-                            : Colors.white.withOpacity(0.1),
+                            : Colors.white.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(
                           AppSpacing.radiusMd,
                         ),
                         border: Border.all(
                           color: isSuggested && !isSelected
                               ? AppColors.premiumGold
-                              : Colors.white.withOpacity(
-                                  isSelected ? 0.6 : 0.2,
+                              : Colors.white.withValues(
+                                  alpha: isSelected ? 0.6 : 0.2,
                                 ),
                           width: isSuggested && !isSelected ? 2 : 1,
                         ),
@@ -787,7 +787,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
                             ? [
                                 BoxShadow(
                                   color: AppColors.islamicGreenPrimary
-                                      .withOpacity(0.4),
+                                      .withValues(alpha: 0.4),
                                   blurRadius: 8,
                                   spreadRadius: 1,
                                 ),
@@ -837,7 +837,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
                 ? 'الأفاتار المختار: ${_selectedAvatar!.arabicName}'
                 : 'الأفاتار المقترح: ${suggestedAvatar.arabicName}',
             style: AppTypography.labelSmall.copyWith(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
               fontStyle: FontStyle.italic,
             ),
             textAlign: TextAlign.center,

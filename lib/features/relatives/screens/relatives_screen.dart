@@ -178,17 +178,17 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
               decoration: InputDecoration(
                 hintText: 'ابحث عن قريب...',
                 hintStyle: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white.withOpacity(0.6),
+                  color: Colors.white.withValues(alpha: 0.6),
                 ),
                 prefixIcon: Icon(
                   Icons.search_rounded,
-                  color: themeColors.primary.withOpacity(0.8),
+                  color: themeColors.primary.withValues(alpha: 0.8),
                 ),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
                         icon: Icon(
                           Icons.clear_rounded,
-                          color: themeColors.primary.withOpacity(0.8),
+                          color: themeColors.primary.withValues(alpha: 0.8),
                         ),
                         onPressed: () {
                           _searchController.clear();
@@ -243,10 +243,10 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
         ),
         decoration: BoxDecoration(
           gradient: isSelected ? AppColors.primaryGradient : null,
-          color: isSelected ? null : Colors.white.withOpacity(0.2),
+          color: isSelected ? null : Colors.white.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           border: Border.all(
-            color: Colors.white.withOpacity(isSelected ? 0.5 : 0.3),
+            color: Colors.white.withValues(alpha: isSelected ? 0.5 : 0.3),
             width: 1.5,
           ),
         ),
@@ -321,7 +321,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
                     Icon(
                           Icons.people_outline,
                           size: 120,
-                          color: Colors.white.withOpacity(0.5),
+                          color: Colors.white.withValues(alpha: 0.5),
                         )
                         .animate(
                           onPlay: (controller) =>
@@ -344,7 +344,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
                     Text(
                       'ابدأ بإضافة أفراد عائلتك\nوالديك، إخوتك، أجدادك',
                       style: AppTypography.bodyMedium.copyWith(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -371,7 +371,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
           Icon(
             Icons.search_off_rounded,
             size: 80,
-            color: Colors.white.withOpacity(0.5),
+            color: Colors.white.withValues(alpha: 0.5),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
@@ -382,7 +382,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
           Text(
             'جرب البحث بكلمة أخرى',
             style: AppTypography.bodyMedium.copyWith(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -398,7 +398,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
           Icon(
             Icons.error_outline,
             size: 80,
-            color: AppColors.error.withOpacity(0.7),
+            color: AppColors.error.withValues(alpha: 0.7),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
@@ -409,7 +409,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
           Text(
             error,
             style: AppTypography.bodySmall.copyWith(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
           ),

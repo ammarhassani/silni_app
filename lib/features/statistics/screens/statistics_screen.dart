@@ -118,7 +118,7 @@ class StatisticsScreen extends ConsumerWidget {
                               Text(
                                 'إجمالي التواصل',
                                 style: AppTypography.titleMedium.copyWith(
-                                  color: Colors.white.withOpacity(0.9),
+                                  color: Colors.white.withValues(alpha: 0.9),
                                 ),
                               ),
                               const SizedBox(height: AppSpacing.sm),
@@ -138,7 +138,7 @@ class StatisticsScreen extends ConsumerWidget {
                                   Text(
                                     'سلسلة التواصل الحالية',
                                     style: AppTypography.titleMedium.copyWith(
-                                      color: Colors.white.withOpacity(0.9),
+                                      color: Colors.white.withValues(alpha: 0.9),
                                     ),
                                   ),
                                   const SizedBox(height: AppSpacing.sm),
@@ -152,7 +152,7 @@ class StatisticsScreen extends ConsumerWidget {
                                   Text(
                                     currentStreak == 1 ? 'يوم' : 'أيام',
                                     style: AppTypography.bodyMedium.copyWith(
-                                      color: Colors.white.withOpacity(0.8),
+                                      color: Colors.white.withValues(alpha: 0.8),
                                     ),
                                   ),
                                 ],

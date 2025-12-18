@@ -110,7 +110,7 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                       trailing: Icon(
                         Icons.arrow_forward_ios_rounded,
-                        color: Colors.white.withOpacity(0.5),
+                        color: Colors.white.withValues(alpha: 0.5),
                         size: 20,
                       ),
                       onTap: () {
@@ -135,7 +135,7 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                       trailing: Icon(
                         Icons.arrow_forward_ios_rounded,
-                        color: Colors.white.withOpacity(0.5),
+                        color: Colors.white.withValues(alpha: 0.5),
                         size: 20,
                       ),
                       onTap: () {
@@ -199,13 +199,13 @@ class SettingsScreen extends ConsumerWidget {
           border: Border.all(
             color: isSelected
                 ? AppColors.premiumGold
-                : Colors.white.withOpacity(0.2),
+                : Colors.white.withValues(alpha: 0.2),
             width: isSelected ? 3 : 1,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppColors.premiumGold.withOpacity(0.5),
+                    color: AppColors.premiumGold.withValues(alpha: 0.5),
                     blurRadius: 10,
                     spreadRadius: 2,
                   ),
@@ -223,7 +223,7 @@ class SettingsScreen extends ConsumerWidget {
                 height: 32,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.3),
+                  color: Colors.white.withValues(alpha: 0.3),
                 ),
                 child: Icon(Icons.palette, color: Colors.white, size: 20),
               ),

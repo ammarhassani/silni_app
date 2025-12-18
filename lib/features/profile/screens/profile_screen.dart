@@ -236,7 +236,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         gradient: themeColors.goldenGradient,
                         boxShadow: [
                           BoxShadow(
-                            color: themeColors.accent.withOpacity(0.5),
+                            color: themeColors.accent.withValues(alpha: 0.5),
                             blurRadius: 30,
                             spreadRadius: 5,
                           ),
@@ -316,7 +316,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         cursorColor: Colors.white,
                         decoration: InputDecoration(
                           filled: true,
-                          fillColor: Colors.white.withOpacity(0.1),
+                          fillColor: Colors.white.withValues(alpha: 0.1),
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.md,
                             vertical: AppSpacing.sm,
@@ -327,7 +327,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                            borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
@@ -363,7 +363,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     },
                     icon: Icon(
                       _isEditingName ? Icons.check_circle : Icons.edit_rounded,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                     ),
                   ),
                 ],
@@ -375,7 +375,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Text(
                 user?.email ?? '',
                 style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                 ),
               ),
             ],
@@ -466,7 +466,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           height: 40,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: themeColors.primary.withOpacity(0.2),
+            color: themeColors.primary.withValues(alpha: 0.2),
           ),
           child: Icon(icon, color: Colors.white, size: 20),
         ),
@@ -478,7 +478,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Text(
                 label,
                 style: AppTypography.labelSmall.copyWith(
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -592,7 +592,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           Text(
             label,
             style: AppTypography.labelSmall.copyWith(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
@@ -615,7 +615,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             trailing: Icon(
               Icons.arrow_forward_ios_rounded,
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withValues(alpha: 0.5),
               size: 20,
             ),
             onTap: () {
@@ -634,7 +634,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             trailing: Icon(
               Icons.arrow_forward_ios_rounded,
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withValues(alpha: 0.5),
               size: 20,
             ),
             onTap: () {
@@ -656,12 +656,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             subtitle: Text(
               'تحميل نسخة من جميع بياناتك',
               style: AppTypography.bodySmall.copyWith(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
               ),
             ),
             trailing: Icon(
               Icons.arrow_forward_ios_rounded,
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withValues(alpha: 0.5),
               size: 20,
             ),
             onTap: () {
@@ -680,7 +680,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             trailing: Icon(
               Icons.arrow_forward_ios_rounded,
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withValues(alpha: 0.5),
               size: 20,
             ),
             onTap: () {
@@ -700,7 +700,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: themeColors.background1.withOpacity(0.95),
+          backgroundColor: themeColors.background1.withValues(alpha: 0.95),
           title: Text(
             'اختر مصدر الصورة',
             style: AppTypography.headlineSmall.copyWith(color: Colors.white),

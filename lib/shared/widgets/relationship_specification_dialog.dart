@@ -106,9 +106,9 @@ class _RelationshipSpecificationDialogState
         width: MediaQuery.of(context).size.width * 0.9,
         height: MediaQuery.of(context).size.height * 0.8,
         decoration: BoxDecoration(
-          color: themeColors.background1.withOpacity(0.95),
+          color: themeColors.background1.withValues(alpha: 0.95),
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-          border: Border.all(color: themeColors.primary.withOpacity(0.3)),
+          border: Border.all(color: themeColors.primary.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: [
@@ -130,7 +130,7 @@ class _RelationshipSpecificationDialogState
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: themeColors.primary.withOpacity(0.2),
+        color: themeColors.primary.withValues(alpha: 0.2),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(AppSpacing.radiusLg),
           topRight: Radius.circular(AppSpacing.radiusLg),
@@ -149,7 +149,7 @@ class _RelationshipSpecificationDialogState
           Text(
             'يرجى تحديد صلة القرابة لكل جهة اتصال تم استيرادها',
             style: AppTypography.bodyMedium.copyWith(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
             textAlign: TextAlign.center,
           ),
@@ -223,7 +223,7 @@ class _RelationshipSpecificationDialogState
                       Text(
                         contact.phones.first.number,
                         style: AppTypography.bodySmall.copyWith(
-                          color: Colors.white.withOpacity(0.7),
+                          color: Colors.white.withValues(alpha: 0.7),
                         ),
                       ),
                   ],
@@ -238,7 +238,7 @@ class _RelationshipSpecificationDialogState
           Text(
             'صلة القرابة:',
             style: AppTypography.bodySmall.copyWith(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -250,7 +250,7 @@ class _RelationshipSpecificationDialogState
           Text(
             'الجنس:',
             style: AppTypography.bodySmall.copyWith(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -262,7 +262,7 @@ class _RelationshipSpecificationDialogState
             Text(
               'وصف العلاقة:',
               style: AppTypography.bodySmall.copyWith(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
               ),
             ),
             const SizedBox(height: AppSpacing.xs),
@@ -271,17 +271,17 @@ class _RelationshipSpecificationDialogState
               decoration: InputDecoration(
                 hintText: 'مثال: صديق، جار، زميل عمل...',
                 hintStyle: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white.withOpacity(0.6),
+                  color: Colors.white.withValues(alpha: 0.6),
                 ),
                 filled: true,
-                fillColor: Colors.white.withOpacity(0.1),
+                fillColor: Colors.white.withValues(alpha: 0.1),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   borderSide: BorderSide.none,
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
@@ -313,12 +313,12 @@ class _RelationshipSpecificationDialogState
           ),
           decoration: BoxDecoration(
             gradient: isSelected ? themeColors.primaryGradient : null,
-            color: isSelected ? null : Colors.white.withOpacity(0.1),
+            color: isSelected ? null : Colors.white.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             border: Border.all(
               color: isSelected
                   ? Colors.transparent
-                  : Colors.white.withOpacity(0.3),
+                  : Colors.white.withValues(alpha: 0.3),
               width: 1,
             ),
           ),
@@ -327,7 +327,7 @@ class _RelationshipSpecificationDialogState
                 ? 'أخرى'
                 : _getRelationshipArabicName(type),
             style: AppTypography.bodySmall.copyWith(
-              color: isSelected ? Colors.white : Colors.white.withOpacity(0.8),
+              color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.8),
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -360,12 +360,12 @@ class _RelationshipSpecificationDialogState
                     : null,
                 color: currentGender == Gender.male
                     ? null
-                    : Colors.white.withOpacity(0.1),
+                    : Colors.white.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                 border: Border.all(
                   color: currentGender == Gender.male
                       ? Colors.transparent
-                      : Colors.white.withOpacity(0.3),
+                      : Colors.white.withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),
@@ -374,7 +374,7 @@ class _RelationshipSpecificationDialogState
                 style: AppTypography.bodySmall.copyWith(
                   color: currentGender == Gender.male
                       ? Colors.white
-                      : Colors.white.withOpacity(0.8),
+                      : Colors.white.withValues(alpha: 0.8),
                   fontWeight: currentGender == Gender.male
                       ? FontWeight.bold
                       : FontWeight.normal,
@@ -401,12 +401,12 @@ class _RelationshipSpecificationDialogState
                     : null,
                 color: currentGender == Gender.female
                     ? null
-                    : Colors.white.withOpacity(0.1),
+                    : Colors.white.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                 border: Border.all(
                   color: currentGender == Gender.female
                       ? Colors.transparent
-                      : Colors.white.withOpacity(0.3),
+                      : Colors.white.withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),
@@ -415,7 +415,7 @@ class _RelationshipSpecificationDialogState
                 style: AppTypography.bodySmall.copyWith(
                   color: currentGender == Gender.female
                       ? Colors.white
-                      : Colors.white.withOpacity(0.8),
+                      : Colors.white.withValues(alpha: 0.8),
                   fontWeight: currentGender == Gender.female
                       ? FontWeight.bold
                       : FontWeight.normal,
@@ -432,7 +432,7 @@ class _RelationshipSpecificationDialogState
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: themeColors.background1.withOpacity(0.8),
+        color: themeColors.background1.withValues(alpha: 0.8),
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(AppSpacing.radiusLg),
           bottomRight: Radius.circular(AppSpacing.radiusLg),
@@ -448,10 +448,10 @@ class _RelationshipSpecificationDialogState
               vertical: AppSpacing.md,
             ),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
               border: Border.all(
-                color: Colors.white.withOpacity(0.3),
+                color: Colors.white.withValues(alpha: 0.3),
                 width: 1,
               ),
             ),
@@ -460,7 +460,7 @@ class _RelationshipSpecificationDialogState
               child: Text(
                 'إلغاء',
                 style: AppTypography.labelLarge.copyWith(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                 ),
               ),
             ),

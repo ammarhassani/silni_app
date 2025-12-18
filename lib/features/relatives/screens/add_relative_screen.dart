@@ -258,17 +258,17 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                           const SizedBox(height: AppSpacing.md),
                           Row(
                             children: [
-                              Expanded(child: Divider(color: Colors.white.withOpacity(0.3))),
+                              Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.3))),
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                                 child: Text(
                                   'أو أدخل يدوياً',
                                   style: AppTypography.bodySmall.copyWith(
-                                    color: Colors.white.withOpacity(0.7),
+                                    color: Colors.white.withValues(alpha: 0.7),
                                   ),
                                 ),
                               ),
-                              Expanded(child: Divider(color: Colors.white.withOpacity(0.3))),
+                              Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.3))),
                             ],
                           ),
                           const SizedBox(height: AppSpacing.md),
@@ -298,14 +298,14 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                           decoration: InputDecoration(
                             labelText: 'رقم الهاتف (اختياري)',
                             labelStyle: AppTypography.bodyMedium.copyWith(
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                             ),
                             hintText: '50 123 4567',
                             hintStyle: AppTypography.bodyMedium.copyWith(
-                              color: Colors.white.withOpacity(0.5),
+                              color: Colors.white.withValues(alpha: 0.5),
                             ),
                             filled: true,
-                            fillColor: Colors.white.withOpacity(0.1),
+                            fillColor: Colors.white.withValues(alpha: 0.1),
                             prefixIcon: const Icon(Icons.phone, color: Colors.white70),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
@@ -314,7 +314,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                               borderSide: BorderSide(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withValues(alpha: 0.2),
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
@@ -453,7 +453,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
             gradient: AppColors.primaryGradient,
             boxShadow: [
               BoxShadow(
-                color: AppColors.islamicGreenPrimary.withOpacity(0.5),
+                color: AppColors.islamicGreenPrimary.withValues(alpha: 0.5),
                 blurRadius: 20,
                 spreadRadius: 3,
               ),
@@ -517,12 +517,12 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
           labelText: label,
           hintText: hint,
           labelStyle: AppTypography.bodyMedium.copyWith(
-            color: Colors.white.withOpacity(0.8),
+            color: Colors.white.withValues(alpha: 0.8),
           ),
           hintStyle: AppTypography.bodySmall.copyWith(
-            color: Colors.white.withOpacity(0.5),
+            color: Colors.white.withValues(alpha: 0.5),
           ),
-          prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.7)),
+          prefixIcon: Icon(icon, color: Colors.white.withValues(alpha: 0.7)),
           border: InputBorder.none,
           filled: true,
           fillColor: Colors.transparent,
@@ -539,7 +539,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.family_restroom, color: Colors.white.withOpacity(0.7)),
+              Icon(Icons.family_restroom, color: Colors.white.withValues(alpha: 0.7)),
               const SizedBox(width: AppSpacing.sm),
               Text(
                 'صلة القرابة',
@@ -553,14 +553,14 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
             dropdownColor: const Color(0xFF1A1A1A),
             decoration: InputDecoration(
               filled: true,
-              fillColor: Colors.white.withOpacity(0.1),
+              fillColor: Colors.white.withValues(alpha: 0.1),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
@@ -572,7 +572,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
               ),
             ),
             style: AppTypography.bodyMedium.copyWith(color: Colors.white),
-            icon: Icon(Icons.arrow_drop_down, color: Colors.white.withOpacity(0.7)),
+            icon: Icon(Icons.arrow_drop_down, color: Colors.white.withValues(alpha: 0.7)),
             items: RelationshipType.values.map((type) {
               return DropdownMenuItem(
                 value: type,
@@ -603,7 +603,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
     return GlassCard(
       child: Row(
         children: [
-          Icon(Icons.wc, color: Colors.white.withOpacity(0.7)),
+          Icon(Icons.wc, color: Colors.white.withValues(alpha: 0.7)),
           const SizedBox(width: AppSpacing.sm),
           Text(
             'الجنس',
@@ -623,7 +623,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                   ),
                   decoration: BoxDecoration(
                     gradient: isSelected ? AppColors.primaryGradient : null,
-                    color: isSelected ? null : Colors.white.withOpacity(0.1),
+                    color: isSelected ? null : Colors.white.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                   ),
                   child: Text(
@@ -649,7 +649,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.priority_high, color: Colors.white.withOpacity(0.7)),
+              Icon(Icons.priority_high, color: Colors.white.withValues(alpha: 0.7)),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
@@ -662,7 +662,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                     Text(
                       'تم ضبطها تلقائياً حسب صلة القرابة',
                       style: AppTypography.labelSmall.copyWith(
-                        color: Colors.white.withOpacity(0.6),
+                        color: Colors.white.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -699,10 +699,10 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
           gradient: isSelected ? AppColors.primaryGradient : null,
-          color: isSelected ? null : Colors.white.withOpacity(0.1),
+          color: isSelected ? null : Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           border: Border.all(
-            color: Colors.white.withOpacity(isSelected ? 0.5 : 0.3),
+            color: Colors.white.withValues(alpha: isSelected ? 0.5 : 0.3),
           ),
         ),
         child: Column(
@@ -729,7 +729,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
     return GlassCard(
       child: Row(
         children: [
-          Icon(Icons.star, color: Colors.white.withOpacity(0.7)),
+          Icon(Icons.star, color: Colors.white.withValues(alpha: 0.7)),
           const SizedBox(width: AppSpacing.sm),
           Text(
             'إضافة للمفضلة',
@@ -757,7 +757,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.face_rounded, color: Colors.white.withOpacity(0.7)),
+              Icon(Icons.face_rounded, color: Colors.white.withValues(alpha: 0.7)),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
@@ -770,7 +770,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                     Text(
                       'اختياري - سيتم اقتراح أفاتار تلقائياً',
                       style: AppTypography.labelSmall.copyWith(
-                        color: Colors.white.withOpacity(0.6),
+                        color: Colors.white.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -805,18 +805,18 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: isSelected || isSuggested ? AppColors.primaryGradient : null,
-                    color: isSelected || isSuggested ? null : Colors.white.withOpacity(0.1),
+                    color: isSelected || isSuggested ? null : Colors.white.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                     border: Border.all(
                       color: isSuggested && !isSelected
                           ? AppColors.premiumGold
-                          : Colors.white.withOpacity(isSelected ? 0.6 : 0.2),
+                          : Colors.white.withValues(alpha: isSelected ? 0.6 : 0.2),
                       width: isSuggested && !isSelected ? 2 : 1,
                     ),
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
-                              color: AppColors.islamicGreenPrimary.withOpacity(0.4),
+                              color: AppColors.islamicGreenPrimary.withValues(alpha: 0.4),
                               blurRadius: 8,
                               spreadRadius: 1,
                             ),
@@ -864,7 +864,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                 ? 'الأفاتار المختار: ${_selectedAvatar!.arabicName}'
                 : 'الأفاتار المقترح: ${suggestedAvatar.arabicName}',
             style: AppTypography.labelSmall.copyWith(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
               fontStyle: FontStyle.italic,
             ),
             textAlign: TextAlign.center,

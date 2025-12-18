@@ -366,7 +366,7 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
                 Text(
                   'اختر جهات الاتصال لإضافتهم كأقارب',
                   style: AppTypography.bodySmall.copyWith(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -387,7 +387,7 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
         decoration: InputDecoration(
           hintText: 'ابحث عن جهة اتصال...',
           hintStyle: AppTypography.bodyMedium.copyWith(
-            color: Colors.white.withOpacity(0.5),
+            color: Colors.white.withValues(alpha: 0.5),
           ),
           prefixIcon: Icon(Icons.search_rounded, color: themeColors.primary),
           suffixIcon: _searchController.text.isNotEmpty
@@ -400,7 +400,7 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
                 )
               : null,
           filled: true,
-          fillColor: Colors.white.withOpacity(0.1),
+          fillColor: Colors.white.withValues(alpha: 0.1),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             borderSide: BorderSide.none,
@@ -492,7 +492,7 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
               Text(
                 'جرب البحث بكلمة أخرى',
                 style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -526,8 +526,8 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
                             ? themeColors.goldenGradient
                             : LinearGradient(
                                 colors: [
-                                  Colors.white.withOpacity(0.2),
-                                  Colors.white.withOpacity(0.1),
+                                  Colors.white.withValues(alpha: 0.2),
+                                  Colors.white.withValues(alpha: 0.1),
                                 ],
                               ),
                       ),
@@ -563,7 +563,7 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
                             Text(
                               contact.phones.first.number,
                               style: AppTypography.bodySmall.copyWith(
-                                color: Colors.white.withOpacity(0.7),
+                                color: Colors.white.withValues(alpha: 0.7),
                               ),
                             ),
                           ],
@@ -615,7 +615,7 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
               Text(
                 'نحتاج إلى إذن للوصول إلى جهات الاتصال لاستيرادها',
                 style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                 ),
                 textAlign: TextAlign.center,
               ),

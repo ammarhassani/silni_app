@@ -93,7 +93,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     child: Text(
                       'تخطي',
                       style: AppTypography.labelLarge.copyWith(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                       ),
                     ),
                   ),
@@ -210,7 +210,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Text(
             page.description,
             style: AppTypography.bodyLarge.copyWith(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               height: 1.8,
             ),
             textAlign: TextAlign.center,
@@ -236,7 +236,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       width: isActive ? 32 : 8,
       height: 8,
       decoration: BoxDecoration(
-        color: isActive ? Colors.white : Colors.white.withOpacity(0.3),
+        color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
       ),
     )

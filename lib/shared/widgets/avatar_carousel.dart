@@ -153,7 +153,7 @@ class _AvatarCarouselState extends State<AvatarCarousel> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: AppColors.joyfulOrange.withOpacity(1.0 - value),
+                              color: AppColors.joyfulOrange.withValues(alpha: 1.0 - value),
                               width: 3,
                             ),
                           ),
@@ -181,7 +181,7 @@ class _AvatarCarouselState extends State<AvatarCarousel> {
                         color: (needsAttention
                                 ? AppColors.joyfulOrange
                                 : AppColors.islamicGreenPrimary)
-                            .withOpacity(0.5),
+                            .withValues(alpha: 0.5),
                         blurRadius: 20,
                         spreadRadius: 3,
                       ),
@@ -269,7 +269,7 @@ class _AvatarCarouselState extends State<AvatarCarousel> {
             child: Text(
               relative.relationshipType.arabicName,
               style: AppTypography.labelSmall.copyWith(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
               maxLines: 1,
@@ -301,18 +301,18 @@ class _AvatarCarouselState extends State<AvatarCarousel> {
               shape: BoxShape.circle,
               gradient: LinearGradient(
                 colors: [
-                  AppColors.islamicGreenPrimary.withOpacity(0.3),
-                  AppColors.premiumGold.withOpacity(0.2),
+                  AppColors.islamicGreenPrimary.withValues(alpha: 0.3),
+                  AppColors.premiumGold.withValues(alpha: 0.2),
                 ],
               ),
               border: Border.all(
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white.withValues(alpha: 0.5),
                 width: 2,
                 style: BorderStyle.solid,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.premiumGold.withOpacity(0.2),
+                  color: AppColors.premiumGold.withValues(alpha: 0.2),
                   blurRadius: 15,
                   spreadRadius: 2,
                 ),
@@ -330,7 +330,7 @@ class _AvatarCarouselState extends State<AvatarCarousel> {
           Text(
             'إضافة قريب',
             style: AppTypography.labelMedium.copyWith(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
         ],
@@ -354,11 +354,11 @@ class _AvatarCarouselState extends State<AvatarCarousel> {
           height: size,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white.withOpacity(opacity.clamp(0.3, 1.0)),
+            color: Colors.white.withValues(alpha: opacity.clamp(0.3, 1.0)),
             boxShadow: isActive
                 ? [
                     BoxShadow(
-                      color: Colors.white.withOpacity(0.5),
+                      color: Colors.white.withValues(alpha: 0.5),
                       blurRadius: 4,
                       spreadRadius: 1,
                     ),

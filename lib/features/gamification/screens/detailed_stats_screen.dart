@@ -327,9 +327,9 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -658,7 +658,7 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
               value: clampedProgress,
-              backgroundColor: Colors.white.withOpacity(0.2),
+              backgroundColor: Colors.white.withValues(alpha: 0.2),
               valueColor: AlwaysStoppedAnimation<Color>(milestone.color),
               minHeight: 8,
             ),
@@ -743,7 +743,7 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: AppColors.premiumGold.withOpacity(0.2),
+                        color: AppColors.premiumGold.withValues(alpha: 0.2),
                       ),
                     ),
                   ],
@@ -1015,7 +1015,7 @@ class _DetailedStatsScreenState extends ConsumerState<DetailedStatsScreen> {
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.joyfulOrange.withOpacity(0.3),
+                        color: AppColors.joyfulOrange.withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),

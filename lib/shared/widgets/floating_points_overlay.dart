@@ -35,7 +35,7 @@ class FloatingPointsOverlay extends StatelessWidget {
             shadows: [
               Shadow(
                 blurRadius: 8,
-                color: AppColors.premiumGold.withOpacity(0.5),
+                color: AppColors.premiumGold.withValues(alpha: 0.5),
               ),
             ],
           ),

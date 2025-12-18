@@ -92,8 +92,8 @@ class _CollapsiblePickerState extends State<CollapsiblePicker>
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
                         colors: [
-                          Colors.white.withOpacity(0.2),
-                          Colors.white.withOpacity(0.1),
+                          Colors.white.withValues(alpha: 0.2),
+                          Colors.white.withValues(alpha: 0.1),
                         ],
                       ),
                     ),
@@ -119,7 +119,7 @@ class _CollapsiblePickerState extends State<CollapsiblePicker>
                         Text(
                           widget.summaryText,
                           style: AppTypography.bodySmall.copyWith(
-                            color: Colors.white.withOpacity(0.7),
+                            color: Colors.white.withValues(alpha: 0.7),
                           ),
                         ),
                       ],

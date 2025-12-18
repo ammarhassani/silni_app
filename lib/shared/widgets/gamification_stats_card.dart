@@ -153,7 +153,7 @@ class _GamificationStatsCardState extends ConsumerState<GamificationStatsCard> {
                             gradient: themeColors.goldenGradient,
                             boxShadow: [
                               BoxShadow(
-                                color: themeColors.accent.withOpacity(0.5),
+                                color: themeColors.accent.withValues(alpha: 0.5),
                                 blurRadius: 20,
                                 spreadRadius: 2,
                               ),
@@ -196,7 +196,7 @@ class _GamificationStatsCardState extends ConsumerState<GamificationStatsCard> {
                         Text(
                           'نقطة',
                           style: AppTypography.titleMedium.copyWith(
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                           ),
                         ),
                       ],
@@ -231,7 +231,7 @@ class _GamificationStatsCardState extends ConsumerState<GamificationStatsCard> {
                     Text(
                       'يوم متتالي',
                       style: AppTypography.labelMedium.copyWith(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                       ),
                     ),
                   ],
@@ -256,7 +256,7 @@ class _GamificationStatsCardState extends ConsumerState<GamificationStatsCard> {
                     Text(
                       'أطول سلسلة',
                       style: AppTypography.labelMedium.copyWith(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                       ),
                     ),
                   ],
@@ -292,7 +292,7 @@ class _GamificationStatsCardState extends ConsumerState<GamificationStatsCard> {
                 Text(
                   'لم تحصل على أي أوسمة بعد. استمر في التواصل مع أقاربك!',
                   style: AppTypography.bodyMedium.copyWith(
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                   ),
                   textAlign: TextAlign.center,
                 )
@@ -329,7 +329,7 @@ class _GamificationStatsCardState extends ConsumerState<GamificationStatsCard> {
         Text(
           label,
           style: AppTypography.labelSmall.copyWith(
-            color: Colors.white.withOpacity(0.8),
+            color: Colors.white.withValues(alpha: 0.8),
           ),
         ),
       ],
@@ -357,7 +357,7 @@ class _GamificationStatsCardState extends ConsumerState<GamificationStatsCard> {
         Text(
           label,
           style: AppTypography.labelSmall.copyWith(
-            color: Colors.white.withOpacity(0.8),
+            color: Colors.white.withValues(alpha: 0.8),
           ),
         ),
       ],
@@ -375,7 +375,7 @@ class _GamificationStatsCardState extends ConsumerState<GamificationStatsCard> {
         gradient: themeColors.primaryGradient,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withOpacity(0.3),
+          color: Colors.white.withValues(alpha: 0.3),
           width: 1,
         ),
       ),

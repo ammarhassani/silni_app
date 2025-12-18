@@ -126,7 +126,7 @@ class _LevelUpModalState extends State<LevelUpModal>
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.premiumGold.withOpacity(0.5),
+                  color: AppColors.premiumGold.withValues(alpha: 0.5),
                   blurRadius: 40,
                   spreadRadius: 10,
                 ),
@@ -165,7 +165,7 @@ class _LevelUpModalState extends State<LevelUpModal>
                     shadows: [
                       Shadow(
                         blurRadius: 20,
-                        color: Colors.black.withOpacity(0.5),
+                        color: Colors.black.withValues(alpha: 0.5),
                       ),
                     ],
                   ),
@@ -186,10 +186,10 @@ class _LevelUpModalState extends State<LevelUpModal>
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.white.withOpacity(_glowAnimation.value * 0.8),
+                            color: Colors.white.withValues(alpha: _glowAnimation.value * 0.8),
                             blurRadius: 40 * _glowAnimation.value,
                             spreadRadius: 10 * _glowAnimation.value,
                           ),
@@ -203,7 +203,7 @@ class _LevelUpModalState extends State<LevelUpModal>
                           shadows: [
                             Shadow(
                               blurRadius: 20,
-                              color: Colors.black.withOpacity(0.3),
+                              color: Colors.black.withValues(alpha: 0.3),
                             ),
                           ],
                         ),
@@ -232,7 +232,7 @@ class _LevelUpModalState extends State<LevelUpModal>
                     shadows: [
                       Shadow(
                         blurRadius: 10,
-                        color: Colors.black.withOpacity(0.5),
+                        color: Colors.black.withValues(alpha: 0.5),
                       ),
                     ],
                   ),
@@ -248,7 +248,7 @@ class _LevelUpModalState extends State<LevelUpModal>
                       vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -264,7 +264,7 @@ class _LevelUpModalState extends State<LevelUpModal>
                         LinearProgressIndicator(
                           value: widget.currentXP /
                               (widget.currentXP + widget.xpToNextLevel),
-                          backgroundColor: Colors.white.withOpacity(0.3),
+                          backgroundColor: Colors.white.withValues(alpha: 0.3),
                           valueColor: const AlwaysStoppedAnimation<Color>(
                             Colors.white,
                           ),

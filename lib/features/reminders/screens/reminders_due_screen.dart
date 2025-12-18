@@ -92,7 +92,7 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
                 Text(
                   'تواصل مع أحبتك اليوم',
                   style: AppTypography.bodySmall.copyWith(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -206,11 +206,11 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: isFriday
-            ? fridayGreen.withOpacity(0.6)
-            : Colors.white.withOpacity(0.15),
+            ? fridayGreen.withValues(alpha: 0.6)
+            : Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(4),
         border: isFriday
-            ? Border.all(color: fridayGreenLight.withOpacity(0.5), width: 1)
+            ? Border.all(color: fridayGreenLight.withValues(alpha: 0.5), width: 1)
             : null,
       ),
       child: Row(
@@ -262,7 +262,7 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
                   Text(
                     'تم التواصل مع $contactedCount',
                     style: AppTypography.bodySmall.copyWith(
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -274,7 +274,7 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
               value: progress,
-              backgroundColor: Colors.white.withOpacity(0.2),
+              backgroundColor: Colors.white.withValues(alpha: 0.2),
               valueColor: AlwaysStoppedAnimation(themeColors.primary),
               minHeight: 8,
             ),
@@ -313,8 +313,8 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
           : hasFriday
               ? LinearGradient(
                   colors: [
-                    fridayGreen.withOpacity(0.25),
-                    fridayGreenLight.withOpacity(0.1),
+                    fridayGreen.withValues(alpha: 0.25),
+                    fridayGreenLight.withValues(alpha: 0.1),
                   ],
                 )
               : null,
@@ -374,7 +374,7 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
                         Text(
                           relative.relationshipType.arabicName,
                           style: AppTypography.bodySmall.copyWith(
-                            color: Colors.white.withOpacity(0.7),
+                            color: Colors.white.withValues(alpha: 0.7),
                           ),
                         ),
                         if (frequencies.isNotEmpty) ...[
@@ -394,7 +394,7 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
                         style: AppTypography.bodySmall.copyWith(
                           color: daysSinceContact > 7
                               ? Colors.orange
-                              : Colors.white.withOpacity(0.6),
+                              : Colors.white.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -492,7 +492,7 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
               Text(
                 'أحسنت! أنت متواصل مع جميع أحبتك',
                 style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                 ),
                 textAlign: TextAlign.center,
               ),

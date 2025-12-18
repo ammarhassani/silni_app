@@ -26,7 +26,7 @@ class ThemeAwareDialog extends ConsumerWidget {
     final themeColors = ref.watch(themeColorsProvider);
 
     return Dialog(
-      backgroundColor: themeColors.background1.withOpacity(0.95),
+      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
       ),
@@ -39,7 +39,7 @@ class ThemeAwareDialog extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: themeColors.primary.withOpacity(0.1),
+                color: themeColors.primary.withValues(alpha: 0.1),
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(AppSpacing.radiusLg),
                   bottomRight: Radius.circular(AppSpacing.radiusLg),
@@ -68,7 +68,7 @@ class ThemeAwareDialog extends ConsumerWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: themeColors.background1.withOpacity(0.1),
+                  color: themeColors.background1.withValues(alpha: 0.1),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(AppSpacing.radiusLg),
                     topRight: Radius.circular(AppSpacing.radiusLg),
@@ -119,7 +119,7 @@ class ScrollableThemeAwareDialog extends ConsumerWidget {
     final themeColors = ref.watch(themeColorsProvider);
 
     return Dialog(
-      backgroundColor: themeColors.background1.withOpacity(0.95),
+      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
       ),
@@ -132,7 +132,7 @@ class ScrollableThemeAwareDialog extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: themeColors.primary.withOpacity(0.1),
+                color: themeColors.primary.withValues(alpha: 0.1),
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(AppSpacing.radiusLg),
                   bottomRight: Radius.circular(AppSpacing.radiusLg),
@@ -164,7 +164,7 @@ class ScrollableThemeAwareDialog extends ConsumerWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: themeColors.background1.withOpacity(0.1),
+                  color: themeColors.background1.withValues(alpha: 0.1),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(AppSpacing.radiusLg),
                     topRight: Radius.circular(AppSpacing.radiusLg),
@@ -221,7 +221,7 @@ class ThemeAwareAlertDialog extends ConsumerWidget {
     final themeColors = ref.watch(themeColorsProvider);
 
     return AlertDialog(
-      backgroundColor: themeColors.background1.withOpacity(0.95),
+      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
       ),
@@ -282,7 +282,7 @@ class ThemeAwareBottomSheet extends ConsumerWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: themeColors.background1.withOpacity(0.95),
+        color: themeColors.background1.withValues(alpha: 0.95),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(AppSpacing.radiusLg),
           topRight: Radius.circular(AppSpacing.radiusLg),
@@ -303,7 +303,7 @@ class ThemeAwareBottomSheet extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: themeColors.background1.withOpacity(0.1),
+                  color: themeColors.background1.withValues(alpha: 0.1),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(AppSpacing.radiusLg),
                     topRight: Radius.circular(AppSpacing.radiusLg),
@@ -361,11 +361,11 @@ class ThemeAwareTextField extends ConsumerWidget {
         labelText: label,
         hintText: hintText,
         labelStyle: TextStyle(
-          color: Colors.white.withOpacity(0.7),
+          color: Colors.white.withValues(alpha: 0.7),
           fontSize: 14,
         ),
         hintStyle: TextStyle(
-          color: Colors.white.withOpacity(0.5),
+          color: Colors.white.withValues(alpha: 0.5),
           fontSize: 14,
         ),
         filled: true,
@@ -373,14 +373,14 @@ class ThemeAwareTextField extends ConsumerWidget {
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           borderSide: BorderSide(
-            color: themeColors.primary.withOpacity(0.3),
+            color: themeColors.primary.withValues(alpha: 0.3),
             width: 1.0,
           ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           borderSide: BorderSide(
-            color: themeColors.primary.withOpacity(0.3),
+            color: themeColors.primary.withValues(alpha: 0.3),
             width: 1.0,
           ),
         ),

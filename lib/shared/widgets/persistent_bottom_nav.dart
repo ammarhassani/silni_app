@@ -161,12 +161,12 @@ class _PersistentBottomNavState extends ConsumerState<PersistentBottomNav>
               height: 75,
               margin: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(
-                  0.1,
+                color: Colors.white.withValues(
+                  alpha: 0.1,
                 ), // Semi-transparent background
                 borderRadius: BorderRadius.circular(30),
                 border: Border.all(
-                  color: themeColors.primary.withOpacity(0.3),
+                  color: themeColors.primary.withValues(alpha: 0.3),
                   width: 1.5,
                 ),
                 boxShadow: [
@@ -236,10 +236,7 @@ class _PersistentBottomNavState extends ConsumerState<PersistentBottomNav>
                                   style: AppTypography.labelSmall.copyWith(
                                     color: isSelected
                                         ? Colors.white
-                                        : UIHelpers.withOpacity(
-                                            Colors.white,
-                                            0.5,
-                                          ),
+                                        : UIHelpers.withOpacity(Colors.white, 0.5),
                                     fontWeight: isSelected
                                         ? FontWeight.bold
                                         : FontWeight.normal,

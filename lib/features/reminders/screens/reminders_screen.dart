@@ -101,7 +101,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                 Text(
                   'نظّم تذكيراتك للتواصل مع أحبتك',
                   style: AppTypography.bodySmall.copyWith(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -195,8 +195,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               ? AppColors.goldenGradient
               : LinearGradient(
                   colors: [
-                    Colors.white.withOpacity(0.1),
-                    Colors.white.withOpacity(0.05),
+                    Colors.white.withValues(alpha: 0.1),
+                    Colors.white.withValues(alpha: 0.05),
                   ],
                 ),
           child: Column(
@@ -233,7 +233,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                 child: Text(
                   template.description,
                   style: AppTypography.bodySmall.copyWith(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -266,7 +266,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
             Text(
               'اختر نوع تذكير من الأعلى للبدء',
               style: AppTypography.bodySmall.copyWith(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -306,7 +306,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                   borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                   boxShadow: [
                     BoxShadow(
-                      color: themeColors.primary.withOpacity(0.4),
+                      color: themeColors.primary.withValues(alpha: 0.4),
                       blurRadius: 12,
                       spreadRadius: 2,
                     ),
@@ -319,8 +319,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
             gradient: isHovering
                 ? LinearGradient(
                     colors: [
-                      themeColors.primary.withOpacity(0.3),
-                      themeColors.primary.withOpacity(0.1),
+                      themeColors.primary.withValues(alpha: 0.3),
+                      themeColors.primary.withValues(alpha: 0.1),
                     ],
                   )
                 : null,
@@ -347,7 +347,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                           Text(
                             schedule.description,
                             style: AppTypography.bodySmall.copyWith(
-                              color: Colors.white.withOpacity(0.7),
+                              color: Colors.white.withValues(alpha: 0.7),
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -384,7 +384,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                   Text(
                     'لا يوجد أقارب في هذا التذكير',
                     style: AppTypography.bodySmall.copyWith(
-                      color: Colors.white.withOpacity(0.5),
+                      color: Colors.white.withValues(alpha: 0.5),
                     ),
                   )
                 else
@@ -449,13 +449,13 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            themeColors.primary.withOpacity(0.3),
-            themeColors.primary.withOpacity(0.15),
+            themeColors.primary.withValues(alpha: 0.3),
+            themeColors.primary.withValues(alpha: 0.15),
           ],
         ),
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         border: Border.all(
-          color: Colors.white.withOpacity(0.2),
+          color: Colors.white.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -474,7 +474,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
             child: Container(
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
+                color: Colors.white.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -503,7 +503,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
           Text(
             'اسحب الأقارب لإضافتهم إلى تذكير',
             style: AppTypography.bodySmall.copyWith(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -547,7 +547,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         boxShadow: [
           BoxShadow(
-            color: themeColors.primary.withOpacity(0.3),
+            color: themeColors.primary.withValues(alpha: 0.3),
             blurRadius: 8,
             spreadRadius: 1,
           ),
@@ -602,7 +602,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               Text(
                 'أضف أقاربك أولاً لتتمكن من إنشاء تذكيرات',
                 style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -641,7 +641,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
             Text(
               'يرجى التحقق من الاتصال بالإنترنت والمحاولة مرة أخرى',
               style: AppTypography.bodySmall.copyWith(
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
               ),
               textAlign: TextAlign.center,
             ),
@@ -862,7 +862,7 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
     return AlertDialog(
-      backgroundColor: themeColors.background1.withOpacity(0.95),
+      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
       title: Text(
         'إنشاء ${widget.template.title}',
         style: AppTypography.headlineMedium.copyWith(color: Colors.white),
@@ -875,7 +875,7 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
             Text(
               widget.template.description,
               style: AppTypography.bodySmall.copyWith(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -891,7 +891,7 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
                   Text(
                     'اختر الوقت المناسب لإرسال التذكير',
                     style: AppTypography.bodySmall.copyWith(
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
@@ -902,7 +902,7 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
                       'تغيير الوقت: ${_selectedTime.format(context)}',
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.2),
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.lg,
@@ -971,7 +971,7 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
         Text(
           'اختر يوم واحد للتذكير الأسبوعي',
           style: AppTypography.bodySmall.copyWith(
-            color: Colors.white.withOpacity(0.7),
+            color: Colors.white.withValues(alpha: 0.7),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -998,15 +998,15 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
                       ? themeColors.primaryGradient
                       : LinearGradient(
                           colors: [
-                            Colors.white.withOpacity(0.1),
-                            Colors.white.withOpacity(0.05),
+                            Colors.white.withValues(alpha: 0.1),
+                            Colors.white.withValues(alpha: 0.05),
                           ],
                         ),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   border: Border.all(
                     color: isSelected
                         ? themeColors.primary
-                        : Colors.white.withOpacity(0.2),
+                        : Colors.white.withValues(alpha: 0.2),
                     width: isSelected ? 2 : 1,
                   ),
                 ),
@@ -1037,7 +1037,7 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.white.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
           child: DropdownButton<int>(
@@ -1045,7 +1045,7 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
             hint: Text(
               'اختر اليوم',
               style: AppTypography.bodyMedium.copyWith(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
               ),
             ),
             isExpanded: true,
@@ -1140,7 +1140,7 @@ class _AddRelativesDialogState extends ConsumerState<_AddRelativesDialog> {
     final themeColors = ref.watch(themeColorsProvider);
 
     return AlertDialog(
-      backgroundColor: themeColors.background1.withOpacity(0.95),
+      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
       title: Text(
         'إضافة أقارب للتذكير',
         style: AppTypography.headlineMedium.copyWith(color: Colors.white),
@@ -1188,7 +1188,7 @@ class _AddRelativesDialogState extends ConsumerState<_AddRelativesDialog> {
                     subtitle: Text(
                       relative.relationshipType.arabicName,
                       style: AppTypography.bodySmall.copyWith(
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                       ),
                     ),
                     activeColor: themeColors.primary,
@@ -1298,7 +1298,7 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
         Text(
           'اختر يوم واحد للتذكير الأسبوعي',
           style: AppTypography.bodySmall.copyWith(
-            color: Colors.white.withOpacity(0.7),
+            color: Colors.white.withValues(alpha: 0.7),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -1323,15 +1323,15 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
                       ? themeColors.primaryGradient
                       : LinearGradient(
                           colors: [
-                            Colors.white.withOpacity(0.1),
-                            Colors.white.withOpacity(0.05),
+                            Colors.white.withValues(alpha: 0.1),
+                            Colors.white.withValues(alpha: 0.05),
                           ],
                         ),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   border: Border.all(
                     color: isSelected
                         ? themeColors.primary
-                        : Colors.white.withOpacity(0.2),
+                        : Colors.white.withValues(alpha: 0.2),
                     width: isSelected ? 2 : 1,
                   ),
                 ),
@@ -1368,15 +1368,15 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
                   ? themeColors.primaryGradient
                   : LinearGradient(
                       colors: [
-                        Colors.white.withOpacity(0.1),
-                        Colors.white.withOpacity(0.05),
+                        Colors.white.withValues(alpha: 0.1),
+                        Colors.white.withValues(alpha: 0.05),
                       ],
                     ),
               borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
               border: Border.all(
                 color: isSelected
                     ? themeColors.primary
-                    : Colors.white.withOpacity(0.2),
+                    : Colors.white.withValues(alpha: 0.2),
                 width: isSelected ? 2 : 1,
               ),
             ),
@@ -1399,7 +1399,7 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
     return AlertDialog(
-      backgroundColor: themeColors.background1.withOpacity(0.95),
+      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
       title: Text(
         'تعديل التذكير',
         style: AppTypography.headlineMedium.copyWith(color: Colors.white),
@@ -1419,7 +1419,7 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
               icon: const Icon(Icons.schedule_rounded),
               label: Text('الوقت: ${_selectedTime.format(context)}'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.2),
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.lg,

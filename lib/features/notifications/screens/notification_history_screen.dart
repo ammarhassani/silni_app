@@ -83,7 +83,7 @@ class _NotificationHistoryScreenState
                 Text(
                   'سجل الإشعارات السابقة',
                   style: AppTypography.bodyMedium.copyWith(
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -151,7 +151,7 @@ class _NotificationHistoryScreenState
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: AppSpacing.lg),
         decoration: BoxDecoration(
-          color: Colors.red.withOpacity(0.8),
+          color: Colors.red.withValues(alpha: 0.8),
           borderRadius: BorderRadius.circular(16),
         ),
         child: const Icon(Icons.delete_outline, color: Colors.white),
@@ -187,7 +187,7 @@ class _NotificationHistoryScreenState
                   height: 48,
                   decoration: BoxDecoration(
                     color: _getTypeColor(notification.notificationType)
-                        .withOpacity(0.2),
+                        .withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
@@ -232,7 +232,7 @@ class _NotificationHistoryScreenState
                       Text(
                         notification.body,
                         style: AppTypography.bodySmall.copyWith(
-                          color: Colors.white.withOpacity(isUnread ? 0.9 : 0.6),
+                          color: Colors.white.withValues(alpha: isUnread ? 0.9 : 0.6),
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -247,7 +247,7 @@ class _NotificationHistoryScreenState
                             ),
                             decoration: BoxDecoration(
                               color: _getTypeColor(notification.notificationType)
-                                  .withOpacity(0.2),
+                                  .withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -262,7 +262,7 @@ class _NotificationHistoryScreenState
                           Text(
                             _formatTime(notification.sentAt),
                             style: AppTypography.labelSmall.copyWith(
-                              color: Colors.white.withOpacity(0.5),
+                              color: Colors.white.withValues(alpha: 0.5),
                             ),
                           ),
                         ],
@@ -360,20 +360,20 @@ class _NotificationHistoryScreenState
           Icon(
             Icons.notifications_off_outlined,
             size: 80,
-            color: Colors.white.withOpacity(0.3),
+            color: Colors.white.withValues(alpha: 0.3),
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(
             'لا توجد إشعارات',
             style: AppTypography.headlineSmall.copyWith(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             'ستظهر إشعاراتك هنا',
             style: AppTypography.bodyMedium.copyWith(
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -389,13 +389,13 @@ class _NotificationHistoryScreenState
           Icon(
             Icons.error_outline,
             size: 60,
-            color: Colors.white.withOpacity(0.5),
+            color: Colors.white.withValues(alpha: 0.5),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
             'حدث خطأ في تحميل الإشعارات',
             style: AppTypography.bodyLarge.copyWith(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
             ),
           ),
         ],

@@ -110,7 +110,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
                           Container(
                             width: 1,
                             height: 40,
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                           ),
                           _buildStatItem(
                             icon: Icons.lock_outline_rounded,
@@ -122,7 +122,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
                           Container(
                             width: 1,
                             height: 40,
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                           ),
                           _buildStatItem(
                             icon: Icons.percent_rounded,
@@ -257,8 +257,8 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isUnlocked
-                    ? badge.color.withOpacity(0.2)
-                    : Colors.white.withOpacity(0.1),
+                    ? badge.color.withValues(alpha: 0.2)
+                    : Colors.white.withValues(alpha: 0.1),
                 border: Border.all(
                   color: isUnlocked ? badge.color : Colors.white30,
                   width: 3,
@@ -279,7 +279,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
                 )
                 .shimmer(
                   duration: 2000.ms,
-                  color: badge.color.withOpacity(0.5),
+                  color: badge.color.withValues(alpha: 0.5),
                 ),
 
             const SizedBox(height: AppSpacing.xs),
@@ -305,7 +305,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.bodySmall.copyWith(
-                color: isUnlocked ? Colors.white70 : Colors.white.withOpacity(0.4),
+                color: isUnlocked ? Colors.white70 : Colors.white.withValues(alpha: 0.4),
                 height: 1.2,
               ),
             ),

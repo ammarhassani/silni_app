@@ -115,7 +115,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                 Text(
                   'تصور جميل لأفراد عائلتك',
                   style: AppTypography.bodySmall.copyWith(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -502,7 +502,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.3),
+                  color: Colors.white.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -538,7 +538,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
               Text(
                 node.relationship,
                 style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                 ),
               ),
 
@@ -593,7 +593,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
         children: [
-          Icon(icon, color: Colors.white.withOpacity(0.7), size: 20),
+          Icon(icon, color: Colors.white.withValues(alpha: 0.7), size: 20),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
@@ -628,7 +628,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
               Text(
                 'ابدأ بإضافة أقاربك لرؤية شجرة العائلة',
                 style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                 ),
                 textAlign: TextAlign.center,
               ),

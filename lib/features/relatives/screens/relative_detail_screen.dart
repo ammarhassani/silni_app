@@ -246,7 +246,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                 vertical: AppSpacing.xs,
               ),
               decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.2),
+                color: Colors.amber.withValues(alpha: 0.2),
                 border: Border.all(color: Colors.amber),
                 borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
               ),
@@ -421,7 +421,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha: 0.2),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -462,7 +462,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
               color: relative.needsContact ? Colors.red : themeColors.primary,
             ),
           ),
-          Container(width: 1, height: 40, color: Colors.white.withOpacity(0.2)),
+          Container(width: 1, height: 40, color: Colors.white.withValues(alpha: 0.2)),
           Flexible(
             child: _buildStatItem(
               icon: Icons.timeline,
@@ -471,7 +471,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
               color: AppColors.premiumGold,
             ),
           ),
-          Container(width: 1, height: 40, color: Colors.white.withOpacity(0.2)),
+          Container(width: 1, height: 40, color: Colors.white.withValues(alpha: 0.2)),
           Flexible(
             child: _buildStatItem(
               icon: Icons.access_time,
@@ -667,7 +667,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                   Icon(
                     Icons.history,
                     size: 48,
-                    color: Colors.white.withOpacity(0.5),
+                    color: Colors.white.withValues(alpha: 0.5),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Text(
@@ -954,7 +954,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: themeColors.background1.withOpacity(0.95),
+        backgroundColor: themeColors.background1.withValues(alpha: 0.95),
         title: Row(
           children: [
             const Icon(Icons.warning_rounded, color: Colors.red),
@@ -993,9 +993,9 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
             Container(
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                color: Colors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                border: Border.all(color: Colors.red.withOpacity(0.3)),
+                border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
               ),
               child: Text(
                 'هذا الإجراء لا يمكن التراجع عنه',
@@ -1087,18 +1087,18 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
       decoration: BoxDecoration(
         gradient: isEnabled
             ? LinearGradient(
-                colors: [color.withOpacity(0.8), color],
+                colors: [color.withValues(alpha: 0.8), color],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               )
             : null,
-        color: isEnabled ? null : Colors.grey.withOpacity(0.3),
+        color: isEnabled ? null : Colors.grey.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        border: isEnabled ? Border.all(color: color.withOpacity(0.3)) : null,
+        border: isEnabled ? Border.all(color: color.withValues(alpha: 0.3)) : null,
         boxShadow: isEnabled
             ? [
                 BoxShadow(
-                  color: color.withOpacity(0.3),
+                  color: color.withValues(alpha: 0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),

@@ -172,8 +172,8 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                                     gradient: LinearGradient(
                                       colors: [
                                         AppColors.emotionalPurple,
-                                        AppColors.emotionalPurple.withOpacity(
-                                          0.7,
+                                        AppColors.emotionalPurple.withValues(
+                                          alpha: 0.7,
                                         ),
                                       ],
                                     ),
@@ -240,7 +240,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                   gradient: AppColors.goldenGradient,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.premiumGold.withOpacity(0.5),
+                      color: AppColors.premiumGold.withValues(alpha: 0.5),
                       blurRadius: 30,
                       spreadRadius: 5,
                     ),
@@ -258,7 +258,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                 end: const Offset(1.1, 1.1),
                 duration: 2000.ms,
               )
-              .shimmer(duration: 2000.ms, color: Colors.white.withOpacity(0.5)),
+              .shimmer(duration: 2000.ms, color: Colors.white.withValues(alpha: 0.5)),
 
           const SizedBox(height: AppSpacing.lg),
 
@@ -293,7 +293,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                   borderRadius: BorderRadius.circular(30),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.islamicGreenPrimary.withOpacity(0.5),
+                      color: AppColors.islamicGreenPrimary.withValues(alpha: 0.5),
                       blurRadius: 20,
                       spreadRadius: 2,
                     ),
@@ -343,8 +343,8 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppColors.premiumGold.withOpacity(0.2),
-                  AppColors.premiumGoldDark.withOpacity(0.1),
+                  AppColors.premiumGold.withValues(alpha: 0.2),
+                  AppColors.premiumGoldDark.withValues(alpha: 0.1),
                 ],
               ),
               borderRadius: BorderRadius.circular(20),
@@ -363,7 +363,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                 Container(
                   width: 1,
                   height: 50,
-                  color: Colors.white.withOpacity(0.3),
+                  color: Colors.white.withValues(alpha: 0.3),
                 ),
                 Flexible(
                   child: _buildStatColumn(
@@ -376,7 +376,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                 Container(
                   width: 1,
                   height: 50,
-                  color: Colors.white.withOpacity(0.3),
+                  color: Colors.white.withValues(alpha: 0.3),
                 ),
                 Flexible(
                   child: _buildStatColumn(
@@ -454,7 +454,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                             Container(
                               padding: const EdgeInsets.all(AppSpacing.xs),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withValues(alpha: 0.2),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(icon, size: 28, color: Colors.white),
@@ -554,7 +554,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                   child: LinearProgressIndicator(
                     value: progress.clamp(0.0, 1.0),
                     minHeight: 20,
-                    backgroundColor: Colors.white.withOpacity(0.2),
+                    backgroundColor: Colors.white.withValues(alpha: 0.2),
                     valueColor: const AlwaysStoppedAnimation<Color>(
                       AppColors.islamicGreenPrimary,
                     ),
@@ -604,8 +604,8 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppColors.emotionalPurple.withOpacity(0.3),
-                  AppColors.calmBlue.withOpacity(0.2),
+                  AppColors.emotionalPurple.withValues(alpha: 0.3),
+                  AppColors.calmBlue.withValues(alpha: 0.2),
                 ],
               ),
               borderRadius: BorderRadius.circular(20),
@@ -664,7 +664,7 @@ extension GradientExtension on Gradient {
     if (this is LinearGradient) {
       final gradient = this as LinearGradient;
       return LinearGradient(
-        colors: gradient.colors.map((c) => c.withOpacity(opacity)).toList(),
+        colors: gradient.colors.map((c) => c.withValues(alpha: opacity)).toList(),
         begin: gradient.begin,
         end: gradient.end,
       );

@@ -433,8 +433,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             return GlassCard(
               gradient: LinearGradient(
                 colors: [
-                  Colors.grey.withOpacity(0.3),
-                  Colors.grey.withOpacity(0.1),
+                  Colors.grey.withValues(alpha: 0.3),
+                  Colors.grey.withValues(alpha: 0.1),
                 ],
               ),
               child: Column(
@@ -442,7 +442,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   Icon(
                     Icons.notifications_none,
                     size: 48,
-                    color: Colors.white.withOpacity(0.6),
+                    color: Colors.white.withValues(alpha: 0.6),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
@@ -455,7 +455,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   Text(
                     'أضف تذكيرات لتبقى على تواصل مع أقاربك',
                     style: AppTypography.bodySmall.copyWith(
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -468,7 +468,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         vertical: AppSpacing.sm,
                       ),
                       decoration: BoxDecoration(
-                        color: themeColors.primary.withOpacity(0.3),
+                        color: themeColors.primary.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                       ),
                       child: Text(
@@ -490,8 +490,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             return GlassCard(
               gradient: LinearGradient(
                 colors: [
-                  themeColors.primaryLight.withOpacity(0.3),
-                  AppColors.premiumGold.withOpacity(0.2),
+                  themeColors.primaryLight.withValues(alpha: 0.3),
+                  AppColors.premiumGold.withValues(alpha: 0.2),
                 ],
               ),
               child: Row(
@@ -513,7 +513,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         Text(
                           'لا توجد تذكيرات لليوم',
                           style: AppTypography.bodySmall.copyWith(
-                            color: Colors.white.withOpacity(0.8),
+                            color: Colors.white.withValues(alpha: 0.8),
                           ),
                         ),
                       ],
@@ -536,8 +536,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             return GlassCard(
               gradient: LinearGradient(
                 colors: [
-                  AppColors.premiumGold.withOpacity(0.4),
-                  themeColors.primaryLight.withOpacity(0.3),
+                  AppColors.premiumGold.withValues(alpha: 0.4),
+                  themeColors.primaryLight.withValues(alpha: 0.3),
                 ],
               ),
               child: Row(
@@ -559,7 +559,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         Text(
                           'تواصلت مع جميع الأقارب في تذكيراتك اليوم',
                           style: AppTypography.bodySmall.copyWith(
-                            color: Colors.white.withOpacity(0.8),
+                            color: Colors.white.withValues(alpha: 0.8),
                           ),
                         ),
                       ],
@@ -591,7 +591,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       vertical: AppSpacing.xs,
                     ),
                     decoration: BoxDecoration(
-                      color: themeColors.primary.withOpacity(0.3),
+                      color: themeColors.primary.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                     ),
                     child: Text(
@@ -611,7 +611,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: totalCount > 0 ? contactedCount / totalCount : 0,
-                  backgroundColor: Colors.white.withOpacity(0.2),
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
                   valueColor: AlwaysStoppedAnimation<Color>(
                     AppColors.premiumGold,
                   ),
@@ -639,7 +639,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     child: Text(
                       'عرض ${dueRelatives.length - 5} المزيد...',
                       style: AppTypography.labelMedium.copyWith(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -816,7 +816,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           borderRadius: BorderRadius.circular(4),
                           color: _currentFrequencyPage == index
                               ? _getFrequencyColor(allFrequencies[index])
-                              : Colors.white.withOpacity(0.3),
+                              : Colors.white.withValues(alpha: 0.3),
                         ),
                       ),
                     ),
@@ -875,8 +875,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         padding: const EdgeInsets.all(AppSpacing.md),
         gradient: LinearGradient(
           colors: [
-            color.withOpacity(0.25),
-            color.withOpacity(0.08),
+            color.withValues(alpha: 0.25),
+            color.withValues(alpha: 0.08),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -892,7 +892,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   height: 36,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: color.withOpacity(0.3),
+                    color: color.withValues(alpha: 0.3),
                   ),
                   child: Center(
                     child: Text(
@@ -934,7 +934,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 child: Text(
                   'لا يوجد تذكيرات',
                   style: AppTypography.bodySmall.copyWith(
-                    color: Colors.white.withOpacity(0.5),
+                    color: Colors.white.withValues(alpha: 0.5),
                   ),
                 ),
               ),
@@ -957,14 +957,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         children: [
           Icon(
             isPast ? Icons.history : Icons.schedule,
-            color: color.withOpacity(isPast ? 0.5 : 0.8),
+            color: color.withValues(alpha: isPast ? 0.5 : 0.8),
             size: 14,
           ),
           const SizedBox(width: 6),
           Text(
             label,
             style: AppTypography.labelSmall.copyWith(
-              color: Colors.white.withOpacity(isPast ? 0.5 : 0.8),
+              color: Colors.white.withValues(alpha: isPast ? 0.5 : 0.8),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -973,9 +973,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             child: Text(
               _buildRelativesHint(relatives),
               style: AppTypography.labelSmall.copyWith(
-                color: Colors.white.withOpacity(isPast ? 0.4 : 0.7),
+                color: Colors.white.withValues(alpha: isPast ? 0.4 : 0.7),
                 decoration: isPast ? TextDecoration.lineThrough : null,
-                decorationColor: Colors.white.withOpacity(0.3),
+                decorationColor: Colors.white.withValues(alpha: 0.3),
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -984,13 +984,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: color.withOpacity(isPast ? 0.2 : 0.4),
+              color: color.withValues(alpha: isPast ? 0.2 : 0.4),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               '${relatives.length}',
               style: AppTypography.labelSmall.copyWith(
-                color: Colors.white.withOpacity(isPast ? 0.6 : 1.0),
+                color: Colors.white.withValues(alpha: isPast ? 0.6 : 1.0),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1132,11 +1132,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: isFriday
-            ? fridayGreen.withOpacity(0.6)
-            : Colors.white.withOpacity(0.15),
+            ? fridayGreen.withValues(alpha: 0.6)
+            : Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(4),
         border: isFriday
-            ? Border.all(color: fridayGreenLight.withOpacity(0.5), width: 1)
+            ? Border.all(color: fridayGreenLight.withValues(alpha: 0.5), width: 1)
             : null,
       ),
       child: Row(
@@ -1182,7 +1182,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       Text(
                         greeting,
                         style: AppTypography.bodyLarge.copyWith(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -1206,7 +1206,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     height: 44,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.15),
+                      color: Colors.white.withValues(alpha: 0.15),
                     ),
                     child: Stack(
                       children: [
@@ -1259,7 +1259,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             Text(
               '"ومن أحب أن يُبسَط له في رزقه، وأن يُنسَأ له في أثره، فليصل رحمه"',
               style: AppTypography.bodySmall.copyWith(
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
                 fontStyle: FontStyle.italic,
                 height: 1.6,
               ),
@@ -1279,8 +1279,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       return GlassCard(
         gradient: LinearGradient(
           colors: [
-            themeColors.primary.withOpacity(0.2),
-            AppColors.premiumGold.withOpacity(0.1),
+            themeColors.primary.withValues(alpha: 0.2),
+            AppColors.premiumGold.withValues(alpha: 0.1),
           ],
         ),
         child: const HadithSkeletonLoader(),
@@ -1296,8 +1296,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return GlassCard(
           gradient: LinearGradient(
             colors: [
-              themeColors.primary.withOpacity(0.3),
-              AppColors.premiumGold.withOpacity(0.2),
+              themeColors.primary.withValues(alpha: 0.3),
+              AppColors.premiumGold.withValues(alpha: 0.2),
             ],
           ),
           child: Column(
@@ -1349,10 +1349,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   border: Border.all(
-                    color: AppColors.premiumGold.withOpacity(0.3),
+                    color: AppColors.premiumGold.withValues(alpha: 0.3),
                     width: 1,
                   ),
                 ),
@@ -1375,13 +1375,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     Icon(
                       Icons.book,
                       size: 14,
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withValues(alpha: 0.6),
                     ),
                     const SizedBox(width: AppSpacing.xs),
                     Text(
                       hadith.reference,
                       style: AppTypography.labelSmall.copyWith(
-                        color: Colors.white.withOpacity(0.6),
+                        color: Colors.white.withValues(alpha: 0.6),
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -1428,8 +1428,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     subtitle: 'تقدمك اليومي',
                     gradient: LinearGradient(
                       colors: [
-                        AppColors.emotionalPurple.withOpacity(0.6),
-                        AppColors.calmBlue.withOpacity(0.4),
+                        AppColors.emotionalPurple.withValues(alpha: 0.6),
+                        AppColors.calmBlue.withValues(alpha: 0.4),
                       ],
                     ),
                     onTap: () => context.push(AppRoutes.statistics),
@@ -1448,7 +1448,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     gradient: LinearGradient(
                       colors: [
                         themeColors.primaryDark,
-                        themeColors.primary.withOpacity(0.8),
+                        themeColors.primary.withValues(alpha: 0.8),
                       ],
                     ),
                     onTap: () => context.push(AppRoutes.familyTree),
@@ -1485,7 +1485,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               height: 45,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
               ),
               child: Icon(icon, color: Colors.white, size: 24),
             ),
@@ -1503,7 +1503,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             Text(
               subtitle,
               style: AppTypography.bodySmall.copyWith(
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -1546,14 +1546,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       Text(
                         'عرض الكل',
                         style: AppTypography.labelLarge.copyWith(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                         ),
                       ),
                       const SizedBox(width: 4),
                       Icon(
                         Icons.arrow_forward_ios,
                         size: 14,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                       ),
                     ],
                   ),
@@ -1579,7 +1579,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           Icon(
             Icons.people_outline,
             size: 64,
-            color: Colors.white.withOpacity(0.7),
+            color: Colors.white.withValues(alpha: 0.7),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
@@ -1591,7 +1591,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           Text(
             'أضف والديك، إخوتك، أجدادك وباقي أقاربك',
             style: AppTypography.bodySmall.copyWith(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
             ),
             textAlign: TextAlign.center,
           ),
