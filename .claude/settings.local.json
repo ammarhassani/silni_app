@@ -62,7 +62,8 @@
       "Bash(md5:*)",
       "Bash(xcodebuild:*)",
       "Bash(wc:*)",
-      "Bash(xargs -I {} sh -c 'echo \"\"\"\"=== {} ===\"\"\"\" && ls -la {} 2>/dev/null | grep -E \"\"\"\"^d|^-\"\"\"\" | head -20')"
+      "Bash(xargs -I {} sh -c 'echo \"\"\"\"=== {} ===\"\"\"\" && ls -la {} 2>/dev/null | grep -E \"\"\"\"^d|^-\"\"\"\" | head -20')",
+      "Bash(do echo \"=== $file ===\" grep -B1 \"print\\(\" \"$file\")"
     ],
     "deny": [],
     "ask": []

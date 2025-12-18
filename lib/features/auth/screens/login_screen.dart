@@ -19,6 +19,7 @@ import '../providers/auth_provider.dart';
 import '../../../core/services/app_logger_service.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/errors/app_errors.dart';
+import '../../../core/services/error_handler_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -538,7 +539,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('حدث خطأ: ${e.toString()}'),
+              content: Text(errorHandler.getArabicMessage(e)),
               backgroundColor: AppColors.error,
               duration: const Duration(seconds: 3),
             ),

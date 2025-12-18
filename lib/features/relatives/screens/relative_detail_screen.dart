@@ -18,6 +18,7 @@ import '../../../shared/services/relatives_service.dart';
 import '../../../shared/providers/interactions_provider.dart';
 import '../../../shared/services/auth_service.dart';
 import '../../../shared/widgets/mood_selector.dart';
+import '../../../core/services/error_handler_service.dart';
 
 class RelativeDetailScreen extends ConsumerStatefulWidget {
   final String relativeId;
@@ -1029,7 +1030,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('فشل حذف القريب: $e'),
+          content: Text(errorHandler.getArabicMessage(e)),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 3),
         ),

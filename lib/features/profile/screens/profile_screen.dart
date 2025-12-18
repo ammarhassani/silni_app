@@ -24,6 +24,7 @@ import '../../../shared/providers/interactions_provider.dart';
 import '../../../shared/providers/data_export_provider.dart';
 import '../../../shared/widgets/data_export_dialog.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../core/services/error_handler_service.dart';
 
 // Providers
 final relativesServiceProvider = Provider((ref) => RelativesService());
@@ -794,7 +795,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('فشل تحديث الصورة: $e'),
+                content: Text(errorHandler.getArabicMessage(e)),
                 backgroundColor: AppColors.error,
               ),
             );
@@ -809,7 +810,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('فشل اختيار الصورة: $e'),
+            content: Text(errorHandler.getArabicMessage(e)),
             backgroundColor: AppColors.error,
           ),
         );
@@ -869,7 +870,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('حدث خطأ: ${e.toString()}'),
+            content: Text(errorHandler.getArabicMessage(e)),
             backgroundColor: AppColors.error,
           ),
         );
@@ -928,7 +929,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               } catch (e) {
                 scaffoldMessenger.showSnackBar(
                   SnackBar(
-                    content: Text('حدث خطأ: ${e.toString()}'),
+                    content: Text(errorHandler.getArabicMessage(e)),
                     backgroundColor: AppColors.error,
                   ),
                 );
@@ -1029,7 +1030,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
                 scaffoldMessenger.showSnackBar(
                   SnackBar(
-                    content: Text('حدث خطأ: ${e.toString()}'),
+                    content: Text(errorHandler.getArabicMessage(e)),
                     backgroundColor: AppColors.error,
                     duration: const Duration(seconds: 4),
                   ),
