@@ -12,7 +12,7 @@ import 'package:silni_app/main.dart';
 /// - Creating reminder schedules
 /// - Managing reminder settings
 ///
-/// Run with: flutter test integration_test/reminders_flow_test.dart -d <device>
+/// Run with: flutter test integration_test/reminders_flow_test.dart
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
