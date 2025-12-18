@@ -1,10 +1,10 @@
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/app_logger_service.dart';
+import 'env/app_environment.dart';
 
 /// Supabase configuration and initialization for Silni app
 ///
@@ -42,12 +42,9 @@ class SupabaseConfig {
         tag: 'SupabaseConfig',
       );
 
-      // Determine environment - check dart-define first, then .env fallback
-      final environment =
-          const String.fromEnvironment('APP_ENV', defaultValue: '') != ''
-          ? const String.fromEnvironment('APP_ENV')
-          : dotenv.env['APP_ENV'] ?? 'staging';
-      final isProduction = environment == 'production';
+      // Get environment from AppEnvironment (handles dart-define priority)
+      final environment = AppEnvironment.currentEnvironment;
+      final isProduction = AppEnvironment.isProduction;
 
       logger.info(
         'Environment determined',
@@ -56,61 +53,9 @@ class SupabaseConfig {
         metadata: {'environment': environment, 'isProduction': isProduction},
       );
 
-      // Debug: Show where credentials are coming from
-      final dartDefineUrl = const String.fromEnvironment(
-        'SUPABASE_STAGING_URL',
-      );
-      final envUrl = dotenv.env['SUPABASE_STAGING_URL'];
-      logger.debug(
-        'Credential sources',
-        category: LogCategory.service,
-        tag: 'SupabaseConfig',
-        metadata: {
-          'dartDefineUrl': dartDefineUrl.isEmpty ? '(empty)' : dartDefineUrl,
-          'envUrl': envUrl ?? '(null)',
-        },
-      );
-
-      // Get environment-specific credentials
-      // Priority: dart-define > .env > empty string
-      final String supabaseUrl;
-      final String supabaseAnonKey;
-
-      if (isProduction) {
-        supabaseUrl =
-            const String.fromEnvironment(
-                  'SUPABASE_PRODUCTION_URL',
-                  defaultValue: '',
-                ) !=
-                ''
-            ? const String.fromEnvironment('SUPABASE_PRODUCTION_URL')
-            : dotenv.env['SUPABASE_PRODUCTION_URL'] ?? '';
-        supabaseAnonKey =
-            const String.fromEnvironment(
-                  'SUPABASE_PRODUCTION_ANON_KEY',
-                  defaultValue: '',
-                ) !=
-                ''
-            ? const String.fromEnvironment('SUPABASE_PRODUCTION_ANON_KEY')
-            : dotenv.env['SUPABASE_PRODUCTION_ANON_KEY'] ?? '';
-      } else {
-        supabaseUrl =
-            const String.fromEnvironment(
-                  'SUPABASE_STAGING_URL',
-                  defaultValue: '',
-                ) !=
-                ''
-            ? const String.fromEnvironment('SUPABASE_STAGING_URL')
-            : dotenv.env['SUPABASE_STAGING_URL'] ?? '';
-        supabaseAnonKey =
-            const String.fromEnvironment(
-                  'SUPABASE_STAGING_ANON_KEY',
-                  defaultValue: '',
-                ) !=
-                ''
-            ? const String.fromEnvironment('SUPABASE_STAGING_ANON_KEY')
-            : dotenv.env['SUPABASE_STAGING_ANON_KEY'] ?? '';
-      }
+      // Get credentials from AppEnvironment (type-safe, compile-time)
+      final supabaseUrl = AppEnvironment.supabaseUrl;
+      final supabaseAnonKey = AppEnvironment.supabaseAnonKey;
 
       // Validate credentials
       if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
@@ -126,7 +71,7 @@ class SupabaseConfig {
         );
         throw Exception(
           'Missing Supabase credentials for environment: $environment. '
-          'Please check your .env file or --dart-define flags.',
+          'Run: flutter pub run build_runner build --delete-conflicting-outputs',
         );
       }
 

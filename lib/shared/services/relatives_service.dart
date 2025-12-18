@@ -1,7 +1,13 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
+import '../../core/services/app_logger_service.dart';
+import '../../core/services/performance_monitoring_service.dart';
+import '../../core/utils/retry_helper.dart';
 import '../models/relative_model.dart';
 
 /// Provider for the Relatives service
@@ -11,24 +17,53 @@ final relativesServiceProvider = Provider<RelativesService>((ref) {
 
 class RelativesService {
   final SupabaseClient _supabase = SupabaseConfig.client;
+  final AppLoggerService _logger = AppLoggerService();
+  final PerformanceMonitoringService _perfService = PerformanceMonitoringService();
   static const String _table = 'relatives';
+
+  /// Check if an error is retryable
+  bool _isRetryable(Exception e) {
+    return e is SocketException ||
+        e is TimeoutException ||
+        e.toString().contains('network') ||
+        e.toString().contains('connection') ||
+        e.toString().contains('timeout');
+  }
 
   /// Create a new relative
   Future<String> createRelative(Relative relative) async {
-    try {
-      final response = await _supabase
-          .from(_table)
-          .insert(relative.toJson())
-          .select('id')
-          .single();
+    return _perfService.measureDatabaseOperation(
+      'insert',
+      _table,
+      () => RetryHelper.withExponentialBackoff(
+        operation: () async {
+          final response = await _supabase
+              .from(_table)
+              .insert(relative.toJson())
+              .select('id')
+              .single();
 
-      return response['id'] as String;
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ [RELATIVES] Error creating relative: $e');
-      }
-      rethrow;
-    }
+          _logger.info(
+            'Created relative successfully',
+            category: LogCategory.database,
+            tag: 'RelativesService',
+            metadata: {'relativeId': response['id']},
+          );
+
+          return response['id'] as String;
+        },
+        maxAttempts: 3,
+        shouldRetry: _isRetryable,
+        onRetry: (attempt, delay, error) {
+          _logger.warning(
+            'Retrying createRelative (attempt $attempt)',
+            category: LogCategory.database,
+            tag: 'RelativesService',
+            metadata: {'error': error.toString()},
+          );
+        },
+      ),
+    );
   }
 
   /// Get all relatives for a user
@@ -63,24 +98,30 @@ class RelativesService {
 
   /// Get a single relative by ID
   Future<Relative?> getRelative(String relativeId) async {
-    try {
-      final response = await _supabase
-          .from(_table)
-          .select()
-          .eq('id', relativeId)
-          .maybeSingle();
+    return _perfService.measureDatabaseOperation(
+      'select',
+      _table,
+      () async {
+        try {
+          final response = await _supabase
+              .from(_table)
+              .select()
+              .eq('id', relativeId)
+              .maybeSingle();
 
-      if (response == null) {
-        return null;
-      }
+          if (response == null) {
+            return null;
+          }
 
-      return Relative.fromJson(response);
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ [RELATIVES] Error fetching relative: $e');
-      }
-      rethrow;
-    }
+          return Relative.fromJson(response);
+        } catch (e) {
+          if (kDebugMode) {
+            print('❌ [RELATIVES] Error fetching relative: $e');
+          }
+          rethrow;
+        }
+      },
+    );
   }
 
   /// Get a single relative by ID as stream (for real-time updates)
@@ -109,33 +150,65 @@ class RelativesService {
     String relativeId,
     Map<String, dynamic> updates,
   ) async {
-    try {
-      // Note: updated_at is automatically set by database trigger
-      await _supabase.from(_table).update(updates).eq('id', relativeId);
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ [RELATIVES] Error updating relative: $e');
-      }
-      rethrow;
-    }
+    return _perfService.measureDatabaseOperation(
+      'update',
+      _table,
+      () => RetryHelper.withExponentialBackoff(
+        operation: () async {
+          // Note: updated_at is automatically set by database trigger
+          await _supabase.from(_table).update(updates).eq('id', relativeId);
+
+          _logger.info(
+            'Updated relative successfully',
+            category: LogCategory.database,
+            tag: 'RelativesService',
+            metadata: {'relativeId': relativeId, 'updates': updates.keys.toList()},
+          );
+        },
+        maxAttempts: 3,
+        shouldRetry: _isRetryable,
+        onRetry: (attempt, delay, error) {
+          _logger.warning(
+            'Retrying updateRelative (attempt $attempt)',
+            category: LogCategory.database,
+            tag: 'RelativesService',
+            metadata: {'relativeId': relativeId, 'error': error.toString()},
+          );
+        },
+      ),
+    );
   }
 
   /// Delete (archive) a relative
   Future<void> deleteRelative(String relativeId) async {
-    try {
-      await _supabase
-          .from(_table)
-          .update({
-            'is_archived': true,
-            // updated_at handled by trigger
-          })
-          .eq('id', relativeId);
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ [RELATIVES] Error archiving relative: $e');
-      }
-      rethrow;
-    }
+    return RetryHelper.withExponentialBackoff(
+      operation: () async {
+        await _supabase
+            .from(_table)
+            .update({
+              'is_archived': true,
+              // updated_at handled by trigger
+            })
+            .eq('id', relativeId);
+
+        _logger.info(
+          'Archived relative successfully',
+          category: LogCategory.database,
+          tag: 'RelativesService',
+          metadata: {'relativeId': relativeId},
+        );
+      },
+      maxAttempts: 3,
+      shouldRetry: _isRetryable,
+      onRetry: (attempt, delay, error) {
+        _logger.warning(
+          'Retrying deleteRelative (attempt $attempt)',
+          category: LogCategory.database,
+          tag: 'RelativesService',
+          metadata: {'relativeId': relativeId, 'error': error.toString()},
+        );
+      },
+    );
   }
 
   /// Permanently delete a relative

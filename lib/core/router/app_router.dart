@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../shared/widgets/gradient_background.dart';
+import '../../shared/widgets/error_widgets.dart';
+import '../providers/connectivity_provider.dart';
+import '../providers/stream_recovery_provider.dart';
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
@@ -27,13 +30,17 @@ import '../../features/gamification/screens/leaderboard_screen.dart';
 import 'app_routes.dart';
 import 'navigation_service.dart';
 import '../services/analytics_service.dart';
+import 'performance_navigator_observer.dart';
 import '../../shared/widgets/persistent_bottom_nav.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: NavigationService.navigatorKey,
     initialLocation: AppRoutes.splash,
-    observers: [AnalyticsService.observer],
+    observers: [
+      AnalyticsService.observer,
+      PerformanceNavigatorObserver(),
+    ],
     routes: [
       // Splash
       GoRoute(
@@ -331,6 +338,10 @@ class _NavigationWrapperState extends ConsumerState<_NavigationWrapper> {
   @override
   Widget build(BuildContext context) {
     final isNavVisible = ref.watch(bottomNavVisibilityProvider);
+    final isOnline = ref.watch(isOnlineProvider);
+
+    // Enable stream recovery when connectivity changes
+    ref.watch(streamRecoveryProvider);
 
     return NotificationListener<ScrollNotification>(
       onNotification: (scrollNotification) {
@@ -344,13 +355,25 @@ class _NavigationWrapperState extends ConsumerState<_NavigationWrapper> {
           children: [
             // Main content with bottom padding to prevent overlap
             Positioned.fill(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: isNavVisible
-                      ? 95
-                      : 20, // Account for nav bar height + margin
-                ),
-                child: KeyedSubtree(key: _childKey, child: widget.child),
+              child: Column(
+                children: [
+                  // Offline banner at top
+                  AnimatedOfflineBanner(
+                    isOffline: !isOnline,
+                    onTap: () => ref.read(connectivityServiceProvider).refresh(),
+                  ),
+                  // Main content
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        bottom: isNavVisible
+                            ? 95
+                            : 20, // Account for nav bar height + margin
+                      ),
+                      child: KeyedSubtree(key: _childKey, child: widget.child),
+                    ),
+                  ),
+                ],
               ),
             ),
 

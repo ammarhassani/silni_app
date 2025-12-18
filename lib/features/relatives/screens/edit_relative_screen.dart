@@ -8,6 +8,7 @@ import '../../../core/config/supabase_config.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/services/error_handler_service.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
@@ -188,12 +189,26 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
       if (mounted) {
         context.pop();
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('خطأ: $e')));
+
+      // Use ErrorHandlerService for user-friendly Arabic messages
+      final errorMessage = errorHandler.getArabicMessage(e);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+
+      // Report error to Sentry
+      errorHandler.reportError(
+        e,
+        stackTrace: stackTrace,
+        tag: 'EditRelativeScreen',
+        context: {'operation': 'updateRelative', 'relativeId': widget.relativeId},
+      );
     }
   }
 

@@ -21,6 +21,8 @@ import '../../../shared/models/interaction_model.dart';
 import '../../../shared/services/relatives_service.dart';
 import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/providers/interactions_provider.dart';
+import '../../../shared/providers/data_export_provider.dart';
+import '../../../shared/widgets/data_export_dialog.dart';
 import '../../auth/providers/auth_provider.dart';
 
 // Providers
@@ -646,6 +648,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         const SizedBox(height: AppSpacing.sm),
         GlassCard(
           child: ListTile(
+            leading: Icon(Icons.download_outlined, color: themeColors.accent),
+            title: Text(
+              'تصدير بياناتي',
+              style: AppTypography.titleMedium.copyWith(color: Colors.white),
+            ),
+            subtitle: Text(
+              'تحميل نسخة من جميع بياناتك',
+              style: AppTypography.bodySmall.copyWith(
+                color: Colors.white.withOpacity(0.7),
+              ),
+            ),
+            trailing: Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: Colors.white.withOpacity(0.5),
+              size: 20,
+            ),
+            onTap: () {
+              HapticFeedback.lightImpact();
+              _showExportDataDialog();
+            },
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        GlassCard(
+          child: ListTile(
             leading: const Icon(Icons.delete_outline, color: Colors.red),
             title: Text(
               'حذف الحساب',
@@ -916,6 +943,38 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ],
       ),
     );
+  }
+
+  void _showExportDataDialog() async {
+    final themeColors = ref.read(themeColorsProvider);
+    final userId = SupabaseConfig.currentUserId;
+
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('يرجى تسجيل الدخول أولاً'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Show confirmation dialog first
+    final confirmed = await showDataExportConfirmationDialog(context, themeColors);
+
+    if (confirmed != true || !mounted) return;
+
+    // Reset the export state before starting
+    ref.read(dataExportNotifierProvider.notifier).reset();
+
+    // Show export progress dialog
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => DataExportDialog(userId: userId),
+      );
+    }
   }
 
   void _showDeleteAccountDialog() {

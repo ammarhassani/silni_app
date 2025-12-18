@@ -12,6 +12,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/services/error_handler_service.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
@@ -161,10 +162,21 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
 
       // Navigate back to home
       context.go(AppRoutes.home);
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      _showMessage('خطأ: $e');
+
+      // Use ErrorHandlerService for user-friendly Arabic messages
+      final errorMessage = errorHandler.getArabicMessage(e);
+      _showMessage(errorMessage);
+
+      // Report error to Sentry
+      errorHandler.reportError(
+        e,
+        stackTrace: stackTrace,
+        tag: 'AddRelativeScreen',
+        context: {'operation': 'createRelative'},
+      );
     }
   }
 

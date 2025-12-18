@@ -142,7 +142,11 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
         }
       },
       child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        padding: const EdgeInsets.only(
+          left: AppSpacing.lg,
+          right: AppSpacing.lg,
+          bottom: AppSpacing.lg,
+        ),
         itemCount: dueRelatives.length + 1, // +1 for summary card
         itemBuilder: (context, index) {
           if (index == 0) {

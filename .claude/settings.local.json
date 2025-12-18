@@ -60,7 +60,9 @@
       "Bash(file:*)",
       "Bash(afplay:*)",
       "Bash(md5:*)",
-      "Bash(xcodebuild:*)"
+      "Bash(xcodebuild:*)",
+      "Bash(wc:*)",
+      "Bash(xargs -I {} sh -c 'echo \"\"\"\"=== {} ===\"\"\"\" && ls -la {} 2>/dev/null | grep -E \"\"\"\"^d|^-\"\"\"\" | head -20')"
     ],
     "deny": [],
     "ask": []

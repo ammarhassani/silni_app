@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'package:silni_app/core/services/analytics_service.dart';
+import 'package:silni_app/core/providers/gamification_events_provider.dart';
+import 'package:silni_app/core/models/gamification_event.dart';
 
 /// Test helpers and utilities for Silni app tests
 ///
@@ -9,7 +14,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// and helper functions used across multiple test files.
 
 // ========================================
-// Mock Classes
+// Mock Classes - Supabase
 // ========================================
 
 /// Mock Supabase Client for testing
@@ -21,6 +26,9 @@ class MockSupabaseQueryBuilder extends Mock implements PostgrestQueryBuilder {}
 /// Mock Supabase Filter Builder
 class MockSupabaseFilterBuilder extends Mock implements PostgrestFilterBuilder {}
 
+/// Mock Supabase Transform Builder
+class MockSupabaseTransformBuilder extends Mock implements PostgrestTransformBuilder {}
+
 /// Mock Auth Client
 class MockGoTrueClient extends Mock implements GoTrueClient {}
 
@@ -29,6 +37,56 @@ class MockUser extends Mock implements User {}
 
 /// Mock Auth Response
 class MockAuthResponse extends Mock implements AuthResponse {}
+
+/// Mock Postgrest Response
+class MockPostgrestResponse extends Mock implements PostgrestResponse {}
+
+// ========================================
+// Mock Classes - Services
+// ========================================
+
+/// Mock Analytics Service for testing
+class MockAnalyticsService extends Mock implements AnalyticsService {}
+
+/// Mock SharedPreferences for testing
+class MockSharedPreferences extends Mock implements SharedPreferences {}
+
+// ========================================
+// Mock Classes - Controllers
+// ========================================
+
+/// Test GamificationEventsController that tracks emitted events
+/// This extends the real controller to add testing capabilities
+class TestGamificationEventsController extends GamificationEventsController {
+  final List<GamificationEvent> emittedEvents = [];
+
+  @override
+  void emit(GamificationEvent event) {
+    emittedEvents.add(event);
+    super.emit(event);
+  }
+
+  /// Clear emitted events (useful between tests)
+  void clearEvents() {
+    emittedEvents.clear();
+  }
+
+  /// Check if a specific event type was emitted
+  bool hasEmittedEventOfType(GamificationEventType type) {
+    return emittedEvents.any((e) => e.type == type);
+  }
+
+  /// Get all events of a specific type
+  List<GamificationEvent> getEventsOfType(GamificationEventType type) {
+    return emittedEvents.where((e) => e.type == type).toList();
+  }
+
+  /// Get the last emitted event
+  GamificationEvent? get lastEvent => emittedEvents.isNotEmpty ? emittedEvents.last : null;
+
+  /// Get events count
+  int get eventCount => emittedEvents.length;
+}
 
 // ========================================
 // Test Data Factories

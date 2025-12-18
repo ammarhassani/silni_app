@@ -3,12 +3,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'core/config/supabase_config.dart';
 import 'core/config/app_scroll_behavior.dart'; // Enable mouse drag scrolling for web
+import 'core/config/env/app_environment.dart';
+import 'core/config/env/env_validator.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
@@ -19,6 +20,9 @@ import 'core/services/app_logger_service.dart'; // Logger service
 import 'shared/services/fcm_notification_service.dart';
 import 'shared/services/unified_notification_service.dart';
 import 'core/services/analytics_service.dart';
+import 'core/services/performance_monitoring_service.dart';
+import 'core/services/app_health_service.dart';
+import 'shared/widgets/error_boundary.dart';
 
 // Background handler is now in fcm_notification_service.dart
 // It's imported and used via FirebaseMessaging.onBackgroundMessage()
@@ -83,75 +87,33 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Load environment variables
+  // Validate environment configuration (compile-time type-safe via envied)
   logger.info(
-    'Loading environment variables from .env file...',
+    'Validating environment configuration...',
     category: LogCategory.lifecycle,
     tag: 'ENV',
   );
   try {
-    await dotenv.load(fileName: '.env');
+    // Validate all required environment variables are present
+    EnvValidator.validate(throwOnError: !kDebugMode);
+    // Log configuration details (without sensitive values)
+    EnvValidator.logConfiguration();
     logger.info(
-      '.env file loaded successfully',
+      'Environment configuration validated successfully',
       category: LogCategory.lifecycle,
       tag: 'ENV',
-    );
-
-    // Log which environment variables are available (without exposing sensitive data)
-    final envKeys = dotenv.env.keys.toList();
-    logger.debug(
-      'Environment variables loaded',
-      category: LogCategory.lifecycle,
-      tag: 'ENV',
-      metadata: {
-        'variableCount': envKeys.length,
-        'hasSupabaseUrl': dotenv.env.containsKey('SUPABASE_STAGING_URL'),
-        'hasSupabaseKey': dotenv.env.containsKey('SUPABASE_STAGING_ANON_KEY'),
-        'hasAppEnv': dotenv.env.containsKey('APP_ENV'),
-      },
-    );
-
-    // Check dart-define values (these take precedence)
-    final dartDefineUrl = const String.fromEnvironment('SUPABASE_STAGING_URL');
-    final dartDefineAppEnv = const String.fromEnvironment('APP_ENV');
-    logger.debug(
-      'Dart-define values checked',
-      category: LogCategory.lifecycle,
-      tag: 'DART-DEFINE',
-      metadata: {
-        'hasSupabaseUrl': dartDefineUrl.isNotEmpty,
-        'appEnv': dartDefineAppEnv.isNotEmpty ? dartDefineAppEnv : '(empty)',
-      },
     );
   } catch (e, stackTrace) {
     logger.critical(
-      'Could not load .env file',
+      'Environment validation failed',
       category: LogCategory.lifecycle,
       tag: 'ENV',
       metadata: {'error': e.toString()},
       stackTrace: stackTrace,
     );
-    logger.warning(
-      'App will rely on --dart-define flags from build command',
-      category: LogCategory.lifecycle,
-      tag: 'ENV',
-    );
-
-    // Check if dart-define provides fallback
-    final dartDefineUrl = const String.fromEnvironment('SUPABASE_STAGING_URL');
-    if (dartDefineUrl.isEmpty) {
-      logger.critical(
-        'No dart-define fallback found! App WILL FAIL - no credentials available',
-        category: LogCategory.lifecycle,
-        tag: 'ENV',
-      );
-    } else {
-      logger.info(
-        'dart-define fallback is available',
-        category: LogCategory.lifecycle,
-        tag: 'ENV',
-      );
-    }
+    // In debug mode, continue anyway for development
+    // In release mode, the exception will propagate
+    if (!kDebugMode) rethrow;
   }
 
   // Initialize Supabase (primary backend)
@@ -219,6 +181,35 @@ void main() async {
       );
       // Don't rethrow - app can work without analytics
     }
+
+    // Initialize Performance Monitoring
+    logger.info(
+      'Initializing performance monitoring...',
+      category: LogCategory.service,
+      tag: 'Performance',
+    );
+    try {
+      final perfService = PerformanceMonitoringService();
+      await perfService.initialize();
+
+      // Start app health monitoring
+      final healthService = AppHealthService();
+      healthService.startMonitoring();
+
+      logger.info(
+        'Performance monitoring initialized',
+        category: LogCategory.service,
+        tag: 'Performance',
+      );
+    } catch (e) {
+      logger.warning(
+        'Performance monitoring initialization failed',
+        category: LogCategory.service,
+        tag: 'Performance',
+        metadata: {'error': e.toString()},
+      );
+      // Don't rethrow - app can work without performance monitoring
+    }
   } catch (e, stackTrace) {
     logger.error(
       'Firebase initialization failed',
@@ -262,6 +253,9 @@ void main() async {
     tag: 'ErrorHandling',
   );
 
+  // Setup custom error widget builder for graceful error UI
+  setupErrorWidgetBuilder();
+
   // Enhanced Flutter error handler with device context
   FlutterError.onError = (FlutterErrorDetails details) async {
     // Log locally
@@ -301,13 +295,13 @@ void main() async {
   );
   await SentryFlutter.init(
     (options) {
-      options.dsn = dotenv.env['SENTRY_DSN'] ?? '';
+      options.dsn = AppEnvironment.sentryDsn;
       options.tracesSampleRate =
           1.0; // Capture 100% of transactions in debug/staging
       options.enableAutoPerformanceTracing = true;
       options.attachThreads = true;
       options.attachStacktrace = true;
-      options.environment = dotenv.env['ENVIRONMENT'] ?? 'development';
+      options.environment = AppEnvironment.sentryEnvironment;
       logger.debug(
         'Sentry environment: ${options.environment}',
         category: LogCategory.service,
@@ -315,13 +309,8 @@ void main() async {
       );
       // Configure beforeSend to enable TestFlight and staging logging
       options.beforeSend = (event, hint) {
-        final environment = dotenv.env['ENVIRONMENT'] ?? 'development';
-        final isTestFlight =
-            const String.fromEnvironment(
-              'IS_TESTFLIGHT',
-              defaultValue: 'false',
-            ) ==
-            'true';
+        final environment = AppEnvironment.sentryEnvironment;
+        final isTestFlight = AppEnvironment.isTestFlight;
 
         // Send events from production OR staging/TestFlight builds
         // Block only from local development
@@ -362,15 +351,11 @@ void main() async {
         category: LogCategory.service,
         tag: 'Sentry',
         metadata: {
-          'environment': dotenv.env['ENVIRONMENT'] ?? 'development',
+          'environment': AppEnvironment.sentryEnvironment,
           'will_send_events':
-              dotenv.env['ENVIRONMENT'] == 'production' ||
-              dotenv.env['ENVIRONMENT'] == 'staging' ||
-              const String.fromEnvironment(
-                    'IS_TESTFLIGHT',
-                    defaultValue: 'false',
-                  ) ==
-                  'true',
+              AppEnvironment.sentryEnvironment == 'production' ||
+              AppEnvironment.sentryEnvironment == 'staging' ||
+              AppEnvironment.isTestFlight,
         },
       );
     },

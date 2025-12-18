@@ -47,6 +47,10 @@ app.*.map.json
 # Environment variables (IMPORTANT - contains secrets!)
 .env
 .env.*
+!.env.example
+
+# Generated environment files (contain obfuscated secrets - do not commit!)
+lib/core/config/env/*.g.dart
 
 # Firebase configuration files (contains API keys)
 # google-services.json - REMOVED from gitignore (safe to commit)

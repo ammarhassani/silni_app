@@ -1,15 +1,11 @@
 import 'dart:async';
 import 'dart:ui';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:confetti/confetti.dart';
 import 'package:intl/intl.dart' as intl;
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -26,6 +22,8 @@ import '../../../shared/widgets/floating_points_overlay.dart';
 import '../../../shared/widgets/level_up_modal.dart';
 import '../../../shared/widgets/badge_unlock_modal.dart';
 import '../../../shared/widgets/streak_milestone_modal.dart';
+import '../../../shared/widgets/error_widgets.dart';
+import '../../../core/providers/stream_recovery_provider.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../../shared/models/hadith_model.dart';
@@ -347,7 +345,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     relativesAsync.when(
                       data: (relatives) => _buildFamilyCircles(relatives),
                       loading: () => const FamilyCirclesSkeleton(),
-                      error: (_, __) => const SizedBox.shrink(),
+                      error: (error, _) => InlineErrorWidget(
+                        message: 'فشل في تحميل بيانات العائلة',
+                        onRetry: () => ref.invalidate(relativesStreamProvider(userId)),
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.xl),
 
@@ -357,6 +358,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       relativesAsync,
                       schedulesAsync,
                     ),
+                    const SizedBox(height: AppSpacing.xl),
 
                     // Due Reminders Card - today's reminders as tasks
                     _buildDueRemindersCard(
@@ -373,20 +375,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         data: (interactions) =>
                             _buildTodaysActivity(interactions, relatives),
                         loading: () => const SizedBox.shrink(),
-                        error: (_, __) => const SizedBox.shrink(),
+                        error: (error, _) => InlineErrorWidget(
+                          message: 'فشل في تحميل نشاط اليوم',
+                          onRetry: () => ref.invalidate(todayInteractionsStreamProvider(userId)),
+                          compact: true,
+                        ),
                       ),
                       loading: () => const SizedBox.shrink(),
-                      error: (_, __) => const SizedBox.shrink(),
+                      error: (error, _) => const SizedBox.shrink(),
                     ),
                     const SizedBox(height: AppSpacing.xl),
 
-                    // Who needs your call?
-                    relativesAsync.when(
-                      data: (relatives) => _buildNeedsContact(relatives),
+                    // Setup reminders prompt (only for new users without reminders)
+                    schedulesAsync.when(
+                      data: (schedules) => _buildSetupRemindersPrompt(schedules),
                       loading: () => const SizedBox.shrink(),
                       error: (_, __) => const SizedBox.shrink(),
                     ),
-                    const SizedBox(height: 120), // Extra padding for bottom nav
+                    const SizedBox(height: AppSpacing.xl), // Padding for bottom nav
                   ],
                 ),
               ),
@@ -996,55 +1002,54 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   Widget _buildDueRelativeCard(DueRelativeWithFrequencies dueRelative, bool isContacted, String userId) {
     final relative = dueRelative.relative;
-    final hasPhone = relative.phoneNumber != null && relative.phoneNumber!.isNotEmpty;
     final hasFriday = dueRelative.hasFridayReminder;
 
     // Friday special green color
     const fridayGreen = Color(0xFF1B5E20);
     const fridayGreenLight = Color(0xFF4CAF50);
 
-    return GlassCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      gradient: isContacted
-          ? LinearGradient(
-              colors: [
-                Colors.green.withOpacity(0.3),
-                Colors.green.withOpacity(0.1),
-              ],
-            )
-          : hasFriday
-              ? LinearGradient(
-                  colors: [
-                    fridayGreen.withOpacity(0.3),
-                    fridayGreenLight.withOpacity(0.15),
-                  ],
-                )
-              : null,
-      child: Row(
-        children: [
-          // Checkbox/status indicator
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isContacted
-                  ? Colors.green
-                  : Colors.white.withOpacity(0.2),
-              border: isContacted
-                  ? null
-                  : Border.all(color: Colors.white.withOpacity(0.5), width: 2),
-            ),
-            child: isContacted
-                ? const Icon(Icons.check, color: Colors.white, size: 18)
+    return GestureDetector(
+      onTap: () => context.push('${AppRoutes.relativeDetail}/${relative.id}'),
+      child: GlassCard(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        gradient: isContacted
+            ? LinearGradient(
+                colors: [
+                  Colors.green.withValues(alpha: 0.3),
+                  Colors.green.withValues(alpha: 0.1),
+                ],
+              )
+            : hasFriday
+                ? LinearGradient(
+                    colors: [
+                      fridayGreen.withValues(alpha: 0.3),
+                      fridayGreenLight.withValues(alpha: 0.15),
+                    ],
+                  )
                 : null,
-          ),
-          const SizedBox(width: AppSpacing.md),
+        child: Row(
+          children: [
+            // Checkbox/status indicator
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isContacted
+                    ? Colors.green
+                    : Colors.white.withValues(alpha: 0.2),
+                border: isContacted
+                    ? null
+                    : Border.all(color: Colors.white.withValues(alpha: 0.5), width: 2),
+              ),
+              child: isContacted
+                  ? const Icon(Icons.check, color: Colors.white, size: 18)
+                  : null,
+            ),
+            const SizedBox(width: AppSpacing.md),
 
-          // Relative info
-          Expanded(
-            child: GestureDetector(
-              onTap: () => context.push('${AppRoutes.relativeDetail}/${relative.id}'),
+            // Relative info
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1053,7 +1058,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     style: AppTypography.titleSmall.copyWith(
                       color: Colors.white,
                       decoration: isContacted ? TextDecoration.lineThrough : null,
-                      decorationColor: Colors.white.withOpacity(0.5),
+                      decorationColor: Colors.white.withValues(alpha: 0.5),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -1064,7 +1069,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       Text(
                         relative.relationshipType.arabicName,
                         style: AppTypography.bodySmall.copyWith(
-                          color: Colors.white.withOpacity(0.7),
+                          color: Colors.white.withValues(alpha: 0.7),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -1075,44 +1080,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ],
               ),
             ),
-          ),
 
-          // Quick action buttons (only show if not contacted and has phone)
-          if (!isContacted && hasPhone) ...[
-            _buildMiniActionButton(
-              icon: Icons.phone,
-              color: Colors.green.shade600,
-              onTap: () => _makeCall(relative.phoneNumber!, relative.id, userId),
-            ),
-            const SizedBox(width: 8),
-            _buildMiniActionButton(
-              icon: FontAwesomeIcons.whatsapp,
-              color: const Color(0xFF25D366),
-              onTap: () => _openWhatsApp(relative.phoneNumber!, relative.id, userId),
-              useFaIcon: true,
-            ),
-          ],
-
-          // Show contacted badge if contacted
-          if (isContacted)
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: AppSpacing.xs,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-              ),
-              child: Text(
-                'تم',
-                style: AppTypography.labelSmall.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+            // Show contacted badge or arrow
+            if (isContacted)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
                 ),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                ),
+                child: Text(
+                  'تم',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              )
+            else
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: Colors.white.withValues(alpha: 0.5),
+                size: 16,
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1162,68 +1157,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ],
       ),
     );
-  }
-
-  Widget _buildMiniActionButton({
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-    bool useFaIcon = false,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Center(
-          child: useFaIcon
-              ? FaIcon(icon, color: Colors.white, size: 16)
-              : Icon(icon, color: Colors.white, size: 18),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _makeCall(String phoneNumber, String relativeId, String userId) async {
-    HapticFeedback.mediumImpact();
-    final uri = Uri.parse('tel:$phoneNumber');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-      await _logInteraction(relativeId, userId, InteractionType.call);
-    }
-  }
-
-  Future<void> _openWhatsApp(String phoneNumber, String relativeId, String userId) async {
-    HapticFeedback.mediumImpact();
-    // Remove any non-digit characters except +
-    final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
-    final uri = Uri.parse('https://wa.me/$cleanNumber');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-      await _logInteraction(relativeId, userId, InteractionType.message);
-    }
-  }
-
-  Future<void> _logInteraction(String relativeId, String userId, InteractionType type) async {
-    try {
-      final service = ref.read(interactionsServiceProvider);
-      final now = DateTime.now();
-      final interaction = Interaction(
-        id: '',
-        relativeId: relativeId,
-        userId: userId,
-        type: type,
-        date: now,
-        createdAt: now,
-      );
-      await service.createInteraction(interaction);
-    } catch (e) {
-      debugPrint('❌ [HOME] Failed to log interaction: $e');
-    }
   }
 
   Widget _buildIslamicHeader(String displayName, String userId) {
@@ -1639,18 +1572,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         .slideY(begin: 0.2, end: 0);
   }
 
-  Widget _buildDefaultAvatar(Relative relative) {
-    return Center(
-      child: Text(
-        relative.fullName.isNotEmpty ? relative.fullName[0] : '؟',
-        style: AppTypography.headlineMedium.copyWith(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
   Widget _buildEmptyState() {
     return GlassCard(
       child: Column(
@@ -1693,291 +1614,180 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // Create a map for quick relative lookup
     final relativeMap = {for (var r in relatives) r.id: r};
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'تواصل اليوم',
-          style: AppTypography.headlineSmall.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.1),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row with icon
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.1),
+                ),
+                child: const Icon(
+                  Icons.history_rounded,
+                  color: Colors.white70,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                'سجل التواصل',
+                style: AppTypography.titleSmall.copyWith(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: interactions.take(3).length,
-          separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-          itemBuilder: (context, index) {
-            final interaction = interactions[index];
+          const SizedBox(height: AppSpacing.sm),
+          const Divider(color: Colors.white12, height: 1),
+          const SizedBox(height: AppSpacing.sm),
+          // Compact list
+          ...interactions.take(4).map((interaction) {
             final relative = relativeMap[interaction.relativeId];
-            return _buildInteractionCard(interaction, relative);
-          },
-        ),
-      ],
+            return _buildCompactInteractionItem(interaction, relative);
+          }),
+        ],
+      ),
     );
   }
 
-  Widget _buildInteractionCard(Interaction interaction, Relative? relative) {
+  Widget _buildCompactInteractionItem(Interaction interaction, Relative? relative) {
     final relativeName = relative?.fullName ?? 'قريب';
 
     return GestureDetector(
       onTap: relative != null
           ? () => context.push('${AppRoutes.relativeDetail}/${relative.id}')
           : null,
-      child: GlassCard(
-        padding: const EdgeInsets.all(AppSpacing.md),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
           children: [
-            // Relative avatar or emoji
+            // Interaction emoji in colored circle
             Container(
-              width: 48,
-              height: 48,
+              width: 28,
+              height: 28,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.2),
-              ),
-              child: relative?.photoUrl != null && relative!.photoUrl!.isNotEmpty
-                  ? ClipOval(
-                      child: CachedNetworkImage(
-                        imageUrl: relative.photoUrl!,
-                        fit: BoxFit.cover,
-                        width: 48,
-                        height: 48,
-                        placeholder: (context, url) => Center(
-                          child: Text(
-                            relativeName.isNotEmpty ? relativeName[0] : '؟',
-                            style: AppTypography.titleMedium.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        errorWidget: (context, url, error) => Center(
-                          child: Text(
-                            relativeName.isNotEmpty ? relativeName[0] : '؟',
-                            style: AppTypography.titleMedium.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    )
-                  : Center(
-                      child: Text(
-                        relativeName.isNotEmpty ? relativeName[0] : '؟',
-                        style: AppTypography.titleMedium.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            // Name and details
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    relativeName,
-                    style: AppTypography.titleSmall.copyWith(color: Colors.white),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Text(
-                        interaction.type.arabicName,
-                        style: AppTypography.bodySmall.copyWith(
-                          color: Colors.white.withOpacity(0.8),
-                        ),
-                      ),
-                      Text(
-                        ' • ',
-                        style: AppTypography.bodySmall.copyWith(
-                          color: Colors.white.withOpacity(0.5),
-                        ),
-                      ),
-                      Text(
-                        interaction.relativeTime,
-                        style: AppTypography.bodySmall.copyWith(
-                          color: Colors.white.withOpacity(0.6),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            // Interaction type emoji
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.1),
+                color: _getInteractionColor(interaction.type).withValues(alpha: 0.15),
               ),
               child: Center(
                 child: Text(
                   interaction.type.emoji,
-                  style: const TextStyle(fontSize: 18),
+                  style: const TextStyle(fontSize: 12),
                 ),
               ),
             ),
+            const SizedBox(width: AppSpacing.sm),
+            // Name
+            Expanded(
+              child: Text(
+                relativeName,
+                style: AppTypography.bodySmall.copyWith(
+                  color: Colors.white.withValues(alpha: 0.9),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            // Time
+            Text(
+              interaction.relativeTime,
+              style: AppTypography.labelSmall.copyWith(
+                color: Colors.white.withValues(alpha: 0.4),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildNeedsContact(List<Relative> allRelatives) {
-    final themeColors = ref.watch(themeColorsProvider);
-    // Don't show anything if there are no relatives at all
-    if (allRelatives.isEmpty) {
+  Color _getInteractionColor(InteractionType type) {
+    switch (type) {
+      case InteractionType.call:
+        return Colors.green;
+      case InteractionType.message:
+        return Colors.blue;
+      case InteractionType.visit:
+        return Colors.orange;
+      case InteractionType.gift:
+        return Colors.pink;
+      case InteractionType.event:
+        return Colors.teal;
+      case InteractionType.other:
+        return Colors.purple;
+    }
+  }
+
+  /// Build setup reminders prompt for new users without reminders
+  Widget _buildSetupRemindersPrompt(List<ReminderSchedule> schedules) {
+    // If user has reminders, don't show anything
+    if (schedules.isNotEmpty) {
       return const SizedBox.shrink();
     }
 
-    final needsContact = allRelatives
-        .where((r) => r.needsContact)
-        .take(3)
-        .toList();
+    final themeColors = ref.watch(themeColorsProvider);
 
-    if (needsContact.isEmpty) {
-      return GlassCard(
+    // Show prompt for new users to set up reminders
+    return GestureDetector(
+      onTap: () => context.push(AppRoutes.reminders),
+      child: GlassCard(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
         gradient: LinearGradient(
           colors: [
-            themeColors.primaryLight.withOpacity(0.3),
-            AppColors.premiumGold.withOpacity(0.2),
+            themeColors.primary.withValues(alpha: 0.3),
+            AppColors.premiumGold.withValues(alpha: 0.2),
           ],
         ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.check_circle_outline,
-              color: Colors.white,
-              size: 48,
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'ممتاز! 🎉',
-                    style: AppTypography.titleLarge.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'تواصلت مع جميع أقاربك مؤخراً',
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: Colors.white.withOpacity(0.9),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'يحتاجون تواصلك ❤️',
-          style: AppTypography.headlineSmall.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: needsContact.length,
-          separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-          itemBuilder: (context, index) {
-            return _buildNeedsContactCard(needsContact[index]);
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNeedsContactCard(Relative relative) {
-    final daysSince = relative.daysSinceLastContact ?? 0;
-
-    return GestureDetector(
-      onTap: () {
-        context.push('${AppRoutes.relativeDetail}/${relative.id}');
-      },
-      child: GlassCard(
-        padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
           children: [
             Container(
-              width: 60,
-              height: 60,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: AppColors.streakFire,
+                color: AppColors.premiumGold.withValues(alpha: 0.3),
               ),
-              child: relative.photoUrl != null && relative.photoUrl!.isNotEmpty
-                  ? ClipOval(
-                      child: CachedNetworkImage(
-                        imageUrl: relative.photoUrl!,
-                        fit: BoxFit.cover,
-                        width: 60,
-                        height: 60,
-                        placeholder: (context, url) =>
-                            _buildDefaultAvatar(relative),
-                        errorWidget: (context, url, error) =>
-                            _buildDefaultAvatar(relative),
-                      ),
-                    )
-                  : _buildDefaultAvatar(relative),
+              child: const Center(
+                child: Text('🔔', style: TextStyle(fontSize: 20)),
+              ),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    relative.fullName,
-                    style: AppTypography.titleMedium.copyWith(
-                      color: Colors.white,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    relative.lastContactDate == null
-                        ? (relative.gender == Gender.female
-                              ? 'لم تتواصل معها بعد'
-                              : 'لم تتواصل معه بعد')
-                        : 'آخر تواصل: منذ $daysSince يوم',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: Colors.white.withOpacity(0.7),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+              child: Text(
+                'اضبط تذكيراتك لتبدأ رحلة الصلة',
+                style: AppTypography.titleSmall.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-            Icon(Icons.phone, color: Colors.white.withOpacity(0.7), size: 24),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: Colors.white.withValues(alpha: 0.7),
+              size: 16,
+            ),
           ],
         ),
       ),
-    );
+    ).animate().fadeIn().slideX(begin: 0.1, end: 0);
   }
 }
