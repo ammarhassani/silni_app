@@ -1,0 +1,248 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../../core/config/supabase_config.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_typography.dart';
+import '../../../core/router/app_routes.dart';
+import '../../../core/theme/app_themes.dart';
+import '../../../core/services/error_handler_service.dart';
+import '../../../shared/providers/data_export_provider.dart';
+import '../../../shared/widgets/data_export_dialog.dart';
+import '../../auth/providers/auth_provider.dart';
+
+/// Show image source selection dialog
+void showImageSourceDialog({
+  required BuildContext context,
+  required ThemeColors themeColors,
+  required void Function(ImageSource source) onSourceSelected,
+}) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        backgroundColor: themeColors.background1.withValues(alpha: 0.95),
+        title: Text(
+          'اختر مصدر الصورة',
+          style: AppTypography.headlineSmall.copyWith(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.photo_library, color: themeColors.primary),
+              title: Text(
+                'المعرض',
+                style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                onSourceSelected(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.camera_alt, color: themeColors.primary),
+              title: Text(
+                'الكاميرا',
+                style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                onSourceSelected(ImageSource.camera);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'إلغاء',
+              style: AppTypography.buttonMedium.copyWith(
+                color: themeColors.primary,
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+/// Show change password dialog
+void showChangePasswordDialog({
+  required BuildContext context,
+  required WidgetRef ref,
+}) {
+  final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+  showDialog(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      backgroundColor: const Color(0xFF1A1A1A),
+      title: Text(
+        'تغيير كلمة المرور',
+        style: AppTypography.headlineMedium.copyWith(color: Colors.white),
+      ),
+      content: Text(
+        'سيتم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني',
+        style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('إلغاء'),
+        ),
+        TextButton(
+          onPressed: () async {
+            Navigator.pop(dialogContext);
+
+            try {
+              final user = SupabaseConfig.client.auth.currentUser;
+              if (user == null || user.email == null) {
+                scaffoldMessenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('البريد الإلكتروني غير متوفر'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
+
+              final authService = ref.read(authServiceProvider);
+              await authService.resetPassword(user.email!);
+
+              scaffoldMessenger.showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني',
+                  ),
+                  backgroundColor: AppColors.success,
+                  duration: Duration(seconds: 4),
+                ),
+              );
+            } catch (e) {
+              scaffoldMessenger.showSnackBar(
+                SnackBar(
+                  content: Text(errorHandler.getArabicMessage(e)),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+            }
+          },
+          child: const Text('إرسال'),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Show export data dialog
+Future<void> showExportDataDialogFlow({
+  required BuildContext context,
+  required WidgetRef ref,
+  required ThemeColors themeColors,
+}) async {
+  final userId = SupabaseConfig.currentUserId;
+
+  if (userId == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('يرجى تسجيل الدخول أولاً'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
+  }
+
+  // Show confirmation dialog first
+  final confirmed = await showDataExportConfirmationDialog(context, themeColors);
+
+  if (confirmed != true) return;
+
+  // Reset the export state before starting
+  ref.read(dataExportNotifierProvider.notifier).reset();
+
+  // Show export progress dialog
+  if (context.mounted) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => DataExportDialog(userId: userId),
+    );
+  }
+}
+
+/// Show delete account dialog
+void showDeleteAccountDialog({
+  required BuildContext context,
+  required WidgetRef ref,
+}) {
+  final scaffoldMessenger = ScaffoldMessenger.of(context);
+  final navigator = Navigator.of(context);
+  final router = GoRouter.of(context);
+
+  showDialog(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      backgroundColor: const Color(0xFF1A1A1A),
+      title: Text(
+        'حذف الحساب',
+        style: AppTypography.headlineMedium.copyWith(color: Colors.red),
+      ),
+      content: Text(
+        'هل أنت متأكد من حذف حسابك؟ سيتم حذف جميع بياناتك بشكل نهائي ولا يمكن التراجع عن هذا الإجراء.',
+        style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('إلغاء'),
+        ),
+        TextButton(
+          onPressed: () async {
+            Navigator.pop(dialogContext);
+
+            // Show loading dialog
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (loadingContext) =>
+                  const Center(child: CircularProgressIndicator()),
+            );
+
+            try {
+              // Use Supabase delete account method
+              final authService = ref.read(authServiceProvider);
+              await authService.deleteAccount();
+
+              // Close loading dialog and navigate
+              navigator.pop();
+              router.go(AppRoutes.login);
+
+              scaffoldMessenger.showSnackBar(
+                const SnackBar(
+                  content: Text('تم حذف حسابك بنجاح'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            } catch (e) {
+              // Close loading dialog
+              navigator.pop();
+
+              scaffoldMessenger.showSnackBar(
+                SnackBar(
+                  content: Text(errorHandler.getArabicMessage(e)),
+                  backgroundColor: AppColors.error,
+                  duration: const Duration(seconds: 4),
+                ),
+              );
+            }
+          },
+          child: const Text('حذف', style: TextStyle(color: Colors.red)),
+        ),
+      ],
+    ),
+  );
+}

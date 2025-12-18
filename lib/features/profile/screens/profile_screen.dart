@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/config/supabase_config.dart';
@@ -11,20 +7,16 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
-import '../../../core/theme/app_themes.dart';
-import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/gradient_background.dart';
-import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gamification_stats_card.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../../shared/services/relatives_service.dart';
 import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/providers/interactions_provider.dart';
-import '../../../shared/providers/data_export_provider.dart';
-import '../../../shared/widgets/data_export_dialog.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/services/error_handler_service.dart';
+import '../widgets/widgets.dart';
 
 // Providers
 final relativesServiceProvider = Provider((ref) => RelativesService());
@@ -43,7 +35,6 @@ final userInteractionsProvider =
       return service.getInteractionsStream(userId);
     });
 
-// Provider for SupabaseStorageService
 final supabaseStorageServiceProvider = Provider((ref) => SupabaseStorageService());
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -81,22 +72,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             physics: const BouncingScrollPhysics(),
             slivers: [
               // Header with avatar
-              SliverToBoxAdapter(child: _buildHeader(user, themeColors)),
+              SliverToBoxAdapter(
+                child: ProfileHeaderWidget(
+                  user: user,
+                  themeColors: themeColors,
+                  isEditingName: _isEditingName,
+                  isUploadingPicture: _isUploadingPicture,
+                  nameController: _nameController,
+                  onEditImage: () => showImageSourceDialog(
+                    context: context,
+                    themeColors: themeColors,
+                    onSourceSelected: _pickImageFromSource,
+                  ),
+                  onEditNameToggle: _handleNameEditToggle,
+                ),
+              ),
 
               // User info card
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
-                  child: _buildUserInfoCard(user, themeColors),
+                  child: ProfileInfoCard(user: user, themeColors: themeColors),
                 ),
               ),
 
-              // Statistics
+              // Statistics header
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                   child: Text(
                     '📊 إحصائياتي',
                     style: AppTypography.headlineMedium.copyWith(
@@ -112,9 +115,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               // Gamification Stats
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                   child: GamificationStatsCard(userId: userId, compact: false),
                 ),
               ),
@@ -124,9 +125,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               // Statistics
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                   child: Text(
                     '📊 إحصائياتي',
                     style: AppTypography.headlineMedium.copyWith(
@@ -141,35 +140,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                   child: relativesAsync.when(
                     data: (relatives) => interactionsAsync.when(
-                      data: (interactions) => _buildStatistics(
-                        relatives,
-                        interactions,
-                        themeColors,
+                      data: (interactions) => ProfileStatsWidget(
+                        relatives: relatives,
+                        interactions: interactions,
+                        themeColors: themeColors,
                       ),
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (_,_) => const SizedBox.shrink(),
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (_, _) => const SizedBox.shrink(),
                     ),
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (_,_) => const SizedBox.shrink(),
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (_, _) => const SizedBox.shrink(),
                   ),
                 ),
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
 
-              // Account actions
+              // Account actions header
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                   child: Text(
                     '⚙️ إعدادات الحساب',
                     style: AppTypography.headlineMedium.copyWith(
@@ -184,10 +177,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: ProfileActionsWidget(
+                    themeColors: themeColors,
+                    onChangePassword: () => showChangePasswordDialog(
+                      context: context,
+                      ref: ref,
+                    ),
+                    onPrivacySettings: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('إعدادات الخصوصية قريباً')),
+                      );
+                    },
+                    onExportData: () => showExportDataDialogFlow(
+                      context: context,
+                      ref: ref,
+                      themeColors: themeColors,
+                    ),
+                    onDeleteAccount: () => showDeleteAccountDialog(
+                      context: context,
+                      ref: ref,
+                    ),
                   ),
-                  child: _buildAccountActions(themeColors),
                 ),
               ),
 
@@ -199,557 +210,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildHeader(dynamic user, ThemeColors themeColors) {
+  void _handleNameEditToggle() {
+    final user = ref.read(currentUserProvider);
     final displayName =
         user?.userMetadata?['full_name'] ??
         user?.email?.split('@')[0] ??
         'المستخدم';
 
-    return Container(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            children: [
-              // Back button (profile is a subpage of settings)
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () => context.pop(),
-                    icon: const Icon(
-                      Icons.arrow_forward_rounded,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const Spacer(),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-
-              // Avatar with edit button
-              Stack(
-                children: [
-                  Hero(
-                    tag: 'profile-avatar',
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: themeColors.goldenGradient,
-                        boxShadow: [
-                          BoxShadow(
-                            color: themeColors.accent.withValues(alpha: 0.5),
-                            blurRadius: 30,
-                            spreadRadius: 5,
-                          ),
-                        ],
-                      ),
-                      child: user?.userMetadata?['profile_picture_url'] != null
-                          ? ClipOval(
-                              child: Image.network(
-                                user!.userMetadata!['profile_picture_url']
-                                    as String,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    _buildDefaultAvatar(displayName),
-                              ),
-                            )
-                          : _buildDefaultAvatar(displayName),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: GestureDetector(
-                      onTap: () {
-                        HapticFeedback.mediumImpact();
-                        _showImageSourceDialog();
-                      },
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: themeColors.primaryGradient,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: _isUploadingPicture
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                              )
-                            : const Icon(
-                                Icons.camera_alt,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: AppSpacing.md),
-
-              // Name with edit button
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (_isEditingName)
-                    ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minWidth: 120,
-                        maxWidth: MediaQuery.of(context).size.width * 0.6,
-                      ),
-                      child: TextField(
-                        controller: _nameController,
-                        autofocus: true,
-                        textAlign: TextAlign.center,
-                        style: AppTypography.headlineLarge.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        cursorColor: Colors.white,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white.withValues(alpha: 0.1),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md,
-                            vertical: AppSpacing.sm,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                            borderSide: const BorderSide(color: Colors.white, width: 2),
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    Text(
-                      displayName,
-                      style: AppTypography.headlineLarge.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  const SizedBox(width: AppSpacing.sm),
-                  IconButton(
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      setState(() {
-                        if (_isEditingName) {
-                          // Save name
-                          _saveName();
-                        } else {
-                          // Start editing
-                          _nameController.text = displayName;
-                          _isEditingName = true;
-                        }
-                      });
-                    },
-                    icon: Icon(
-                      _isEditingName ? Icons.check_circle : Icons.edit_rounded,
-                      color: Colors.white.withValues(alpha: 0.9),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: AppSpacing.xs),
-
-              // Email
-              Text(
-                user?.email ?? '',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white.withValues(alpha: 0.8),
-                ),
-              ),
-            ],
-          ),
-        )
-        .animate()
-        .fadeIn(duration: const Duration(milliseconds: 600))
-        .slideY(begin: -0.1, end: 0);
+    setState(() {
+      if (_isEditingName) {
+        _saveName();
+      } else {
+        _nameController.text = displayName;
+        _isEditingName = true;
+      }
+    });
   }
 
-  Widget _buildDefaultAvatar(String name) {
-    return Center(
-      child: Text(
-        name.isNotEmpty ? name[0].toUpperCase() : '؟',
-        style: const TextStyle(
-          fontSize: 48,
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUserInfoCard(dynamic user, ThemeColors themeColors) {
-    return GlassCard(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.info_outline, color: themeColors.accent),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'معلومات الحساب',
-                style: AppTypography.titleLarge.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-
-          _buildInfoRow(
-            icon: Icons.email_outlined,
-            label: 'البريد الإلكتروني',
-            value: user?.email ?? 'غير متوفر',
-            themeColors: themeColors,
-          ),
-
-          const SizedBox(height: AppSpacing.md),
-
-          _buildInfoRow(
-            icon: Icons.verified_user_outlined,
-            label: 'حالة التحقق',
-            value: user?.emailConfirmedAt != null
-                ? 'تم التحقق ✓'
-                : 'لم يتم التحقق',
-            themeColors: themeColors,
-          ),
-
-          const SizedBox(height: AppSpacing.md),
-
-          _buildInfoRow(
-            icon: Icons.calendar_today_outlined,
-            label: 'تاريخ الانضمام',
-            value: user?.createdAt != null
-                ? _formatDate(_parseDateTime(user!.createdAt))
-                : 'غير متوفر',
-            themeColors: themeColors,
-          ),
-        ],
-      ),
-    ).animate().fadeIn().slideX(begin: -0.1, end: 0);
-  }
-
-  Widget _buildInfoRow({
-    required IconData icon,
-    required String label,
-    required String value,
-    required ThemeColors themeColors,
-  }) {
-    return Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: themeColors.primary.withValues(alpha: 0.2),
-          ),
-          child: Icon(icon, color: Colors.white, size: 20),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: AppTypography.labelSmall.copyWith(
-                  color: Colors.white.withValues(alpha: 0.7),
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatistics(
-    List<Relative> relatives,
-    List<Interaction> interactions,
-    ThemeColors themeColors,
-  ) {
-    final thisMonth = DateTime.now();
-    final monthStart = DateTime(thisMonth.year, thisMonth.month, 1);
-    final thisMonthInteractions = interactions
-        .where((i) => i.date.isAfter(monthStart))
-        .length;
-
-    final needsContact = relatives.where((r) => r.needsContact).length;
-
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.people_rounded,
-                label: 'إجمالي الأقارب',
-                value: '${relatives.length}',
-                gradient: themeColors.primaryGradient,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.call_rounded,
-                label: 'تواصل هذا الشهر',
-                value: '$thisMonthInteractions',
-                gradient: themeColors.goldenGradient,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.timeline_rounded,
-                label: 'إجمالي التفاعلات',
-                value: '${interactions.length}',
-                gradient: LinearGradient(
-                  colors: [themeColors.accent, themeColors.primaryLight],
-                ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.notifications_active_rounded,
-                label: 'يحتاجون تواصل',
-                value: '$needsContact',
-                gradient: needsContact > 0
-                    ? AppColors.streakFire
-                    : themeColors.primaryGradient,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatCard({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Gradient gradient,
-  }) {
-    return GlassCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      gradient: gradient,
-      child: Column(
-        children: [
-          Icon(icon, color: Colors.white, size: 32),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            value,
-            style: AppTypography.headlineLarge.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            label,
-            style: AppTypography.labelSmall.copyWith(
-              color: Colors.white.withValues(alpha: 0.9),
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    ).animate().fadeIn().scale();
-  }
-
-  Widget _buildAccountActions(ThemeColors themeColors) {
-    return Column(
-      children: [
-        GlassCard(
-          child: ListTile(
-            leading: Icon(Icons.lock_outline, color: themeColors.accent),
-            title: Text(
-              'تغيير كلمة المرور',
-              style: AppTypography.titleMedium.copyWith(color: Colors.white),
-            ),
-            trailing: Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: Colors.white.withValues(alpha: 0.5),
-              size: 20,
-            ),
-            onTap: () {
-              HapticFeedback.lightImpact();
-              _showChangePasswordDialog();
-            },
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        GlassCard(
-          child: ListTile(
-            leading: Icon(Icons.shield_outlined, color: themeColors.accent),
-            title: Text(
-              'الخصوصية والأمان',
-              style: AppTypography.titleMedium.copyWith(color: Colors.white),
-            ),
-            trailing: Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: Colors.white.withValues(alpha: 0.5),
-              size: 20,
-            ),
-            onTap: () {
-              HapticFeedback.lightImpact();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('إعدادات الخصوصية قريباً')),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        GlassCard(
-          child: ListTile(
-            leading: Icon(Icons.download_outlined, color: themeColors.accent),
-            title: Text(
-              'تصدير بياناتي',
-              style: AppTypography.titleMedium.copyWith(color: Colors.white),
-            ),
-            subtitle: Text(
-              'تحميل نسخة من جميع بياناتك',
-              style: AppTypography.bodySmall.copyWith(
-                color: Colors.white.withValues(alpha: 0.7),
-              ),
-            ),
-            trailing: Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: Colors.white.withValues(alpha: 0.5),
-              size: 20,
-            ),
-            onTap: () {
-              HapticFeedback.lightImpact();
-              _showExportDataDialog();
-            },
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        GlassCard(
-          child: ListTile(
-            leading: const Icon(Icons.delete_outline, color: Colors.red),
-            title: Text(
-              'حذف الحساب',
-              style: AppTypography.titleMedium.copyWith(color: Colors.red),
-            ),
-            trailing: Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: Colors.white.withValues(alpha: 0.5),
-              size: 20,
-            ),
-            onTap: () {
-              HapticFeedback.heavyImpact();
-              _showDeleteAccountDialog();
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Show image source selection dialog
-  void _showImageSourceDialog() {
-    final themeColors = ref.read(themeColorsProvider);
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: themeColors.background1.withValues(alpha: 0.95),
-          title: Text(
-            'اختر مصدر الصورة',
-            style: AppTypography.headlineSmall.copyWith(color: Colors.white),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Icon(Icons.photo_library, color: themeColors.primary),
-                title: Text(
-                  'المعرض',
-                  style: AppTypography.bodyMedium.copyWith(color: Colors.white),
-                ),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _pickImageFromSource(ImageSource.gallery);
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.camera_alt, color: themeColors.primary),
-                title: Text(
-                  'الكاميرا',
-                  style: AppTypography.bodyMedium.copyWith(color: Colors.white),
-                ),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _pickImageFromSource(ImageSource.camera);
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'إلغاء',
-                style: AppTypography.buttonMedium.copyWith(
-                  color: themeColors.primary,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  /// Pick image from gallery or camera
   Future<void> _pickImageFromSource(ImageSource source) async {
     try {
       final storageService = ref.read(supabaseStorageServiceProvider);
@@ -759,7 +236,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         setState(() => _isUploadingPicture = true);
 
         try {
-          // Upload to Supabase Storage
           final user = SupabaseConfig.client.auth.currentUser;
           if (user != null) {
             final imageUrl = await storageService.uploadUserProfilePicture(
@@ -767,21 +243,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               user.id,
             );
 
-            // Update user profile in Supabase database
             await SupabaseConfig.client
                 .from('users')
                 .update({'profile_picture_url': imageUrl})
                 .eq('id', user.id);
 
-            // Also update auth user metadata so UI reflects immediately
             await SupabaseConfig.client.auth.updateUser(
-              UserAttributes(
-                data: {'profile_picture_url': imageUrl},
-              ),
+              UserAttributes(data: {'profile_picture_url': imageUrl}),
             );
 
             if (mounted) {
-              // Force rebuild to show new image
               setState(() {});
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -844,17 +315,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       final user = SupabaseConfig.client.auth.currentUser;
       if (user == null) return;
 
-      // Update Supabase user profile in database
       await SupabaseConfig.client
           .from('users')
           .update({'full_name': newName})
           .eq('id', user.id);
 
-      // Also update auth user metadata so UI reflects immediately
       await SupabaseConfig.client.auth.updateUser(
-        UserAttributes(
-          data: {'full_name': newName},
-        ),
+        UserAttributes(data: {'full_name': newName}),
       );
 
       if (mounted) {
@@ -876,213 +343,5 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         );
       }
     }
-  }
-
-  void _showChangePasswordDialog() {
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: Text(
-          'تغيير كلمة المرور',
-          style: AppTypography.headlineMedium.copyWith(color: Colors.white),
-        ),
-        content: Text(
-          'سيتم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني',
-          style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('إلغاء'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-
-              try {
-                final user = SupabaseConfig.client.auth.currentUser;
-                if (user == null || user.email == null) {
-                  scaffoldMessenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('البريد الإلكتروني غير متوفر'),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
-                  return;
-                }
-
-                final authService = ref.read(authServiceProvider);
-                await authService.resetPassword(user.email!);
-
-                scaffoldMessenger.showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني',
-                    ),
-                    backgroundColor: AppColors.success,
-                    duration: Duration(seconds: 4),
-                  ),
-                );
-              } catch (e) {
-                scaffoldMessenger.showSnackBar(
-                  SnackBar(
-                    content: Text(errorHandler.getArabicMessage(e)),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-              }
-            },
-            child: const Text('إرسال'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showExportDataDialog() async {
-    final themeColors = ref.read(themeColorsProvider);
-    final userId = SupabaseConfig.currentUserId;
-
-    if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('يرجى تسجيل الدخول أولاً'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    // Show confirmation dialog first
-    final confirmed = await showDataExportConfirmationDialog(context, themeColors);
-
-    if (confirmed != true || !mounted) return;
-
-    // Reset the export state before starting
-    ref.read(dataExportNotifierProvider.notifier).reset();
-
-    // Show export progress dialog
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => DataExportDialog(userId: userId),
-      );
-    }
-  }
-
-  void _showDeleteAccountDialog() {
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-    final router = GoRouter.of(context);
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: Text(
-          'حذف الحساب',
-          style: AppTypography.headlineMedium.copyWith(color: Colors.red),
-        ),
-        content: Text(
-          'هل أنت متأكد من حذف حسابك؟ سيتم حذف جميع بياناتك بشكل نهائي ولا يمكن التراجع عن هذا الإجراء.',
-          style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('إلغاء'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-
-              // Show loading dialog
-              if (!mounted) return;
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (loadingContext) =>
-                    const Center(child: CircularProgressIndicator()),
-              );
-
-              try {
-                // Use Supabase delete account method (handles all cascading deletions via RPC)
-                final authService = ref.read(authServiceProvider);
-                await authService.deleteAccount();
-
-                // Close loading dialog and navigate
-                navigator.pop();
-                router.go(AppRoutes.login);
-
-                scaffoldMessenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('تم حذف حسابك بنجاح'),
-                    backgroundColor: AppColors.success,
-                  ),
-                );
-              } catch (e) {
-                // Close loading dialog
-                navigator.pop();
-
-                scaffoldMessenger.showSnackBar(
-                  SnackBar(
-                    content: Text(errorHandler.getArabicMessage(e)),
-                    backgroundColor: AppColors.error,
-                    duration: const Duration(seconds: 4),
-                  ),
-                );
-              }
-            },
-            child: const Text('حذف', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  DateTime _parseDateTime(dynamic date) {
-    if (date == null) {
-      return DateTime.now();
-    }
-
-    if (date is DateTime) {
-      return date;
-    }
-
-    if (date is String) {
-      try {
-        return DateTime.parse(date);
-      } catch (e) {
-        if (kDebugMode) {
-          print('Error parsing date string: $date, error: $e');
-        }
-        return DateTime.now();
-      }
-    }
-
-    return DateTime.now();
-  }
-
-  String _formatDate(DateTime date) {
-    final months = [
-      'يناير',
-      'فبراير',
-      'مارس',
-      'أبريل',
-      'مايو',
-      'يونيو',
-      'يوليو',
-      'أغسطس',
-      'سبتمبر',
-      'أكتوبر',
-      'نوفمبر',
-      'ديسمبر',
-    ];
-
-    return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 }
