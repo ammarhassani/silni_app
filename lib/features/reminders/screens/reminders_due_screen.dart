@@ -16,7 +16,7 @@ import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/providers/interactions_provider.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../home/screens/home_screen.dart';
+import '../../home/providers/home_providers.dart';
 
 /// Screen that shows relatives due for contact from reminder notifications
 class RemindersDueScreen extends ConsumerStatefulWidget {
