@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:confetti/confetti.dart';
-import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 
 /// Dramatic streak milestone celebration modal

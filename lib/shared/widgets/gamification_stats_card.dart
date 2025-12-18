@@ -11,7 +11,6 @@ import '../../core/models/gamification_event.dart';
 import '../../core/providers/gamification_events_provider.dart';
 import 'glass_card.dart';
 import 'animated_counter.dart';
-import 'floating_points_overlay.dart';
 
 /// Widget to display user's gamification stats (points, level, streak, badges)
 class GamificationStatsCard extends ConsumerStatefulWidget {

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
-import '../../../shared/widgets/glass_card.dart';
 import '../models/tree_node.dart';
 
 class TreeNodeWidget extends StatelessWidget {

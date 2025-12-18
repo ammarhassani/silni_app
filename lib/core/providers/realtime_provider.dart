@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../shared/services/realtime_service.dart';
 import '../../shared/services/relatives_service.dart';
-import '../../shared/services/reminder_schedules_service.dart';
 import '../../core/services/app_logger_service.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/home/screens/home_screen.dart';
@@ -60,8 +59,8 @@ class RealtimeSubscriptionsNotifier
             metadata: {
               'userId': userId,
               'deletedRecord': payload.oldRecord,
-              'relativeId': payload.oldRecord?['id'],
-              'relativeName': payload.oldRecord?['full_name'],
+              'relativeId': payload.oldRecord['id'],
+              'relativeName': payload.oldRecord['full_name'],
             },
           );
         }

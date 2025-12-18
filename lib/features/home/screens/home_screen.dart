@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:confetti/confetti.dart';
-import 'package:intl/intl.dart' as intl;
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -13,7 +12,6 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/models/gamification_event.dart';
 import '../../../core/providers/gamification_events_provider.dart';
-import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
@@ -23,13 +21,11 @@ import '../../../shared/widgets/level_up_modal.dart';
 import '../../../shared/widgets/badge_unlock_modal.dart';
 import '../../../shared/widgets/streak_milestone_modal.dart';
 import '../../../shared/widgets/error_widgets.dart';
-import '../../../core/providers/stream_recovery_provider.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../../shared/models/hadith_model.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/services/relatives_service.dart';
-import '../../../shared/services/interactions_service.dart';
 import '../../../shared/services/hadith_service.dart';
 import '../../../shared/services/reminder_schedules_service.dart';
 import '../../../shared/services/notification_history_service.dart';
@@ -1160,7 +1156,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Widget _buildIslamicHeader(String displayName, String userId) {
-    final themeColors = ref.watch(themeColorsProvider);
     final unreadCountAsync = ref.watch(unreadNotificationCountProvider(userId));
     final hour = DateTime.now().hour;
     String greeting = 'السلام عليكم';

@@ -68,7 +68,7 @@ class AuthService {
   Future<bool> _checkSecureStorage() async {
     try {
       // Check if we can access secure storage
-      final prefs = await SharedPreferences.getInstance();
+      await SharedPreferences.getInstance();
       return true; // If we can get instance, storage is accessible
     } catch (e) {
       return false;
@@ -240,8 +240,8 @@ class AuthService {
           'storage_available': storageAvailable,
           'platform': kIsWeb ? 'web' : Platform.operatingSystem,
           'isWeb': kIsWeb,
-          'supabaseClientExists': _supabase != null,
-          'supabaseAuthExists': _supabase.auth != null,
+          'supabaseClientExists': true,
+          'supabaseAuthExists': true,
         },
       );
 

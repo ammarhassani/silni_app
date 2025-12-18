@@ -9,7 +9,6 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/router/app_routes.dart';
-import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
 
@@ -224,7 +223,6 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
 
   Widget _buildHeroHeader() {
     final stats = _userStats ?? {};
-    final points = stats['points'] ?? 0;
     final level = stats['level'] ?? 1;
 
     return Container(

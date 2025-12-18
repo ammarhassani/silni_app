@@ -17,7 +17,6 @@ import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/relationship_specification_dialog.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/services/relatives_service.dart';
-import '../../../shared/services/contacts_import_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class ContactImportScreen extends ConsumerStatefulWidget {
@@ -30,7 +29,6 @@ class ContactImportScreen extends ConsumerStatefulWidget {
 
 class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
   final RelativesService _relativesService = RelativesService();
-  final ContactsImportService _contactsImportService = ContactsImportService();
   final TextEditingController _searchController = TextEditingController();
   final ConfettiController _confettiController = ConfettiController(
     duration: const Duration(seconds: 3),
@@ -311,6 +309,7 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
                 vertical: AppSpacing.sm,
               ),
               gradient: themeColors.primaryGradient,
+              onTap: _isImporting ? null : _importSelected,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

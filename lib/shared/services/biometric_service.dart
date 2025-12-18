@@ -178,8 +178,6 @@ class BiometricService {
         return 'مصادقة قوية';
       case BiometricType.weak:
         return 'مصادقة ضعيفة';
-      default:
-        return 'بيومتري';
     }
   }
 }

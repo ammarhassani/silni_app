@@ -19,7 +19,6 @@ import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/services/relatives_service.dart';
 import '../../../shared/services/supabase_storage_service.dart';
-import '../../../shared/services/contacts_import_service.dart';
 import '../../../shared/widgets/health_status_picker.dart';
 import '../../auth/providers/auth_provider.dart';
 
@@ -48,7 +47,6 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
 
   final RelativesService _relativesService = RelativesService();
   final SupabaseStorageService _storageService = SupabaseStorageService();
-  final ContactsImportService _contactsService = ContactsImportService();
 
   // Confetti controller for celebration animation
   late ConfettiController _confettiController;
@@ -599,49 +597,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
     );
   }
 
-  Widget _buildGenderPicker() {
-    return GlassCard(
-      child: Row(
-        children: [
-          Icon(Icons.wc, color: Colors.white.withValues(alpha: 0.7)),
-          const SizedBox(width: AppSpacing.sm),
-          Text(
-            'الجنس',
-            style: AppTypography.titleMedium.copyWith(color: Colors.white),
-          ),
-          const Spacer(),
-          ...Gender.values.map((gender) {
-            final isSelected = gender == _selectedGender;
-            return Padding(
-              padding: const EdgeInsets.only(left: AppSpacing.sm),
-              child: GestureDetector(
-                onTap: () => setState(() => _selectedGender = gender),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: isSelected ? AppColors.primaryGradient : null,
-                    color: isSelected ? null : Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                  ),
-                  child: Text(
-                    gender.arabicName,
-                    style: AppTypography.bodySmall.copyWith(color: Colors.white),
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ],
-      ),
-    );
-  }
-
   Widget _buildPriorityPicker() {
-    String priorityLabel = _priority == 1 ? 'عالية 🔥' : _priority == 2 ? 'متوسطة ⭐' : 'منخفضة 📌';
-
     return GlassCard(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(

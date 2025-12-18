@@ -55,8 +55,8 @@ class RealtimeService {
                 metadata: {
                   'userId': userId,
                   'deletedRecord': payload.oldRecord,
-                  'deletedRelativeId': payload.oldRecord?['id'],
-                  'deletedRelativeName': payload.oldRecord?['full_name'],
+                  'deletedRelativeId': payload.oldRecord['id'],
+                  'deletedRelativeName': payload.oldRecord['full_name'],
                   'timestamp': DateTime.now().toIso8601String(),
                 },
               );

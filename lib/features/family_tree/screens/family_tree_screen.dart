@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
@@ -9,7 +8,6 @@ import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/models/relative_model.dart';
-import '../../../shared/services/relatives_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../home/screens/home_screen.dart';
 import '../widgets/tree_node_widget.dart';

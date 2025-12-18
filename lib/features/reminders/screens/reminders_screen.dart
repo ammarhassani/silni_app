@@ -29,12 +29,6 @@ class RemindersScreen extends ConsumerStatefulWidget {
 
 class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   ReminderFrequency? _selectedFrequency;
-  final Map<ReminderFrequency, List<String>> _selectedRelatives = {
-    ReminderFrequency.daily: [],
-    ReminderFrequency.weekly: [],
-    ReminderFrequency.monthly: [],
-    ReminderFrequency.friday: [],
-  };
 
   @override
   Widget build(BuildContext context) {
@@ -776,21 +770,19 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   void _handleDragTarget(DragTargetDetails details, ReminderSchedule schedule) {
     final relative = details.data as Relative;
 
-    if (schedule != null && relative != null) {
-      // Add relative to schedule
-      final updatedRelativeIds = [...schedule.relativeIds, relative.id];
+    // Add relative to schedule
+    final updatedRelativeIds = [...schedule.relativeIds, relative.id];
 
-      // Update the schedule
-      _updateScheduleRelativeIds(schedule.id, updatedRelativeIds);
+    // Update the schedule
+    _updateScheduleRelativeIds(schedule.id, updatedRelativeIds);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تمت إضافة ${relative.fullName} إلى التذكير'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('تمت إضافة ${relative.fullName} إلى التذكير'),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
   }
 

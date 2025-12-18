@@ -222,38 +222,6 @@ class GamificationService {
   // BADGE SYSTEM
   // =====================================================
 
-  /// Available badges in the system
-  static const List<String> _availableBadges = [
-    // Consistency badges
-    'first_interaction',
-    'streak_7',
-    'streak_30',
-    'streak_100',
-    'streak_365',
-
-    // Volume badges
-    'interactions_10',
-    'interactions_50',
-    'interactions_100',
-    'interactions_500',
-    'interactions_1000',
-
-    // Variety badges
-    'all_interaction_types',
-    'social_butterfly', // 10+ different relatives
-
-    // Dedication badges
-    'early_bird', // Interaction before 9 AM
-    'night_owl', // Interaction after 9 PM
-    'weekend_warrior', // 5+ weekend interactions
-
-    // Special badges
-    'generous_giver', // 10+ gift interactions
-    'family_gatherer', // 10+ event interactions
-    'frequent_caller', // 50+ call interactions
-    'devoted_visitor', // 25+ visit interactions
-  ];
-
   /// Check and award new badges to user
   Future<List<String>> checkAndAwardBadges(String userId) async {
     try {

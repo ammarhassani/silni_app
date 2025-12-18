@@ -589,12 +589,6 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
   }
 
   Widget _buildPriorityPicker() {
-    String priorityLabel = _priority == 1
-        ? 'عالية 🔥'
-        : _priority == 2
-        ? 'متوسطة ⭐'
-        : 'منخفضة 📌';
-
     return GlassCard(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(

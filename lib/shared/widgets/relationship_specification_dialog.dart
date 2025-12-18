@@ -4,7 +4,6 @@ import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../models/relative_model.dart';
 import '../services/contacts_import_service.dart';
-import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/theme/theme_provider.dart';
@@ -76,12 +75,6 @@ class _RelationshipSpecificationDialogState
         gender: detectedGender,
       );
     }).toList();
-  }
-
-  void _updateRelationship(int index, RelationshipType relationship) {
-    setState(() {
-      _contactsWithRelationship[index].relationshipType = relationship;
-    });
   }
 
   void _updateGender(int index, Gender? gender) {
