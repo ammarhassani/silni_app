@@ -547,7 +547,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           DropdownButtonFormField<RelationshipType>(
-            value: _selectedRelationship,
+            initialValue: _selectedRelationship,
             dropdownColor: const Color(0xFF1A1A1A),
             decoration: InputDecoration(
               filled: true,
@@ -695,7 +695,8 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
           Switch(
             value: _isFavorite,
             onChanged: (value) => setState(() => _isFavorite = value),
-            activeColor: AppColors.premiumGold,
+            activeTrackColor: AppColors.premiumGold.withValues(alpha: 0.5),
+            activeThumbColor: AppColors.premiumGold,
           ),
         ],
       ),

@@ -352,7 +352,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                     Switch(
                       value: schedule.isActive,
                       onChanged: (value) => _toggleSchedule(schedule, value),
-                      activeColor: themeColors.primary,
+                      activeTrackColor: themeColors.primary.withValues(alpha: 0.5),
+                      activeThumbColor: themeColors.primary,
                     ),
                   ],
                 ),
