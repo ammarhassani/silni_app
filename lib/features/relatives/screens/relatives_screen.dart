@@ -6,7 +6,6 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
-import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/swipeable_relative_card.dart';
@@ -311,18 +310,6 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
         .slideX(begin: 0.2, end: 0);
   }
 
-  Widget _buildDefaultAvatar(Relative relative) {
-    return Center(
-      child: Text(
-        relative.fullName.isNotEmpty ? relative.fullName[0] : '؟',
-        style: AppTypography.headlineMedium.copyWith(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
   Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Padding(
@@ -364,9 +351,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
                     const SizedBox(height: AppSpacing.xl),
                     GradientButton(
                       text: 'إضافة أول قريب',
-                      onPressed: () {
-                        // TODO: Navigate to add relative
-                      },
+                      onPressed: () => context.push(AppRoutes.addRelative),
                       icon: Icons.person_add,
                     ),
                   ],
