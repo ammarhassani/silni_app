@@ -63,7 +63,9 @@
       "Bash(xcodebuild:*)",
       "Bash(wc:*)",
       "Bash(xargs -I {} sh -c 'echo \"\"\"\"=== {} ===\"\"\"\" && ls -la {} 2>/dev/null | grep -E \"\"\"\"^d|^-\"\"\"\" | head -20')",
-      "Bash(do echo \"=== $file ===\" grep -B1 \"print\\(\" \"$file\")"
+      "Bash(do echo \"=== $file ===\" grep -B1 \"print\\(\" \"$file\")",
+      "Bash(while read file)",
+      "Bash(do wc -l \"$file\")"
     ],
     "deny": [],
     "ask": []
