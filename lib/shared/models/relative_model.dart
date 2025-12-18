@@ -162,7 +162,6 @@ class Relative {
   final String? country;
   final String? photoUrl;
   final String? notes;
-  final List<String> tags;
   final int priority; // 1 = high, 2 = medium, 3 = low
   final String? islamicImportance;
   final String? preferredContactMethod;
@@ -191,7 +190,6 @@ class Relative {
     this.country,
     this.photoUrl,
     this.notes,
-    this.tags = const [],
     this.priority = 2,
     this.islamicImportance,
     this.preferredContactMethod,
@@ -225,7 +223,6 @@ class Relative {
       country: json['country'] as String?,
       photoUrl: json['photo_url'] as String?,
       notes: json['notes'] as String?,
-      tags: List<String>.from(json['tags'] ?? []),
       priority: json['priority'] as int? ?? 2,
       islamicImportance: json['islamic_importance'] as String?,
       preferredContactMethod: json['preferred_contact_method'] as String?,
@@ -261,7 +258,6 @@ class Relative {
       'country': country,
       'photo_url': photoUrl,
       'notes': notes,
-      'tags': tags,
       'priority': priority,
       'islamic_importance': islamicImportance,
       'preferred_contact_method': preferredContactMethod,
@@ -292,7 +288,6 @@ class Relative {
     String? country,
     String? photoUrl,
     String? notes,
-    List<String>? tags,
     int? priority,
     String? islamicImportance,
     String? preferredContactMethod,
@@ -321,7 +316,6 @@ class Relative {
       country: country ?? this.country,
       photoUrl: photoUrl ?? this.photoUrl,
       notes: notes ?? this.notes,
-      tags: tags ?? this.tags,
       priority: priority ?? this.priority,
       islamicImportance: islamicImportance ?? this.islamicImportance,
       preferredContactMethod: preferredContactMethod ?? this.preferredContactMethod,

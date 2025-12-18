@@ -92,7 +92,6 @@ void main() {
         expect(relative.avatarType, equals(AvatarType.adultMan)); // Default
         expect(relative.dateOfBirth, isNull);
         expect(relative.phoneNumber, isNull);
-        expect(relative.tags, isEmpty);
         expect(relative.priority, equals(2)); // Default
         expect(relative.interactionCount, equals(0)); // Default
         expect(relative.isArchived, isFalse); // Default
@@ -105,7 +104,6 @@ void main() {
           relationshipType: RelationshipType.uncle,
           gender: Gender.male,
           priority: 3,
-          tags: ['عم', 'الرياض'],
           isFavorite: true,
         );
 
@@ -119,7 +117,6 @@ void main() {
         expect(restored.relationshipType, equals(original.relationshipType));
         expect(restored.gender, equals(original.gender));
         expect(restored.priority, equals(original.priority));
-        expect(restored.tags, equals(original.tags));
         expect(restored.isFavorite, equals(original.isFavorite));
       });
     });
@@ -566,7 +563,6 @@ void main() {
           priority: 2,
           isFavorite: true,
           isArchived: false,
-          tags: ['tag1', 'tag2'],
         );
         final copied = original.copyWith();
 
@@ -579,7 +575,6 @@ void main() {
         expect(copied.priority, equals(original.priority));
         expect(copied.isFavorite, equals(original.isFavorite));
         expect(copied.isArchived, equals(original.isArchived));
-        expect(copied.tags, equals(original.tags));
       });
     });
 

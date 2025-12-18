@@ -82,8 +82,6 @@ void main() {
         expect(interaction.notes, isNull);
         expect(interaction.mood, isNull);
         expect(interaction.photoUrls, isEmpty);
-        expect(interaction.audioNoteUrl, isNull);
-        expect(interaction.tags, isEmpty);
         expect(interaction.rating, isNull);
         expect(interaction.isRecurring, isFalse);
       });
@@ -93,7 +91,6 @@ void main() {
           type: InteractionType.gift,
           notes: 'هدية عيد ميلاد',
           photoUrls: ['photo1.jpg', 'photo2.jpg'],
-          tags: ['عيد ميلاد', 'هدية'],
           rating: 4,
         );
 
@@ -106,7 +103,6 @@ void main() {
         expect(restored.type, equals(original.type));
         expect(restored.notes, equals(original.notes));
         expect(restored.photoUrls, equals(original.photoUrls));
-        expect(restored.tags, equals(original.tags));
         expect(restored.rating, equals(original.rating));
       });
     });
@@ -350,14 +346,6 @@ void main() {
         expect(original.photoUrls.length, equals(1));
       });
 
-      test('should copy with new tags', () {
-        final original = createTestInteraction(tags: ['tag1']);
-        final copied = original.copyWith(tags: ['tag1', 'tag2']);
-
-        expect(copied.tags.length, equals(2));
-        expect(original.tags.length, equals(1));
-      });
-
       test('should preserve all fields when copying with no changes', () {
         final original = createTestInteraction(
           id: 'test-id',
@@ -369,7 +357,6 @@ void main() {
           notes: 'Test notes',
           mood: 'happy',
           photoUrls: ['photo.jpg'],
-          tags: ['tag'],
           rating: 4,
           isRecurring: true,
         );
@@ -384,7 +371,6 @@ void main() {
         expect(copied.notes, equals(original.notes));
         expect(copied.mood, equals(original.mood));
         expect(copied.photoUrls, equals(original.photoUrls));
-        expect(copied.tags, equals(original.tags));
         expect(copied.rating, equals(original.rating));
         expect(copied.isRecurring, equals(original.isRecurring));
       });

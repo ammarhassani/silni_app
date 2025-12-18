@@ -60,9 +60,9 @@ void main() {
         // Note: id, created_at, updated_at are not included in toJson()
         expect(json['user_id'], 'user-123');
         expect(json['relative_id'], 'relative-456');
-        expect(json['interaction_type'], 'visit'); // enum.value returns string
+        expect(json['type'], 'visit'); // enum.value returns string
         expect(json['notes'], 'Test interaction notes');
-        expect(json.containsKey('interaction_date'), true);
+        expect(json.containsKey('date'), true);
       });
 
       test('should handle different interaction types correctly', () {
@@ -95,8 +95,8 @@ void main() {
           'id': 'test-id',
           'user_id': 'user-id',
           'relative_id': 'relative-id',
-          'interaction_type': 'call',
-          'interaction_date': DateTime.now().toIso8601String(),
+          'type': 'call',
+          'date': DateTime.now().toIso8601String(),
           'created_at': DateTime.now().toIso8601String(),
         };
 
@@ -109,7 +109,6 @@ void main() {
         expect(interaction.location, isNull);
         expect(interaction.notes, isNull);
         expect(interaction.mood, isNull);
-        expect(interaction.audioNoteUrl, isNull);
         expect(interaction.rating, isNull);
         expect(json['duration'], isNull);
         expect(json['location'], isNull);
@@ -165,13 +164,13 @@ void main() {
 
         final allInteractions = [
           createTestInteractionMap(id: '1')
-            ..['interaction_date'] = today.add(const Duration(hours: 10)).toIso8601String(),
+            ..['date'] = today.add(const Duration(hours: 10)).toIso8601String(),
           createTestInteractionMap(id: '2')
-            ..['interaction_date'] = yesterday.toIso8601String(),
+            ..['date'] = yesterday.toIso8601String(),
           createTestInteractionMap(id: '3')
-            ..['interaction_date'] = today.add(const Duration(hours: 14)).toIso8601String(),
+            ..['date'] = today.add(const Duration(hours: 14)).toIso8601String(),
           createTestInteractionMap(id: '4')
-            ..['interaction_date'] = tomorrow.toIso8601String(),
+            ..['date'] = tomorrow.toIso8601String(),
         ];
 
         // Act - Simulate filtering for today's interactions
@@ -180,7 +179,7 @@ void main() {
 
         final filtered = allInteractions
             .where((json) {
-              final date = DateTime.parse(json['interaction_date'] as String);
+              final date = DateTime.parse(json['date'] as String);
               return date.isAfter(startOfDay) && date.isBefore(endOfDay);
             })
             .map((json) => Interaction.fromJson(json))
@@ -200,11 +199,11 @@ void main() {
 
         final allInteractions = [
           createTestInteractionMap(id: '1', userId: 'user-1')
-            ..['interaction_date'] = today.add(const Duration(hours: 10)).toIso8601String(),
+            ..['date'] = today.add(const Duration(hours: 10)).toIso8601String(),
           createTestInteractionMap(id: '2', userId: 'user-2')
-            ..['interaction_date'] = today.add(const Duration(hours: 12)).toIso8601String(),
+            ..['date'] = today.add(const Duration(hours: 12)).toIso8601String(),
           createTestInteractionMap(id: '3', userId: 'user-1')
-            ..['interaction_date'] = yesterday.toIso8601String(),
+            ..['date'] = yesterday.toIso8601String(),
         ];
 
         // Act
@@ -215,7 +214,7 @@ void main() {
         final filtered = allInteractions
             .where((json) {
               if (json['user_id'] != userId) return false;
-              final date = DateTime.parse(json['interaction_date'] as String);
+              final date = DateTime.parse(json['date'] as String);
               return date.isAfter(startOfDay) && date.isBefore(endOfDay);
             })
             .map((json) => Interaction.fromJson(json))
@@ -257,11 +256,11 @@ void main() {
 
         final interactions = [
           Interaction.fromJson(createTestInteractionMap(id: '1')
-            ..['interaction_date'] = yesterday.toIso8601String()),
+            ..['date'] = yesterday.toIso8601String()),
           Interaction.fromJson(createTestInteractionMap(id: '2')
-            ..['interaction_date'] = tomorrow.toIso8601String()),
+            ..['date'] = tomorrow.toIso8601String()),
           Interaction.fromJson(createTestInteractionMap(id: '3')
-            ..['interaction_date'] = now.toIso8601String()),
+            ..['date'] = now.toIso8601String()),
         ];
 
         // Act - Simulate sorting logic from getInteractionsStream
@@ -330,19 +329,19 @@ void main() {
 
         final allInteractions = [
           createTestInteractionMap()
-            ..['interaction_date'] = DateTime(2025, 1, 15).toIso8601String(),
+            ..['date'] = DateTime(2025, 1, 15).toIso8601String(),
           createTestInteractionMap()
-            ..['interaction_date'] = DateTime(2025, 1, 20).toIso8601String(),
+            ..['date'] = DateTime(2025, 1, 20).toIso8601String(),
           createTestInteractionMap()
-            ..['interaction_date'] = DateTime(2024, 12, 25).toIso8601String(),
+            ..['date'] = DateTime(2024, 12, 25).toIso8601String(),
           createTestInteractionMap()
-            ..['interaction_date'] = DateTime(2025, 2, 5).toIso8601String(),
+            ..['date'] = DateTime(2025, 2, 5).toIso8601String(),
         ];
 
         // Act - Simulate counting logic
         final filtered = allInteractions
             .where((json) {
-              final date = DateTime.parse(json['interaction_date'] as String);
+              final date = DateTime.parse(json['date'] as String);
               return (date.isAfter(startDate) || date.isAtSameMomentAs(startDate)) &&
                      (date.isBefore(endDate) || date.isAtSameMomentAs(endDate));
             })
@@ -360,12 +359,12 @@ void main() {
 
         final todayInteractions = [
           createTestInteractionMap()
-            ..['interaction_date'] = today.add(const Duration(hours: 10)).toIso8601String(),
+            ..['date'] = today.add(const Duration(hours: 10)).toIso8601String(),
         ];
 
         final yesterdayInteractions = [
           createTestInteractionMap()
-            ..['interaction_date'] = yesterday.toIso8601String(),
+            ..['date'] = yesterday.toIso8601String(),
         ];
 
         // Act - Simulate hasInteractedToday logic
@@ -373,12 +372,12 @@ void main() {
         final endOfDay = startOfDay.add(const Duration(days: 1));
 
         final hasTodayInteraction = todayInteractions.any((json) {
-          final date = DateTime.parse(json['interaction_date'] as String);
+          final date = DateTime.parse(json['date'] as String);
           return date.isAfter(startOfDay) && date.isBefore(endOfDay);
         });
 
         final hasYesterdayInteraction = yesterdayInteractions.any((json) {
-          final date = DateTime.parse(json['interaction_date'] as String);
+          final date = DateTime.parse(json['date'] as String);
           return date.isAfter(startOfDay) && date.isBefore(endOfDay);
         });
 
@@ -394,13 +393,13 @@ void main() {
         final now = DateTime.now();
         final allInteractions = [
           createTestInteractionMap(id: '1', userId: 'user-1')
-            ..['interaction_date'] = now.subtract(const Duration(days: 3)).toIso8601String(),
+            ..['date'] = now.subtract(const Duration(days: 3)).toIso8601String(),
           createTestInteractionMap(id: '2', userId: 'user-2')
-            ..['interaction_date'] = now.subtract(const Duration(days: 1)).toIso8601String(),
+            ..['date'] = now.subtract(const Duration(days: 1)).toIso8601String(),
           createTestInteractionMap(id: '3', userId: 'user-1')
-            ..['interaction_date'] = now.subtract(const Duration(days: 1)).toIso8601String(),
+            ..['date'] = now.subtract(const Duration(days: 1)).toIso8601String(),
           createTestInteractionMap(id: '4', userId: 'user-1')
-            ..['interaction_date'] = now.subtract(const Duration(days: 5)).toIso8601String(),
+            ..['date'] = now.subtract(const Duration(days: 5)).toIso8601String(),
         ];
 
         const userId = 'user-1';

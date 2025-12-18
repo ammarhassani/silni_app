@@ -131,6 +131,7 @@ Map<String, dynamic> createTestRelativeMap({
 }
 
 /// Create a test interaction map
+/// Field names match Interaction.fromJson expectations
 Map<String, dynamic> createTestInteractionMap({
   String? id,
   String? userId,
@@ -141,8 +142,8 @@ Map<String, dynamic> createTestInteractionMap({
     'id': id ?? 'test-interaction-id',
     'user_id': userId ?? 'test-user-id',
     'relative_id': relativeId ?? 'test-relative-id',
-    'interaction_type': type ?? 'call',
-    'interaction_date': DateTime.now().toIso8601String(),
+    'type': type ?? 'call',
+    'date': DateTime.now().toIso8601String(),
     'duration': 30,
     'location': null,
     'notes': 'Test interaction notes',

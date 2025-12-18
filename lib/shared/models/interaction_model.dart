@@ -33,8 +33,6 @@ class Interaction {
   final String? notes;
   final String? mood;
   final List<String> photoUrls;
-  final String? audioNoteUrl;
-  final List<String> tags;
   final int? rating; // 1-5
   final bool isRecurring;
   final DateTime createdAt;
@@ -51,8 +49,6 @@ class Interaction {
     this.notes,
     this.mood,
     this.photoUrls = const [],
-    this.audioNoteUrl,
-    this.tags = const [],
     this.rating,
     this.isRecurring = false,
     required this.createdAt,
@@ -73,10 +69,6 @@ class Interaction {
       mood: json['mood'] as String?,
       photoUrls: json['photo_urls'] != null
           ? List<String>.from(json['photo_urls'] as List)
-          : [],
-      audioNoteUrl: json['audio_note_url'] as String?,
-      tags: json['tags'] != null
-          ? List<String>.from(json['tags'] as List)
           : [],
       rating: json['rating'] as int?,
       isRecurring: json['is_recurring'] as bool? ?? false,
@@ -99,8 +91,6 @@ class Interaction {
       'notes': notes,
       'mood': mood,
       'photo_urls': photoUrls,
-      'audio_note_url': audioNoteUrl,
-      'tags': tags,
       'rating': rating,
       'is_recurring': isRecurring,
       // Don't include id, created_at, updated_at - managed by database
@@ -119,8 +109,6 @@ class Interaction {
     String? notes,
     String? mood,
     List<String>? photoUrls,
-    String? audioNoteUrl,
-    List<String>? tags,
     int? rating,
     bool? isRecurring,
     DateTime? createdAt,
@@ -137,8 +125,6 @@ class Interaction {
       notes: notes ?? this.notes,
       mood: mood ?? this.mood,
       photoUrls: photoUrls ?? this.photoUrls,
-      audioNoteUrl: audioNoteUrl ?? this.audioNoteUrl,
-      tags: tags ?? this.tags,
       rating: rating ?? this.rating,
       isRecurring: isRecurring ?? this.isRecurring,
       createdAt: createdAt ?? this.createdAt,
