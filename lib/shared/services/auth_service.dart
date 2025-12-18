@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import '../../core/config/supabase_config.dart';
+import '../../core/errors/app_errors.dart';
 import '../../core/services/app_logger_service.dart';
 import 'session_persistence_service.dart';
 import 'unified_notification_service.dart';
@@ -571,7 +572,11 @@ class AuthService {
           category: LogCategory.auth,
           tag: 'deleteAccount',
         );
-        throw Exception('No user logged in');
+        throw const AuthError(
+          type: AuthErrorType.sessionExpired,
+          message: 'No user logged in',
+          arabicMessage: 'يرجى تسجيل الدخول أولاً',
+        );
       }
 
       logger.info(

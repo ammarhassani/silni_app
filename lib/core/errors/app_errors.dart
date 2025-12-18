@@ -243,6 +243,47 @@ class UnknownError extends AppError {
   String toString() => 'UnknownError: $message';
 }
 
+/// Configuration/initialization errors
+class ConfigurationError extends AppError {
+  final String? component;
+
+  const ConfigurationError({
+    super.message = 'Configuration error',
+    super.arabicMessage = 'خطأ في إعدادات التطبيق',
+    super.originalError,
+    super.stackTrace,
+    this.component,
+  });
+
+  @override
+  bool get isRetryable => false;
+
+  @override
+  String toString() => 'ConfigurationError: $message (component: $component)';
+}
+
+/// Resource not found errors
+class NotFoundError extends AppError {
+  final String? resourceType;
+  final String? resourceId;
+
+  const NotFoundError({
+    super.message = 'Resource not found',
+    super.arabicMessage = 'العنصر غير موجود',
+    super.originalError,
+    super.stackTrace,
+    this.resourceType,
+    this.resourceId,
+  });
+
+  @override
+  bool get isRetryable => false;
+
+  @override
+  String toString() =>
+      'NotFoundError: $message (type: $resourceType, id: $resourceId)';
+}
+
 /// Extension to check error types
 extension AppErrorChecks on AppError {
   bool get isNetworkRelated =>

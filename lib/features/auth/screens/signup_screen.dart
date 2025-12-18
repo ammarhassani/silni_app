@@ -14,6 +14,7 @@ import '../../../core/providers/analytics_provider.dart';
 import '../../../shared/services/auth_service.dart';
 import '../providers/auth_provider.dart';
 import '../../../core/services/app_logger_service.dart';
+import '../../../core/errors/app_errors.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -81,9 +82,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             const Duration(seconds: 30),  // Increased from 15s for iOS
             onTimeout: () {
               logger.error('Signup timeout after 30 seconds', category: LogCategory.auth, tag: 'SignUpScreen');
-              throw Exception(
-                'Signup is taking longer than expected. This may indicate a '
-                'network issue or service problem. Please try again.'
+              throw const TimeoutError(
+                message: 'Signup is taking longer than expected',
+                arabicMessage: 'انتهت مهلة التسجيل، يرجى المحاولة مرة أخرى',
+                timeout: Duration(seconds: 30),
               );
             },
           );

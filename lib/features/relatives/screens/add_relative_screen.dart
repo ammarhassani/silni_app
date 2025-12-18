@@ -12,6 +12,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/errors/app_errors.dart';
 import '../../../core/services/error_handler_service.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -93,7 +94,13 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
 
     try {
       final user = ref.read(currentUserProvider);
-      if (user == null) throw Exception('User not authenticated');
+      if (user == null) {
+        throw const AuthError(
+          type: AuthErrorType.sessionExpired,
+          message: 'User not authenticated',
+          arabicMessage: 'يرجى تسجيل الدخول أولاً',
+        );
+      }
 
       // Generate a UUID for the new relative (needed for photo upload path)
       final relativeId = const Uuid().v4();

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
+import '../../core/errors/app_errors.dart';
 import '../models/reminder_schedule_model.dart';
 
 /// Provider for the ReminderSchedules service
@@ -162,7 +163,12 @@ class ReminderSchedulesService {
     try {
       final schedule = await getSchedule(scheduleId);
       if (schedule == null) {
-        throw Exception('Schedule not found');
+        throw NotFoundError(
+          message: 'Schedule not found',
+          arabicMessage: 'جدول التذكير غير موجود',
+          resourceType: 'ReminderSchedule',
+          resourceId: scheduleId,
+        );
       }
 
       final updatedRelativeIds = [...schedule.relativeIds, ...relativeIds];
@@ -184,7 +190,12 @@ class ReminderSchedulesService {
     try {
       final schedule = await getSchedule(scheduleId);
       if (schedule == null) {
-        throw Exception('Schedule not found');
+        throw NotFoundError(
+          message: 'Schedule not found',
+          arabicMessage: 'جدول التذكير غير موجود',
+          resourceType: 'ReminderSchedule',
+          resourceId: scheduleId,
+        );
       }
 
       final updatedRelativeIds = schedule.relativeIds

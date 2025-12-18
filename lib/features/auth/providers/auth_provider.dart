@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../shared/services/auth_service.dart';
 import '../../../shared/services/session_persistence_service.dart';
 import '../../../core/config/supabase_config.dart';
+import '../../../core/errors/app_errors.dart';
 
 // Session persistence service provider
 final sessionPersistenceServiceProvider = Provider<SessionPersistenceService>((
@@ -15,22 +16,21 @@ final sessionPersistenceServiceProvider = Provider<SessionPersistenceService>((
 final authServiceProvider = Provider<AuthService>((ref) {
   // Check if Supabase is initialized before creating AuthService
   if (!SupabaseConfig.isInitialized) {
-    throw Exception(
-      'Supabase is not initialized. Cannot access authentication services.\n'
-      'This usually happens when:\n'
-      '1. Supabase credentials are missing or invalid\n'
-      '2. Network connection failed during initialization\n'
-      '3. Environment variables are not properly configured\n\n'
-      'Please check console logs for detailed initialization errors.',
+    throw const ConfigurationError(
+      message: 'Supabase is not initialized. Cannot access authentication services.',
+      arabicMessage: 'لم يتم تهيئة الاتصال بالخادم. يرجى إعادة تشغيل التطبيق.',
+      component: 'Supabase',
     );
   }
 
   try {
     return AuthService();
   } catch (e) {
-    throw Exception(
-      'AuthService initialization failed: ${e.toString()}\n'
-      'Make sure SupabaseConfig.initialize() completed successfully.',
+    throw ConfigurationError(
+      message: 'AuthService initialization failed: ${e.toString()}',
+      arabicMessage: 'فشل تهيئة خدمة المصادقة',
+      component: 'AuthService',
+      originalError: e,
     );
   }
 });

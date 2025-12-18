@@ -10,6 +10,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/theme/app_themes.dart';
+import '../../../core/errors/app_errors.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -163,7 +164,11 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
     try {
       final user = ref.read(currentUserProvider);
       if (user == null) {
-        throw Exception('User not authenticated');
+        throw const AuthError(
+          type: AuthErrorType.sessionExpired,
+          message: 'User not authenticated',
+          arabicMessage: 'يرجى تسجيل الدخول أولاً',
+        );
       }
 
       int successCount = 0;

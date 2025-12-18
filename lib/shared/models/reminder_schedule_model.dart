@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:silni_app/core/errors/app_errors.dart';
 import 'package:silni_app/shared/models/relative_model.dart';
 
 /// Reminder frequency types
@@ -76,7 +77,11 @@ class ReminderSchedule {
           frequency == null ||
           reminderTime == null ||
           createdAt == null) {
-        throw Exception('Missing required fields in ReminderSchedule.fromJson');
+        throw const ValidationError(
+          message: 'Missing required fields in ReminderSchedule.fromJson',
+          arabicMessage: 'بيانات جدول التذكير غير مكتملة',
+          field: 'ReminderSchedule',
+        );
       }
 
       return ReminderSchedule(

@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import '../../core/config/supabase_config.dart';
+import '../../core/errors/app_errors.dart';
 import '../../core/router/navigation_service.dart';
 import '../../core/router/app_routes.dart';
 import 'dart:async';
@@ -89,7 +90,11 @@ class SupabaseNotificationService {
   Future<void> _subscribeToNotifications() async {
     try {
       if (_deviceId == null) {
-        throw Exception('Device ID not available');
+        throw const ConfigurationError(
+          message: 'Device ID not available',
+          arabicMessage: 'معرف الجهاز غير متوفر',
+          component: 'NotificationService',
+        );
       }
 
       // Subscribe to notifications for this device

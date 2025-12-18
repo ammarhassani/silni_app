@@ -18,6 +18,7 @@ import '../../../shared/services/session_persistence_service.dart';
 import '../providers/auth_provider.dart';
 import '../../../core/services/app_logger_service.dart';
 import '../../../core/config/supabase_config.dart';
+import '../../../core/errors/app_errors.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -135,7 +136,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           .timeout(
             const Duration(seconds: 30),
             onTimeout: () {
-              throw Exception('Login timeout');
+              throw const TimeoutError(
+                message: 'Login timeout',
+                arabicMessage: 'انتهت مهلة تسجيل الدخول، يرجى المحاولة مرة أخرى',
+                timeout: Duration(seconds: 30),
+              );
             },
           );
 
@@ -273,8 +278,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 category: LogCategory.auth,
                 tag: 'LoginScreen',
               );
-              throw Exception(
-                'Login timeout - Supabase took too long to respond',
+              throw const TimeoutError(
+                message: 'Login timeout - Supabase took too long to respond',
+                arabicMessage: 'انتهت مهلة تسجيل الدخول، يرجى المحاولة مرة أخرى',
+                timeout: Duration(seconds: 30),
               );
             },
           );
