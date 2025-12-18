@@ -395,8 +395,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     const SizedBox(height: AppSpacing.xl),
 
                     // Login link
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(
                           'لديك حساب بالفعل؟',

@@ -20,6 +20,7 @@ import '../../../shared/models/relative_model.dart';
 import '../../../shared/services/relatives_service.dart';
 import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/services/contacts_import_service.dart';
+import '../../../shared/widgets/health_status_picker.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class AddRelativeScreen extends ConsumerStatefulWidget {
@@ -43,6 +44,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   int _priority = 2; // Auto-set based on relationship
   String _phoneNumber = ''; // Store phone number separately
   AvatarType? _selectedAvatar; // User-selected avatar
+  String? _healthStatus; // Health status of the relative
 
   final RelativesService _relativesService = RelativesService();
   final SupabaseStorageService _storageService = SupabaseStorageService();
@@ -132,6 +134,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         photoUrl: photoUrl,
         priority: _priority,
         isFavorite: _isFavorite,
+        healthStatus: _healthStatus,
         createdAt: DateTime.now(),
       );
 
@@ -351,6 +354,15 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
 
                         // Favorite toggle
                         _buildFavoriteToggle(),
+                        const SizedBox(height: AppSpacing.md),
+
+                        // Health status
+                        HealthStatusPicker(
+                          selectedStatus: _healthStatus,
+                          onStatusChanged: (status) {
+                            setState(() => _healthStatus = status);
+                          },
+                        ),
                         const SizedBox(height: AppSpacing.md),
 
                         // Notes

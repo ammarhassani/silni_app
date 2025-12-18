@@ -213,12 +213,12 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
   Widget _buildFilterChips() {
     return Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
-          child: Row(
+          child: Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
             children: [
               _buildFilterChip('الكل', 'all'),
-              const SizedBox(width: AppSpacing.sm),
               _buildFilterChip('يحتاجون تواصل', 'needs_contact'),
-              const SizedBox(width: AppSpacing.sm),
               _buildFilterChip('المفضلة', 'favorites'),
             ],
           ),

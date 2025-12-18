@@ -15,6 +15,7 @@ import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/services/relatives_service.dart';
 import '../../../shared/services/supabase_storage_service.dart';
+import '../../../shared/widgets/health_status_picker.dart';
 
 class EditRelativeScreen extends ConsumerStatefulWidget {
   final String relativeId;
@@ -41,6 +42,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
   bool _isLoading = false;
   bool _isFavorite = false;
   int _priority = 2;
+  String? _healthStatus;
   Relative? _relative;
 
   final RelativesService _relativesService = RelativesService();
@@ -68,6 +70,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
         _selectedAvatar = relative.avatarType;
         _priority = relative.priority;
         _isFavorite = relative.isFavorite;
+        _healthStatus = relative.healthStatus;
       });
     }
   }
@@ -168,6 +171,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
         if (photoUrl != null) 'photo_url': photoUrl,
         'priority': _priority,
         'is_favorite': _isFavorite,
+        'health_status': _healthStatus,
       });
 
       if (!mounted) return;
@@ -343,6 +347,15 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
 
                         // Favorite toggle
                         _buildFavoriteToggle(),
+                        const SizedBox(height: AppSpacing.md),
+
+                        // Health status
+                        HealthStatusPicker(
+                          selectedStatus: _healthStatus,
+                          onStatusChanged: (status) {
+                            setState(() => _healthStatus = status);
+                          },
+                        ),
                         const SizedBox(height: AppSpacing.xl),
 
                         // Save button

@@ -17,6 +17,7 @@ import '../../../shared/models/interaction_model.dart';
 import '../../../shared/services/relatives_service.dart';
 import '../../../shared/providers/interactions_provider.dart';
 import '../../../shared/services/auth_service.dart';
+import '../../../shared/widgets/mood_selector.dart';
 
 class RelativeDetailScreen extends ConsumerStatefulWidget {
   final String relativeId;
@@ -751,9 +752,69 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ],
+                            // Location display
+                            if (interaction.location != null &&
+                                interaction.location!.isNotEmpty) ...[
+                              const SizedBox(height: AppSpacing.xs),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    size: 12,
+                                    color: Colors.white54,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      interaction.location!,
+                                      style: AppTypography.labelSmall.copyWith(
+                                        color: Colors.white54,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            // Photo indicator
+                            if (interaction.photoUrls.isNotEmpty) ...[
+                              const SizedBox(height: AppSpacing.xs),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.photo_library,
+                                    size: 12,
+                                    color: Colors.white54,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${interaction.photoUrls.length} صور',
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: Colors.white54,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ],
                         ),
                       ),
+                      // Mood emoji display
+                      if (interaction.mood != null) ...[
+                        const SizedBox(width: AppSpacing.sm),
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: MoodOption.fromString(interaction.mood)?.color.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            MoodOption.fromString(interaction.mood)?.emoji ?? '',
+                            style: const TextStyle(fontSize: 18),
+                          ),
+                        ),
+                      ],
                       if (interaction.duration != null)
                         Column(
                           children: [
