@@ -5,7 +5,7 @@ import '../../shared/services/realtime_service.dart';
 import '../../shared/services/relatives_service.dart';
 import '../../core/services/app_logger_service.dart';
 import '../../features/auth/providers/auth_provider.dart';
-import '../../features/home/screens/home_screen.dart';
+import '../../features/home/providers/home_providers.dart';
 import '../../shared/providers/interactions_provider.dart';
 
 /// Provider for the real-time service

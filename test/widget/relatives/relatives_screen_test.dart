@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:silni_app/features/relatives/screens/relatives_screen.dart';
 import 'package:silni_app/features/auth/providers/auth_provider.dart';
-import 'package:silni_app/features/home/screens/home_screen.dart';
+import 'package:silni_app/features/home/providers/home_providers.dart';
 import 'package:silni_app/shared/models/relative_model.dart';
 import 'package:silni_app/core/router/app_routes.dart';
 import 'package:silni_app/core/providers/realtime_provider.dart';

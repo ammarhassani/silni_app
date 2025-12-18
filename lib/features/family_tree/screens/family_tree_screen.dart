@@ -9,7 +9,7 @@ import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../home/screens/home_screen.dart';
+import '../../home/providers/home_providers.dart';
 import '../widgets/tree_node_widget.dart';
 import '../models/tree_node.dart';
 import '../../../core/providers/realtime_provider.dart';

@@ -6,7 +6,7 @@ import '../services/connectivity_service.dart';
 import 'connectivity_provider.dart';
 import 'realtime_provider.dart';
 import '../../features/auth/providers/auth_provider.dart';
-import '../../features/home/screens/home_screen.dart';
+import '../../features/home/providers/home_providers.dart';
 
 /// Provider that monitors connectivity and triggers stream recovery
 /// when the device comes back online after being offline.
