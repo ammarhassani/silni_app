@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -386,7 +385,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     schedulesAsync.when(
                       data: (schedules) => _buildSetupRemindersPrompt(schedules),
                       loading: () => const SizedBox.shrink(),
-                      error: (_, __) => const SizedBox.shrink(),
+                      error: (_,_) => const SizedBox.shrink(),
                     ),
                     const SizedBox(height: AppSpacing.xl), // Padding for bottom nav
                   ],
@@ -410,10 +409,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // Wait for all data to load
     return relativesAsync.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_,_) => const SizedBox.shrink(),
       data: (relatives) => schedulesAsync.when(
         loading: () => const SizedBox.shrink(),
-        error: (_, __) => const SizedBox.shrink(),
+        error: (_,_) => const SizedBox.shrink(),
         data: (schedules) {
           // Get today's due relatives
           final dueRelatives = ref.watch(todayDueRelativesProvider((
@@ -746,10 +745,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   ) {
     return relativesAsync.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_,_) => const SizedBox.shrink(),
       data: (relatives) => schedulesAsync.when(
         loading: () => const SizedBox.shrink(),
-        error: (_, __) => const SizedBox.shrink(),
+        error: (_,_) => const SizedBox.shrink(),
         data: (schedules) {
           final tomorrow = DateTime.now().add(const Duration(days: 1));
           final yesterday = DateTime.now().subtract(const Duration(days: 1));
@@ -1242,7 +1241,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 )
                               : const SizedBox.shrink(),
                           loading: () => const SizedBox.shrink(),
-                          error: (_, __) => const SizedBox.shrink(),
+                          error: (_,_) => const SizedBox.shrink(),
                         ),
                       ],
                     ),

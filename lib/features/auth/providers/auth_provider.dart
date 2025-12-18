@@ -62,7 +62,7 @@ final currentUserProvider = Provider<User?>((ref) {
     return authState.when(
       data: (user) => user,
       loading: () => null,
-      error: (_, __) => null,
+      error: (_,_) => null,
     );
   } catch (e) {
     // If provider fails, return null

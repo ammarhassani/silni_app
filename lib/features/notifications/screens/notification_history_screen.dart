@@ -46,7 +46,7 @@ class _NotificationHistoryScreenState
                         _buildContent(context, notifications, themeColors),
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
-                    error: (_, __) => _buildError(),
+                    error: (_,_) => _buildError(),
                   ),
                 ),
               ],

@@ -78,7 +78,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                     loading: () => const Center(
                       child: CircularProgressIndicator(color: Colors.white),
                     ),
-                    error: (_, __) => _buildError(),
+                    error: (_,_) => _buildError(),
                   ),
                 ),
               ],

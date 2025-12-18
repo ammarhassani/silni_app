@@ -152,11 +152,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
-                      error: (_, __) => const SizedBox.shrink(),
+                      error: (_,_) => const SizedBox.shrink(),
                     ),
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
-                    error: (_, __) => const SizedBox.shrink(),
+                    error: (_,_) => const SizedBox.shrink(),
                   ),
                 ),
               ),
@@ -248,7 +248,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 user!.userMetadata!['profile_picture_url']
                                     as String,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) =>
+                                errorBuilder: (context, error, stackTrace) =>
                                     _buildDefaultAvatar(displayName),
                               ),
                             )
@@ -878,9 +878,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   void _showChangePasswordDialog() {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
         title: Text(
           'تغيير كلمة المرور',
@@ -892,50 +894,44 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('إلغاء'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
 
               try {
                 final user = SupabaseConfig.client.auth.currentUser;
                 if (user == null || user.email == null) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('البريد الإلكتروني غير متوفر'),
-                        backgroundColor: AppColors.error,
-                      ),
-                    );
-                  }
+                  scaffoldMessenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('البريد الإلكتروني غير متوفر'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
                   return;
                 }
 
                 final authService = ref.read(authServiceProvider);
                 await authService.resetPassword(user.email!);
 
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني',
-                      ),
-                      backgroundColor: AppColors.success,
-                      duration: Duration(seconds: 4),
+                scaffoldMessenger.showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني',
                     ),
-                  );
-                }
+                    backgroundColor: AppColors.success,
+                    duration: Duration(seconds: 4),
+                  ),
+                );
               } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('حدث خطأ: ${e.toString()}'),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
-                }
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text('حدث خطأ: ${e.toString()}'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
               }
             },
             child: const Text('إرسال'),
@@ -978,9 +974,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   void _showDeleteAccountDialog() {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final router = GoRouter.of(context);
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
         title: Text(
           'حذف الحساب',
@@ -992,55 +992,48 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('إلغاء'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
 
               // Show loading dialog
-              if (mounted) {
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (context) =>
-                      const Center(child: CircularProgressIndicator()),
-                );
-              }
+              if (!mounted) return;
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (loadingContext) =>
+                    const Center(child: CircularProgressIndicator()),
+              );
 
               try {
                 // Use Supabase delete account method (handles all cascading deletions via RPC)
                 final authService = ref.read(authServiceProvider);
                 await authService.deleteAccount();
 
-                // Close loading dialog
-                if (mounted) {
-                  Navigator.pop(context);
+                // Close loading dialog and navigate
+                navigator.pop();
+                router.go(AppRoutes.login);
 
-                  // Navigate to login
-                  context.go(AppRoutes.login);
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('تم حذف حسابك بنجاح'),
-                      backgroundColor: AppColors.success,
-                    ),
-                  );
-                }
+                scaffoldMessenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('تم حذف حسابك بنجاح'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
               } catch (e) {
                 // Close loading dialog
-                if (mounted) {
-                  Navigator.pop(context);
+                navigator.pop();
 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('حدث خطأ: ${e.toString()}'),
-                      backgroundColor: AppColors.error,
-                      duration: const Duration(seconds: 4),
-                    ),
-                  );
-                }
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text('حدث خطأ: ${e.toString()}'),
+                    backgroundColor: AppColors.error,
+                    duration: const Duration(seconds: 4),
+                  ),
+                );
               }
             },
             child: const Text('حذف', style: TextStyle(color: Colors.red)),

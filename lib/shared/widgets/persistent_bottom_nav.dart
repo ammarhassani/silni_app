@@ -300,7 +300,7 @@ class _PersistentBottomNavState extends ConsumerState<PersistentBottomNav>
     if (location.startsWith('${AppRoutes.editRelative}/')) {
       return 1; // Show relatives tab for edit relative pages
     }
-    if (location.startsWith('${AppRoutes.addRelative}')) {
+    if (location.startsWith(AppRoutes.addRelative)) {
       return 1; // Show relatives tab for add relative page
     }
 

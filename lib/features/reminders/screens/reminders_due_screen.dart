@@ -57,7 +57,7 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
                     },
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
-                    error: (_, __) => _buildError(),
+                    error: (_,_) => _buildError(),
                   ),
                 ),
               ],

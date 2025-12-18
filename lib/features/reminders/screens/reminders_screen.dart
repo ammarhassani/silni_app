@@ -56,11 +56,11 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                           _buildContent(context, relatives, schedules),
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
-                      error: (_, __) => _buildError(),
+                      error: (_,_) => _buildError(),
                     ),
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
-                    error: (_, __) => _buildError(),
+                    error: (_,_) => _buildError(),
                   ),
                 ),
               ],
@@ -821,7 +821,7 @@ class _CreateScheduleDialog extends ConsumerStatefulWidget {
 
 class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
   late TimeOfDay _selectedTime;
-  List<int> _selectedDays = [];
+  final List<int> _selectedDays = [];
   int? _selectedDayOfMonth;
 
   @override
@@ -928,7 +928,7 @@ class _CreateScheduleDialogState extends ConsumerState<_CreateScheduleDialog> {
                 icon: Icons.calendar_month_rounded,
                 summaryText: _selectedDayOfMonth == null
                     ? 'اختر يوم من الشهر'
-                    : 'اليوم ${_selectedDayOfMonth}',
+                    : 'اليوم $_selectedDayOfMonth',
                 expandedContent: _buildMonthDaySelector(),
               ),
             ],
@@ -1487,10 +1487,11 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
         ).showSnackBar(const SnackBar(content: Text('تم تحديث التذكير بنجاح')));
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('خطأ: $e')));
+      }
     }
   }
 }
