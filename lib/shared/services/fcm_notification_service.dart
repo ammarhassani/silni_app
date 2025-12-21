@@ -41,12 +41,14 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       importance: Importance.high,
       priority: Priority.high,
       playSound: true,
+      sound: RawResourceAndroidNotificationSound('silni_default'),
     );
 
     const iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      sound: 'silni_default.wav',
     );
 
     // Use unique ID combining timestamp and random to prevent notification collisions
@@ -89,6 +91,11 @@ class FCMNotificationService {
 
   bool _isInitialized = false;
   String? _fcmToken;
+
+  // Stream subscriptions for cleanup
+  StreamSubscription<String>? _tokenRefreshSubscription;
+  StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
+  StreamSubscription<RemoteMessage>? _backgroundTapSubscription;
 
   final StreamController<RemoteMessage> _messageStreamController =
       StreamController<RemoteMessage>.broadcast();
@@ -171,13 +178,14 @@ class FCMNotificationService {
       },
     );
 
-    // Create Android notification channel
+    // Create Android notification channel with custom sound
     const androidChannel = AndroidNotificationChannel(
       'silni_channel',
       'Silni Notifications',
       description: 'Notifications for Silni app',
       importance: Importance.high,
       playSound: true,
+      sound: RawResourceAndroidNotificationSound('silni_default'),
     );
 
     await _localNotifications
@@ -237,7 +245,7 @@ class FCMNotificationService {
         await _storeFCMToken(_fcmToken!);
 
         // Listen for token refresh
-        _firebaseMessaging.onTokenRefresh.listen((newToken) async {
+        _tokenRefreshSubscription = _firebaseMessaging.onTokenRefresh.listen((newToken) async {
           _logger.info(
             'FCM token refreshed',
             category: LogCategory.service,
@@ -315,7 +323,7 @@ class FCMNotificationService {
   /// Set up FCM message handlers for different app states
   void _setupMessageHandlers() {
     // Handle foreground messages
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _logger.info(
         'Foreground FCM message received',
         category: LogCategory.service,
@@ -334,7 +342,7 @@ class FCMNotificationService {
     });
 
     // Handle notification tap when app is in background
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    _backgroundTapSubscription = FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       _logger.info(
         'Background notification tapped',
         category: LogCategory.service,
@@ -380,12 +388,14 @@ class FCMNotificationService {
         priority: Priority.high,
         icon: '@mipmap/ic_launcher',
         playSound: true,
+        sound: RawResourceAndroidNotificationSound('silni_default'),
       );
 
       const iosDetails = DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        sound: 'silni_default.wav',
       );
 
       const details = NotificationDetails(
@@ -667,6 +677,9 @@ class FCMNotificationService {
 
   /// Dispose resources
   void dispose() {
+    _tokenRefreshSubscription?.cancel();
+    _foregroundMessageSubscription?.cancel();
+    _backgroundTapSubscription?.cancel();
     _messageStreamController.close();
   }
 }

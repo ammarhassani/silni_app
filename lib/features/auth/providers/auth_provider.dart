@@ -4,6 +4,7 @@ import '../../../shared/services/auth_service.dart';
 import '../../../shared/services/session_persistence_service.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/errors/app_errors.dart';
+import '../../../core/services/app_logger_service.dart';
 
 // Session persistence service provider
 final sessionPersistenceServiceProvider = Provider<SessionPersistenceService>((
@@ -46,37 +47,66 @@ final sessionInitializationProvider = FutureProvider<bool>((ref) async {
 
 // Auth state provider with error handling
 final authStateProvider = StreamProvider<User?>((ref) {
+  final logger = AppLoggerService();
   try {
     final authService = ref.watch(authServiceProvider);
     return authService.authStateChanges;
-  } catch (e) {
-    // If auth service fails, return empty stream
-    return Stream.value(null);
+  } catch (e, stackTrace) {
+    // Log the error - don't silently swallow auth failures
+    logger.error(
+      'Auth state provider failed: $e',
+      category: LogCategory.auth,
+      tag: 'AuthProvider',
+      metadata: {'error': e.toString(), 'stackTrace': stackTrace.toString()},
+    );
+    // Return error stream so UI can show proper error state
+    return Stream.error(e, stackTrace);
   }
 });
 
 // Current user provider with error handling
 final currentUserProvider = Provider<User?>((ref) {
+  final logger = AppLoggerService();
   try {
     final authState = ref.watch(authStateProvider);
     return authState.when(
       data: (user) => user,
       loading: () => null,
-      error: (_,_) => null,
+      error: (error, stackTrace) {
+        // Log the error - auth failures should be visible
+        logger.error(
+          'Current user provider received auth error: $error',
+          category: LogCategory.auth,
+          tag: 'AuthProvider',
+        );
+        return null;
+      },
     );
   } catch (e) {
-    // If provider fails, return null
+    // Log unexpected errors
+    logger.error(
+      'Current user provider failed: $e',
+      category: LogCategory.auth,
+      tag: 'AuthProvider',
+      metadata: {'error': e.toString()},
+    );
     return null;
   }
 });
 
 // Is authenticated provider with error handling
 final isAuthenticatedProvider = Provider<bool>((ref) {
+  final logger = AppLoggerService();
   try {
     final user = ref.watch(currentUserProvider);
     return user != null;
   } catch (e) {
-    // If anything fails, assume not authenticated
+    // Log the error instead of silently assuming not authenticated
+    logger.error(
+      'Is authenticated provider failed: $e',
+      category: LogCategory.auth,
+      tag: 'AuthProvider',
+    );
     return false;
   }
 });

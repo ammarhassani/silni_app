@@ -1,9 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app_themes.dart';
+import '../services/app_logger_service.dart';
 
 /// Theme provider for managing app theme
 class ThemeNotifier extends StateNotifier<AppThemeType> {
+  final AppLoggerService _logger = AppLoggerService();
+
   ThemeNotifier() : super(AppThemeType.defaultGreen) {
     _loadTheme();
   }
@@ -17,7 +20,13 @@ class ThemeNotifier extends StateNotifier<AppThemeType> {
         state = AppThemeType.fromString(themeValue);
       }
     } catch (e) {
-      // Default theme if loading fails
+      // Default theme if loading fails, but log for visibility
+      _logger.warning(
+        'Failed to load theme from preferences, using default',
+        category: LogCategory.service,
+        tag: 'ThemeNotifier',
+        metadata: {'error': e.toString()},
+      );
       state = AppThemeType.defaultGreen;
     }
   }
@@ -29,7 +38,13 @@ class ThemeNotifier extends StateNotifier<AppThemeType> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('app_theme', theme.value);
     } catch (e) {
-      // Fail silently - theme is still changed in memory
+      // Theme is still changed in memory, but log the persistence failure
+      _logger.warning(
+        'Failed to persist theme to preferences',
+        category: LogCategory.service,
+        tag: 'ThemeNotifier',
+        metadata: {'theme': theme.value, 'error': e.toString()},
+      );
     }
   }
 }

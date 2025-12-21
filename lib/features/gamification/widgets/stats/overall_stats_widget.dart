@@ -40,7 +40,7 @@ class OverallStatsWidget extends StatelessWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 2,
-              childAspectRatio: 1.4,
+              childAspectRatio: 1.3,
               crossAxisSpacing: AppSpacing.md,
               mainAxisSpacing: AppSpacing.md,
               children: [
@@ -113,25 +113,29 @@ class _StatTile extends StatelessWidget {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: AppTypography.headlineSmall.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 2),
+          Flexible(
+            child: Text(
+              value,
+              style: AppTypography.headlineSmall.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: AppTypography.bodySmall.copyWith(color: Colors.white70),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+          Flexible(
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: AppTypography.bodySmall.copyWith(color: Colors.white70),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),

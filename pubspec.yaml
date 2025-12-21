@@ -22,6 +22,10 @@ dependencies:
   flutter_secure_storage: ^9.2.4
   universal_html: ^2.2.4
 
+  # OAuth Social Login
+  google_sign_in: ^6.2.2
+  sign_in_with_apple: ^6.1.4
+
   # Navigation & Routing
   go_router: ^14.8.1
 
@@ -63,6 +67,7 @@ dependencies:
   image_picker: ^1.1.2
   image_cropper: ^8.0.2
   photo_view: ^0.15.0
+  screenshot: ^3.0.0
 
   # Contacts
   flutter_contacts: ^1.1.9
@@ -70,13 +75,14 @@ dependencies:
   # Charts & Visualization
   fl_chart: ^0.70.2
 
-  # Audio
-  just_audio: ^0.9.40
-
   # Hardware Features (can add later if needed)
   # sensors_plus: ^6.1.1
   # camera: ^0.11.0+2
   # geolocator: ^13.0.2
+
+  # Local Storage - Hive (Offline Cache)
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
 
   # Utilities
   uuid: ^4.5.1
@@ -98,6 +104,7 @@ dependencies:
   flutter_svg: ^2.0.16
   flutter_slidable: ^3.1.1
   google_fonts: ^6.3.3
+  screenshot_callback: ^3.0.1
 
 dev_dependencies:
   flutter_test:
@@ -119,7 +126,6 @@ flutter:
   assets:
     - assets/animations/
     - assets/images/
-    - assets/sounds/
     # Note: .env removed - now using envied for compile-time type-safe secrets
 
   # Fonts are loaded from Google Fonts - no need for local files

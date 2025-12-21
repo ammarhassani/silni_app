@@ -5,10 +5,12 @@ import '../../shared/widgets/gradient_background.dart';
 import '../../shared/widgets/error_widgets.dart';
 import '../providers/connectivity_provider.dart';
 import '../providers/stream_recovery_provider.dart';
+import '../providers/realtime_provider.dart';
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/signup_screen.dart';
+import '../../features/auth/screens/email_verification_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/relatives/screens/relatives_screen.dart';
 import '../../features/relatives/screens/relative_detail_screen.dart';
@@ -70,6 +72,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'signup',
         pageBuilder: (context, state) =>
             _buildPageWithTransition(context, state, const SignUpScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.emailVerification,
+        name: 'emailVerification',
+        pageBuilder: (context, state) =>
+            _buildPageWithTransition(context, state, const EmailVerificationScreen()),
       ),
 
       // Main App Routes
@@ -342,6 +350,10 @@ class _NavigationWrapperState extends ConsumerState<_NavigationWrapper> {
 
     // Enable stream recovery when connectivity changes
     ref.watch(streamRecoveryProvider);
+
+    // Enable real-time subscriptions when authenticated
+    // This ensures subscriptions are always active for logged-in users
+    ref.watch(autoRealtimeSubscriptionsProvider);
 
     return NotificationListener<ScrollNotification>(
       onNotification: (scrollNotification) {

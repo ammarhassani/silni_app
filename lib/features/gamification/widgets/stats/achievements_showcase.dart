@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_typography.dart';
+import '../../../../core/utils/badge_prestige.dart';
 import '../../../../shared/widgets/glass_card.dart';
 
 /// Grid widget showcasing user achievements/badges
@@ -60,15 +60,17 @@ class AchievementsShowcase extends StatelessWidget {
               crossAxisSpacing: AppSpacing.sm,
               mainAxisSpacing: AppSpacing.sm,
               children: achievements.take(6).map((achievement) {
+                final badgeId = achievement['id'] as String? ?? achievement['name'] as String? ?? '';
+                final badgeInfo = BadgePrestige.getBadgeInfo(badgeId);
                 return Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [AppColors.joyfulOrange, AppColors.energeticRed],
+                      colors: [badgeInfo.color, badgeInfo.color.withValues(alpha: 0.7)],
                     ),
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.joyfulOrange.withValues(alpha: 0.3),
+                        color: badgeInfo.color.withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -77,21 +79,23 @@ class AchievementsShowcase extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
-                        Icons.emoji_events_rounded,
-                        color: Colors.white,
-                        size: 32,
+                      Text(
+                        badgeInfo.emoji,
+                        style: const TextStyle(fontSize: 28),
                       ),
                       const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        achievement['name'] as String? ?? 'إنجاز',
-                        textAlign: TextAlign.center,
-                        style: AppTypography.bodySmall.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(
+                          badgeInfo.name,
+                          textAlign: TextAlign.center,
+                          style: AppTypography.bodySmall.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),

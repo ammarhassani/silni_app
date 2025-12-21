@@ -111,7 +111,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         logger.warning('Analytics failed (non-blocking)', category: LogCategory.analytics, tag: 'SignUpScreen', metadata: {'error': e.toString()});
       });
       if (credential.user != null) {
-        analytics.setUserId(credential.user!.id).catchError((e) {});
+        analytics.setUserId(credential.user!.id).catchError((e) {
+          logger.warning('Analytics setUserId failed: $e', category: LogCategory.analytics, tag: 'SignUpScreen');
+        });
       }
 
       if (!mounted) {
@@ -119,15 +121,43 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         return;
       }
 
-      logger.info('Widget still mounted, attempting navigation to home screen', category: LogCategory.auth, tag: 'SignUpScreen', metadata: {'targetRoute': AppRoutes.home});
-
-      // Navigate to home
-      context.go(AppRoutes.home);
+      // Check if email verification is required (no session means email not confirmed)
+      if (!authService.isEmailVerified) {
+        logger.info(
+          'Email verification required, navigating to verification screen',
+          category: LogCategory.auth,
+          tag: 'SignUpScreen',
+          metadata: {'targetRoute': AppRoutes.emailVerification},
+        );
+        context.go(AppRoutes.emailVerification);
+      } else {
+        logger.info(
+          'Email already verified, navigating to home screen',
+          category: LogCategory.auth,
+          tag: 'SignUpScreen',
+          metadata: {'targetRoute': AppRoutes.home},
+        );
+        context.go(AppRoutes.home);
+      }
 
       logger.info('Navigation executed successfully - Signup flow completed', category: LogCategory.auth, tag: 'SignUpScreen');
 
       // Don't reset loading state on success - let the new screen take over
     } on AuthException catch (e, stackTrace) {
+      // Check if this is an email verification required error
+      if (e.message.toLowerCase().contains('email not confirmed')) {
+        if (!mounted) return;
+
+        logger.info(
+          'Email verification required (from exception), navigating to verification screen',
+          category: LogCategory.auth,
+          tag: 'SignUpScreen',
+        );
+
+        setState(() => _isLoading = false);
+        context.go(AppRoutes.emailVerification);
+        return;
+      }
       // Handle Supabase auth errors specifically
       logger.error(
         'AuthException during signup',

@@ -206,11 +206,18 @@ class Relative {
 
   /// Create from Supabase JSON
   factory Relative.fromJson(Map<String, dynamic> json) {
+    // Handle potentially null required fields (for offline queue compatibility)
+    final id = json['id'] as String? ?? '';
+    final userId = json['user_id'] as String? ?? '';
+    final fullName = json['full_name'] as String? ?? '';
+    final relationshipTypeStr = json['relationship_type'] as String? ?? 'other';
+    final createdAtStr = json['created_at'] as String?;
+
     return Relative(
-      id: json['id'] as String,
-      userId: json['user_id'] as String,
-      fullName: json['full_name'] as String,
-      relationshipType: RelationshipType.fromString(json['relationship_type'] as String),
+      id: id,
+      userId: userId,
+      fullName: fullName,
+      relationshipType: RelationshipType.fromString(relationshipTypeStr),
       gender: Gender.fromString(json['gender'] as String?),
       avatarType: AvatarType.fromString(json['avatar_type'] as String?),
       dateOfBirth: json['date_of_birth'] != null
@@ -235,7 +242,7 @@ class Relative {
       isArchived: json['is_archived'] as bool? ?? false,
       isFavorite: json['is_favorite'] as bool? ?? false,
       contactId: json['contact_id'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: createdAtStr != null ? DateTime.parse(createdAtStr) : DateTime.now(),
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
           : null,

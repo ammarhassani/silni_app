@@ -117,7 +117,9 @@ class _QuickActionCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: Colors.white.withValues(alpha: 0.2),
               ),
-              child: Icon(icon, color: Colors.white, size: 24),
+              child: Center(
+                child: Icon(icon, color: Colors.white, size: 24),
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             Text(

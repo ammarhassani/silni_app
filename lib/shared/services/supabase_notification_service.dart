@@ -22,6 +22,7 @@ class SupabaseNotificationService {
 
   String? _deviceId;
   bool _isInitialized = false;
+  RealtimeChannel? _notificationsChannel;
   final StreamController<Map<String, dynamic>> _messageStreamController =
       StreamController<Map<String, dynamic>>.broadcast();
 
@@ -98,7 +99,7 @@ class SupabaseNotificationService {
       }
 
       // Subscribe to notifications for this device
-      _supabase
+      _notificationsChannel = _supabase
           .channel('notifications:device_id=eq.$_deviceId')
           .onPostgresChanges(
             event: PostgresChangeEvent.insert,
@@ -109,8 +110,8 @@ class SupabaseNotificationService {
               _messageStreamController.add(notification);
               await _showLocalNotification(notification);
             },
-          )
-          .subscribe();
+          );
+      _notificationsChannel!.subscribe();
     } catch (e) {
       if (kDebugMode) {
         print('❌ [NOTIFICATIONS] Error subscribing: $e');
@@ -132,12 +133,15 @@ class SupabaseNotificationService {
         importance: Importance.high,
         priority: Priority.high,
         icon: '@mipmap/ic_launcher',
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('silni_default'),
       );
 
       const iosDetails = DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        sound: 'silni_default.wav',
       );
 
       const details = NotificationDetails(
@@ -242,12 +246,14 @@ class SupabaseNotificationService {
         icon: '@mipmap/ic_launcher',
         playSound: true,
         enableVibration: true,
+        sound: RawResourceAndroidNotificationSound('silni_default'),
       );
 
       const iosDetails = DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        sound: 'silni_default.wav',
       );
 
       const details = NotificationDetails(
@@ -301,12 +307,15 @@ class SupabaseNotificationService {
         importance: Importance.high,
         priority: Priority.high,
         icon: '@mipmap/ic_launcher',
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('silni_default'),
       );
 
       const iosDetails = DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        sound: 'silni_default.wav',
       );
 
       const details = NotificationDetails(
@@ -336,6 +345,9 @@ class SupabaseNotificationService {
 
   /// Dispose resources
   void dispose() {
+    if (_notificationsChannel != null) {
+      _supabase.removeChannel(_notificationsChannel!);
+    }
     _messageStreamController.close();
   }
 }

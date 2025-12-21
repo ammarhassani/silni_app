@@ -341,6 +341,12 @@ class PerformanceMonitoringService {
       }
       return Sentry.startTransaction(operation, description);
     } catch (e) {
+      _logger.warning(
+        'Failed to start Sentry span',
+        category: LogCategory.service,
+        tag: 'Performance',
+        metadata: {'operation': operation, 'error': e.toString()},
+      );
       return null;
     }
   }

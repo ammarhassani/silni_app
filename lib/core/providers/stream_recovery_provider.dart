@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/app_logger_service.dart';
 import '../services/connectivity_service.dart';
+import '../services/sync_service.dart';
 import 'connectivity_provider.dart';
 import 'realtime_provider.dart';
 import '../../features/auth/providers/auth_provider.dart';
@@ -64,8 +65,19 @@ void _recoverStreams(Ref ref, AppLoggerService logger) {
   );
 
   // Use post frame callback to avoid provider lifecycle issues
-  WidgetsBinding.instance.addPostFrameCallback((_) {
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
     try {
+      // Trigger cache sync to push offline changes and pull latest data
+      logger.info(
+        'Triggering cache sync after reconnection',
+        category: LogCategory.network,
+        tag: 'StreamRecovery',
+        metadata: {'userId': userId},
+      );
+
+      final syncService = SyncService.instance;
+      await syncService.fullSync(userId);
+
       // Invalidate stream providers to force reconnection
       ref.invalidate(relativesStreamProvider(userId));
       ref.invalidate(todayInteractionsStreamProvider(userId));

@@ -5,7 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../features/auth/providers/auth_provider.dart';
 import '../../../shared/services/notification_history_service.dart';
+import '../../../shared/widgets/sync_status_indicator.dart';
+import 'streak_badge_bar.dart';
 
 /// Islamic greeting header with notification bell
 class HomeHeaderWidget extends ConsumerWidget {
@@ -21,6 +24,8 @@ class HomeHeaderWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final unreadCountAsync = ref.watch(unreadNotificationCountProvider(userId));
+    final user = ref.watch(currentUserProvider);
+    final profilePhotoUrl = user?.userMetadata?['profile_picture_url'] as String?;
     final hour = DateTime.now().hour;
     String greeting = 'السلام عليكم';
     if (hour < 12) {
@@ -35,28 +40,20 @@ class HomeHeaderWidget extends ConsumerWidget {
         Row(
           children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    greeting,
-                    style: AppTypography.bodyLarge.copyWith(
-                      color: Colors.white.withValues(alpha: 0.9),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    displayName,
-                    style: AppTypography.headlineMedium.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+              child: Text(
+                greeting,
+                style: AppTypography.headlineSmall.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
+            // Sync status indicator
+            const SyncStatusIndicator(
+              asBadge: true,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
             // Notification bell icon with unread badge
             GestureDetector(
               onTap: () => context.push(AppRoutes.notificationHistory),
@@ -113,6 +110,13 @@ class HomeHeaderWidget extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        // Streak & Badge Bar with username
+        StreakBadgeBar(
+          userId: userId,
+          displayName: displayName,
+          profilePhotoUrl: profilePhotoUrl,
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(

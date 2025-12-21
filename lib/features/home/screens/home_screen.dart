@@ -139,8 +139,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final displayName =
-        user.userMetadata?['full_name'] as String? ?? user.email ?? 'المستخدم';
+    final displayName = user.userMetadata?['full_name'] as String? ??
+        user.userMetadata?['display_name'] as String? ??
+        user.userMetadata?['name'] as String? ??
+        user.email ??
+        'المستخدم';
     final userId = user.id;
 
     final themeColors = ref.watch(themeColorsProvider);

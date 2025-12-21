@@ -3,15 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/connectivity_service.dart';
 
 /// Provider for connectivity service singleton
+/// Uses the global singleton that's initialized in main.dart
 final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
-  final service = ConnectivityService();
-  service.initialize();
-
-  ref.onDispose(() {
-    service.dispose();
-  });
-
-  return service;
+  // Use the global singleton instead of creating a new instance
+  // This ensures we don't double-initialize connectivity
+  return connectivityService;
 });
 
 /// Stream provider for connectivity status changes
@@ -32,9 +28,10 @@ final connectivityStatusProvider =
 final isOnlineProvider = Provider<bool>((ref) {
   final statusAsync = ref.watch(connectivityStatusProvider);
 
-  return statusAsync.maybeWhen(
+  return statusAsync.when(
     data: (status) => status == ConnectivityStatus.online,
-    orElse: () => true, // Assume online until proven otherwise
+    loading: () => true, // Assume online during initial check
+    error: (e, st) => false, // Assume offline on error - safer default
   );
 });
 

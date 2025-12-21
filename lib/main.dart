@@ -7,12 +7,16 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'core/config/supabase_config.dart';
+import 'core/cache/hive_initializer.dart';
 import 'core/config/app_scroll_behavior.dart'; // Enable mouse drag scrolling for web
 import 'core/config/env/app_environment.dart';
 import 'core/config/env/env_validator.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
+import 'core/providers/gamification_events_provider.dart';
+import 'core/services/sync_service.dart';
+import 'core/services/connectivity_service.dart';
 import 'features/auth/providers/auth_provider.dart'; // Auth providers
 import 'shared/widgets/floating_points_overlay.dart';
 import 'shared/widgets/logger_host.dart'; // In-app logger
@@ -143,6 +147,62 @@ void main() async {
       stackTrace: stackTrace,
     );
     // Don't rethrow - let app start so we can see logs
+  }
+
+  // Initialize Hive for local caching (offline support)
+  logger.info(
+    'Initializing Hive for local caching...',
+    category: LogCategory.database,
+    tag: 'Hive',
+  );
+  try {
+    await HiveInitializer.initialize();
+    logger.info(
+      'Hive initialization completed successfully',
+      category: LogCategory.database,
+      tag: 'Hive',
+    );
+  } catch (e, stackTrace) {
+    logger.error(
+      'Hive initialization failed - Offline caching disabled',
+      category: LogCategory.database,
+      tag: 'Hive',
+      metadata: {'error': e.toString()},
+      stackTrace: stackTrace,
+    );
+    // Don't rethrow - app can work without local cache
+  }
+
+  // Initialize connectivity monitoring
+  logger.info(
+    'Initializing connectivity service...',
+    category: LogCategory.network,
+    tag: 'Connectivity',
+  );
+  connectivityService.initialize();
+
+  // Initialize sync service (offline queue + background sync)
+  logger.info(
+    'Initializing sync service...',
+    category: LogCategory.service,
+    tag: 'Sync',
+  );
+  try {
+    await SyncService.instance.initialize();
+    logger.info(
+      'Sync service initialized successfully',
+      category: LogCategory.service,
+      tag: 'Sync',
+    );
+  } catch (e, stackTrace) {
+    logger.error(
+      'Sync service initialization failed',
+      category: LogCategory.service,
+      tag: 'Sync',
+      metadata: {'error': e.toString()},
+      stackTrace: stackTrace,
+    );
+    // Don't rethrow - app can work without sync
   }
 
   // Initialize Firebase for FCM (push notifications only)
@@ -380,6 +440,10 @@ class SilniApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Initialize SyncService with gamification events controller for UI feedback
+    final eventsController = ref.read(gamificationEventsControllerProvider);
+    SyncService.instance.setEventsController(eventsController);
+
     final router = ref.watch(routerProvider);
     // Watch theme provider for dynamic theme changes
     final themeColors = ref.watch(themeColorsProvider);

@@ -7,14 +7,21 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/utils/contact_launcher.dart';
+import '../../../core/providers/cache_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../../shared/services/relatives_service.dart';
-import '../../../shared/providers/interactions_provider.dart';
 import '../../../shared/services/auth_service.dart';
 import '../../../core/services/error_handler_service.dart';
 import '../widgets/detail/widgets.dart';
+
+/// Provider for watching a single relative (cache-first)
+final relativeDetailProvider =
+    StreamProvider.family<Relative?, String>((ref, relativeId) {
+  final repository = ref.watch(relativesRepositoryProvider);
+  return repository.watchRelative(relativeId);
+});
 
 class RelativeDetailScreen extends ConsumerStatefulWidget {
   final String relativeId;
@@ -35,27 +42,21 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
+    final relativeAsync = ref.watch(relativeDetailProvider(widget.relativeId));
 
     return Scaffold(
       body: GradientBackground(
         animated: true,
         child: SafeArea(
-          child: StreamBuilder<Relative?>(
-            stream: _relativesService.getRelativeStream(widget.relativeId),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Center(
-                  child: CircularProgressIndicator(color: themeColors.primary),
-                );
-              }
-
-              if (snapshot.hasError ||
-                  !snapshot.hasData ||
-                  snapshot.data == null) {
+          child: relativeAsync.when(
+            loading: () => Center(
+              child: CircularProgressIndicator(color: themeColors.primary),
+            ),
+            error: (_, _) => _buildErrorState(context),
+            data: (relative) {
+              if (relative == null) {
                 return _buildErrorState(context);
               }
-
-              final relative = snapshot.data!;
 
               return CustomScrollView(
                 slivers: [
@@ -203,8 +204,8 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
         createdAt: DateTime.now(),
       );
 
-      final interactionsService = ref.read(interactionsServiceProvider);
-      await interactionsService.createInteraction(interaction);
+      final repository = ref.read(interactionsRepositoryProvider);
+      await repository.createInteraction(interaction);
 
       if (mounted) {
         HapticFeedback.lightImpact();

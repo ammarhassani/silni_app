@@ -1,12 +1,13 @@
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
 import '../../core/services/gamification_service.dart';
+import '../../core/services/app_logger_service.dart';
 import '../models/interaction_model.dart';
 
 class InteractionsService {
   final SupabaseClient _supabase = SupabaseConfig.client;
   final GamificationService? _gamificationService;
+  final AppLoggerService _logger = AppLoggerService();
   static const String _table = 'interactions';
 
   InteractionsService({GamificationService? gamificationService})
@@ -42,18 +43,23 @@ class InteractionsService {
             interaction: interaction.copyWith(id: id),
           );
         } catch (e) {
-          // Don't fail interaction creation if gamification fails
-          if (kDebugMode) {
-            print('❌ [INTERACTIONS] Gamification failed: $e');
-          }
+          // Don't fail interaction creation if gamification fails, but log it
+          _logger.warning(
+            'Gamification processing failed',
+            category: LogCategory.gamification,
+            tag: 'InteractionsService',
+            metadata: {'userId': interaction.userId, 'error': e.toString()},
+          );
         }
       }
 
       return id;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [INTERACTIONS] Error creating: $e');
-      }
+      _logger.error(
+        'Error creating interaction: $e',
+        category: LogCategory.database,
+        tag: 'InteractionsService',
+      );
       rethrow;
     }
   }
@@ -205,9 +211,12 @@ class InteractionsService {
       // Note: updated_at is automatically set by database trigger
       await _supabase.from(_table).update(updates).eq('id', interactionId);
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [INTERACTIONS] Error updating: $e');
-      }
+      _logger.error(
+        'Error updating interaction: $e',
+        category: LogCategory.database,
+        tag: 'InteractionsService',
+        metadata: {'interactionId': interactionId},
+      );
       rethrow;
     }
   }
@@ -217,9 +226,12 @@ class InteractionsService {
     try {
       await _supabase.from(_table).delete().eq('id', interactionId);
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [INTERACTIONS] Error deleting: $e');
-      }
+      _logger.error(
+        'Error deleting interaction: $e',
+        category: LogCategory.database,
+        tag: 'InteractionsService',
+        metadata: {'interactionId': interactionId},
+      );
       rethrow;
     }
   }

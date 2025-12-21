@@ -13,6 +13,7 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
+import '../../../core/providers/cache_provider.dart';
 import '../../../shared/providers/interactions_provider.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -574,7 +575,7 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
       final user = ref.read(currentUserProvider);
       if (user == null) return;
 
-      final interactionsService = ref.read(interactionsServiceProvider);
+      final repository = ref.read(interactionsRepositoryProvider);
       final interaction = Interaction(
         id: '',
         userId: user.id,
@@ -584,7 +585,7 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
         notes: 'تم التواصل من شاشة التذكيرات',
         createdAt: DateTime.now(),
       );
-      await interactionsService.createInteraction(interaction);
+      await repository.createInteraction(interaction);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

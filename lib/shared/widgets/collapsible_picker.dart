@@ -97,10 +97,12 @@ class _CollapsiblePickerState extends State<CollapsiblePicker>
                         ],
                       ),
                     ),
-                    child: Icon(
-                      widget.icon,
-                      color: Colors.white,
-                      size: 20,
+                    child: Center(
+                      child: Icon(
+                        widget.icon,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),

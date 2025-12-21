@@ -9,30 +9,19 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/gamification_stats_card.dart';
-import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
-import '../../../shared/services/relatives_service.dart';
 import '../../../shared/services/supabase_storage_service.dart';
-import '../../../shared/providers/interactions_provider.dart';
+import '../../../core/providers/cache_provider.dart';
+import '../../home/providers/home_providers.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/services/error_handler_service.dart';
 import '../widgets/widgets.dart';
 
-// Providers
-final relativesServiceProvider = Provider((ref) => RelativesService());
-
-final userRelativesProvider = StreamProvider.family<List<Relative>, String>((
-  ref,
-  userId,
-) {
-  final service = ref.watch(relativesServiceProvider);
-  return service.getRelativesStream(userId);
-});
-
+// Provider for all user interactions (uses cache-first repository pattern)
 final userInteractionsProvider =
     StreamProvider.family<List<Interaction>, String>((ref, userId) {
-      final service = ref.watch(interactionsServiceProvider);
-      return service.getInteractionsStream(userId);
+      final repository = ref.watch(interactionsRepositoryProvider);
+      return repository.watchUserInteractions(userId);
     });
 
 final supabaseStorageServiceProvider = Provider((ref) => SupabaseStorageService());
@@ -61,7 +50,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final userId = user?.id ?? '';
     final themeColors = ref.watch(themeColorsProvider);
 
-    final relativesAsync = ref.watch(userRelativesProvider(userId));
+    final relativesAsync = ref.watch(relativesStreamProvider(userId));
     final interactionsAsync = ref.watch(userInteractionsProvider(userId));
 
     return Scaffold(
@@ -321,7 +310,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           .eq('id', user.id);
 
       await SupabaseConfig.client.auth.updateUser(
-        UserAttributes(data: {'full_name': newName}),
+        UserAttributes(data: {
+          'full_name': newName,
+          'display_name': newName,
+        }),
       );
 
       if (mounted) {

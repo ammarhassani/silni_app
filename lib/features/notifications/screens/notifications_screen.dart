@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
-import 'package:just_audio/just_audio.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
@@ -29,7 +28,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   bool _weeklyRemindersEnabled = true;
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
-  String _selectedSound = 'default';
 
   @override
   void initState() {
@@ -41,7 +39,16 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     try {
       await _notificationService.initialize();
     } catch (e) {
-      // Initialization error handled silently
+      debugPrint('❌ [NotificationsScreen] Notification service initialization failed: $e');
+      // Show error to user if mounted
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('فشل تهيئة خدمة الإشعارات'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -147,11 +154,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       themeColors: themeColors,
                     ),
 
-                    const SizedBox(height: AppSpacing.md),
-
-                    // Sound Picker
-                    _buildSoundPicker(themeColors),
-
                     const SizedBox(height: AppSpacing.xl),
                   ],
                 ),
@@ -245,136 +247,5 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         ],
       ),
     ).animate().fadeIn().slideX(begin: -0.1, end: 0);
-  }
-
-  Widget _buildSoundPicker(ThemeColors themeColors) {
-    final sounds = [
-      {'id': 'default', 'name': 'صِلني (افتراضي)', 'icon': Icons.notifications_active},
-      {'id': 'gentle', 'name': 'رنين ناعم', 'icon': Icons.music_note},
-      {'id': 'chime', 'name': 'جرس كلاسيكي', 'icon': Icons.doorbell},
-      {'id': 'family', 'name': 'نغمة عائلية', 'icon': Icons.family_restroom},
-      {'id': 'silent', 'name': 'صامت', 'icon': Icons.notifications_off},
-    ];
-
-    return GlassCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.audiotrack, color: themeColors.accent),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'نغمة الإشعارات',
-                style: AppTypography.titleMedium.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          ...sounds.map((sound) {
-            final isSelected = _selectedSound == sound['id'];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: GestureDetector(
-                onTap: _soundEnabled
-                    ? () {
-                        HapticFeedback.selectionClick();
-                        setState(() => _selectedSound = sound['id'] as String);
-                        // Play preview sound
-                        _playPreviewSound(sound['id'] as String);
-                      }
-                    : null,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: isSelected ? themeColors.primaryGradient : null,
-                    color: isSelected ? null : Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                    border: Border.all(
-                      color: isSelected
-                          ? Colors.white.withValues(alpha: 0.5)
-                          : Colors.white.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        sound['icon'] as IconData,
-                        color: _soundEnabled
-                            ? Colors.white
-                            : Colors.white.withValues(alpha: 0.4),
-                        size: 20,
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Text(
-                        sound['name'] as String,
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: _soundEnabled
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: 0.4),
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      ),
-                      const Spacer(),
-                      if (isSelected)
-                        Icon(
-                          Icons.check_circle,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }),
-        ],
-      ),
-    ).animate().fadeIn().slideX(begin: -0.1, end: 0);
-  }
-
-  bool _isPlayingPreview = false;
-
-  Future<void> _playPreviewSound(String soundId) async {
-    if (soundId == 'silent' || _isPlayingPreview) return;
-
-    HapticFeedback.mediumImpact();
-
-    _isPlayingPreview = true;
-
-    try {
-      // Map sound IDs to asset files
-      final soundAssets = {
-        'default': 'assets/sounds/silni_default.wav',
-        'gentle': 'assets/sounds/gentle_chime.wav',
-        'chime': 'assets/sounds/classic_bell.wav',
-        'family': 'assets/sounds/family_tone.wav',
-      };
-
-      final assetPath = soundAssets[soundId];
-      if (assetPath != null) {
-        // Create fresh player for each preview to avoid state issues
-        final player = AudioPlayer();
-        await player.setAsset(assetPath);
-        await player.play();
-        // Dispose after playing
-        player.playerStateStream.listen((state) {
-          if (state.processingState == ProcessingState.completed) {
-            player.dispose();
-          }
-        });
-      }
-    } catch (e) {
-      debugPrint('Sound preview error: $e');
-    } finally {
-      _isPlayingPreview = false;
-    }
   }
 }

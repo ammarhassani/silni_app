@@ -1,6 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:screenshot/screenshot.dart';
+import 'package:screenshot_callback/screenshot_callback.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -11,8 +16,11 @@ import '../../../shared/models/relative_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../home/providers/home_providers.dart';
 import '../widgets/tree_node_widget.dart';
+import '../widgets/export_tree_node_widget.dart';
 import '../models/tree_node.dart';
 import '../../../core/providers/realtime_provider.dart';
+import '../../../core/theme/theme_provider.dart';
+import '../../../core/theme/app_themes.dart';
 
 // Note: relativesStreamProvider is now imported from features/home/screens/home_screen.dart
 
@@ -26,13 +34,92 @@ class FamilyTreeScreen extends ConsumerStatefulWidget {
 class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   final TransformationController _transformationController =
       TransformationController();
+  final ScreenshotController _screenshotController = ScreenshotController();
+  final ScreenshotCallback _screenshotCallback = ScreenshotCallback();
   double _currentScale = 1.0;
   String? _selectedNodeId;
+  bool _isExporting = false;
+  bool _showWatermark = false;
+
+  // Store tree data for export
+  TreeNode? _currentTreeData;
+  List<Relative>? _currentRelatives;
+
+  @override
+  void initState() {
+    super.initState();
+    _initScreenshotDetection();
+  }
+
+  void _initScreenshotDetection() {
+    _screenshotCallback.addListener(() {
+      // User took a screenshot - show watermark temporarily
+      if (mounted) {
+        setState(() => _showWatermark = true);
+        // Show snackbar with branding
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Image.asset(
+                  'assets/images/silni_branding.png',
+                  width: 40,
+                  height: 40,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                const Text('شجرة عائلتي من صلني 🌳'),
+              ],
+            ),
+            backgroundColor: AppColors.islamicGreenDark,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        // Hide watermark after delay
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            setState(() => _showWatermark = false);
+          }
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
     _transformationController.dispose();
+    _screenshotCallback.dispose();
     super.dispose();
+  }
+
+  /// Calculate responsive node size based on screen width and tree complexity
+  double _calculateNodeSize(double screenWidth, TreeNode root) {
+    // Count total members at level 0 (siblings + user + spouse)
+    final level0Count = root.siblings.length + 1;
+
+    // Base size calculations
+    const double minNodeSize = 50.0;
+    const double maxNodeSize = 90.0;
+    const double defaultNodeSize = 80.0;
+
+    // For small screens (< 400px), use smaller nodes
+    if (screenWidth < 400) {
+      return minNodeSize;
+    }
+
+    // For medium screens (400-600px)
+    if (screenWidth < 600) {
+      // Scale based on number of siblings
+      if (level0Count > 4) return minNodeSize;
+      if (level0Count > 3) return 60.0;
+      return 70.0;
+    }
+
+    // For larger screens, adjust based on tree complexity
+    if (level0Count > 5) return 60.0;
+    if (level0Count > 3) return 70.0;
+
+    // Default size for normal trees
+    return defaultNodeSize.clamp(minNodeSize, maxNodeSize);
   }
 
   @override
@@ -84,6 +171,14 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
               ],
             ),
           ),
+          // Floating zoom controls
+          Positioned(
+            bottom: AppSpacing.xl,
+            right: AppSpacing.md,
+            child: SafeArea(
+              child: _buildZoomControls(),
+            ),
+          ),
         ],
       ),
     );
@@ -91,7 +186,10 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       child: Row(
         children: [
           IconButton(
@@ -100,51 +198,89 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'شجرة العائلة',
-                  style: AppTypography.headlineLarge.copyWith(
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'تصور جميل لأفراد عائلتك',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: Colors.white.withValues(alpha: 0.8),
-                  ),
-                ),
-              ],
+            child: Text(
+              'شجرة العائلة',
+              style: AppTypography.headlineMedium.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          // Zoom controls
-          Row(
-            children: [
-              IconButton(
-                onPressed: _zoomOut,
-                icon: const Icon(Icons.zoom_out_rounded, color: Colors.white),
-                tooltip: 'تصغير',
-              ),
-              Text(
-                '${(_currentScale * 100).toInt()}%',
-                style: AppTypography.bodySmall.copyWith(color: Colors.white),
-              ),
-              IconButton(
-                onPressed: _zoomIn,
-                icon: const Icon(Icons.zoom_in_rounded, color: Colors.white),
-                tooltip: 'تكبير',
-              ),
-              IconButton(
-                onPressed: _resetZoom,
-                icon: const Icon(
-                  Icons.center_focus_strong_rounded,
-                  color: Colors.white,
-                ),
-                tooltip: 'إعادة ضبط',
-              ),
-            ],
+          // Share button only
+          IconButton(
+            onPressed: _isExporting ? null : _exportTree,
+            icon: _isExporting
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.share_rounded, color: Colors.white),
+            tooltip: 'مشاركة الشجرة',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildZoomControls() {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.islamicGreenDark.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            onPressed: _zoomOut,
+            icon: const Icon(Icons.remove_rounded, color: Colors.white, size: 20),
+            tooltip: 'تصغير',
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            padding: EdgeInsets.zero,
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+            child: Text(
+              '${(_currentScale * 100).toInt()}%',
+              style: AppTypography.labelSmall.copyWith(color: Colors.white),
+            ),
+          ),
+          IconButton(
+            onPressed: _zoomIn,
+            icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+            tooltip: 'تكبير',
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            padding: EdgeInsets.zero,
+          ),
+          Container(
+            width: 1,
+            height: 20,
+            color: Colors.white.withValues(alpha: 0.3),
+            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          ),
+          IconButton(
+            onPressed: _resetZoom,
+            icon: const Icon(Icons.center_focus_strong_rounded, color: Colors.white, size: 20),
+            tooltip: 'إعادة ضبط',
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            padding: EdgeInsets.zero,
           ),
         ],
       ),
@@ -164,26 +300,86 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     // Build tree structure
     final treeData = _buildTreeData(relatives, userName);
 
-    return InteractiveViewer(
-      transformationController: _transformationController,
-      boundaryMargin: const EdgeInsets.all(double.infinity),
-      constrained: false,
-      minScale: 0.1,
-      maxScale: 3.0,
-      onInteractionUpdate: (details) {
-        // Read scale directly from matrix entry (0,0) instead of getMaxScaleOnAxis()
-        // getMaxScaleOnAxis() returns 1.0 when zoomed out because Z axis is always 1.0
-        final matrixScale = _transformationController.value.entry(0, 0);
-        if (matrixScale != _currentScale) {
-          setState(() {
-            _currentScale = matrixScale;
-          });
-        }
+    // Store for export
+    _currentTreeData = treeData;
+    _currentRelatives = relatives;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calculate responsive node size based on screen width
+        final screenWidth = constraints.maxWidth;
+        final nodeSize = _calculateNodeSize(screenWidth, treeData);
+
+        return Stack(
+          children: [
+            // Main tree view (NO branding - clean view)
+            InteractiveViewer(
+              transformationController: _transformationController,
+              boundaryMargin: const EdgeInsets.all(double.infinity),
+              constrained: false,
+              minScale: 0.1,
+              maxScale: 3.0,
+              onInteractionUpdate: (details) {
+                final matrixScale = _transformationController.value.entry(0, 0);
+                if (matrixScale != _currentScale) {
+                  setState(() {
+                    _currentScale = matrixScale;
+                  });
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                color: Colors.transparent,
+                child: _buildTreeLayout(treeData, relatives, nodeSize),
+              ),
+            ),
+            // Watermark overlay (shows when screenshot detected)
+            if (_showWatermark)
+              Positioned(
+                bottom: AppSpacing.xxl,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.md,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.islamicGreenDark.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          'assets/images/silni_branding.png',
+                          width: 50,
+                          height: 50,
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Text(
+                          'شجرة عائلتي',
+                          style: AppTypography.headlineSmall.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
       },
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: _buildTreeLayout(treeData, relatives),
-      ),
     );
   }
 
@@ -341,7 +537,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     return root;
   }
 
-  Widget _buildTreeLayout(TreeNode root, List<Relative> relatives) {
+  Widget _buildTreeLayout(TreeNode root, List<Relative> relatives, double nodeSize) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -349,7 +545,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         // Grandparents (Level -2)
         if (root.children.isNotEmpty &&
             root.children.first.children.isNotEmpty) ...[
-          _buildGeneration(root.children.first.children, relatives, -2),
+          _buildGeneration(root.children.first.children, relatives, -2, nodeSize),
           const SizedBox(height: AppSpacing.md),
           _buildConnectionLines(
             root.children.first.children.length,
@@ -364,6 +560,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
             root.children.where((n) => n.level == -1).toList(),
             relatives,
             -1,
+            nodeSize,
           ),
           const SizedBox(height: AppSpacing.md),
           _buildConnectionLines(
@@ -374,37 +571,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         ],
 
         // User + Siblings + Spouse (Level 0)
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Siblings before user
-            if (root.siblings.isNotEmpty) ...[
-              ...root.siblings.map(
-                (sibling) => Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                  ),
-                  child: TreeNodeWidget(
-                    node: sibling,
-                    isSelected: _selectedNodeId == sibling.id,
-                    onTap: () => _onNodeTap(sibling, relatives),
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              _buildConnectionLines(root.siblings.length + 1, vertical: false),
-              const SizedBox(width: AppSpacing.md),
-            ],
-
-            // User (root)
-            TreeNodeWidget(
-              node: root,
-              isSelected: _selectedNodeId == root.id,
-              onTap: () => _onNodeTap(root, relatives),
-            ),
-          ],
-        ),
+        _buildSiblingRow(root, relatives, nodeSize),
 
         // Children + Extended (Level 1+)
         if (root.children.where((n) => n.level >= 1).isNotEmpty) ...[
@@ -418,6 +585,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
             root.children.where((n) => n.level >= 1).toList(),
             relatives,
             1,
+            nodeSize,
           ),
         ],
       ],
@@ -428,6 +596,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     List<TreeNode> nodes,
     List<Relative> relatives,
     int level,
+    double nodeSize,
   ) {
     if (nodes.isEmpty) return const SizedBox.shrink();
 
@@ -440,8 +609,90 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
           node: node,
           isSelected: _selectedNodeId == node.id,
           onTap: () => _onNodeTap(node, relatives),
+          nodeSize: nodeSize,
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildSiblingRow(TreeNode root, List<Relative> relatives, double nodeSize) {
+    // Combine all level 0 members: siblings + user + spouse
+    final allMembers = <TreeNode>[];
+
+    // Add siblings first
+    allMembers.addAll(root.siblings.where((s) =>
+      s.relationship == 'أخ' || s.relationship == 'أخت' ||
+      s.relationship.contains('أخ') || s.relationship.contains('أخت')));
+
+    // Add user (root) in the middle
+    allMembers.add(root);
+
+    // Add spouse after user
+    allMembers.addAll(root.siblings.where((s) =>
+      s.relationship == 'زوج' || s.relationship == 'زوجة' ||
+      s.relationship.contains('زوج') || s.relationship.contains('زوجة')));
+
+    if (allMembers.length == 1) {
+      // Just the user, no siblings
+      return TreeNodeWidget(
+        node: root,
+        isSelected: _selectedNodeId == root.id,
+        onTap: () => _onNodeTap(root, relatives),
+        nodeSize: nodeSize,
+      );
+    }
+
+    // Build row with horizontal connection lines between siblings
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        for (int i = 0; i < allMembers.length; i++) ...[
+          TreeNodeWidget(
+            node: allMembers[i],
+            isSelected: _selectedNodeId == allMembers[i].id,
+            onTap: () => _onNodeTap(allMembers[i], relatives),
+            nodeSize: nodeSize,
+          ),
+          // Add horizontal connection line between members (not after last one)
+          if (i < allMembers.length - 1) ...[
+            const SizedBox(width: AppSpacing.xs),
+            _buildHorizontalConnection(
+              isSpouseConnection: _isSpouseNode(allMembers[i]) || _isSpouseNode(allMembers[i + 1]),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+          ],
+        ],
+      ],
+    );
+  }
+
+  bool _isSpouseNode(TreeNode node) {
+    return node.relationship == 'زوج' ||
+           node.relationship == 'زوجة' ||
+           node.relationship.contains('زوج') ||
+           node.relationship.contains('زوجة');
+  }
+
+  Widget _buildHorizontalConnection({bool isSpouseConnection = false}) {
+    return Container(
+      width: 40,
+      height: 3,
+      decoration: BoxDecoration(
+        gradient: isSpouseConnection
+            ? AppColors.goldenGradient  // Golden for spouse connection (marriage)
+            : AppColors.primaryGradient, // Green for sibling connection
+        borderRadius: BorderRadius.circular(2),
+        boxShadow: [
+          BoxShadow(
+            color: isSpouseConnection
+                ? AppColors.premiumGold.withValues(alpha: 0.4)
+                : AppColors.islamicGreenPrimary.withValues(alpha: 0.4),
+            blurRadius: 4,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
     );
   }
 
@@ -714,5 +965,293 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       _currentScale = 1.0;
       _transformationController.value = Matrix4.identity();
     });
+  }
+
+  Future<void> _exportTree() async {
+    if (_currentTreeData == null || _currentRelatives == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('لا توجد شجرة للتصدير'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    // Get the render box before async operations (required for iOS share sheet)
+    final box = context.findRenderObject() as RenderBox?;
+    final sharePositionOrigin = box != null
+        ? Rect.fromLTWH(
+            box.size.width / 2,
+            0,
+            box.size.width / 2,
+            box.size.height / 2,
+          )
+        : null;
+
+    setState(() => _isExporting = true);
+
+    try {
+      // Capture the branded export widget
+      final image = await _screenshotController.captureFromWidget(
+        _buildBrandedExportWidget(),
+        delay: const Duration(milliseconds: 100),
+        pixelRatio: 2.0,
+      );
+
+      final directory = await getTemporaryDirectory();
+      final path = '${directory.path}/family_tree_${DateTime.now().millisecondsSinceEpoch}.png';
+      final file = File(path);
+      await file.writeAsBytes(image);
+
+      await Share.shareXFiles(
+        [XFile(path)],
+        sharePositionOrigin: sharePositionOrigin,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('حدث خطأ: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isExporting = false);
+      }
+    }
+  }
+
+  /// Calculate optimal node size for export based on tree complexity
+  double _calculateExportNodeSize(TreeNode root) {
+    // Count members at each level
+    final grandparentsCount = root.children.isNotEmpty
+        ? root.children.first.children.length
+        : 0;
+    final parentsCount = root.children.where((n) => n.level == -1).length;
+    final siblingsCount = root.siblings.length + 1; // +1 for user
+    final childrenCount = root.children.where((n) => n.level >= 1).length;
+
+    // Find the widest row (most members horizontally)
+    final maxRowCount = [grandparentsCount, parentsCount, siblingsCount, childrenCount]
+        .reduce((a, b) => a > b ? a : b);
+
+    // Total members for vertical consideration
+    final totalMembers = grandparentsCount + parentsCount + siblingsCount + childrenCount;
+
+    // Node size bounds - reduced minimum to ensure siblings fit in one row
+    const double minNodeSize = 35.0;
+    const double maxNodeSize = 70.0;
+
+    // Calculate based on widest row
+    // Each node needs: nodeSize + spacing + text width (~nodeSize * 2.0)
+    // Target export width ~350px (accounting for padding)
+    double nodeSize;
+    if (maxRowCount <= 2) {
+      nodeSize = maxNodeSize;
+    } else if (maxRowCount <= 3) {
+      nodeSize = 60.0;
+    } else if (maxRowCount <= 4) {
+      nodeSize = 50.0;
+    } else if (maxRowCount <= 5) {
+      nodeSize = 42.0;
+    } else if (maxRowCount <= 6) {
+      nodeSize = 38.0;
+    } else {
+      // For 7+ members in a row, use minimum
+      nodeSize = minNodeSize;
+    }
+
+    // Also consider total members (many members = smaller nodes)
+    if (totalMembers > 12) {
+      nodeSize = (nodeSize * 0.85).clamp(minNodeSize, maxNodeSize);
+    }
+
+    return nodeSize;
+  }
+
+  /// Build a branded widget specifically for export (with title and watermark)
+  Widget _buildBrandedExportWidget() {
+    // Calculate intelligent node size based on tree complexity
+    final exportNodeSize = _calculateExportNodeSize(_currentTreeData!);
+    // Get user's selected theme colors
+    final themeColors = ref.read(themeColorsProvider);
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          gradient: themeColors.backgroundGradient,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Title header
+            Text(
+              'شجرة عائلتي 🌳',
+              style: AppTypography.headlineMedium.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            // Tree content with intelligent node sizing
+            _buildExportTreeLayout(_currentTreeData!, exportNodeSize, themeColors),
+            const SizedBox(height: AppSpacing.lg),
+            // App branding watermark
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  'assets/images/silni_branding.png',
+                  width: 36,
+                  height: 36,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  'صلني',
+                  style: AppTypography.titleMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build tree layout for export with intelligent sizing
+  Widget _buildExportTreeLayout(TreeNode root, double nodeSize, ThemeColors themeColors) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Grandparents (Level -2)
+        if (root.children.isNotEmpty &&
+            root.children.first.children.isNotEmpty) ...[
+          _buildExportGeneration(root.children.first.children, nodeSize, themeColors),
+          SizedBox(height: nodeSize * 0.15),
+          _buildExportConnectionLine(themeColors),
+          SizedBox(height: nodeSize * 0.15),
+        ],
+
+        // Parents (Level -1)
+        if (root.children.where((n) => n.level == -1).isNotEmpty) ...[
+          _buildExportGeneration(
+            root.children.where((n) => n.level == -1).toList(),
+            nodeSize,
+            themeColors,
+          ),
+          SizedBox(height: nodeSize * 0.15),
+          _buildExportConnectionLine(themeColors),
+          SizedBox(height: nodeSize * 0.15),
+        ],
+
+        // User + Siblings + Spouse (Level 0)
+        _buildExportSiblingRow(root, nodeSize, themeColors),
+
+        // Children + Extended (Level 1+)
+        if (root.children.where((n) => n.level >= 1).isNotEmpty) ...[
+          SizedBox(height: nodeSize * 0.15),
+          _buildExportConnectionLine(themeColors),
+          SizedBox(height: nodeSize * 0.15),
+          _buildExportGeneration(
+            root.children.where((n) => n.level >= 1).toList(),
+            nodeSize,
+            themeColors,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildExportConnectionLine(ThemeColors themeColors) {
+    return Container(
+      height: 25,
+      width: 3,
+      decoration: BoxDecoration(
+        gradient: themeColors.primaryGradient,
+        borderRadius: BorderRadius.circular(2),
+      ),
+    );
+  }
+
+  Widget _buildExportGeneration(List<TreeNode> nodes, double nodeSize, ThemeColors themeColors) {
+    if (nodes.isEmpty) return const SizedBox.shrink();
+
+    return Wrap(
+      spacing: nodeSize * 0.2,
+      runSpacing: nodeSize * 0.2,
+      alignment: WrapAlignment.center,
+      children: nodes.map((node) {
+        return ExportTreeNodeWidget(
+          node: node,
+          nodeSize: nodeSize,
+          themeColors: themeColors,
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildExportSiblingRow(TreeNode root, double nodeSize, ThemeColors themeColors) {
+    // Combine all level 0 members: siblings + user + spouse
+    final allMembers = <TreeNode>[];
+
+    // Add siblings first (brothers/sisters)
+    allMembers.addAll(root.siblings.where((s) =>
+      s.relationship == 'أخ' || s.relationship == 'أخت' ||
+      s.relationship.contains('أخ') || s.relationship.contains('أخت')));
+
+    // Add user (root) in the middle
+    allMembers.add(root);
+
+    // Add spouse after user
+    allMembers.addAll(root.siblings.where((s) =>
+      s.relationship == 'زوج' || s.relationship == 'زوجة' ||
+      s.relationship.contains('زوج') || s.relationship.contains('زوجة')));
+
+    if (allMembers.length == 1) {
+      return ExportTreeNodeWidget(
+        node: root,
+        nodeSize: nodeSize,
+        themeColors: themeColors,
+      );
+    }
+
+    // Use Row wrapped in FittedBox to ensure ALL siblings stay on ONE line
+    // FittedBox will scale down if needed to prevent overflow
+    // This prevents siblings from looking like children/different generation
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: allMembers.map((member) {
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: nodeSize * 0.1),
+            child: ExportTreeNodeWidget(
+              node: member,
+              nodeSize: nodeSize,
+              themeColors: themeColors,
+            ),
+          );
+        }).toList(),
+      ),
+    );
   }
 }

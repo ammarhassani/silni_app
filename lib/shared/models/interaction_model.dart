@@ -57,12 +57,20 @@ class Interaction {
 
   /// Create from Supabase JSON
   factory Interaction.fromJson(Map<String, dynamic> json) {
+    // Handle potentially null required fields (for offline queue compatibility)
+    final id = json['id'] as String? ?? '';
+    final userId = json['user_id'] as String? ?? '';
+    final relativeId = json['relative_id'] as String? ?? '';
+    final typeStr = json['type'] as String? ?? 'other';
+    final dateStr = json['date'] as String?;
+    final createdAtStr = json['created_at'] as String?;
+
     return Interaction(
-      id: json['id'] as String,
-      userId: json['user_id'] as String,
-      relativeId: json['relative_id'] as String,
-      type: InteractionType.fromString(json['type'] as String),
-      date: DateTime.parse(json['date'] as String),
+      id: id,
+      userId: userId,
+      relativeId: relativeId,
+      type: InteractionType.fromString(typeStr),
+      date: dateStr != null ? DateTime.parse(dateStr) : DateTime.now(),
       duration: json['duration'] as int?,
       location: json['location'] as String?,
       notes: json['notes'] as String?,
@@ -72,7 +80,7 @@ class Interaction {
           : [],
       rating: json['rating'] as int?,
       isRecurring: json['is_recurring'] as bool? ?? false,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: createdAtStr != null ? DateTime.parse(createdAtStr) : DateTime.now(),
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
           : null,

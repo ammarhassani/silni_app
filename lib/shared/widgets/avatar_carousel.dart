@@ -232,10 +232,12 @@ class _AvatarCarouselState extends State<AvatarCarousel> {
                               color: AppColors.joyfulOrange,
                               border: Border.all(color: Colors.white, width: 2),
                             ),
-                            child: const Icon(
-                              Icons.notifications_active,
-                              color: Colors.white,
-                              size: 12,
+                            child: const Center(
+                              child: Icon(
+                                Icons.notifications_active,
+                                color: Colors.white,
+                                size: 12,
+                              ),
                             ),
                           ),
                         ),

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:universal_html/html.dart' as html;
+import '../../core/services/app_logger_service.dart';
 
 /// Simple session persistence service for managing login sessions
 class SessionPersistenceService {
@@ -9,6 +10,8 @@ class SessionPersistenceService {
       SessionPersistenceService._internal();
   factory SessionPersistenceService() => _instance;
   SessionPersistenceService._internal();
+
+  final AppLoggerService _logger = AppLoggerService();
 
   // Session persistence keys
   static const String _sessionActiveKey = 'session_active';
@@ -32,9 +35,12 @@ class SessionPersistenceService {
         userId: userId,
       );
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [SESSION] Failed to mark logged in: $e');
-      }
+      _logger.warning(
+        'Failed to mark user logged in',
+        category: LogCategory.auth,
+        tag: 'SessionPersistenceService',
+        metadata: {'userId': userId, 'error': e.toString()},
+      );
     }
   }
 
@@ -43,9 +49,12 @@ class SessionPersistenceService {
     try {
       await _clearSessionData();
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [SESSION] Failed to mark logged out: $e');
-      }
+      _logger.warning(
+        'Failed to mark user logged out',
+        category: LogCategory.auth,
+        tag: 'SessionPersistenceService',
+        metadata: {'error': e.toString()},
+      );
     }
   }
 
@@ -101,6 +110,12 @@ class SessionPersistenceService {
         };
       }
     } catch (e) {
+      _logger.warning(
+        'Failed to get stored session data',
+        category: LogCategory.auth,
+        tag: 'SessionPersistenceService',
+        metadata: {'error': e.toString()},
+      );
       return null;
     }
   }
@@ -141,9 +156,12 @@ class SessionPersistenceService {
       await storage.write(key: _storedPasswordKey, value: password);
       await storage.write(key: _biometricEnabledKey, value: 'true');
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [SESSION] Failed to save biometric: $e');
-      }
+      _logger.warning(
+        'Failed to save biometric credentials',
+        category: LogCategory.auth,
+        tag: 'SessionPersistenceService',
+        metadata: {'error': e.toString()},
+      );
     }
   }
 
@@ -164,6 +182,12 @@ class SessionPersistenceService {
 
       return {'email': email, 'password': password};
     } catch (e) {
+      _logger.warning(
+        'Failed to get biometric credentials',
+        category: LogCategory.auth,
+        tag: 'SessionPersistenceService',
+        metadata: {'error': e.toString()},
+      );
       return null;
     }
   }
@@ -177,6 +201,12 @@ class SessionPersistenceService {
       final enabled = await storage.read(key: _biometricEnabledKey);
       return enabled == 'true';
     } catch (e) {
+      _logger.warning(
+        'Failed to check if biometric login is enabled',
+        category: LogCategory.auth,
+        tag: 'SessionPersistenceService',
+        metadata: {'error': e.toString()},
+      );
       return false;
     }
   }
@@ -191,9 +221,12 @@ class SessionPersistenceService {
       await storage.delete(key: _storedPasswordKey);
       await storage.delete(key: _biometricEnabledKey);
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [SESSION] Failed to clear biometric: $e');
-      }
+      _logger.warning(
+        'Failed to clear biometric credentials',
+        category: LogCategory.auth,
+        tag: 'SessionPersistenceService',
+        metadata: {'error': e.toString()},
+      );
     }
   }
 }

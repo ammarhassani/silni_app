@@ -6,6 +6,7 @@ class AppRoutes {
   static const String onboarding = '/onboarding';
   static const String login = '/login';
   static const String signup = '/signup';
+  static const String emailVerification = '/email-verification';
 
   // Main routes
   static const String home = '/home';
@@ -18,7 +19,6 @@ class AppRoutes {
   // Sub-routes
   static const String addRelative = '/add-relative';
   static const String editRelative = '/edit-relative';
-  static const String addInteraction = '/add-interaction';
   static const String reminders = '/reminders';
   static const String remindersDue = '/reminders-due';
   static const String familyTree = '/family-tree';

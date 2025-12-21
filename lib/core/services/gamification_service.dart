@@ -115,77 +115,64 @@ class GamificationService {
   }
 
   // =====================================================
-  // STREAK TRACKING
+  // STREAK TRACKING (24h-based, Snapchat-like)
   // =====================================================
 
   /// Update user's streak after an interaction
+  ///
+  /// Streak Logic (24h-based):
+  /// - Timer resets to 24h on EVERY interaction
+  /// - Streak increments once per 24h period (24-48h since last)
+  /// - Streak breaks if > 48h pass without interaction
   Future<Map<String, dynamic>> updateStreak(String userId) async {
     try {
-      // Get user's current streak data and last interaction date
+      // Get user's current streak data and last interaction timestamp
       final userData = await _supabase
           .from('users')
-          .select('current_streak, longest_streak, last_streak_date')
+          .select('current_streak, longest_streak, last_interaction_at')
           .eq('id', userId)
           .single();
 
       final int currentStreak = userData['current_streak'] ?? 0;
       final int longestStreak = userData['longest_streak'] ?? 0;
-      final String? lastStreakDateStr = userData['last_streak_date'];
+      final String? lastInteractionAtStr = userData['last_interaction_at'];
 
       final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-      final yesterday = DateTime(now.year, now.month, now.day - 1);
-
-      // Parse last streak date if available
-      DateTime? lastStreakDate;
-      if (lastStreakDateStr != null) {
-        final parsed = DateTime.parse(lastStreakDateStr);
-        lastStreakDate = DateTime(parsed.year, parsed.month, parsed.day);
-      }
-
-      int newStreak = currentStreak;
+      int newStreak;
       bool streakIncreased = false;
-      bool shouldUpdateDate = false;
 
-      // Check if we already processed streak today
-      if (lastStreakDate != null && lastStreakDate.isAtSameMomentAs(today)) {
-        // Already counted today's interaction - no streak change needed
-        return {
-          'current_streak': currentStreak,
-          'longest_streak': longestStreak,
-          'streak_increased': false,
-        };
-      }
-
-      // First interaction today - determine streak behavior
-      if (lastStreakDate == null) {
-        // No previous streak date - start fresh
+      if (lastInteractionAtStr == null) {
+        // First interaction ever - start streak at 1
         newStreak = 1;
         streakIncreased = true;
-        shouldUpdateDate = true;
-      } else if (lastStreakDate.isAtSameMomentAs(yesterday)) {
-        // Had interaction yesterday - continue streak
-        newStreak = currentStreak + 1;
-        streakIncreased = true;
-        shouldUpdateDate = true;
-      } else if (lastStreakDate.isBefore(yesterday)) {
-        // Streak broken (missed a day) - reset to 1
-        newStreak = 1;
-        streakIncreased = true; // New streak starts
-        shouldUpdateDate = true;
+      } else {
+        final lastInteraction = DateTime.parse(lastInteractionAtStr);
+        final hoursSinceLast = now.difference(lastInteraction).inHours;
+
+        if (hoursSinceLast > 48) {
+          // More than 48h passed - streak broken completely
+          newStreak = 1;
+          streakIncreased = true; // New streak starts
+        } else if (hoursSinceLast >= 24) {
+          // 24-48h window - new day earned, increment streak
+          newStreak = currentStreak + 1;
+          streakIncreased = true;
+        } else {
+          // Within 24h - same period, no increment (but timer resets)
+          newStreak = currentStreak;
+          streakIncreased = false;
+        }
       }
 
       // Update longest streak if necessary
       final newLongestStreak = newStreak > longestStreak ? newStreak : longestStreak;
 
-      // Update database with streak and last_streak_date
-      if (shouldUpdateDate) {
-        await _supabase.from('users').update({
-          'current_streak': newStreak,
-          'longest_streak': newLongestStreak,
-          'last_streak_date': today.toIso8601String().split('T')[0], // Store as date only
-        }).eq('id', userId);
-      }
+      // ALWAYS update last_interaction_at (resets the 24h timer display)
+      await _supabase.from('users').update({
+        'current_streak': newStreak,
+        'longest_streak': newLongestStreak,
+        'last_interaction_at': now.toUtc().toIso8601String(), // Full timestamp
+      }).eq('id', userId);
 
       // Emit streak events
       if (streakIncreased) {
@@ -209,6 +196,7 @@ class GamificationService {
         'current_streak': newStreak,
         'longest_streak': newLongestStreak,
         'streak_increased': streakIncreased,
+        'last_interaction_at': now.toUtc().toIso8601String(),
       };
     } catch (e) {
       if (kDebugMode) {

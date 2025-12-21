@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS users (
   total_interactions INTEGER NOT NULL DEFAULT 0,
   current_streak INTEGER NOT NULL DEFAULT 0,
   longest_streak INTEGER NOT NULL DEFAULT 0,
+  last_interaction_at TIMESTAMPTZ, -- Timestamp of last interaction (for 24h streak logic)
   points INTEGER NOT NULL DEFAULT 0,
   level INTEGER NOT NULL DEFAULT 1,
   badges TEXT[] NOT NULL DEFAULT '{}',

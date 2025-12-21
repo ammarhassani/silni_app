@@ -8,12 +8,14 @@ class TreeNodeWidget extends StatelessWidget {
   final TreeNode node;
   final bool isSelected;
   final VoidCallback onTap;
+  final double nodeSize;
 
   const TreeNodeWidget({
     super.key,
     required this.node,
     this.isSelected = false,
     required this.onTap,
+    this.nodeSize = 80,
   });
 
   @override
@@ -29,8 +31,8 @@ class TreeNodeWidget extends StatelessWidget {
               // Outer glow for selected node
               if (isSelected)
                 Container(
-                  width: 90,
-                  height: 90,
+                  width: nodeSize + 10,
+                  height: nodeSize + 10,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: node.isRoot
@@ -50,8 +52,8 @@ class TreeNodeWidget extends StatelessWidget {
 
               // Main node circle
               Container(
-                width: 80,
-                height: 80,
+                width: nodeSize,
+                height: nodeSize,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: node.isRoot
@@ -76,7 +78,7 @@ class TreeNodeWidget extends StatelessWidget {
                 child: Center(
                   child: Text(
                     node.emoji,
-                    style: const TextStyle(fontSize: 36),
+                    style: TextStyle(fontSize: nodeSize * 0.45),
                   ),
                 ),
               ),
@@ -87,16 +89,16 @@ class TreeNodeWidget extends StatelessWidget {
                   top: 0,
                   right: 0,
                   child: Container(
-                    width: 24,
-                    height: 24,
+                    width: nodeSize * 0.3,
+                    height: nodeSize * 0.3,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: AppColors.goldenGradient,
                       border: Border.all(color: Colors.white, width: 2),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.star_rounded,
-                      size: 14,
+                      size: nodeSize * 0.175,
                       color: Colors.white,
                     ),
                   ),
@@ -108,16 +110,16 @@ class TreeNodeWidget extends StatelessWidget {
                   bottom: 0,
                   left: 0,
                   child: Container(
-                    width: 24,
-                    height: 24,
+                    width: nodeSize * 0.3,
+                    height: nodeSize * 0.3,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: AppColors.calmBlue,
                       border: Border.all(color: Colors.white, width: 2),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.people_rounded,
-                      size: 14,
+                      size: nodeSize * 0.175,
                       color: Colors.white,
                     ),
                   ),
@@ -128,7 +130,7 @@ class TreeNodeWidget extends StatelessWidget {
 
           // Name
           Container(
-            constraints: const BoxConstraints(maxWidth: 100),
+            constraints: BoxConstraints(maxWidth: nodeSize * 1.25),
             child: Text(
               node.name,
               style: AppTypography.bodySmall.copyWith(

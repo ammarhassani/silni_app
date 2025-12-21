@@ -15,6 +15,7 @@ final todayContactedRelativesProvider =
     StreamProvider.family<Set<String>, String>((ref, userId) {
   final now = DateTime.now();
   final startOfDay = DateTime(now.year, now.month, now.day);
+  final endOfDay = startOfDay.add(const Duration(days: 1));
 
   return Supabase.instance.client
       .from('interactions')
@@ -25,9 +26,10 @@ final todayContactedRelativesProvider =
         final todayInteractions = data.where((interaction) {
           final dateStr = interaction['date'] as String?;
           if (dateStr == null) return false;
-          final date = DateTime.parse(dateStr);
-          return date.isAfter(startOfDay) ||
-              date.isAtSameMomentAs(startOfDay);
+          final date = DateTime.parse(dateStr).toLocal();
+          // Check both start and end of day boundaries
+          return (date.isAfter(startOfDay) || date.isAtSameMomentAs(startOfDay))
+              && date.isBefore(endOfDay);
         });
         return todayInteractions
             .map((i) => i['relative_id'] as String)

@@ -11,7 +11,7 @@ import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/swipeable_relative_card.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
-import '../../../shared/providers/interactions_provider.dart';
+import '../../../core/providers/cache_provider.dart';
 import '../../../core/router/app_routes.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../home/providers/home_providers.dart';
@@ -287,8 +287,8 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
             context.push('${AppRoutes.relativeDetail}/${relative.id}');
           },
           onMarkContacted: () async {
-            final interactionsService = ref.read(interactionsServiceProvider);
-            await interactionsService.createInteraction(
+            final repository = ref.read(interactionsRepositoryProvider);
+            await repository.createInteraction(
               Interaction(
                 id: '',
                 userId: userId,

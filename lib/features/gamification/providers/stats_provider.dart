@@ -34,6 +34,22 @@ class DetailedStats {
   );
 }
 
+/// Parse badges from database (can be strings or maps)
+List<Map<String, dynamic>> _parseBadges(dynamic badges) {
+  if (badges == null) return [];
+  if (badges is! List) return [];
+
+  return badges.map((badge) {
+    if (badge is Map<String, dynamic>) {
+      return badge;
+    } else if (badge is String) {
+      return {'name': badge, 'id': badge};
+    } else {
+      return {'name': badge.toString(), 'id': badge.toString()};
+    }
+  }).toList();
+}
+
 /// Provider for loading detailed statistics
 final detailedStatsProvider = FutureProvider.autoDispose<DetailedStats>((ref) async {
   final user = ref.watch(currentUserProvider);
@@ -141,8 +157,6 @@ final detailedStatsProvider = FutureProvider.autoDispose<DetailedStats>((ref) as
         .toList(),
     topRelatives: topRelativesData,
     timePatterns: hourlyPatterns,
-    achievements: (userResponse['badges'] as List<dynamic>?)
-            ?.cast<Map<String, dynamic>>() ??
-        [],
+    achievements: _parseBadges(userResponse['badges']),
   );
 });

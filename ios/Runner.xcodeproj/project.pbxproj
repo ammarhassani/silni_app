@@ -18,6 +18,7 @@
 		E675BB27791DAFFDC5E9A8AF /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A754B578B95DDB585B758D25 /* Pods_RunnerTests.framework */; };
 		EDFA25AD2EEC8EE000C471BA /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = EDFA25AC2EEC8EE000C471BA /* GoogleService-Info.plist */; };
 		EDFA25AE2EEC8EE000C471BA /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = EDFA25AC2EEC8EE000C471BA /* GoogleService-Info.plist */; };
+		SILNI00012EF08A0100000001 /* silni_default.wav in Resources */ = {isa = PBXBuildFile; fileRef = SILNI00012EF08A0100000002 /* silni_default.wav */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -69,6 +70,7 @@
 		A754B578B95DDB585B758D25 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		E5159858086E54F5E7D42CC2 /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
 		EDFA25AC2EEC8EE000C471BA /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		SILNI00012EF08A0100000002 /* silni_default.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = silni_default.wav; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -153,6 +155,7 @@
 				1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */,
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
+				SILNI00012EF08A0100000002 /* silni_default.wav */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -272,6 +275,7 @@
 				EDFA25AD2EEC8EE000C471BA /* GoogleService-Info.plist in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
+				SILNI00012EF08A0100000001 /* silni_default.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

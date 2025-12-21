@@ -268,10 +268,12 @@ class _LogInteractionDialogState extends State<LogInteractionDialog> {
                       gradient: AppColors.primaryGradient,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.add_comment_rounded,
-                      color: Colors.white,
-                      size: 24,
+                    child: const Center(
+                      child: Icon(
+                        Icons.add_comment_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),

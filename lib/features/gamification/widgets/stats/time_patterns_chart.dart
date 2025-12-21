@@ -70,12 +70,15 @@ class TimePatternsChart extends StatelessWidget {
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
+                        reservedSize: 30,
                         getTitlesWidget: (value, meta) {
                           final hour = value.toInt();
+                          // Only show labels for every 4 hours
+                          if (hour % 4 != 0) return const SizedBox.shrink();
                           return Padding(
                             padding: const EdgeInsets.only(top: 8),
                             child: Text(
-                              '${hour.toString().padLeft(2, '0')}:00',
+                              '$hour',
                               style: AppTypography.bodySmall.copyWith(
                                 color: Colors.white70,
                                 fontSize: 10,
@@ -107,9 +110,9 @@ class TimePatternsChart extends StatelessWidget {
                         BarChartRodData(
                           toY: count.toDouble(),
                           color: AppColors.emotionalPurple,
-                          width: 8,
+                          width: 6,
                           borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(4),
+                            top: Radius.circular(3),
                           ),
                         ),
                       ],

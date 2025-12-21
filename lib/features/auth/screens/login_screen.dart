@@ -20,6 +20,9 @@ import '../../../core/services/app_logger_service.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/errors/app_errors.dart';
 import '../../../core/services/error_handler_service.dart';
+import '../widgets/social_login_button.dart';
+import '../widgets/name_prompt_dialog.dart';
+import 'dart:io' show Platform;
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -36,6 +39,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _obscurePassword = true;
   bool _biometricAvailable = false;
   bool _hasSavedCredentials = false;
+  bool _isGoogleLoading = false;
+  bool _isAppleLoading = false;
 
   @override
   void dispose() {
@@ -154,9 +159,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       // Track login and set user ID
       final analytics = ref.read(analyticsServiceProvider);
-      analytics.logLogin('biometric').catchError((e) {});
+      analytics.logLogin('biometric').catchError((e) {
+        logger.warning('Analytics logLogin failed: $e', category: LogCategory.analytics, tag: 'LoginScreen');
+      });
       if (credential.user != null) {
-        analytics.setUserId(credential.user!.id).catchError((e) {});
+        analytics.setUserId(credential.user!.id).catchError((e) {
+          logger.warning('Analytics setUserId failed: $e', category: LogCategory.analytics, tag: 'LoginScreen');
+        });
       }
 
       if (!mounted) return;
@@ -323,7 +332,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
       });
       if (credential.user != null) {
-        analytics.setUserId(credential.user!.id).catchError((e) {});
+        analytics.setUserId(credential.user!.id).catchError((e) {
+          logger.warning('Analytics setUserId failed: $e', category: LogCategory.analytics, tag: 'LoginScreen');
+        });
       }
 
       if (!mounted) {
@@ -551,20 +562,164 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     emailController.dispose();
   }
 
+  // Sign in with Google
+  Future<void> _signInWithGoogle() async {
+    final logger = AppLoggerService();
+
+    setState(() => _isGoogleLoading = true);
+
+    try {
+      logger.info(
+        'Starting Google sign in from LoginScreen',
+        category: LogCategory.auth,
+        tag: 'LoginScreen',
+      );
+
+      final authService = ref.read(authServiceProvider);
+      final credential = await authService.signInWithGoogle();
+
+      if (!mounted) return;
+
+      // Track login event
+      final analytics = ref.read(analyticsServiceProvider);
+      analytics.logLogin('google').catchError((e) {
+        logger.warning('Analytics logLogin failed: $e', category: LogCategory.analytics, tag: 'LoginScreen');
+      });
+      if (credential.user != null) {
+        analytics.setUserId(credential.user!.id).catchError((e) {
+          logger.warning('Analytics setUserId failed: $e', category: LogCategory.analytics, tag: 'LoginScreen');
+        });
+      }
+
+      logger.info(
+        'Google sign in successful, navigating to home',
+        category: LogCategory.auth,
+        tag: 'LoginScreen',
+      );
+
+      context.go(AppRoutes.home);
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      setState(() => _isGoogleLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AuthService.getErrorMessage(e.message)),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isGoogleLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AuthService.getErrorMessage(e.toString())),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  // Sign in with Apple
+  Future<void> _signInWithApple() async {
+    final logger = AppLoggerService();
+
+    setState(() => _isAppleLoading = true);
+
+    try {
+      logger.info(
+        'Starting Apple sign in from LoginScreen',
+        category: LogCategory.auth,
+        tag: 'LoginScreen',
+      );
+
+      final authService = ref.read(authServiceProvider);
+      final credential = await authService.signInWithApple();
+
+      if (!mounted) return;
+
+      // Track login event
+      final analytics = ref.read(analyticsServiceProvider);
+      analytics.logLogin('apple').catchError((e) {
+        logger.warning('Analytics logLogin failed: $e', category: LogCategory.analytics, tag: 'LoginScreen');
+      });
+      if (credential.user != null) {
+        analytics.setUserId(credential.user!.id).catchError((e) {
+          logger.warning('Analytics setUserId failed: $e', category: LogCategory.analytics, tag: 'LoginScreen');
+        });
+      }
+
+      logger.info(
+        'Apple sign in successful',
+        category: LogCategory.auth,
+        tag: 'LoginScreen',
+      );
+
+      // Check if user needs to set a display name (Apple private relay email)
+      if (authService.needsDisplayName) {
+        logger.info(
+          'User needs display name, showing prompt',
+          category: LogCategory.auth,
+          tag: 'LoginScreen',
+        );
+
+        await NamePromptDialog.show(
+          context,
+          onSubmit: (name) async {
+            await authService.updateDisplayName(name);
+          },
+        );
+      }
+
+      if (!mounted) return;
+      context.go(AppRoutes.home);
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      setState(() => _isAppleLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AuthService.getErrorMessage(e.message)),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isAppleLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AuthService.getErrorMessage(e.toString())),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: GradientBackground(
         animated: true,
         child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight - (AppSpacing.lg * 2),
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
                     // Logo
                     Container(
                           width: 100,
@@ -763,18 +918,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                               const SizedBox(height: AppSpacing.sm),
 
-                              // Forgot password
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: TextButton(
-                                  onPressed: _showForgotPasswordDialog,
-                                  child: Text(
-                                    'نسيت كلمة المرور؟',
-                                    style: AppTypography.labelMedium.copyWith(
-                                      color: Colors.white.withValues(alpha: 0.8),
+                              // Forgot password & Sign up row
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  TextButton(
+                                    onPressed: () => context.go(AppRoutes.signup),
+                                    child: Text(
+                                      'إنشاء حساب جديد',
+                                      style: AppTypography.labelMedium.copyWith(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
-                                ),
+                                  TextButton(
+                                    onPressed: _showForgotPasswordDialog,
+                                    child: Text(
+                                      'نسيت كلمة المرور؟',
+                                      style: AppTypography.labelMedium.copyWith(
+                                        color: Colors.white.withValues(alpha: 0.8),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
 
                               const SizedBox(height: AppSpacing.md),
@@ -853,38 +1020,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         .fadeIn(duration: const Duration(milliseconds: 800))
                         .slideY(begin: 0.3, end: 0, curve: Curves.easeOut),
 
-                    const SizedBox(height: AppSpacing.xl),
+                    const SizedBox(height: AppSpacing.lg),
 
-                    // Sign up link
-                    Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'ليس لديك حساب؟',
-                              style: AppTypography.bodyMedium.copyWith(
-                                color: Colors.white.withValues(alpha: 0.8),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                context.go(AppRoutes.signup);
-                              },
-                              child: Text(
-                                'سجّل الآن',
-                                style: AppTypography.labelLarge.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                        .animate(delay: const Duration(milliseconds: 800))
+                    // Social login section
+                    Column(
+                      children: [
+                        const OrDivider(text: 'أو سجّل / ادخل بـ'),
+                        const SizedBox(height: AppSpacing.md),
+
+                        // Google Sign-In button
+                        SocialLoginButton(
+                          provider: SocialProvider.google,
+                          onPressed: _signInWithGoogle,
+                          isLoading: _isGoogleLoading,
+                        ),
+
+                        // Apple Sign-In button (iOS only)
+                        if (!kIsWeb && Platform.isIOS) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          SocialLoginButton(
+                            provider: SocialProvider.apple,
+                            onPressed: _signInWithApple,
+                            isLoading: _isAppleLoading,
+                          ),
+                        ],
+                      ],
+                    )
+                        .animate(delay: const Duration(milliseconds: 700))
                         .fadeIn(duration: const Duration(milliseconds: 600)),
-                  ],
+
+                    const SizedBox(height: AppSpacing.lg),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ),

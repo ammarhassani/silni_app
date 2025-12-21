@@ -110,6 +110,14 @@ class RealtimeSubscriptionsNotifier
           // Invalidate the interactions stream provider to trigger UI refresh
           _ref.invalidate(todayInteractionsStreamProvider(userId));
 
+          // Invalidate today contacted relatives provider for home screen checkmarks
+          _ref.invalidate(todayContactedRelativesProvider(userId));
+
+          // Note: todayDueRelativesProvider is a pure derived provider that takes
+          // schedules and relatives as parameters. It will automatically update
+          // when the parent providers (relativesStreamProvider, reminderSchedulesStreamProvider)
+          // are invalidated and widgets re-read fresh data.
+
           // Also invalidate the service provider
           _ref.invalidate(interactionsServiceProvider);
 

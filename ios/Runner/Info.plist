@@ -32,9 +32,21 @@
 				<string>com.silni.app</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>Google Sign-In</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.1049917341546-e8014s5klpg00d3gdf7gp5co99pejbmv</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>GIDClientID</key>
+	<string>1049917341546-e8014s5klpg00d3gdf7gp5co99pejbmv.apps.googleusercontent.com</string>
 	<key>FirebaseMessagingAutoInitEnabled</key>
 	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>

@@ -25,4 +25,12 @@ abstract class EnvServices {
   /// Cloudinary upload preset
   @EnviedField(varName: 'CLOUDINARY_UPLOAD_PRESET', defaultValue: '')
   static String cloudinaryUploadPreset = _EnvServices.cloudinaryUploadPreset;
+
+  /// Google OAuth - iOS Client ID (for Google Sign-In)
+  @EnviedField(varName: 'GOOGLE_IOS_CLIENT_ID', defaultValue: '')
+  static String googleIosClientId = _EnvServices.googleIosClientId;
+
+  /// Google OAuth - Web Client ID (for Supabase OAuth)
+  @EnviedField(varName: 'GOOGLE_WEB_CLIENT_ID', defaultValue: '')
+  static String googleWebClientId = _EnvServices.googleWebClientId;
 }

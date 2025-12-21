@@ -1,12 +1,13 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
+import '../../core/services/app_logger_service.dart';
 import '../models/hadith_model.dart';
 
 class HadithService {
   final SupabaseClient _supabase = SupabaseConfig.client;
+  final AppLoggerService _logger = AppLoggerService();
   static const String _table = 'hadith';
   static const String _lastIndexKey = 'last_hadith_index';
 
@@ -142,11 +143,19 @@ class HadithService {
 
       return hadithList[nextIndex];
     } on TimeoutException {
+      _logger.warning(
+        'Hadith query timed out, using fallback',
+        category: LogCategory.database,
+        tag: 'HadithService',
+      );
       return _getDefaultHadithFallback();
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [HADITH] Error: $e');
-      }
+      _logger.warning(
+        'Failed to get daily hadith, using fallback',
+        category: LogCategory.database,
+        tag: 'HadithService',
+        metadata: {'error': e.toString()},
+      );
       return _getDefaultHadithFallback();
     }
   }
@@ -169,6 +178,12 @@ class HadithService {
         'createdAt': DateTime.now(),
       });
     } catch (e) {
+      _logger.warning(
+        'Failed to get default hadith fallback',
+        category: LogCategory.database,
+        tag: 'HadithService',
+        metadata: {'error': e.toString()},
+      );
       return null;
     }
   }
@@ -203,9 +218,12 @@ class HadithService {
 
       return response['id'] as String;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [HADITH] Error adding: $e');
-      }
+      _logger.error(
+        'Failed to add hadith',
+        category: LogCategory.database,
+        tag: 'HadithService',
+        metadata: {'error': e.toString()},
+      );
       rethrow;
     }
   }
@@ -219,9 +237,12 @@ class HadithService {
           .update(updates)
           .eq('id', hadithId);
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [HADITH] Error updating: $e');
-      }
+      _logger.error(
+        'Failed to update hadith',
+        category: LogCategory.database,
+        tag: 'HadithService',
+        metadata: {'hadithId': hadithId, 'error': e.toString()},
+      );
       rethrow;
     }
   }
@@ -234,9 +255,12 @@ class HadithService {
           .delete()
           .eq('id', hadithId);
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [HADITH] Error deleting: $e');
-      }
+      _logger.error(
+        'Failed to delete hadith',
+        category: LogCategory.database,
+        tag: 'HadithService',
+        metadata: {'hadithId': hadithId, 'error': e.toString()},
+      );
       rethrow;
     }
   }

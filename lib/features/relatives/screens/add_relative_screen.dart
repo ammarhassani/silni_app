@@ -18,7 +18,7 @@ import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/models/relative_model.dart';
-import '../../../shared/services/relatives_service.dart';
+import '../../../core/providers/cache_provider.dart';
 import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/widgets/health_status_picker.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -46,7 +46,6 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   AvatarType? _selectedAvatar; // User-selected avatar
   String? _healthStatus; // Health status of the relative
 
-  final RelativesService _relativesService = RelativesService();
   final SupabaseStorageService _storageService = SupabaseStorageService();
 
   // Confetti controller for celebration animation
@@ -143,7 +142,8 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         createdAt: DateTime.now(),
       );
 
-      await _relativesService.createRelative(relative);
+      final repository = ref.read(relativesRepositoryProvider);
+      await repository.createRelative(relative);
 
       if (!mounted) return;
 

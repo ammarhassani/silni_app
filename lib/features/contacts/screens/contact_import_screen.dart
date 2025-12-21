@@ -17,7 +17,7 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/relationship_specification_dialog.dart';
 import '../../../shared/models/relative_model.dart';
-import '../../../shared/services/relatives_service.dart';
+import '../../../core/providers/cache_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class ContactImportScreen extends ConsumerStatefulWidget {
@@ -29,7 +29,6 @@ class ContactImportScreen extends ConsumerStatefulWidget {
 }
 
 class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
-  final RelativesService _relativesService = RelativesService();
   final TextEditingController _searchController = TextEditingController();
   final ConfettiController _confettiController = ConfettiController(
     duration: const Duration(seconds: 3),
@@ -203,7 +202,8 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
             createdAt: DateTime.now(),
           );
 
-          await _relativesService.createRelative(relative);
+          final repository = ref.read(relativesRepositoryProvider);
+          await repository.createRelative(relative);
           successCount++;
         } catch (e) {
           errorCount++;

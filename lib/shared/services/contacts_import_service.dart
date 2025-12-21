@@ -1,12 +1,21 @@
 import 'package:flutter_contacts/flutter_contacts.dart';
 import '../models/relative_model.dart';
+import '../../core/services/app_logger_service.dart';
 
 class ContactsImportService {
+  final AppLoggerService _logger = AppLoggerService();
+
   /// Request contacts permission
   Future<bool> requestPermission() async {
     try {
       return await FlutterContacts.requestPermission();
     } catch (e) {
+      _logger.warning(
+        'Failed to request contacts permission',
+        category: LogCategory.service,
+        tag: 'ContactsImportService',
+        metadata: {'error': e.toString()},
+      );
       return false;
     }
   }
@@ -19,6 +28,12 @@ class ContactsImportService {
         withPhoto: true,
       );
     } catch (e) {
+      _logger.warning(
+        'Failed to get all contacts',
+        category: LogCategory.service,
+        tag: 'ContactsImportService',
+        metadata: {'error': e.toString()},
+      );
       return [];
     }
   }
@@ -32,6 +47,12 @@ class ContactsImportService {
         return name.contains(query.toLowerCase());
       }).toList();
     } catch (e) {
+      _logger.warning(
+        'Failed to search contacts',
+        category: LogCategory.service,
+        tag: 'ContactsImportService',
+        metadata: {'query': query, 'error': e.toString()},
+      );
       return [];
     }
   }
@@ -201,6 +222,12 @@ class ContactsImportService {
         return createSuggestedRelative(userId: userId, contact: contact);
       }).toList();
     } catch (e) {
+      _logger.warning(
+        'Failed to batch import contacts',
+        category: LogCategory.service,
+        tag: 'ContactsImportService',
+        metadata: {'userId': userId, 'contactCount': contacts.length, 'error': e.toString()},
+      );
       return [];
     }
   }
@@ -216,6 +243,12 @@ class ContactsImportService {
         return relationship != RelationshipType.other;
       }).toList();
     } catch (e) {
+      _logger.warning(
+        'Failed to get family contacts',
+        category: LogCategory.service,
+        tag: 'ContactsImportService',
+        metadata: {'error': e.toString()},
+      );
       return [];
     }
   }

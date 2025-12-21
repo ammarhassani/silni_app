@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:silni_app/core/config/supabase_config.dart';
+import 'package:silni_app/core/services/app_logger_service.dart';
 
 /// Export status enum for tracking progress
 enum ExportStatus {
@@ -125,6 +125,7 @@ class ExportResult {
 /// Service for exporting user data (GDPR + Saudi PDPL compliant)
 class DataExportService {
   final SupabaseClient _client;
+  final AppLoggerService _logger = AppLoggerService();
 
   DataExportService({SupabaseClient? client})
       : _client = client ?? SupabaseConfig.client;
@@ -215,7 +216,12 @@ class DataExportService {
 
       return response;
     } catch (e) {
-      debugPrint('Error fetching user profile: $e');
+      _logger.warning(
+        'Error fetching user profile for export',
+        category: LogCategory.database,
+        tag: 'DataExportService',
+        metadata: {'userId': userId, 'error': e.toString()},
+      );
       // Return basic profile on error
       final user = _client.auth.currentUser;
       return {
@@ -238,7 +244,12 @@ class DataExportService {
 
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
-      debugPrint('Error fetching relatives: $e');
+      _logger.warning(
+        'Error fetching relatives for export',
+        category: LogCategory.database,
+        tag: 'DataExportService',
+        metadata: {'userId': userId, 'error': e.toString()},
+      );
       return [];
     }
   }
@@ -255,7 +266,12 @@ class DataExportService {
 
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
-      debugPrint('Error fetching interactions: $e');
+      _logger.warning(
+        'Error fetching interactions for export',
+        category: LogCategory.database,
+        tag: 'DataExportService',
+        metadata: {'userId': userId, 'error': e.toString()},
+      );
       return [];
     }
   }
@@ -272,7 +288,12 @@ class DataExportService {
 
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
-      debugPrint('Error fetching reminder schedules: $e');
+      _logger.warning(
+        'Error fetching reminder schedules for export',
+        category: LogCategory.database,
+        tag: 'DataExportService',
+        metadata: {'userId': userId, 'error': e.toString()},
+      );
       return [];
     }
   }
@@ -290,7 +311,12 @@ class DataExportService {
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       // Table might not exist - return empty list
-      debugPrint('Error fetching notification history: $e');
+      _logger.warning(
+        'Error fetching notification history for export (table may not exist)',
+        category: LogCategory.database,
+        tag: 'DataExportService',
+        metadata: {'userId': userId, 'error': e.toString()},
+      );
       return [];
     }
   }

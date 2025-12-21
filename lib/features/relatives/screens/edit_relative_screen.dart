@@ -13,7 +13,7 @@ import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/models/relative_model.dart';
-import '../../../shared/services/relatives_service.dart';
+import '../../../core/providers/cache_provider.dart';
 import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/widgets/health_status_picker.dart';
 
@@ -45,7 +45,6 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
   String? _healthStatus;
   Relative? _relative;
 
-  final RelativesService _relativesService = RelativesService();
   final SupabaseStorageService _storageService = SupabaseStorageService();
 
   @override
@@ -55,7 +54,8 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
   }
 
   Future<void> _loadRelative() async {
-    final relative = await _relativesService.getRelative(widget.relativeId);
+    final repository = ref.read(relativesRepositoryProvider);
+    final relative = await repository.getRelative(widget.relativeId);
     if (relative != null && mounted) {
       setState(() {
         _relative = relative;
@@ -148,7 +148,8 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
           );
 
       // Update relative
-      await _relativesService.updateRelative(widget.relativeId, {
+      final repository = ref.read(relativesRepositoryProvider);
+      await repository.updateRelative(widget.relativeId, {
         'full_name': _nameController.text.trim(),
         'relationship_type': _selectedRelationship.value,
         'gender': _selectedGender?.value,

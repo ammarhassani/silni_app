@@ -2,40 +2,39 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
-import '../../../shared/services/relatives_service.dart';
 import '../../../shared/services/hadith_service.dart';
-import '../../../shared/services/reminder_schedules_service.dart';
-import '../../../shared/providers/interactions_provider.dart';
+import '../../../core/providers/cache_provider.dart';
+import '../../../core/config/supabase_config.dart';
 
 /// Provider for HadithService
 final hadithServiceProvider = Provider((ref) {
   return HadithService();
 });
 
-/// Stream provider for relatives list
+/// Stream provider for relatives list (cache-first via repository)
 final relativesStreamProvider = StreamProvider.family<List<Relative>, String>((
   ref,
   userId,
 ) {
   ref.keepAlive();
-  final service = ref.watch(relativesServiceProvider);
-  return service.getRelativesStream(userId);
+  final repository = ref.watch(relativesRepositoryProvider);
+  return repository.watchRelatives(userId);
 });
 
-/// Stream provider for today's interactions
+/// Stream provider for today's interactions (cache-first via repository)
 final todayInteractionsStreamProvider =
     StreamProvider.family<List<Interaction>, String>((ref, userId) {
       ref.keepAlive();
-      final service = ref.watch(interactionsServiceProvider);
-      return service.getTodayInteractionsStream(userId);
+      final repository = ref.watch(interactionsRepositoryProvider);
+      return repository.watchTodayInteractions(userId);
     });
 
-/// Stream provider for reminder schedules
+/// Stream provider for reminder schedules (cache-first via repository)
 final reminderSchedulesStreamProvider =
     StreamProvider.family<List<ReminderSchedule>, String>((ref, userId) {
       ref.keepAlive();
-      final service = ref.watch(reminderSchedulesServiceProvider);
-      return service.getSchedulesStream(userId);
+      final repository = ref.watch(reminderSchedulesRepositoryProvider);
+      return repository.watchSchedules(userId);
     });
 
 /// Provider for today's due relatives based on reminder schedules
@@ -66,4 +65,16 @@ final todayDueRelativesProvider = Provider.family<List<DueRelativeWithFrequencie
             frequencies: relativeFrequencies[r.id]!,
           ))
       .toList();
+});
+
+/// Stream provider for user gamification data (streak, badges)
+/// Used by StreakBadgeBar for live updates
+final userGamificationDataProvider =
+    StreamProvider.family<Map<String, dynamic>, String>((ref, userId) {
+  ref.keepAlive();
+  return SupabaseConfig.client
+      .from('users')
+      .stream(primaryKey: ['id'])
+      .eq('id', userId)
+      .map((data) => data.isNotEmpty ? data.first : <String, dynamic>{});
 });

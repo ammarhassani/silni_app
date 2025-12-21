@@ -6,7 +6,7 @@ import '../../../../core/constants/app_typography.dart';
 import '../../../../core/theme/theme_provider.dart';
 import '../../../../shared/widgets/glass_card.dart';
 import '../../../../shared/models/interaction_model.dart';
-import '../../../../shared/providers/interactions_provider.dart';
+import '../../../../core/providers/cache_provider.dart';
 import '../../../../shared/widgets/mood_selector.dart';
 
 /// List of recent interactions for a relative
@@ -22,10 +22,10 @@ class RelativeInteractionsList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeColors = ref.watch(themeColorsProvider);
 
+    final repository = ref.watch(interactionsRepositoryProvider);
+
     return StreamBuilder<List<Interaction>>(
-      stream: ref
-          .read(interactionsServiceProvider)
-          .getRelativeInteractionsStream(relativeId),
+      stream: repository.watchRelativeInteractions(relativeId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Padding(

@@ -1,9 +1,12 @@
 import 'dart:io' show Platform, InternetAddress;
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import '../../core/config/supabase_config.dart';
+import '../../core/config/env/env_services.dart';
 import '../../core/errors/app_errors.dart';
 import '../../core/services/app_logger_service.dart';
 import 'session_persistence_service.dart';
@@ -558,6 +561,349 @@ class AuthService {
       );
       rethrow;
     }
+  }
+
+  // Sign in with Google OAuth
+  Future<AuthResponse> signInWithGoogle() async {
+    final logger = AppLoggerService();
+
+    try {
+      logger.info(
+        'Google sign in starting',
+        category: LogCategory.auth,
+        tag: 'signInWithGoogle',
+      );
+
+      // Configure Google Sign-In
+      final googleSignIn = GoogleSignIn(
+        clientId: kIsWeb ? EnvServices.googleWebClientId : null,
+        serverClientId: EnvServices.googleWebClientId,
+        scopes: ['email', 'profile'],
+      );
+
+      // Trigger the authentication flow
+      final googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        logger.warning(
+          'Google sign in cancelled by user',
+          category: LogCategory.auth,
+          tag: 'signInWithGoogle',
+        );
+        throw AuthException('تم إلغاء تسجيل الدخول');
+      }
+
+      // Obtain the auth details from the request
+      final googleAuth = await googleUser.authentication;
+
+      logger.debug(
+        'Google auth obtained',
+        category: LogCategory.auth,
+        tag: 'signInWithGoogle',
+        metadata: {
+          'hasIdToken': googleAuth.idToken != null,
+          'hasAccessToken': googleAuth.accessToken != null,
+        },
+      );
+
+      if (googleAuth.idToken == null) {
+        throw AuthException('فشل في الحصول على رمز المصادقة من Google');
+      }
+
+      // Sign in to Supabase with the Google ID token
+      final response = await _supabase.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: googleAuth.idToken!,
+        accessToken: googleAuth.accessToken,
+      );
+
+      logger.info(
+        'Google sign in successful',
+        category: LogCategory.auth,
+        tag: 'signInWithGoogle',
+        metadata: {
+          'userId': response.user?.id,
+          'email': response.user?.email,
+        },
+      );
+
+      // Mark user as logged in
+      if (response.user != null) {
+        await _sessionPersistence.markUserLoggedIn(response.user!.id);
+
+        // Register FCM token
+        try {
+          final unifiedNotifications = UnifiedNotificationService();
+          await unifiedNotifications.onLogin();
+        } catch (e) {
+          logger.warning(
+            'Failed to register FCM token on Google sign in',
+            category: LogCategory.auth,
+            tag: 'signInWithGoogle',
+            metadata: {'error': e.toString()},
+          );
+        }
+      }
+
+      return response;
+    } on AuthException catch (e, stackTrace) {
+      logger.error(
+        'Google sign in auth error',
+        category: LogCategory.auth,
+        tag: 'signInWithGoogle',
+        metadata: {'message': e.message},
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    } catch (e, stackTrace) {
+      logger.error(
+        'Google sign in error',
+        category: LogCategory.auth,
+        tag: 'signInWithGoogle',
+        metadata: {'error': e.toString()},
+        stackTrace: stackTrace,
+      );
+
+      await Sentry.captureException(e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
+  // Sign in with Apple
+  Future<AuthResponse> signInWithApple() async {
+    final logger = AppLoggerService();
+
+    try {
+      logger.info(
+        'Apple sign in starting',
+        category: LogCategory.auth,
+        tag: 'signInWithApple',
+      );
+
+      // Request credentials from Apple
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      logger.debug(
+        'Apple credential obtained',
+        category: LogCategory.auth,
+        tag: 'signInWithApple',
+        metadata: {
+          'hasIdentityToken': credential.identityToken != null,
+          'hasAuthorizationCode': credential.authorizationCode.isNotEmpty,
+        },
+      );
+
+      if (credential.identityToken == null) {
+        throw AuthException('فشل في الحصول على رمز المصادقة من Apple');
+      }
+
+      // Build display name from Apple credential (only available on first sign-in)
+      String? displayName;
+      if (credential.givenName != null || credential.familyName != null) {
+        final parts = <String>[];
+        if (credential.givenName != null) parts.add(credential.givenName!);
+        if (credential.familyName != null) parts.add(credential.familyName!);
+        displayName = parts.join(' ');
+      }
+
+      // Sign in to Supabase with the Apple ID token
+      final response = await _supabase.auth.signInWithIdToken(
+        provider: OAuthProvider.apple,
+        idToken: credential.identityToken!,
+      );
+
+      logger.info(
+        'Apple sign in successful',
+        category: LogCategory.auth,
+        tag: 'signInWithApple',
+        metadata: {
+          'userId': response.user?.id,
+          'email': response.user?.email,
+          'displayName': displayName,
+        },
+      );
+
+      // Mark user as logged in and update display name if available
+      if (response.user != null) {
+        await _sessionPersistence.markUserLoggedIn(response.user!.id);
+
+        // Update user metadata with display name if provided by Apple
+        if (displayName != null && displayName.isNotEmpty) {
+          try {
+            await _supabase.auth.updateUser(
+              UserAttributes(
+                data: {'display_name': displayName},
+              ),
+            );
+            logger.info(
+              'Updated user display name from Apple',
+              category: LogCategory.auth,
+              tag: 'signInWithApple',
+              metadata: {'displayName': displayName},
+            );
+          } catch (e) {
+            logger.warning(
+              'Failed to update display name',
+              category: LogCategory.auth,
+              tag: 'signInWithApple',
+              metadata: {'error': e.toString()},
+            );
+          }
+        }
+
+        // Register FCM token
+        try {
+          final unifiedNotifications = UnifiedNotificationService();
+          await unifiedNotifications.onLogin();
+        } catch (e) {
+          logger.warning(
+            'Failed to register FCM token on Apple sign in',
+            category: LogCategory.auth,
+            tag: 'signInWithApple',
+            metadata: {'error': e.toString()},
+          );
+        }
+      }
+
+      return response;
+    } on SignInWithAppleAuthorizationException catch (e) {
+      logger.warning(
+        'Apple sign in cancelled or failed',
+        category: LogCategory.auth,
+        tag: 'signInWithApple',
+        metadata: {'code': e.code.toString(), 'message': e.message},
+      );
+
+      if (e.code == AuthorizationErrorCode.canceled) {
+        throw AuthException('تم إلغاء تسجيل الدخول');
+      }
+      rethrow;
+    } on AuthException catch (e, stackTrace) {
+      logger.error(
+        'Apple sign in auth error',
+        category: LogCategory.auth,
+        tag: 'signInWithApple',
+        metadata: {'message': e.message},
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    } catch (e, stackTrace) {
+      logger.error(
+        'Apple sign in error',
+        category: LogCategory.auth,
+        tag: 'signInWithApple',
+        metadata: {'error': e.toString()},
+        stackTrace: stackTrace,
+      );
+
+      await Sentry.captureException(e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
+  // Check if email is verified
+  bool get isEmailVerified {
+    final user = _supabase.auth.currentUser;
+    return user?.emailConfirmedAt != null;
+  }
+
+  // Resend email verification
+  Future<void> resendVerificationEmail() async {
+    final logger = AppLoggerService();
+    final user = _supabase.auth.currentUser;
+
+    if (user == null || user.email == null) {
+      throw AuthException('لا يوجد مستخدم مسجل');
+    }
+
+    try {
+      logger.info(
+        'Resending verification email',
+        category: LogCategory.auth,
+        tag: 'resendVerificationEmail',
+        metadata: {'email': user.email},
+      );
+
+      await _supabase.auth.resend(
+        type: OtpType.signup,
+        email: user.email!,
+      );
+
+      logger.info(
+        'Verification email resent',
+        category: LogCategory.auth,
+        tag: 'resendVerificationEmail',
+        metadata: {'email': user.email},
+      );
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to resend verification email',
+        category: LogCategory.auth,
+        tag: 'resendVerificationEmail',
+        metadata: {'error': e.toString()},
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  /// Update user's display name in metadata
+  Future<void> updateDisplayName(String name) async {
+    final logger = AppLoggerService();
+
+    try {
+      logger.info(
+        'Updating display name',
+        category: LogCategory.auth,
+        tag: 'updateDisplayName',
+        metadata: {'name': name},
+      );
+
+      await _supabase.auth.updateUser(
+        UserAttributes(
+          data: {'display_name': name},
+        ),
+      );
+
+      logger.info(
+        'Display name updated successfully',
+        category: LogCategory.auth,
+        tag: 'updateDisplayName',
+        metadata: {'name': name},
+      );
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to update display name',
+        category: LogCategory.auth,
+        tag: 'updateDisplayName',
+        metadata: {'error': e.toString()},
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  /// Check if the current user needs to set a display name
+  /// Returns true if user signed in via Apple with private relay email
+  /// and has no display name set
+  bool get needsDisplayName {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return false;
+
+    final email = user.email ?? '';
+    final displayName = user.userMetadata?['display_name'] as String? ??
+        user.userMetadata?['full_name'] as String? ??
+        user.userMetadata?['name'] as String?;
+
+    // Check if using Apple private relay and no name set
+    final isApplePrivateRelay = email.contains('privaterelay.appleid.com');
+    final hasNoDisplayName = displayName == null || displayName.isEmpty;
+
+    return isApplePrivateRelay && hasNoDisplayName;
   }
 
   // Delete account
