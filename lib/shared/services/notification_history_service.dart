@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
@@ -64,9 +63,6 @@ class NotificationHistoryService {
           .map((json) => NotificationHistoryItem.fromJson(json))
           .toList();
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [NOTIFICATIONS] Get error: $e');
-      }
       rethrow;
     }
   }
@@ -79,9 +75,6 @@ class NotificationHistoryService {
           .update({'is_read': true})
           .eq('id', notificationId);
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [NOTIFICATIONS] Mark as read error: $e');
-      }
       rethrow;
     }
   }
@@ -95,9 +88,6 @@ class NotificationHistoryService {
           .eq('user_id', userId)
           .eq('is_read', false);
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [NOTIFICATIONS] Mark all as read error: $e');
-      }
       rethrow;
     }
   }
@@ -107,9 +97,6 @@ class NotificationHistoryService {
     try {
       await _supabase.from(_table).delete().eq('id', notificationId);
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [NOTIFICATIONS] Delete error: $e');
-      }
       rethrow;
     }
   }

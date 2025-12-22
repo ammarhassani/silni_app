@@ -132,19 +132,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     // Initialize real-time subscriptions for this user
     ref.watch(autoRealtimeSubscriptionsProvider);
 
-    debugPrint('🌳 [FAMILY TREE] Building family tree for user: $userId');
     final relativesAsync = ref.watch(relativesStreamProvider(userId));
-
-    // Log when relatives data changes
-    relativesAsync.whenData((relatives) {
-      debugPrint(
-        '🌳 [FAMILY TREE] Relatives updated: ${relatives.length} relatives',
-      );
-      final relativeNames = relatives
-          .map((r) => '${r.fullName} (${r.id})')
-          .toList();
-      debugPrint('🌳 [FAMILY TREE] Current relatives in tree: $relativeNames');
-    });
 
     return Scaffold(
       body: Stack(

@@ -73,32 +73,80 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _authenticateWithBiometrics() async {
     final biometricService = BiometricService();
-    final sessionService = SessionPersistenceService();
+    final logger = AppLoggerService();
+
+    logger.info(
+      'Biometric login flow started',
+      category: LogCategory.auth,
+      tag: 'LoginScreen',
+    );
 
     // First verify biometrics
     final result = await biometricService.authenticate();
 
     if (result.success) {
-      // Get stored credentials
-      final credentials = await sessionService.getBiometricCredentials();
+      setState(() => _isLoading = true);
 
-      if (credentials == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('لم يتم العثور على بيانات تسجيل الدخول المحفوظة'),
-              backgroundColor: AppColors.error,
-              duration: Duration(seconds: 3),
-            ),
-          );
+      try {
+        // Biometric verified - now use existing Supabase session
+        // Supabase automatically persists and refreshes sessions
+        // Try to refresh the existing session
+        await SupabaseConfig.client.auth.refreshSession();
+
+        final user = SupabaseConfig.client.auth.currentUser;
+
+        if (user == null) {
+          // Session expired or invalid - user needs to login with password
+          if (mounted) {
+            setState(() => _isLoading = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('انتهت صلاحية الجلسة. يرجى تسجيل الدخول بكلمة المرور'),
+                backgroundColor: AppColors.error,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+          return;
         }
-        return;
-      }
 
-      // Set credentials and login
-      _emailController.text = credentials['email']!;
-      _passwordController.text = credentials['password']!;
-      _loginWithCredentials(credentials['email']!, credentials['password']!);
+        logger.info(
+          'Biometric login successful - session restored',
+          category: LogCategory.auth,
+          tag: 'LoginScreen',
+          metadata: {'userId': user.id},
+        );
+
+        // Track login and set user ID
+        final analytics = ref.read(analyticsServiceProvider);
+        analytics.logLogin('biometric').catchError((e) {
+          logger.warning('Analytics logLogin failed: $e', category: LogCategory.analytics, tag: 'LoginScreen');
+        });
+        analytics.setUserId(user.id).catchError((e) {
+          logger.warning('Analytics setUserId failed: $e', category: LogCategory.analytics, tag: 'LoginScreen');
+        });
+
+        if (!mounted) return;
+        context.go(AppRoutes.home);
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+
+        logger.warning(
+          'Biometric login failed - session refresh error',
+          category: LogCategory.auth,
+          tag: 'LoginScreen',
+          metadata: {'error': e.toString()},
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('انتهت صلاحية الجلسة. يرجى تسجيل الدخول بكلمة المرور'),
+            backgroundColor: AppColors.error,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     } else if (result.error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -109,79 +157,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         );
       }
-    }
-  }
-
-  Future<void> _loginWithCredentials(String email, String password) async {
-    final logger = AppLoggerService();
-    logger.info(
-      'Biometric login flow started',
-      category: LogCategory.auth,
-      tag: 'LoginScreen',
-    );
-
-    setState(() => _isLoading = true);
-
-    try {
-      if (!SupabaseConfig.isInitialized) {
-        if (!mounted) return;
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('فشل تهيئة الاتصال بالخادم. يرجى إعادة تشغيل التطبيق.'),
-            backgroundColor: AppColors.error,
-            duration: Duration(seconds: 5),
-          ),
-        );
-        return;
-      }
-
-      final authService = ref.read(authServiceProvider);
-      final credential = await authService
-          .signInWithEmail(email: email, password: password)
-          .timeout(
-            const Duration(seconds: 30),
-            onTimeout: () {
-              throw const TimeoutError(
-                message: 'Login timeout',
-                arabicMessage: 'انتهت مهلة تسجيل الدخول، يرجى المحاولة مرة أخرى',
-                timeout: Duration(seconds: 30),
-              );
-            },
-          );
-
-      logger.info(
-        'Biometric login successful',
-        category: LogCategory.auth,
-        tag: 'LoginScreen',
-        metadata: {'userId': credential.user?.id},
-      );
-
-      // Track login and set user ID
-      final analytics = ref.read(analyticsServiceProvider);
-      analytics.logLogin('biometric').catchError((e) {
-        logger.warning('Analytics logLogin failed: $e', category: LogCategory.analytics, tag: 'LoginScreen');
-      });
-      if (credential.user != null) {
-        analytics.setUserId(credential.user!.id).catchError((e) {
-          logger.warning('Analytics setUserId failed: $e', category: LogCategory.analytics, tag: 'LoginScreen');
-        });
-      }
-
-      if (!mounted) return;
-      context.go(AppRoutes.home);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-
-      String errorMessage = AuthService.getErrorMessage(e.toString());
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: AppColors.error,
-          duration: const Duration(seconds: 3),
-        ),
-      );
     }
   }
 
@@ -310,11 +285,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         },
       );
 
-      // Save credentials for biometric login (fire and forget)
-      SessionPersistenceService().saveBiometricCredentials(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+      // Enable biometric login for this session (fire and forget)
+      // Note: We no longer store passwords - biometric unlocks the existing Supabase session
+      SessionPersistenceService().enableBiometricLogin();
 
       // Track login event and set user ID (fire and forget - don't block auth flow)
       logger.debug(
@@ -506,7 +479,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   if (value == null || value.isEmpty) {
                     return 'يرجى إدخال البريد الإلكتروني';
                   }
-                  if (!value.contains('@')) {
+                  // Email regex validation
+                  final emailRegex = RegExp(
+                    r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                  );
+                  if (!emailRegex.hasMatch(value)) {
                     return 'يرجى إدخال بريد إلكتروني صحيح';
                   }
                   return null;
@@ -600,6 +577,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       context.go(AppRoutes.home);
     } on AuthException catch (e) {
       if (!mounted) return;
+
+      // For web OAuth, a redirect is expected - don't show error
+      if (e.message.contains('OAuth redirect in progress')) {
+        // Keep loading state - page will redirect to Google
+        return;
+      }
+
       setState(() => _isGoogleLoading = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -834,7 +818,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   if (value == null || value.isEmpty) {
                                     return 'الرجاء إدخال البريد الإلكتروني';
                                   }
-                                  if (!value.contains('@')) {
+                                  // Email regex validation
+                                  final emailRegex = RegExp(
+                                    r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                                  );
+                                  if (!emailRegex.hasMatch(value)) {
                                     return 'البريد الإلكتروني غير صحيح';
                                   }
                                   return null;
@@ -909,8 +897,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   if (value == null || value.isEmpty) {
                                     return 'الرجاء إدخال كلمة المرور';
                                   }
-                                  if (value.length < 6) {
-                                    return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+                                  if (value.length < 8) {
+                                    return 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
                                   }
                                   return null;
                                 },

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -34,9 +33,36 @@ class SupabaseNotificationService {
     try {
       // Initialize timezone data
       tz.initializeTimeZones();
-      tz.setLocalLocation(
-        tz.getLocation('Asia/Riyadh'),
-      ); // Default to Saudi Arabia timezone
+
+      // Try to detect device timezone, fallback to UTC
+      try {
+        // Detect timezone based on device's UTC offset
+        final offset = DateTime.now().timeZoneOffset;
+        final String tzName;
+
+        // Map common offsets to timezone IDs
+        if (offset.inHours == 3) {
+          tzName = 'Asia/Riyadh'; // UTC+3 (Saudi Arabia, etc.)
+        } else if (offset.inHours == 4) {
+          tzName = 'Asia/Dubai'; // UTC+4 (UAE, etc.)
+        } else if (offset.inHours == 2) {
+          tzName = 'Africa/Cairo'; // UTC+2 (Egypt, etc.)
+        } else if (offset.inHours == 0) {
+          tzName = 'UTC';
+        } else if (offset.inHours == -5) {
+          tzName = 'America/New_York'; // UTC-5 (EST)
+        } else if (offset.inHours == -8) {
+          tzName = 'America/Los_Angeles'; // UTC-8 (PST)
+        } else {
+          // Default to UTC for unknown timezones
+          tzName = 'UTC';
+        }
+
+        tz.setLocalLocation(tz.getLocation(tzName));
+      } catch (_) {
+        // If timezone detection fails, use UTC as safe fallback
+        tz.setLocalLocation(tz.getLocation('UTC'));
+      }
 
       // Initialize local notifications
       await _initializeLocalNotifications();
@@ -49,9 +75,6 @@ class SupabaseNotificationService {
 
       _isInitialized = true;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [NOTIFICATIONS] Error initializing: $e');
-      }
       rethrow;
     }
   }
@@ -113,9 +136,6 @@ class SupabaseNotificationService {
           );
       _notificationsChannel!.subscribe();
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [NOTIFICATIONS] Error subscribing: $e');
-      }
       rethrow;
     }
   }
@@ -157,9 +177,7 @@ class SupabaseNotificationService {
         payload: notification.toString(),
       );
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [NOTIFICATIONS] Error showing notification: $e');
-      }
+      // Silently fail - notification display is not critical
     }
   }
 
@@ -221,9 +239,6 @@ class SupabaseNotificationService {
         }
       });
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [NOTIFICATIONS] Error handling tap: $e');
-      }
       NavigationService.navigateTo(AppRoutes.home);
     }
   }
@@ -277,9 +292,6 @@ class SupabaseNotificationService {
         payload: payload,
       );
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [NOTIFICATIONS] Error scheduling: $e');
-      }
       rethrow;
     }
   }
@@ -331,9 +343,7 @@ class SupabaseNotificationService {
         payload: 'immediate_notification',
       );
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [NOTIFICATIONS] Error showing immediate: $e');
-      }
+      // Silently fail - notification display is not critical
     }
   }
 

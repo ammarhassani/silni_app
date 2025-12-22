@@ -193,82 +193,85 @@ class _DebugErrorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: const Color(0xFF1A1A2E),
-      child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.error.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.bug_report_rounded,
-                      color: AppColors.error,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'Debug Error View',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Material(
+        color: const Color(0xFF1A1A2E),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.bug_report_rounded,
+                        color: AppColors.error,
+                        size: 24,
                       ),
                     ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Debug Error View',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Error type
+                _buildSection(
+                  'Exception',
+                  details.exception.runtimeType.toString(),
+                  AppColors.error,
+                ),
+
+                // Error message
+                _buildSection(
+                  'Message',
+                  details.exceptionAsString(),
+                  Colors.orange,
+                ),
+
+                // Library
+                if (details.library != null)
+                  _buildSection(
+                    'Library',
+                    details.library!,
+                    Colors.blue,
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
 
-              // Error type
-              _buildSection(
-                'Exception',
-                details.exception.runtimeType.toString(),
-                AppColors.error,
-              ),
+                // Context
+                if (details.context != null)
+                  _buildSection(
+                    'Context',
+                    details.context.toString(),
+                    Colors.purple,
+                  ),
 
-              // Error message
-              _buildSection(
-                'Message',
-                details.exceptionAsString(),
-                Colors.orange,
-              ),
-
-              // Library
-              if (details.library != null)
-                _buildSection(
-                  'Library',
-                  details.library!,
-                  Colors.blue,
-                ),
-
-              // Context
-              if (details.context != null)
-                _buildSection(
-                  'Context',
-                  details.context.toString(),
-                  Colors.purple,
-                ),
-
-              // Stack trace (truncated)
-              if (details.stack != null)
-                _buildSection(
-                  'Stack Trace',
-                  details.stack.toString().split('\n').take(10).join('\n'),
-                  Colors.grey,
-                ),
-            ],
+                // Stack trace (truncated)
+                if (details.stack != null)
+                  _buildSection(
+                    'Stack Trace',
+                    details.stack.toString().split('\n').take(10).join('\n'),
+                    Colors.grey,
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -320,35 +323,38 @@ class _ReleaseErrorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: const Color(0xFF1A1A2E),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.sentiment_dissatisfied_rounded,
-                color: Colors.white.withValues(alpha: 0.5),
-                size: 64,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'حدث خطأ',
-                style: AppTypography.titleLarge.copyWith(
-                  color: Colors.white,
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Material(
+        color: const Color(0xFF1A1A2E),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.sentiment_dissatisfied_rounded,
+                  color: Colors.white.withValues(alpha: 0.5),
+                  size: 64,
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'يرجى إعادة تشغيل التطبيق',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white70,
+                const SizedBox(height: 16),
+                Text(
+                  'حدث خطأ',
+                  style: AppTypography.titleLarge.copyWith(
+                    color: Colors.white,
+                  ),
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  'يرجى إعادة تشغيل التطبيق',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: Colors.white70,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ),
       ),

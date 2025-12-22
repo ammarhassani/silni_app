@@ -39,7 +39,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     try {
       await _notificationService.initialize();
     } catch (e) {
-      debugPrint('❌ [NotificationsScreen] Notification service initialization failed: $e');
       // Show error to user if mounted
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -167,7 +166,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.only(
+        top: AppSpacing.sm,
+        left: AppSpacing.md,
+        right: AppSpacing.md,
+        bottom: AppSpacing.sm,
+      ),
       child: Row(
         children: [
           IconButton(

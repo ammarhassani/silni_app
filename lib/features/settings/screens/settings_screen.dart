@@ -25,7 +25,12 @@ class SettingsScreen extends ConsumerWidget {
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.only(
+                top: AppSpacing.sm,
+                left: AppSpacing.md,
+                right: AppSpacing.md,
+                bottom: AppSpacing.sm,
+              ),
               child: Row(
                 children: [
                   const SizedBox(width: AppSpacing.sm),

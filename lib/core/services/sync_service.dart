@@ -13,6 +13,7 @@ import 'connectivity_service.dart';
 import 'app_logger_service.dart';
 import 'gamification_service.dart';
 import '../providers/gamification_events_provider.dart';
+import '../errors/app_errors.dart';
 
 /// Status of the sync process.
 enum SyncStatus {
@@ -389,7 +390,11 @@ class SyncService {
         await _executeScheduleOperation(operation);
         break;
       default:
-        throw Exception('Unknown entity type: ${operation.entityType}');
+        throw ValidationError(
+          message: 'Unknown entity type: ${operation.entityType}',
+          arabicMessage: 'نوع العملية غير معروف',
+          field: 'entityType',
+        );
     }
   }
 

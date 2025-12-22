@@ -1,14 +1,39 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
-import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/widgets.dart';
 
 /// Analytics service for tracking user events and behavior
 /// Uses Firebase Analytics for production tracking
 class AnalyticsService {
-  static final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+  static FirebaseAnalytics? _analytics;
+  static bool _initialized = false;
+
+  /// Safely get analytics instance, returns null if Firebase not initialized
+  static FirebaseAnalytics? get _safeAnalytics {
+    if (!_initialized) {
+      try {
+        // Check if Firebase is initialized
+        Firebase.app();
+        _analytics = FirebaseAnalytics.instance;
+        _initialized = true;
+      } catch (e) {
+        // Firebase not initialized (e.g., web without config)
+        return null;
+      }
+    }
+    return _analytics;
+  }
 
   /// Get the NavigatorObserver for automatic screen tracking
-  static FirebaseAnalyticsObserver get observer =>
-      FirebaseAnalyticsObserver(analytics: _analytics);
+  /// Returns a no-op observer if Firebase isn't available
+  static NavigatorObserver get observer {
+    final analytics = _safeAnalytics;
+    if (analytics != null) {
+      return FirebaseAnalyticsObserver(analytics: analytics);
+    }
+    // Return a no-op observer when Firebase isn't available
+    return NavigatorObserver();
+  }
 
   // =====================================================
   // USER PROPERTIES
@@ -17,10 +42,9 @@ class AnalyticsService {
   /// Set user ID for analytics
   Future<void> setUserId(String? userId) async {
     try {
-      await _analytics.setUserId(id: userId);
-      if (kDebugMode) print('📊 [Analytics] User ID set: $userId');
+      await _safeAnalytics?.setUserId(id: userId);
     } catch (e) {
-      if (kDebugMode) print('📊 [Analytics] Error setting user ID: $e');
+      // Silently fail - analytics is not critical
     }
   }
 
@@ -30,10 +54,9 @@ class AnalyticsService {
     required String? value,
   }) async {
     try {
-      await _analytics.setUserProperty(name: name, value: value);
-      if (kDebugMode) print('📊 [Analytics] User property set: $name = $value');
+      await _safeAnalytics?.setUserProperty(name: name, value: value);
     } catch (e) {
-      if (kDebugMode) print('📊 [Analytics] Error setting user property: $e');
+      // Silently fail - analytics is not critical
     }
   }
 
@@ -53,19 +76,17 @@ class AnalyticsService {
 
   Future<void> logSignUp(String method) async {
     try {
-      await _analytics.logSignUp(signUpMethod: method);
-      if (kDebugMode) print('📊 [Analytics] User signed up via $method');
+      await _safeAnalytics?.logSignUp(signUpMethod: method);
     } catch (e) {
-      if (kDebugMode) print('📊 [Analytics] Error logging signup: $e');
+      // Silently fail - analytics is not critical
     }
   }
 
   Future<void> logLogin(String method) async {
     try {
-      await _analytics.logLogin(loginMethod: method);
-      if (kDebugMode) print('📊 [Analytics] User logged in via $method');
+      await _safeAnalytics?.logLogin(loginMethod: method);
     } catch (e) {
-      if (kDebugMode) print('📊 [Analytics] Error logging login: $e');
+      // Silently fail - analytics is not critical
     }
   }
 
@@ -75,43 +96,40 @@ class AnalyticsService {
 
   Future<void> logRelativeAdded(String relationshipType) async {
     try {
-      await _analytics.logEvent(
+      await _safeAnalytics?.logEvent(
         name: 'relative_added',
         parameters: {
           'relationship_type': relationshipType,
         },
       );
-      if (kDebugMode) print('📊 [Analytics] Relative added: $relationshipType');
     } catch (e) {
-      if (kDebugMode) print('📊 [Analytics] Error logging relative added: $e');
+      // Silently fail - analytics is not critical
     }
   }
 
   Future<void> logRelativeViewed(String relationshipType) async {
     try {
-      await _analytics.logEvent(
+      await _safeAnalytics?.logEvent(
         name: 'relative_viewed',
         parameters: {
           'relationship_type': relationshipType,
         },
       );
-      if (kDebugMode) print('📊 [Analytics] Relative viewed: $relationshipType');
     } catch (e) {
-      if (kDebugMode) print('📊 [Analytics] Error logging relative viewed: $e');
+      // Silently fail - analytics is not critical
     }
   }
 
   Future<void> logRelativeDeleted(String relationshipType) async {
     try {
-      await _analytics.logEvent(
+      await _safeAnalytics?.logEvent(
         name: 'relative_deleted',
         parameters: {
           'relationship_type': relationshipType,
         },
       );
-      if (kDebugMode) print('📊 [Analytics] Relative deleted: $relationshipType');
     } catch (e) {
-      if (kDebugMode) print('📊 [Analytics] Error logging relative deleted: $e');
+      // Silently fail - analytics is not critical
     }
   }
 
@@ -121,23 +139,20 @@ class AnalyticsService {
 
   Future<void> logInteractionRecorded(String interactionType) async {
     try {
-      await _analytics.logEvent(
+      await _safeAnalytics?.logEvent(
         name: 'interaction_recorded',
         parameters: {
           'interaction_type': interactionType,
         },
       );
-      if (kDebugMode) {
-        print('📊 [Analytics] Interaction recorded: $interactionType');
-      }
     } catch (e) {
-      if (kDebugMode) print('📊 [Analytics] Error logging interaction: $e');
+      // Silently fail - analytics is not critical
     }
   }
 
   Future<void> logStreakMilestone(int streakDays) async {
     try {
-      await _analytics.logEvent(
+      await _safeAnalytics?.logEvent(
         name: 'streak_milestone',
         parameters: {
           'streak_days': streakDays,
@@ -145,13 +160,8 @@ class AnalyticsService {
       );
       // Also update user property
       await setUserStreak(streakDays);
-      if (kDebugMode) {
-        print('📊 [Analytics] Streak milestone: $streakDays days');
-      }
     } catch (e) {
-      if (kDebugMode) {
-        print('📊 [Analytics] Error logging streak milestone: $e');
-      }
+      // Silently fail - analytics is not critical
     }
   }
 
@@ -161,13 +171,12 @@ class AnalyticsService {
 
   Future<void> logScreenView(String screenName) async {
     try {
-      await _analytics.logScreenView(
+      await _safeAnalytics?.logScreenView(
         screenName: screenName,
         screenClass: screenName,
       );
-      if (kDebugMode) print('📊 [Analytics] Screen view: $screenName');
     } catch (e) {
-      if (kDebugMode) print('📊 [Analytics] Error logging screen view: $e');
+      // Silently fail - analytics is not critical
     }
   }
 
@@ -177,21 +186,19 @@ class AnalyticsService {
 
   Future<void> logBadgeUnlocked(String badgeName) async {
     try {
-      await _analytics.logUnlockAchievement(id: badgeName);
-      if (kDebugMode) print('📊 [Analytics] Badge unlocked: $badgeName');
+      await _safeAnalytics?.logUnlockAchievement(id: badgeName);
     } catch (e) {
-      if (kDebugMode) print('📊 [Analytics] Error logging badge unlock: $e');
+      // Silently fail - analytics is not critical
     }
   }
 
   Future<void> logLevelUp(int newLevel) async {
     try {
-      await _analytics.logLevelUp(level: newLevel);
+      await _safeAnalytics?.logLevelUp(level: newLevel);
       // Also update user property
       await setUserLevel(newLevel);
-      if (kDebugMode) print('📊 [Analytics] Level up: $newLevel');
     } catch (e) {
-      if (kDebugMode) print('📊 [Analytics] Error logging level up: $e');
+      // Silently fail - analytics is not critical
     }
   }
 
@@ -201,10 +208,9 @@ class AnalyticsService {
 
   Future<void> logAppOpen() async {
     try {
-      await _analytics.logAppOpen();
-      if (kDebugMode) print('📊 [Analytics] App opened');
+      await _safeAnalytics?.logAppOpen();
     } catch (e) {
-      if (kDebugMode) print('📊 [Analytics] Error logging app open: $e');
+      // Silently fail - analytics is not critical
     }
   }
 
@@ -214,7 +220,7 @@ class AnalyticsService {
 
   Future<void> logError(String errorMessage, {String? context}) async {
     try {
-      await _analytics.logEvent(
+      await _safeAnalytics?.logEvent(
         name: 'app_error',
         parameters: {
           'error_message': errorMessage.substring(
@@ -224,9 +230,8 @@ class AnalyticsService {
           if (context != null) 'context': context,
         },
       );
-      if (kDebugMode) print('📊 [Analytics] Error logged: $errorMessage');
     } catch (e) {
-      if (kDebugMode) print('📊 [Analytics] Error logging error event: $e');
+      // Silently fail - analytics is not critical
     }
   }
 }

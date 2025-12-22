@@ -1,10 +1,8 @@
-import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/badge_prestige.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -29,70 +27,6 @@ class StreakBadgeBar extends ConsumerStatefulWidget {
 }
 
 class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
-  Timer? _countdownTimer;
-  Duration _timeRemaining = const Duration(hours: 24);
-  DateTime? _lastInteractionAt;
-
-  @override
-  void initState() {
-    super.initState();
-    _startCountdown();
-  }
-
-  void _updateTimeRemaining() {
-    if (_lastInteractionAt == null) {
-      // No previous interaction - show full 24h
-      _timeRemaining = const Duration(hours: 24);
-      return;
-    }
-
-    final deadline = _lastInteractionAt!.add(const Duration(hours: 24));
-    final now = DateTime.now();
-
-    if (now.isAfter(deadline)) {
-      // Timer expired - streak may be at risk
-      _timeRemaining = Duration.zero;
-    } else {
-      _timeRemaining = deadline.difference(now);
-    }
-  }
-
-  void _startCountdown() {
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      setState(() {
-        _updateTimeRemaining();
-      });
-    });
-  }
-
-  String get _formattedTime {
-    if (_timeRemaining == Duration.zero) {
-      return '00:00';
-    }
-    final hours = _timeRemaining.inHours;
-    final minutes = _timeRemaining.inMinutes.remainder(60);
-    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}';
-  }
-
-  /// Get timer urgency state for styling
-  _TimerUrgency get _timerUrgency {
-    if (_timeRemaining.inMinutes < 15) {
-      return _TimerUrgency.critical;
-    } else if (_timeRemaining.inHours < 1) {
-      return _TimerUrgency.warning;
-    }
-    return _TimerUrgency.normal;
-  }
-
-  @override
-  void dispose() {
-    _countdownTimer?.cancel();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -111,15 +45,8 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
     final badges = List<String>.from(data['badges'] ?? []);
     final highestBadge = BadgePrestige.getHighestPrestigeBadge(badges);
 
-    // Update last interaction time from streamed data
-    final lastInteractionAtStr = data['last_interaction_at'] as String?;
-    if (lastInteractionAtStr != null) {
-      _lastInteractionAt = DateTime.tryParse(lastInteractionAtStr)?.toLocal();
-    }
-    _updateTimeRemaining();
-
     return GlassCard(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
@@ -129,6 +56,7 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
         ],
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Username Section
           _buildUsernameSection(),
@@ -144,11 +72,6 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
 
           // Streak Section
           _buildStreakSection(currentStreak),
-
-          const Spacer(),
-
-          // Timer Section
-          _buildTimerSection(),
         ],
       ),
     )
@@ -213,8 +136,8 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
   Widget _buildDivider() {
     return Container(
       width: 1,
-      height: 32,
-      margin: const EdgeInsets.symmetric(horizontal: 8),
+      height: 24,
+      margin: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -395,80 +318,9 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
     );
   }
 
-  Widget _buildTimerSection() {
-    final urgency = _timerUrgency;
-    Color timerColor;
-    bool shouldPulse;
-
-    switch (urgency) {
-      case _TimerUrgency.critical:
-        timerColor = AppColors.error;
-        shouldPulse = true;
-      case _TimerUrgency.warning:
-        timerColor = AppColors.warning;
-        shouldPulse = true;
-      case _TimerUrgency.normal:
-        timerColor = Colors.white.withValues(alpha: 0.8);
-        shouldPulse = false;
-    }
-
-    Widget timerWidget = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
-        color: urgency == _TimerUrgency.normal
-            ? Colors.white.withValues(alpha: 0.1)
-            : timerColor.withValues(alpha: 0.2),
-        border: Border.all(
-          color: urgency == _TimerUrgency.normal
-              ? Colors.white.withValues(alpha: 0.2)
-              : timerColor.withValues(alpha: 0.5),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.timer_outlined,
-            size: 14,
-            color: timerColor,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            _formattedTime,
-            style: AppTypography.labelMedium.copyWith(
-              color: timerColor,
-              fontWeight: FontWeight.w700,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldPulse) {
-      timerWidget = timerWidget
-          .animate(onPlay: (controller) => controller.repeat())
-          .fade(
-            begin: 1.0,
-            end: 0.6,
-            duration: urgency == _TimerUrgency.critical ? 500.ms : 1.seconds,
-          )
-          .then()
-          .fade(
-            begin: 0.6,
-            end: 1.0,
-            duration: urgency == _TimerUrgency.critical ? 500.ms : 1.seconds,
-          );
-    }
-
-    return timerWidget;
-  }
-
   Widget _buildSkeletonLoader() {
     return GlassCard(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Row(
         children: [
           // Badge placeholder
@@ -489,26 +341,10 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
               color: Colors.white.withValues(alpha: 0.1),
             ),
           ),
-          const Spacer(),
-          // Timer placeholder
-          Container(
-            width: 70,
-            height: 24,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: Colors.white.withValues(alpha: 0.1),
-            ),
-          ),
         ],
       ),
     )
         .animate(onPlay: (controller) => controller.repeat())
         .shimmer(duration: 1500.ms, color: Colors.white.withValues(alpha: 0.1));
   }
-}
-
-enum _TimerUrgency {
-  normal,
-  warning,
-  critical,
 }

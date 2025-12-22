@@ -80,7 +80,16 @@
       "Bash(fi)",
       "Bash(paste:*)",
       "Bash(bc:*)",
-      "Bash(git -C /Users/engammar/Apps/silni_app log --oneline --all)"
+      "Bash(git -C /Users/engammar/Apps/silni_app log --oneline --all)",
+      "Bash(dart pub global:*)",
+      "Bash(export PATH=\"$PATH:$HOME/.pub-cache/bin\")",
+      "Bash(flutterfire configure:*)",
+      "Bash(firebase login:*)",
+      "Bash($HOME/.pub-cache/bin/flutterfire configure:*)",
+      "Bash(firebase apps:sdkconfig:*)",
+      "Bash(keytool -list:*)",
+      "Bash(./gradlew signingReport:*)",
+      "Bash(xargs cat:*)"
     ],
     "deny": [],
     "ask": []

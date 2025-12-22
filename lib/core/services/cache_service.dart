@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 import '../../shared/models/relative_model.dart';
 import '../../shared/models/interaction_model.dart';
 import '../../shared/models/reminder_schedule_model.dart';
@@ -23,7 +21,6 @@ class CacheService {
           .where((r) => r.userId == userId && !r.isArchived)
           .toList();
     } catch (e) {
-      debugPrint('[CacheService] Error getting relatives: $e');
       return [];
     }
   }
@@ -33,7 +30,6 @@ class CacheService {
     try {
       return HiveInitializer.relativesBox.get(relativeId);
     } catch (e) {
-      debugPrint('[CacheService] Error getting relative $relativeId: $e');
       return null;
     }
   }
@@ -43,7 +39,7 @@ class CacheService {
     try {
       await HiveInitializer.relativesBox.put(relative.id, relative);
     } catch (e) {
-      debugPrint('[CacheService] Error caching relative: $e');
+      // Silently fail - cache is not critical
     }
   }
 
@@ -55,7 +51,7 @@ class CacheService {
       };
       await HiveInitializer.relativesBox.putAll(entries);
     } catch (e) {
-      debugPrint('[CacheService] Error caching relatives: $e');
+      // Silently fail - cache is not critical
     }
   }
 
@@ -64,7 +60,7 @@ class CacheService {
     try {
       await HiveInitializer.relativesBox.delete(relativeId);
     } catch (e) {
-      debugPrint('[CacheService] Error deleting relative $relativeId: $e');
+      // Silently fail - cache is not critical
     }
   }
 
@@ -73,7 +69,7 @@ class CacheService {
     try {
       await HiveInitializer.relativesBox.clear();
     } catch (e) {
-      debugPrint('[CacheService] Error clearing relatives: $e');
+      // Silently fail - cache is not critical
     }
   }
 
@@ -89,7 +85,6 @@ class CacheService {
           .toList()
         ..sort((a, b) => b.date.compareTo(a.date)); // Most recent first
     } catch (e) {
-      debugPrint('[CacheService] Error getting interactions: $e');
       return [];
     }
   }
@@ -102,7 +97,6 @@ class CacheService {
           .toList()
         ..sort((a, b) => b.date.compareTo(a.date));
     } catch (e) {
-      debugPrint('[CacheService] Error getting all interactions: $e');
       return [];
     }
   }
@@ -122,7 +116,6 @@ class CacheService {
           .toList()
         ..sort((a, b) => b.date.compareTo(a.date));
     } catch (e) {
-      debugPrint('[CacheService] Error getting today interactions: $e');
       return [];
     }
   }
@@ -132,7 +125,6 @@ class CacheService {
     try {
       return HiveInitializer.interactionsBox.get(interactionId);
     } catch (e) {
-      debugPrint('[CacheService] Error getting interaction $interactionId: $e');
       return null;
     }
   }
@@ -143,7 +135,7 @@ class CacheService {
       await HiveInitializer.interactionsBox.put(interaction.id, interaction);
       await _enforceInteractionLimit(interaction.relativeId);
     } catch (e) {
-      debugPrint('[CacheService] Error caching interaction: $e');
+      // Silently fail - cache is not critical
     }
   }
 
@@ -161,7 +153,7 @@ class CacheService {
         await _enforceInteractionLimit(relativeId);
       }
     } catch (e) {
-      debugPrint('[CacheService] Error caching interactions: $e');
+      // Silently fail - cache is not critical
     }
   }
 
@@ -184,7 +176,7 @@ class CacheService {
     try {
       await HiveInitializer.interactionsBox.delete(interactionId);
     } catch (e) {
-      debugPrint('[CacheService] Error deleting interaction $interactionId: $e');
+      // Silently fail - cache is not critical
     }
   }
 
@@ -193,7 +185,7 @@ class CacheService {
     try {
       await HiveInitializer.interactionsBox.clear();
     } catch (e) {
-      debugPrint('[CacheService] Error clearing interactions: $e');
+      // Silently fail - cache is not critical
     }
   }
 
@@ -208,7 +200,6 @@ class CacheService {
           .where((s) => s.userId == userId)
           .toList();
     } catch (e) {
-      debugPrint('[CacheService] Error getting reminder schedules: $e');
       return [];
     }
   }
@@ -220,7 +211,6 @@ class CacheService {
           .where((s) => s.userId == userId && s.isActive)
           .toList();
     } catch (e) {
-      debugPrint('[CacheService] Error getting active schedules: $e');
       return [];
     }
   }
@@ -230,7 +220,6 @@ class CacheService {
     try {
       return HiveInitializer.reminderSchedulesBox.get(scheduleId);
     } catch (e) {
-      debugPrint('[CacheService] Error getting schedule $scheduleId: $e');
       return null;
     }
   }
@@ -240,7 +229,7 @@ class CacheService {
     try {
       await HiveInitializer.reminderSchedulesBox.put(schedule.id, schedule);
     } catch (e) {
-      debugPrint('[CacheService] Error caching schedule: $e');
+      // Silently fail - cache is not critical
     }
   }
 
@@ -252,7 +241,7 @@ class CacheService {
       };
       await HiveInitializer.reminderSchedulesBox.putAll(entries);
     } catch (e) {
-      debugPrint('[CacheService] Error caching schedules: $e');
+      // Silently fail - cache is not critical
     }
   }
 
@@ -261,7 +250,7 @@ class CacheService {
     try {
       await HiveInitializer.reminderSchedulesBox.delete(scheduleId);
     } catch (e) {
-      debugPrint('[CacheService] Error deleting schedule $scheduleId: $e');
+      // Silently fail - cache is not critical
     }
   }
 
@@ -270,7 +259,7 @@ class CacheService {
     try {
       await HiveInitializer.reminderSchedulesBox.clear();
     } catch (e) {
-      debugPrint('[CacheService] Error clearing schedules: $e');
+      // Silently fail - cache is not critical
     }
   }
 
@@ -283,7 +272,6 @@ class CacheService {
     try {
       return HiveInitializer.syncMetadataBox.get(key);
     } catch (e) {
-      debugPrint('[CacheService] Error getting sync metadata: $e');
       return null;
     }
   }
@@ -293,7 +281,7 @@ class CacheService {
     try {
       await HiveInitializer.syncMetadataBox.put(metadata.key, metadata);
     } catch (e) {
-      debugPrint('[CacheService] Error updating sync metadata: $e');
+      // Silently fail - cache is not critical
     }
   }
 

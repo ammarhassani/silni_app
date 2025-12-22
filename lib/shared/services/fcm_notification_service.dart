@@ -17,10 +17,6 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Initialize Firebase in background isolate
   await Firebase.initializeApp();
 
-  if (kDebugMode) {
-    print('🔔 [FCM] Background message received: ${message.notification?.title}');
-  }
-
   // Show notification when app is in background
   final notification = message.notification;
   if (notification != null) {
@@ -59,10 +55,6 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         .map((e) => '${e.key}=${e.value}')
         .join('&');
 
-    if (kDebugMode) {
-      print('🔔 [FCM] Payload for navigation: $payload');
-    }
-
     await localNotifications.show(
       uniqueId,
       notification.title ?? 'تذكير',
@@ -70,10 +62,6 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       const NotificationDetails(android: androidDetails, iOS: iosDetails),
       payload: payload, // Enable navigation on tap
     );
-
-    if (kDebugMode) {
-      print('🔔 [FCM] Background notification displayed with payload');
-    }
   }
 }
 

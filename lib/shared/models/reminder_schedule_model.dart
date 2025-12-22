@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:silni_app/core/errors/app_errors.dart';
 import 'package:silni_app/shared/models/relative_model.dart';
 
@@ -53,10 +52,6 @@ class ReminderSchedule {
   /// Create from Supabase JSON
   factory ReminderSchedule.fromJson(Map<String, dynamic> json) {
     try {
-      // Always log regardless of debug mode
-      debugPrint('🔍 [REMINDER_MODEL] fromJson() called with: $json');
-      debugPrint('🔍 [REMINDER_MODEL] Keys available: ${json.keys.toList()}');
-
       // Check for required fields
       final id = json['id'];
       final userId = json['user_id'];
@@ -64,13 +59,6 @@ class ReminderSchedule {
       // Use 'time' field as that's what database actually has
       final reminderTime = json['time'];
       final createdAt = json['created_at'];
-
-      debugPrint('🔍 [REMINDER_MODEL] Field check:');
-      debugPrint('  - id: $id');
-      debugPrint('  - user_id: $userId');
-      debugPrint('  - frequency: $frequency');
-      debugPrint('  - reminder_time: $reminderTime');
-      debugPrint('  - created_at: $createdAt');
 
       if (id == null ||
           userId == null ||
@@ -103,16 +91,13 @@ class ReminderSchedule {
             : null,
       );
     } catch (e) {
-      debugPrint('❌ [REMINDER_MODEL] fromJson() error: $e');
-      debugPrint('❌ [REMINDER_MODEL] JSON data: $json');
-      debugPrint('❌ [REMINDER_MODEL] Error type: ${e.runtimeType}');
       rethrow;
     }
   }
 
   /// Convert to Supabase JSON
   Map<String, dynamic> toJson() {
-    final json = {
+    return {
       'user_id': userId,
       'frequency': frequency.value,
       'relative_ids': relativeIds,
@@ -122,15 +107,6 @@ class ReminderSchedule {
       'day_of_month': dayOfMonth,
       // Don't include id, created_at, updated_at - managed by database
     };
-
-    if (kDebugMode) {
-      print('🔔 [REMINDER_MODEL] toJson() called');
-      print('🔔 [REMINDER_MODEL] JSON keys: ${json.keys.toList()}');
-      print('🔔 [REMINDER_MODEL] time value: ${json['time']}');
-      print('🔔 [REMINDER_MODEL] Full JSON: $json');
-    }
-
-    return json;
   }
 
   /// Copy with method

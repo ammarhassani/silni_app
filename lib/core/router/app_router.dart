@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../shared/widgets/gradient_background.dart';
 import '../../shared/widgets/error_widgets.dart';
+import '../config/supabase_config.dart';
 import '../providers/connectivity_provider.dart';
 import '../providers/stream_recovery_provider.dart';
 import '../providers/realtime_provider.dart';
@@ -43,6 +44,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       AnalyticsService.observer,
       PerformanceNavigatorObserver(),
     ],
+    // Skip splash screen if user is already authenticated
+    redirect: (context, state) {
+      // Only redirect from splash screen
+      if (state.matchedLocation == AppRoutes.splash) {
+        // Check if user has a valid session (Supabase restores session on init)
+        if (SupabaseConfig.isInitialized && SupabaseConfig.currentUser != null) {
+          return AppRoutes.home;
+        }
+      }
+      return null; // No redirect needed
+    },
     routes: [
       // Splash
       GoRoute(

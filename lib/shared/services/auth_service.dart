@@ -572,79 +572,17 @@ class AuthService {
         'Google sign in starting',
         category: LogCategory.auth,
         tag: 'signInWithGoogle',
+        metadata: {'platform': kIsWeb ? 'web' : 'mobile'},
       );
 
-      // Configure Google Sign-In
-      final googleSignIn = GoogleSignIn(
-        clientId: kIsWeb ? EnvServices.googleWebClientId : null,
-        serverClientId: EnvServices.googleWebClientId,
-        scopes: ['email', 'profile'],
-      );
-
-      // Trigger the authentication flow
-      final googleUser = await googleSignIn.signIn();
-      if (googleUser == null) {
-        logger.warning(
-          'Google sign in cancelled by user',
-          category: LogCategory.auth,
-          tag: 'signInWithGoogle',
-        );
-        throw AuthException('تم إلغاء تسجيل الدخول');
+      // For web: Use Supabase's native OAuth flow (redirect-based)
+      // The google_sign_in plugin can't reliably provide ID tokens on web
+      if (kIsWeb) {
+        return await _signInWithGoogleWeb(logger);
       }
 
-      // Obtain the auth details from the request
-      final googleAuth = await googleUser.authentication;
-
-      logger.debug(
-        'Google auth obtained',
-        category: LogCategory.auth,
-        tag: 'signInWithGoogle',
-        metadata: {
-          'hasIdToken': googleAuth.idToken != null,
-          'hasAccessToken': googleAuth.accessToken != null,
-        },
-      );
-
-      if (googleAuth.idToken == null) {
-        throw AuthException('فشل في الحصول على رمز المصادقة من Google');
-      }
-
-      // Sign in to Supabase with the Google ID token
-      final response = await _supabase.auth.signInWithIdToken(
-        provider: OAuthProvider.google,
-        idToken: googleAuth.idToken!,
-        accessToken: googleAuth.accessToken,
-      );
-
-      logger.info(
-        'Google sign in successful',
-        category: LogCategory.auth,
-        tag: 'signInWithGoogle',
-        metadata: {
-          'userId': response.user?.id,
-          'email': response.user?.email,
-        },
-      );
-
-      // Mark user as logged in
-      if (response.user != null) {
-        await _sessionPersistence.markUserLoggedIn(response.user!.id);
-
-        // Register FCM token
-        try {
-          final unifiedNotifications = UnifiedNotificationService();
-          await unifiedNotifications.onLogin();
-        } catch (e) {
-          logger.warning(
-            'Failed to register FCM token on Google sign in',
-            category: LogCategory.auth,
-            tag: 'signInWithGoogle',
-            metadata: {'error': e.toString()},
-          );
-        }
-      }
-
-      return response;
+      // For mobile: Use google_sign_in plugin for native experience
+      return await _signInWithGoogleMobile(logger);
     } on AuthException catch (e, stackTrace) {
       logger.error(
         'Google sign in auth error',
@@ -666,6 +604,111 @@ class AuthService {
       await Sentry.captureException(e, stackTrace: stackTrace);
       rethrow;
     }
+  }
+
+  // Google Sign-In for web using Supabase OAuth
+  Future<AuthResponse> _signInWithGoogleWeb(AppLoggerService logger) async {
+    logger.debug(
+      'Using Supabase OAuth flow for web',
+      category: LogCategory.auth,
+      tag: 'signInWithGoogle',
+    );
+
+    // Supabase OAuth will redirect to Google, then back to the app
+    // The session is automatically created on callback
+    await _supabase.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: kIsWeb ? null : 'com.silni.app://login-callback',
+      authScreenLaunchMode: LaunchMode.platformDefault,
+    );
+
+    // For web, this is a redirect flow - the page will reload
+    // After redirect, the session is automatically restored by Supabase
+    // Return an empty response - the actual session comes after redirect
+    logger.info(
+      'Google OAuth redirect initiated',
+      category: LogCategory.auth,
+      tag: 'signInWithGoogle',
+    );
+
+    // This won't actually return - the browser will redirect
+    // But we need to satisfy the return type
+    throw AuthException('OAuth redirect in progress');
+  }
+
+  // Google Sign-In for mobile using native plugin
+  Future<AuthResponse> _signInWithGoogleMobile(AppLoggerService logger) async {
+    // Configure Google Sign-In for mobile
+    // serverClientId is the web client ID needed for Supabase token exchange
+    final googleSignIn = GoogleSignIn(
+      serverClientId: EnvServices.googleWebClientId,
+      scopes: ['email', 'profile'],
+    );
+
+    // Trigger the native authentication flow
+    final googleUser = await googleSignIn.signIn();
+    if (googleUser == null) {
+      logger.warning(
+        'Google sign in cancelled by user',
+        category: LogCategory.auth,
+        tag: 'signInWithGoogle',
+      );
+      throw AuthException('تم إلغاء تسجيل الدخول');
+    }
+
+    // Obtain the auth details from the request
+    final googleAuth = await googleUser.authentication;
+
+    logger.debug(
+      'Google auth obtained',
+      category: LogCategory.auth,
+      tag: 'signInWithGoogle',
+      metadata: {
+        'hasIdToken': googleAuth.idToken != null,
+        'hasAccessToken': googleAuth.accessToken != null,
+      },
+    );
+
+    if (googleAuth.idToken == null) {
+      throw AuthException('فشل في الحصول على رمز المصادقة من Google');
+    }
+
+    // Sign in to Supabase with the Google ID token
+    final response = await _supabase.auth.signInWithIdToken(
+      provider: OAuthProvider.google,
+      idToken: googleAuth.idToken!,
+      accessToken: googleAuth.accessToken,
+    );
+
+    logger.info(
+      'Google sign in successful',
+      category: LogCategory.auth,
+      tag: 'signInWithGoogle',
+      metadata: {
+        'userId': response.user?.id,
+        'email': response.user?.email,
+      },
+    );
+
+    // Mark user as logged in
+    if (response.user != null) {
+      await _sessionPersistence.markUserLoggedIn(response.user!.id);
+
+      // Register FCM token
+      try {
+        final unifiedNotifications = UnifiedNotificationService();
+        await unifiedNotifications.onLogin();
+      } catch (e) {
+        logger.warning(
+          'Failed to register FCM token on Google sign in',
+          category: LogCategory.auth,
+          tag: 'signInWithGoogle',
+          metadata: {'error': e.toString()},
+        );
+      }
+    }
+
+    return response;
   }
 
   // Sign in with Apple

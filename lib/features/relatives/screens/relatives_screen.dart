@@ -132,7 +132,12 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.only(
+            top: AppSpacing.sm,
+            left: AppSpacing.md,
+            right: AppSpacing.md,
+            bottom: AppSpacing.sm,
+          ),
           child: Row(
             children: [
               const SizedBox(width: AppSpacing.sm),

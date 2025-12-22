@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
@@ -35,9 +34,6 @@ class SupabaseStorageService {
 
       return publicUrl;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [STORAGE] Profile upload error: $e');
-      }
       rethrow;
     }
   }
@@ -72,9 +68,6 @@ class SupabaseStorageService {
 
       return publicUrl;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [STORAGE] Relative photo upload error: $e');
-      }
       rethrow;
     }
   }
@@ -96,9 +89,6 @@ class SupabaseStorageService {
         }
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [STORAGE] Delete profile error: $e');
-      }
       rethrow;
     }
   }
@@ -120,9 +110,6 @@ class SupabaseStorageService {
         }
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [STORAGE] Delete relative photo error: $e');
-      }
       rethrow;
     }
   }
@@ -141,9 +128,6 @@ class SupabaseStorageService {
 
       return image;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [IMAGE_PICKER] Error: $e');
-      }
       return null;
     }
   }
@@ -151,9 +135,6 @@ class SupabaseStorageService {
   /// Pick image with platform-aware handling
   /// On web, only gallery is available
   Future<XFile?> pickImageWithDialog() async {
-    if (kIsWeb) {
-      return pickImage(source: ImageSource.gallery);
-    }
     return pickImage(source: ImageSource.gallery);
   }
 }

@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:universal_html/html.dart' as html;
+
 import 'app_logger_service.dart';
 
 /// Connectivity status
@@ -27,6 +30,10 @@ class ConnectivityService {
   // Timer for periodic checks
   Timer? _checkTimer;
 
+  // Web event subscriptions
+  StreamSubscription<html.Event>? _onlineSubscription;
+  StreamSubscription<html.Event>? _offlineSubscription;
+
   // Last check timestamp
   DateTime? _lastCheck;
 
@@ -47,6 +54,16 @@ class ConnectivityService {
     // Do initial check
     checkConnectivity();
 
+    // For web: Listen to browser online/offline events for instant updates
+    if (kIsWeb) {
+      _onlineSubscription = html.window.onOnline.listen((_) {
+        _updateStatus(ConnectivityStatus.online);
+      });
+      _offlineSubscription = html.window.onOffline.listen((_) {
+        _updateStatus(ConnectivityStatus.offline);
+      });
+    }
+
     // Start periodic monitoring (every 30 seconds)
     _checkTimer?.cancel();
     _checkTimer = Timer.periodic(const Duration(seconds: 30), (_) {
@@ -59,9 +76,23 @@ class ConnectivityService {
     );
   }
 
+  /// Update connectivity status and notify listeners
+  void _updateStatus(ConnectivityStatus newStatus) {
+    if (_currentStatus != newStatus) {
+      _logger.info(
+        'Connectivity changed: ${_currentStatus.name} -> ${newStatus.name}',
+        category: LogCategory.network,
+      );
+      _currentStatus = newStatus;
+      _statusController.add(newStatus);
+    }
+  }
+
   /// Dispose the service
   void dispose() {
     _checkTimer?.cancel();
+    _onlineSubscription?.cancel();
+    _offlineSubscription?.cancel();
     _statusController.close();
   }
 
@@ -110,9 +141,25 @@ class ConnectivityService {
     }
   }
 
-  /// Internal connectivity check using DNS lookup
+  /// Internal connectivity check
+  /// Uses HTTP HEAD request for web, DNS lookup for mobile
   Future<bool> _checkInternetConnection() async {
-    // Try multiple hosts for reliability
+    if (kIsWeb) {
+      return _checkInternetConnectionWeb();
+    }
+    return _checkInternetConnectionMobile();
+  }
+
+  /// Web: Use browser's navigator.onLine API
+  /// HTTP requests to external domains are blocked by CORS
+  Future<bool> _checkInternetConnectionWeb() async {
+    // Use browser's native navigator.onLine API
+    // This is instant, doesn't require network requests, and has no CORS issues
+    return html.window.navigator.onLine ?? true;
+  }
+
+  /// Mobile: Use DNS lookup for connectivity check
+  Future<bool> _checkInternetConnectionMobile() async {
     final hosts = ['google.com', 'cloudflare.com', 'apple.com'];
 
     for (final host in hosts) {

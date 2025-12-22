@@ -12,7 +12,12 @@
           "package_name": "com.silni.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1049917341546-s0v9645jaquokpqqv1kia2trnlpsjfru.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAkD1WixdndkawQbtg0bkCgixZcnR583kA"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1049917341546-s0v9645jaquokpqqv1kia2trnlpsjfru.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1049917341546-e8014s5klpg00d3gdf7gp5co99pejbmv.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.silni.app"
+              }
+            }
+          ]
         }
       }
     }

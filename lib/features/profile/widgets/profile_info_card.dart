@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/constants/app_spacing.dart';
@@ -85,9 +84,6 @@ class ProfileInfoCard extends StatelessWidget {
       try {
         return DateTime.parse(date);
       } catch (e) {
-        if (kDebugMode) {
-          print('Error parsing date string: $date, error: $e');
-        }
         return DateTime.now();
       }
     }

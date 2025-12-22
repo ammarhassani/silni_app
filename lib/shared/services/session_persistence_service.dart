@@ -18,8 +18,7 @@ class SessionPersistenceService {
   static const String _sessionTimestampKey = 'session_timestamp';
   static const String _userIdKey = 'user_id';
   static const String _biometricEnabledKey = 'biometric_enabled';
-  static const String _storedEmailKey = 'stored_email';
-  static const String _storedPasswordKey = 'stored_password';
+  // Note: We no longer store passwords - biometric unlocks the existing Supabase session
 
   /// Initialize session persistence service
   Future<void> initialize() async {
@@ -141,23 +140,24 @@ class SessionPersistenceService {
     }
   }
 
-  /// Save credentials for biometric login
-  Future<void> saveBiometricCredentials({
-    required String email,
-    required String password,
-  }) async {
+  /// Enable biometric login for the current session
+  /// Note: We no longer store passwords - biometric just unlocks access to the existing Supabase session
+  Future<void> enableBiometricLogin() async {
     try {
       if (kIsWeb) {
-        // Don't store credentials on web for security
+        // Don't enable biometric on web
         return;
       }
       final storage = FlutterSecureStorage();
-      await storage.write(key: _storedEmailKey, value: email);
-      await storage.write(key: _storedPasswordKey, value: password);
       await storage.write(key: _biometricEnabledKey, value: 'true');
+      _logger.info(
+        'Biometric login enabled',
+        category: LogCategory.auth,
+        tag: 'SessionPersistenceService',
+      );
     } catch (e) {
       _logger.warning(
-        'Failed to save biometric credentials',
+        'Failed to enable biometric login',
         category: LogCategory.auth,
         tag: 'SessionPersistenceService',
         metadata: {'error': e.toString()},
@@ -165,30 +165,25 @@ class SessionPersistenceService {
     }
   }
 
-  /// Get stored biometric credentials
-  Future<Map<String, String?>?> getBiometricCredentials() async {
+  /// Disable biometric login
+  Future<void> disableBiometricLogin() async {
     try {
-      if (kIsWeb) return null;
+      if (kIsWeb) return;
 
       final storage = FlutterSecureStorage();
-      final enabled = await storage.read(key: _biometricEnabledKey);
-
-      if (enabled != 'true') return null;
-
-      final email = await storage.read(key: _storedEmailKey);
-      final password = await storage.read(key: _storedPasswordKey);
-
-      if (email == null || password == null) return null;
-
-      return {'email': email, 'password': password};
+      await storage.delete(key: _biometricEnabledKey);
+      _logger.info(
+        'Biometric login disabled',
+        category: LogCategory.auth,
+        tag: 'SessionPersistenceService',
+      );
     } catch (e) {
       _logger.warning(
-        'Failed to get biometric credentials',
+        'Failed to disable biometric login',
         category: LogCategory.auth,
         tag: 'SessionPersistenceService',
         metadata: {'error': e.toString()},
       );
-      return null;
     }
   }
 
@@ -211,22 +206,8 @@ class SessionPersistenceService {
     }
   }
 
-  /// Clear biometric credentials
+  /// Clear biometric settings (alias for disableBiometricLogin for backwards compatibility)
   Future<void> clearBiometricCredentials() async {
-    try {
-      if (kIsWeb) return;
-
-      final storage = FlutterSecureStorage();
-      await storage.delete(key: _storedEmailKey);
-      await storage.delete(key: _storedPasswordKey);
-      await storage.delete(key: _biometricEnabledKey);
-    } catch (e) {
-      _logger.warning(
-        'Failed to clear biometric credentials',
-        category: LogCategory.auth,
-        tag: 'SessionPersistenceService',
-        metadata: {'error': e.toString()},
-      );
-    }
+    await disableBiometricLogin();
   }
 }

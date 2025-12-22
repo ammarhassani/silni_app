@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
@@ -27,9 +26,6 @@ class ReminderSchedulesService {
 
       return response['id'] as String;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [SCHEDULES] Create error: $e');
-      }
       rethrow;
     }
   }
@@ -49,9 +45,6 @@ class ReminderSchedulesService {
             return ReminderSchedule.fromJson(json);
           }).toList();
         } catch (e) {
-          if (kDebugMode) {
-            print('❌ [SCHEDULES] Model parsing error: $e');
-          }
           rethrow;
         }
 
@@ -61,9 +54,6 @@ class ReminderSchedulesService {
         return schedules;
       });
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [SCHEDULES] Stream setup error: $e');
-      }
       rethrow;
     }
   }
@@ -86,9 +76,6 @@ class ReminderSchedulesService {
         return filtered;
       });
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [SCHEDULES] Active stream error: $e');
-      }
       rethrow;
     }
   }
@@ -108,9 +95,6 @@ class ReminderSchedulesService {
 
       return ReminderSchedule.fromJson(response);
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [SCHEDULES] Get error: $e');
-      }
       rethrow;
     }
   }
@@ -124,9 +108,6 @@ class ReminderSchedulesService {
       // Note: updated_at is automatically set by database trigger
       await _supabase.from(_table).update(data).eq('id', scheduleId);
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [SCHEDULES] Update error: $e');
-      }
       rethrow;
     }
   }
@@ -136,9 +117,6 @@ class ReminderSchedulesService {
     try {
       await _supabase.from(_table).delete().eq('id', scheduleId);
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [SCHEDULES] Delete error: $e');
-      }
       rethrow;
     }
   }
@@ -148,9 +126,6 @@ class ReminderSchedulesService {
     try {
       await updateSchedule(scheduleId, {'is_active': isActive});
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [SCHEDULES] Toggle error: $e');
-      }
       rethrow;
     }
   }
@@ -175,9 +150,6 @@ class ReminderSchedulesService {
 
       await updateSchedule(scheduleId, {'relative_ids': updatedRelativeIds});
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [SCHEDULES] Add relatives error: $e');
-      }
       rethrow;
     }
   }
@@ -204,9 +176,6 @@ class ReminderSchedulesService {
 
       await updateSchedule(scheduleId, {'relative_ids': updatedRelativeIds});
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [SCHEDULES] Remove relative error: $e');
-      }
       rethrow;
     }
   }
@@ -231,9 +200,6 @@ class ReminderSchedulesService {
 
       return todaySchedules;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [SCHEDULES] Get today schedules error: $e');
-      }
       rethrow;
     }
   }
@@ -260,9 +226,6 @@ class ReminderSchedulesService {
         return filtered;
       });
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [SCHEDULES] Frequency stream error: $e');
-      }
       rethrow;
     }
   }

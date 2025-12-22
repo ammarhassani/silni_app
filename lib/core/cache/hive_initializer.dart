@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../shared/models/relative_model.dart';
@@ -25,11 +24,8 @@ class HiveInitializer {
   /// Call this before runApp() in main.dart.
   static Future<void> initialize() async {
     if (_initialized) {
-      debugPrint('[HiveInitializer] Already initialized, skipping');
       return;
     }
-
-    debugPrint('[HiveInitializer] Initializing Hive...');
 
     // Initialize Hive with Flutter
     await Hive.initFlutter();
@@ -44,7 +40,6 @@ class HiveInitializer {
     await _openBoxes();
 
     _initialized = true;
-    debugPrint('[HiveInitializer] Hive initialization complete');
   }
 
   /// Register all enum adapters.
@@ -67,7 +62,6 @@ class HiveInitializer {
     if (!Hive.isAdapterRegistered(CacheConfig.operationTypeTypeId)) {
       Hive.registerAdapter(OperationTypeAdapter());
     }
-    debugPrint('[HiveInitializer] Enum adapters registered');
   }
 
   /// Register all model adapters.
@@ -87,7 +81,6 @@ class HiveInitializer {
     if (!Hive.isAdapterRegistered(CacheConfig.syncMetadataTypeId)) {
       Hive.registerAdapter(SyncMetadataAdapter());
     }
-    debugPrint('[HiveInitializer] Model adapters registered');
   }
 
   /// Open all Hive boxes with error recovery.
@@ -97,7 +90,6 @@ class HiveInitializer {
     await _openBoxSafely<ReminderSchedule>(CacheConfig.reminderSchedulesBox);
     await _openBoxSafely<OfflineOperation>(CacheConfig.offlineQueueBox);
     await _openBoxSafely<SyncMetadata>(CacheConfig.syncMetadataBox);
-    debugPrint('[HiveInitializer] All boxes opened');
   }
 
   /// Open a box safely with corruption recovery.
@@ -105,14 +97,11 @@ class HiveInitializer {
     try {
       return await Hive.openBox<T>(boxName);
     } catch (e) {
-      debugPrint('[HiveInitializer] Error opening box "$boxName": $e');
-      debugPrint('[HiveInitializer] Attempting recovery by deleting corrupt box...');
-
+      // Attempt recovery by deleting corrupt box
       try {
         await Hive.deleteBoxFromDisk(boxName);
         return await Hive.openBox<T>(boxName);
       } catch (deleteError) {
-        debugPrint('[HiveInitializer] Failed to recover box "$boxName": $deleteError');
         rethrow;
       }
     }
@@ -122,7 +111,6 @@ class HiveInitializer {
   static Future<void> close() async {
     await Hive.close();
     _initialized = false;
-    debugPrint('[HiveInitializer] Hive closed');
   }
 
   /// Clear all cached data (useful for logout or reset).
@@ -140,8 +128,6 @@ class HiveInitializer {
       queueBox.clear(),
       metadataBox.clear(),
     ]);
-
-    debugPrint('[HiveInitializer] All caches cleared');
   }
 
   /// Get a typed box (convenience getter).

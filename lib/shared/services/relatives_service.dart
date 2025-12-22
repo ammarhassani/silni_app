@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
@@ -89,9 +88,6 @@ class RelativesService {
         return filtered;
       });
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [RELATIVES] Error streaming relatives: $e');
-      }
       rethrow;
     }
   }
@@ -115,9 +111,6 @@ class RelativesService {
 
           return Relative.fromJson(response);
         } catch (e) {
-          if (kDebugMode) {
-            print('❌ [RELATIVES] Error fetching relative: $e');
-          }
           rethrow;
         }
       },
@@ -138,9 +131,6 @@ class RelativesService {
             return Relative.fromJson(data.first);
           });
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [RELATIVES] Error streaming relative: $e');
-      }
       rethrow;
     }
   }
@@ -223,9 +213,6 @@ class RelativesService {
       // Then delete the relative
       await _supabase.from(_table).delete().eq('id', relativeId);
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [RELATIVES] Error permanently deleting relative: $e');
-      }
       rethrow;
     }
   }
@@ -241,9 +228,6 @@ class RelativesService {
           })
           .eq('id', relativeId);
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [RELATIVES] Error toggling favorite: $e');
-      }
       rethrow;
     }
   }
@@ -261,9 +245,6 @@ class RelativesService {
         },
       );
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [RELATIVES] Error recording interaction: $e');
-      }
       rethrow;
     }
   }
@@ -312,9 +293,6 @@ class RelativesService {
 
       return (response as List).length;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [RELATIVES] Error counting relatives: $e');
-      }
       return 0;
     }
   }

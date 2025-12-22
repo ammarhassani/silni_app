@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -9,6 +10,8 @@ import 'package:silni_app/core/router/app_routes.dart';
 import 'package:silni_app/core/theme/theme_provider.dart';
 import 'package:silni_app/shared/widgets/gradient_background.dart';
 import 'package:silni_app/features/auth/providers/auth_provider.dart';
+import 'package:silni_app/core/config/supabase_config.dart';
+import 'package:universal_html/html.dart' as html;
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -56,6 +59,40 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   Future<void> _navigateToNextScreen() async {
     if (!mounted) return;
+
+    // For web: Check if this is an OAuth callback (URL contains auth code)
+    // Supabase processes the code during initialization, so user may already be logged in
+    if (kIsWeb) {
+      final uri = Uri.parse(html.window.location.href);
+      final hasAuthCode = uri.queryParameters.containsKey('code');
+
+      if (hasAuthCode) {
+        // Supabase has already processed the OAuth callback during initialization
+        // Check if user is already authenticated
+        final currentUser = SupabaseConfig.currentUser;
+
+        if (currentUser != null) {
+          // User is already logged in from OAuth callback
+          // Clear the URL params to prevent re-processing on refresh
+          html.window.history.replaceState(null, '', '/');
+          if (mounted) context.go(AppRoutes.home);
+          return;
+        }
+
+        // If not yet authenticated, wait briefly for the auth state to settle
+        // (in case Supabase is still processing)
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        if (!mounted) return;
+
+        final userAfterWait = SupabaseConfig.currentUser;
+        if (userAfterWait != null) {
+          html.window.history.replaceState(null, '', '/');
+          context.go(AppRoutes.home);
+          return;
+        }
+      }
+    }
 
     // IMPORTANT: First try to restore persistent session
     // This calls checkPersistentSession() which handles session recovery after app kill

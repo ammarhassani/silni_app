@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../../shared/models/interaction_model.dart';
@@ -107,9 +106,6 @@ class GamificationService {
         source: 'interaction',
       ));
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [Gamification] Failed to award points: $e');
-      }
       rethrow;
     }
   }
@@ -118,64 +114,83 @@ class GamificationService {
   // STREAK TRACKING (24h-based, Snapchat-like)
   // =====================================================
 
-  /// Update user's streak after an interaction
+  /// Update user's streak after an interaction (Snapchat-style)
   ///
-  /// Streak Logic (24h-based):
-  /// - Timer resets to 24h on EVERY interaction
-  /// - Streak increments once per 24h period (24-48h since last)
-  /// - Streak breaks if > 48h pass without interaction
+  /// Snapchat Streak Rules:
+  /// - Every interaction resets the 24h deadline timer
+  /// - Streak increments when entering a new "day" (24h since day_start)
+  /// - Streak breaks if deadline passes without interaction
   Future<Map<String, dynamic>> updateStreak(String userId) async {
     try {
-      // Get user's current streak data and last interaction timestamp
+      // Get user's current streak data
       final userData = await _supabase
           .from('users')
-          .select('current_streak, longest_streak, last_interaction_at')
+          .select('current_streak, longest_streak, streak_deadline, streak_day_start')
           .eq('id', userId)
           .single();
 
       final int currentStreak = userData['current_streak'] ?? 0;
       final int longestStreak = userData['longest_streak'] ?? 0;
-      final String? lastInteractionAtStr = userData['last_interaction_at'];
+      final String? deadlineStr = userData['streak_deadline'];
+      final String? dayStartStr = userData['streak_day_start'];
 
-      final now = DateTime.now();
+      // Use UTC for consistent timezone handling
+      final now = DateTime.now().toUtc();
+      final newDeadline = now.add(const Duration(hours: 24));
+
       int newStreak;
+      DateTime newDayStart;
       bool streakIncreased = false;
+      bool streakBroken = false;
 
-      if (lastInteractionAtStr == null) {
-        // First interaction ever - start streak at 1
+      if (deadlineStr == null || dayStartStr == null) {
+        // FIRST INTERACTION EVER - Start fresh streak
         newStreak = 1;
+        newDayStart = now;
         streakIncreased = true;
       } else {
-        final lastInteraction = DateTime.parse(lastInteractionAtStr);
-        final hoursSinceLast = now.difference(lastInteraction).inHours;
+        final deadline = DateTime.parse(deadlineStr).toUtc();
+        final dayStart = DateTime.parse(dayStartStr).toUtc();
 
-        if (hoursSinceLast > 48) {
-          // More than 48h passed - streak broken completely
+        if (now.isAfter(deadline)) {
+          // DEADLINE MISSED - Streak broken!
           newStreak = 1;
-          streakIncreased = true; // New streak starts
-        } else if (hoursSinceLast >= 24) {
-          // 24-48h window - new day earned, increment streak
-          newStreak = currentStreak + 1;
+          newDayStart = now;
           streakIncreased = true;
+          streakBroken = true;
         } else {
-          // Within 24h - same period, no increment (but timer resets)
-          newStreak = currentStreak;
-          streakIncreased = false;
+          // WITHIN DEADLINE - Streak is safe!
+          // Check if we've entered a new "day" (24h since day_start)
+          final hoursSinceDayStart = now.difference(dayStart).inHours;
+
+          if (hoursSinceDayStart >= 24) {
+            // NEW DAY - Increment streak!
+            newStreak = currentStreak + 1;
+            newDayStart = now;
+            streakIncreased = true;
+          } else {
+            // SAME DAY - No increment, just extend deadline
+            newStreak = currentStreak;
+            newDayStart = dayStart; // Keep original day start
+          }
         }
       }
 
       // Update longest streak if necessary
       final newLongestStreak = newStreak > longestStreak ? newStreak : longestStreak;
 
-      // ALWAYS update last_interaction_at (resets the 24h timer display)
+      // ALWAYS update database: streak values + deadline (timer always resets!)
       await _supabase.from('users').update({
         'current_streak': newStreak,
         'longest_streak': newLongestStreak,
-        'last_interaction_at': now.toUtc().toIso8601String(), // Full timestamp
+        'streak_deadline': newDeadline.toIso8601String(),
+        'streak_day_start': newDayStart.toIso8601String(),
+        // Also update legacy field for backward compatibility
+        'last_interaction_at': now.toIso8601String(),
       }).eq('id', userId);
 
       // Emit streak events
-      if (streakIncreased) {
+      if (streakIncreased && !streakBroken) {
         _eventsController?.emit(GamificationEvent.streakIncreased(
           userId: userId,
           currentStreak: newStreak,
@@ -196,12 +211,11 @@ class GamificationService {
         'current_streak': newStreak,
         'longest_streak': newLongestStreak,
         'streak_increased': streakIncreased,
-        'last_interaction_at': now.toUtc().toIso8601String(),
+        'streak_broken': streakBroken,
+        'streak_deadline': newDeadline.toIso8601String(),
+        'streak_day_start': newDayStart.toIso8601String(),
       };
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [Gamification] Failed to update streak: $e');
-      }
       rethrow;
     }
   }
@@ -328,9 +342,6 @@ class GamificationService {
 
       return newBadges;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [Gamification] Failed to check badges: $e');
-      }
       rethrow;
     }
   }
@@ -465,9 +476,6 @@ class GamificationService {
         'current_level': currentLevel,
       };
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [Gamification] Failed to check level: $e');
-      }
       rethrow;
     }
   }
@@ -528,9 +536,6 @@ class GamificationService {
         'level': levelResult,
       };
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [Gamification] Failed to process: $e');
-      }
       rethrow;
     }
   }

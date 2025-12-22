@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/interaction_model.dart';
@@ -283,10 +282,6 @@ class InteractionsRepository {
               'updated_at': interaction.updatedAt!.toUtc().toIso8601String(),
           }
         : updates ?? {};
-
-    // Debug: Log the data being queued
-    debugPrint('[InteractionsRepository] Queueing $type for $entityId');
-    debugPrint('[InteractionsRepository] Data keys: ${data.keys.toList()}');
 
     final operation = OfflineOperation(
       id: 0,

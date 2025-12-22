@@ -4,6 +4,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/app_logger_service.dart';
+import '../errors/app_errors.dart';
 import 'env/app_environment.dart';
 
 /// Supabase configuration and initialization for Silni app
@@ -69,9 +70,11 @@ class SupabaseConfig {
             'environment': environment,
           },
         );
-        throw Exception(
-          'Missing Supabase credentials for environment: $environment. '
-          'Run: flutter pub run build_runner build --delete-conflicting-outputs',
+        throw ConfigurationError(
+          message: 'Missing Supabase credentials for environment: $environment. '
+              'Run: flutter pub run build_runner build --delete-conflicting-outputs',
+          arabicMessage: 'بيانات الاعتماد مفقودة، يرجى إعادة بناء التطبيق',
+          component: 'Supabase',
         );
       }
 
@@ -168,8 +171,9 @@ class SupabaseConfig {
           );
 
           if (retrieved != 'test_value') {
-            throw Exception(
-              'iOS storage verification failed - could not read back test value',
+            throw const StorageError(
+              message: 'iOS storage verification failed - could not read back test value',
+              arabicMessage: 'فشل التحقق من التخزين المحلي',
             );
           }
 
@@ -230,10 +234,11 @@ class SupabaseConfig {
 
       // Re-throw with user-friendly message
       // This prevents the app from continuing with an uninitialized Supabase instance
-      throw Exception(
-        'فشل الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.\n\n'
-        'Failed to connect to server. Please check your internet connection and try again.\n\n'
-        'Technical details: $e',
+      throw ServerError(
+        message: 'Failed to connect to server: $e',
+        arabicMessage: 'فشل الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى',
+        originalError: e,
+        stackTrace: stackTrace,
       );
     }
   }
@@ -243,8 +248,10 @@ class SupabaseConfig {
   /// Throws an exception if Supabase is not initialized
   static SupabaseClient get client {
     if (!_initialized) {
-      throw Exception(
-        'Supabase not initialized. Call SupabaseConfig.initialize() first.',
+      throw const ConfigurationError(
+        message: 'Supabase not initialized. Call SupabaseConfig.initialize() first.',
+        arabicMessage: 'لم يتم تهيئة الاتصال بالخادم',
+        component: 'Supabase',
       );
     }
     return Supabase.instance.client;

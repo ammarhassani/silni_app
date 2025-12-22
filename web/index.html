@@ -18,12 +18,15 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="صِلْني - تطبيق صلة الرحم">
+
+  <!-- Google Sign-In Client ID for web -->
+  <meta name="google-signin-client_id" content="1049917341546-s0v9645jaquokpqqv1kia2trnlpsjfru.apps.googleusercontent.com">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="silni_app">
+  <meta name="apple-mobile-web-app-title" content="صِلْني">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
@@ -33,6 +36,16 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <!-- Google Sign-In API for web - must load synchronously before Flutter -->
+  <script src="https://accounts.google.com/gsi/client"></script>
+
+  <!-- Firebase SDK - Required for Firebase services on web -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-performance-compat.js"></script>
+
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

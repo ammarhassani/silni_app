@@ -331,7 +331,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                               if (value == null || value.isEmpty) {
                                 return 'الرجاء إدخال البريد الإلكتروني';
                               }
-                              if (!value.contains('@')) {
+                              // Email regex validation
+                              final emailRegex = RegExp(
+                                r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                              );
+                              if (!emailRegex.hasMatch(value)) {
                                 return 'البريد الإلكتروني غير صحيح';
                               }
                               return null;
@@ -365,8 +369,17 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                               if (value == null || value.isEmpty) {
                                 return 'الرجاء إدخال كلمة المرور';
                               }
-                              if (value.length < 6) {
-                                return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+                              if (value.length < 8) {
+                                return 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
+                              }
+                              if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                                return 'يجب أن تحتوي على حرف كبير واحد على الأقل';
+                              }
+                              if (!RegExp(r'[a-z]').hasMatch(value)) {
+                                return 'يجب أن تحتوي على حرف صغير واحد على الأقل';
+                              }
+                              if (!RegExp(r'[0-9]').hasMatch(value)) {
+                                return 'يجب أن تحتوي على رقم واحد على الأقل';
                               }
                               return null;
                             },

@@ -98,11 +98,6 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
           SafeArea(
             child: Column(
               children: [
-                // Header with back button
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Row(children: [const Spacer()]),
-                ),
                 // Content
                 Expanded(
                   child: _isLoading
@@ -225,7 +220,12 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
     final level = stats['level'] ?? 1;
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.xl),
+      padding: const EdgeInsets.only(
+        top: AppSpacing.sm,
+        left: AppSpacing.lg,
+        right: AppSpacing.lg,
+        bottom: AppSpacing.md,
+      ),
       child: Column(
         children: [
           // Animated Trophy Icon
