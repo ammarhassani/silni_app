@@ -42,16 +42,16 @@ class QuickActionsWidget extends ConsumerWidget {
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: _QuickActionCard(
-                icon: Icons.assessment_rounded,
-                title: 'الإحصائيات',
-                subtitle: 'تقدمك اليومي',
+                icon: Icons.auto_awesome_rounded,
+                title: 'واصل',
+                subtitle: 'مساعدك الذكي',
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.emotionalPurple.withValues(alpha: 0.6),
-                    AppColors.calmBlue.withValues(alpha: 0.4),
+                    AppColors.emotionalPurple.withValues(alpha: 0.7),
+                    AppColors.calmBlue.withValues(alpha: 0.5),
                   ],
                 ),
-                onTap: () => context.push(AppRoutes.statistics),
+                onTap: () => context.push(AppRoutes.aiHub),
               ),
             ),
           ],

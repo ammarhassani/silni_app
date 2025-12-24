@@ -3,6 +3,7 @@ import 'dart:async';
 import '../../shared/models/relative_model.dart';
 import '../../shared/models/interaction_model.dart';
 import '../../shared/models/offline_operation.dart';
+import '../../shared/models/reminder_schedule_model.dart';
 import '../../shared/services/relatives_service.dart';
 import '../../shared/services/interactions_service.dart';
 import '../../shared/services/reminder_schedules_service.dart';
@@ -254,8 +255,14 @@ class SyncService {
         tag: 'Sync',
       );
 
-      // Fetch all relatives from server
-      final relatives = await _relativesService.getRelativesStream(userId).first;
+      // Fetch all relatives from server with timeout to prevent hanging
+      final relatives = await _relativesService
+          .getRelativesStream(userId)
+          .first
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () => <Relative>[],
+          );
 
       // Update cache
       await _cache.putRelatives(relatives);
@@ -290,10 +297,14 @@ class SyncService {
         tag: 'Sync',
       );
 
-      // Fetch interactions from server
+      // Fetch interactions from server with timeout to prevent hanging
       final interactions = await _interactionsService
           .getRelativeInteractionsStream(relativeId)
-          .first;
+          .first
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () => <Interaction>[],
+          );
 
       // Take only the most recent ones based on limit
       final limitedInteractions = interactions
@@ -334,8 +345,14 @@ class SyncService {
         tag: 'Sync',
       );
 
-      // Fetch all schedules from server
-      final schedules = await _schedulesService.getSchedulesStream(userId).first;
+      // Fetch all schedules from server with timeout to prevent hanging
+      final schedules = await _schedulesService
+          .getSchedulesStream(userId)
+          .first
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () => <ReminderSchedule>[],
+          );
 
       // Update cache
       await _cache.putReminderSchedules(schedules);

@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
+import '../../features/ai_assistant/widgets/health_badge.dart';
 import '../models/relative_model.dart';
 import 'glass_card.dart';
 
@@ -88,9 +89,15 @@ class SwipeableRelativeCard extends StatelessWidget {
   Widget _buildCard(BuildContext context) {
     final needsAttention = relative.needsContact;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: GlassCard(
+    return Semantics(
+      label: '${relative.fullName}، ${relative.relationshipType.arabicName}'
+          '${needsAttention ? '، يحتاج تواصل' : ''}'
+          '${relative.isFavorite ? '، مفضل' : ''}',
+      button: true,
+      hint: 'انقر للعرض، اسحب لخيارات التواصل',
+      child: GestureDetector(
+        onTap: onTap,
+        child: GlassCard(
         padding: const EdgeInsets.all(AppSpacing.md),
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
         gradient: needsAttention
@@ -180,6 +187,12 @@ class SwipeableRelativeCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                // Health badge (bottom-right)
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: HealthBadge(relative: relative, size: 14),
+                ),
               ],
             ),
           ),
@@ -263,6 +276,7 @@ class SwipeableRelativeCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

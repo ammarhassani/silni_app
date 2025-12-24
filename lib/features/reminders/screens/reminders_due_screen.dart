@@ -18,6 +18,7 @@ import '../../../shared/providers/interactions_provider.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../home/providers/home_providers.dart';
+import '../../../shared/widgets/premium_loading_indicator.dart';
 
 /// Screen that shows relatives due for contact from reminder notifications
 class RemindersDueScreen extends ConsumerStatefulWidget {
@@ -56,8 +57,11 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
                       final schedules = schedulesAsync.valueOrNull ?? [];
                       return _buildContent(context, relatives, contactedToday, schedules);
                     },
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
+                    loading: () => const Center(
+                      child: PremiumLoadingIndicator(
+                        message: 'جاري تحميل التذكيرات...',
+                      ),
+                    ),
                     error: (_,_) => _buildError(),
                   ),
                 ),

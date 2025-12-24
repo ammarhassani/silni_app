@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
@@ -11,31 +12,95 @@ final hadithServiceProvider = Provider((ref) {
   return HadithService();
 });
 
+/// Cache duration for stream providers - keeps data alive for 5 minutes
+/// after the last listener is removed to avoid excessive re-fetches
+const _cacheTimeout = Duration(minutes: 5);
+
 /// Stream provider for relatives list (cache-first via repository)
-final relativesStreamProvider = StreamProvider.family<List<Relative>, String>((
+/// Uses autoDispose with timed cache to prevent memory leaks
+final relativesStreamProvider =
+    StreamProvider.autoDispose.family<List<Relative>, String>((
   ref,
   userId,
 ) {
-  ref.keepAlive();
+  // Keep alive for 5 minutes after last listener removed
+  final link = ref.keepAlive();
+  Timer? timer;
+
+  ref.onDispose(() {
+    timer?.cancel();
+  });
+
+  ref.onCancel(() {
+    // Start countdown when no listeners
+    timer = Timer(_cacheTimeout, () {
+      link.close();
+    });
+  });
+
+  ref.onResume(() {
+    // Cancel countdown if listener re-attaches
+    timer?.cancel();
+  });
+
   final repository = ref.watch(relativesRepositoryProvider);
   return repository.watchRelatives(userId);
 });
 
 /// Stream provider for today's interactions (cache-first via repository)
+/// Uses autoDispose with timed cache to prevent memory leaks
 final todayInteractionsStreamProvider =
-    StreamProvider.family<List<Interaction>, String>((ref, userId) {
-      ref.keepAlive();
-      final repository = ref.watch(interactionsRepositoryProvider);
-      return repository.watchTodayInteractions(userId);
+    StreamProvider.autoDispose.family<List<Interaction>, String>((ref, userId) {
+  // Keep alive for 5 minutes after last listener removed
+  final link = ref.keepAlive();
+  Timer? timer;
+
+  ref.onDispose(() {
+    timer?.cancel();
+  });
+
+  ref.onCancel(() {
+    timer = Timer(_cacheTimeout, () {
+      link.close();
     });
+  });
+
+  ref.onResume(() {
+    timer?.cancel();
+  });
+
+  final repository = ref.watch(interactionsRepositoryProvider);
+  return repository.watchTodayInteractions(userId);
+});
 
 /// Stream provider for reminder schedules (cache-first via repository)
+/// Uses autoDispose with timed cache to prevent memory leaks
 final reminderSchedulesStreamProvider =
-    StreamProvider.family<List<ReminderSchedule>, String>((ref, userId) {
-      ref.keepAlive();
-      final repository = ref.watch(reminderSchedulesRepositoryProvider);
-      return repository.watchSchedules(userId);
+    StreamProvider.autoDispose.family<List<ReminderSchedule>, String>((
+  ref,
+  userId,
+) {
+  // Keep alive for 5 minutes after last listener removed
+  final link = ref.keepAlive();
+  Timer? timer;
+
+  ref.onDispose(() {
+    timer?.cancel();
+  });
+
+  ref.onCancel(() {
+    timer = Timer(_cacheTimeout, () {
+      link.close();
     });
+  });
+
+  ref.onResume(() {
+    timer?.cancel();
+  });
+
+  final repository = ref.watch(reminderSchedulesRepositoryProvider);
+  return repository.watchSchedules(userId);
+});
 
 /// Provider for today's due relatives based on reminder schedules
 /// Returns relatives with ALL their applicable frequencies (e.g., daily + friday)
@@ -69,9 +134,30 @@ final todayDueRelativesProvider = Provider.family<List<DueRelativeWithFrequencie
 
 /// Stream provider for user gamification data (streak, badges)
 /// Used by StreakBadgeBar for live updates
+/// Uses autoDispose with timed cache to prevent memory leaks
 final userGamificationDataProvider =
-    StreamProvider.family<Map<String, dynamic>, String>((ref, userId) {
-  ref.keepAlive();
+    StreamProvider.autoDispose.family<Map<String, dynamic>, String>((
+  ref,
+  userId,
+) {
+  // Keep alive for 5 minutes after last listener removed
+  final link = ref.keepAlive();
+  Timer? timer;
+
+  ref.onDispose(() {
+    timer?.cancel();
+  });
+
+  ref.onCancel(() {
+    timer = Timer(_cacheTimeout, () {
+      link.close();
+    });
+  });
+
+  ref.onResume(() {
+    timer?.cancel();
+  });
+
   return SupabaseConfig.client
       .from('users')
       .stream(primaryKey: ['id'])

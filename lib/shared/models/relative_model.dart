@@ -175,6 +175,30 @@ class Relative {
   final DateTime createdAt;
   final DateTime? updatedAt;
 
+  // AI-Optimized Fields - Gift Related
+  final List<String>? interests;
+  final List<String>? favoriteColors;
+  final List<String>? favoriteFoods;
+  final String? clothingSize;
+  final String? giftBudget; // 'low', 'medium', 'high'
+  final List<String>? dislikedGifts;
+  final List<String>? wishlist;
+
+  // AI-Optimized Fields - Personality & Communication
+  final String? personalityType;
+  final String? communicationStyle; // 'direct', 'gentle', 'formal'
+  final List<String>? sensitiveTopics;
+  final String? relationshipChallenges;
+  final String? relationshipStrengths;
+  final String? aiNotes;
+
+  // AI-Optimized Fields - Health Scoring
+  final int? emotionalCloseness; // 1-5 scale
+  final int? communicationQuality; // 1-5 scale
+  final String? conflictHistory;
+  final int? supportLevel; // 1-5 scale
+  final DateTime? lastMeaningfulInteraction;
+
   Relative({
     required this.id,
     required this.userId,
@@ -202,6 +226,25 @@ class Relative {
     this.contactId,
     required this.createdAt,
     this.updatedAt,
+    // AI fields
+    this.interests,
+    this.favoriteColors,
+    this.favoriteFoods,
+    this.clothingSize,
+    this.giftBudget,
+    this.dislikedGifts,
+    this.wishlist,
+    this.personalityType,
+    this.communicationStyle,
+    this.sensitiveTopics,
+    this.relationshipChallenges,
+    this.relationshipStrengths,
+    this.aiNotes,
+    this.emotionalCloseness,
+    this.communicationQuality,
+    this.conflictHistory,
+    this.supportLevel,
+    this.lastMeaningfulInteraction,
   });
 
   /// Create from Supabase JSON
@@ -212,6 +255,15 @@ class Relative {
     final fullName = json['full_name'] as String? ?? '';
     final relationshipTypeStr = json['relationship_type'] as String? ?? 'other';
     final createdAtStr = json['created_at'] as String?;
+
+    // Helper to parse list of strings from JSON
+    List<String>? parseStringList(dynamic value) {
+      if (value == null) return null;
+      if (value is List) {
+        return value.map((e) => e.toString()).toList();
+      }
+      return null;
+    }
 
     return Relative(
       id: id,
@@ -246,6 +298,29 @@ class Relative {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
           : null,
+      // AI fields - Gift related
+      interests: parseStringList(json['interests']),
+      favoriteColors: parseStringList(json['favorite_colors']),
+      favoriteFoods: parseStringList(json['favorite_foods']),
+      clothingSize: json['clothing_size'] as String?,
+      giftBudget: json['gift_budget'] as String?,
+      dislikedGifts: parseStringList(json['disliked_gifts']),
+      wishlist: parseStringList(json['wishlist']),
+      // AI fields - Personality
+      personalityType: json['personality_type'] as String?,
+      communicationStyle: json['communication_style'] as String?,
+      sensitiveTopics: parseStringList(json['sensitive_topics']),
+      relationshipChallenges: json['relationship_challenges'] as String?,
+      relationshipStrengths: json['relationship_strengths'] as String?,
+      aiNotes: json['ai_notes'] as String?,
+      // AI fields - Health scoring
+      emotionalCloseness: json['emotional_closeness'] as int?,
+      communicationQuality: json['communication_quality'] as int?,
+      conflictHistory: json['conflict_history'] as String?,
+      supportLevel: json['support_level'] as int?,
+      lastMeaningfulInteraction: json['last_meaningful_interaction'] != null
+          ? DateTime.parse(json['last_meaningful_interaction'] as String)
+          : null,
     );
   }
 
@@ -275,6 +350,27 @@ class Relative {
       'is_archived': isArchived,
       'is_favorite': isFavorite,
       'contact_id': contactId,
+      // AI fields - Gift related
+      'interests': interests,
+      'favorite_colors': favoriteColors,
+      'favorite_foods': favoriteFoods,
+      'clothing_size': clothingSize,
+      'gift_budget': giftBudget,
+      'disliked_gifts': dislikedGifts,
+      'wishlist': wishlist,
+      // AI fields - Personality
+      'personality_type': personalityType,
+      'communication_style': communicationStyle,
+      'sensitive_topics': sensitiveTopics,
+      'relationship_challenges': relationshipChallenges,
+      'relationship_strengths': relationshipStrengths,
+      'ai_notes': aiNotes,
+      // AI fields - Health scoring
+      'emotional_closeness': emotionalCloseness,
+      'communication_quality': communicationQuality,
+      'conflict_history': conflictHistory,
+      'support_level': supportLevel,
+      'last_meaningful_interaction': lastMeaningfulInteraction?.toUtc().toIso8601String(),
       // Don't include id, created_at, updated_at - managed by database
     };
   }
@@ -307,6 +403,25 @@ class Relative {
     String? contactId,
     DateTime? createdAt,
     DateTime? updatedAt,
+    // AI fields
+    List<String>? interests,
+    List<String>? favoriteColors,
+    List<String>? favoriteFoods,
+    String? clothingSize,
+    String? giftBudget,
+    List<String>? dislikedGifts,
+    List<String>? wishlist,
+    String? personalityType,
+    String? communicationStyle,
+    List<String>? sensitiveTopics,
+    String? relationshipChallenges,
+    String? relationshipStrengths,
+    String? aiNotes,
+    int? emotionalCloseness,
+    int? communicationQuality,
+    String? conflictHistory,
+    int? supportLevel,
+    DateTime? lastMeaningfulInteraction,
   }) {
     return Relative(
       id: id ?? this.id,
@@ -335,6 +450,25 @@ class Relative {
       contactId: contactId ?? this.contactId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      // AI fields
+      interests: interests ?? this.interests,
+      favoriteColors: favoriteColors ?? this.favoriteColors,
+      favoriteFoods: favoriteFoods ?? this.favoriteFoods,
+      clothingSize: clothingSize ?? this.clothingSize,
+      giftBudget: giftBudget ?? this.giftBudget,
+      dislikedGifts: dislikedGifts ?? this.dislikedGifts,
+      wishlist: wishlist ?? this.wishlist,
+      personalityType: personalityType ?? this.personalityType,
+      communicationStyle: communicationStyle ?? this.communicationStyle,
+      sensitiveTopics: sensitiveTopics ?? this.sensitiveTopics,
+      relationshipChallenges: relationshipChallenges ?? this.relationshipChallenges,
+      relationshipStrengths: relationshipStrengths ?? this.relationshipStrengths,
+      aiNotes: aiNotes ?? this.aiNotes,
+      emotionalCloseness: emotionalCloseness ?? this.emotionalCloseness,
+      communicationQuality: communicationQuality ?? this.communicationQuality,
+      conflictHistory: conflictHistory ?? this.conflictHistory,
+      supportLevel: supportLevel ?? this.supportLevel,
+      lastMeaningfulInteraction: lastMeaningfulInteraction ?? this.lastMeaningfulInteraction,
     );
   }
 
@@ -365,4 +499,81 @@ class Relative {
     // Low priority (cousins, others): every 2 weeks
     return days >= 14;
   }
+
+  /// Calculate relationship health score (0-100) based on AI fields
+  /// Returns null if not enough data available
+  int? get healthScore {
+    int totalWeight = 0;
+    int totalScore = 0;
+
+    // Contact frequency factor (weight: 30)
+    if (lastContactDate != null) {
+      final days = daysSinceLastContact!;
+      int contactScore;
+      if (priority == 1) {
+        // High priority: full score if < 2 days, decreasing after
+        contactScore = days < 2 ? 100 : (days < 7 ? 70 : (days < 14 ? 40 : 20));
+      } else if (priority == 2) {
+        // Medium priority: full score if < 7 days
+        contactScore = days < 7 ? 100 : (days < 14 ? 70 : (days < 30 ? 40 : 20));
+      } else {
+        // Low priority: full score if < 14 days
+        contactScore = days < 14 ? 100 : (days < 30 ? 70 : (days < 60 ? 40 : 20));
+      }
+      totalScore += contactScore * 30;
+      totalWeight += 30;
+    }
+
+    // Emotional closeness factor (weight: 25)
+    if (emotionalCloseness != null) {
+      totalScore += (emotionalCloseness! * 20) * 25;
+      totalWeight += 25;
+    }
+
+    // Communication quality factor (weight: 25)
+    if (communicationQuality != null) {
+      totalScore += (communicationQuality! * 20) * 25;
+      totalWeight += 25;
+    }
+
+    // Support level factor (weight: 20)
+    if (supportLevel != null) {
+      totalScore += (supportLevel! * 20) * 20;
+      totalWeight += 20;
+    }
+
+    if (totalWeight == 0) return null;
+    return (totalScore / totalWeight).round();
+  }
+
+  /// Get health status as enum value
+  RelationshipHealthStatus get healthStatus2 {
+    final score = healthScore;
+    if (score == null) return RelationshipHealthStatus.unknown;
+    if (score >= 70) return RelationshipHealthStatus.healthy;
+    if (score >= 40) return RelationshipHealthStatus.needsAttention;
+    return RelationshipHealthStatus.atRisk;
+  }
+
+  /// Check if this relative has any AI profile data
+  bool get hasAIProfile {
+    return interests != null ||
+        favoriteColors != null ||
+        personalityType != null ||
+        emotionalCloseness != null;
+  }
+}
+
+/// Relationship health status enum
+enum RelationshipHealthStatus {
+  healthy('healthy', 'صحية', '🟢'),
+  needsAttention('needs_attention', 'تحتاج اهتمام', '🟡'),
+  atRisk('at_risk', 'معرضة للخطر', '🔴'),
+  unknown('unknown', 'غير محدد', '⚪');
+
+  final String value;
+  final String arabicName;
+  final String emoji;
+
+  const RelationshipHealthStatus(this.value, this.arabicName, this.emoji);
 }

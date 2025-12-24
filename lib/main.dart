@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'core/config/supabase_config.dart';
@@ -28,6 +29,7 @@ import 'core/services/analytics_service.dart';
 import 'core/services/performance_monitoring_service.dart';
 import 'core/services/app_health_service.dart';
 import 'shared/widgets/error_boundary.dart';
+import 'shared/widgets/premium_loading_indicator.dart';
 
 // Background handler is now in fcm_notification_service.dart
 // It's imported and used via FirebaseMessaging.onBackgroundMessage()
@@ -91,6 +93,9 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+
+  // Initialize Arabic locale for date formatting
+  await initializeDateFormatting('ar');
 
   // Validate environment configuration (compile-time type-safe via envied)
   logger.info(
@@ -488,7 +493,11 @@ class SilniApp extends ConsumerWidget {
                   // Show loading while checking session
                   return const Scaffold(
                     backgroundColor: Colors.transparent,
-                    body: Center(child: CircularProgressIndicator()),
+                    body: Center(
+                      child: PremiumLoadingIndicator(
+                        message: 'جاري التحميل...',
+                      ),
+                    ),
                   );
                 },
                 error: (error, stack) {

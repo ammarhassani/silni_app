@@ -12,6 +12,7 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/models/notification_history_model.dart';
 import '../../../shared/services/notification_history_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../shared/widgets/premium_loading_indicator.dart';
 
 /// Screen that shows notification history
 class NotificationHistoryScreen extends ConsumerStatefulWidget {
@@ -44,8 +45,11 @@ class _NotificationHistoryScreenState
                   child: notificationsAsync.when(
                     data: (notifications) =>
                         _buildContent(context, notifications, themeColors),
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
+                    loading: () => const Center(
+                      child: PremiumLoadingIndicator(
+                        message: 'جاري تحميل الإشعارات...',
+                      ),
+                    ),
                     error: (_,_) => _buildError(),
                   ),
                 ),

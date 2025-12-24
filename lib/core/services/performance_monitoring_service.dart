@@ -2,7 +2,56 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'analytics_service.dart';
 import 'app_logger_service.dart';
+
+/// Pre-defined trace names for critical performance paths
+class PerformanceTraces {
+  PerformanceTraces._();
+
+  // App Lifecycle
+  static const appLaunch = 'app_launch';
+  static const appColdStart = 'app_cold_start';
+  static const appWarmStart = 'app_warm_start';
+  static const firstMeaningfulPaint = 'first_meaningful_paint';
+  static const timeToInteractive = 'time_to_interactive';
+
+  // Screen Loads
+  static const homeScreenLoad = 'home_screen_load';
+  static const relativesListLoad = 'relatives_list_load';
+  static const relativeDetailLoad = 'relative_detail_load';
+  static const remindersScreenLoad = 'reminders_screen_load';
+  static const aiChatScreenLoad = 'ai_chat_screen_load';
+  static const familyTreeLoad = 'family_tree_load';
+
+  // Data Operations
+  static const relativesDataFetch = 'relatives_data_fetch';
+  static const interactionsDataFetch = 'interactions_data_fetch';
+  static const remindersDataFetch = 'reminders_data_fetch';
+  static const userDataSync = 'user_data_sync';
+
+  // AI Operations
+  static const aiResponseTime = 'ai_response_time';
+  static const aiStreamingStart = 'ai_streaming_start';
+  static const aiFullResponse = 'ai_full_response';
+  static const aiPreload = 'ai_preload';
+
+  // Cache Operations
+  static const cacheRead = 'cache_read';
+  static const cacheWrite = 'cache_write';
+  static const cacheSync = 'cache_sync';
+}
+
+/// Slow load thresholds in milliseconds
+class PerformanceThresholds {
+  PerformanceThresholds._();
+
+  static const int screenLoad = 500; // 500ms for screen loads
+  static const int dataFetch = 1000; // 1s for data fetches
+  static const int aiResponse = 3000; // 3s for AI responses
+  static const int cacheOperation = 100; // 100ms for cache ops
+  static const int coldStart = 2000; // 2s for cold start
+}
 
 /// Centralized performance monitoring service
 /// Integrates Firebase Performance and Sentry for comprehensive metrics
@@ -13,6 +62,7 @@ class PerformanceMonitoringService {
   PerformanceMonitoringService._internal();
 
   final AppLoggerService _logger = AppLoggerService();
+  final AnalyticsService _analytics = AnalyticsService();
   late final FirebasePerformance _firebasePerformance;
 
   bool _isInitialized = false;
@@ -432,6 +482,166 @@ class PerformanceMonitoringService {
       await span.finish();
     }
     _activeSentrySpans.clear();
+  }
+
+  // =====================================================
+  // CRITICAL PATH MONITORING WITH ANALYTICS
+  // =====================================================
+
+  /// Measure a screen load and report slow loads to analytics
+  Future<T> measureScreenLoad<T>(
+    String screenName,
+    Future<T> Function() operation, {
+    int? itemCount,
+  }) async {
+    final stopwatch = Stopwatch()..start();
+    final traceId = await startScreenTrace(screenName);
+
+    try {
+      final result = await operation();
+      stopwatch.stop();
+
+      final duration = stopwatch.elapsedMilliseconds;
+      await stopScreenTrace(traceId);
+      _recordMetric('screen_$screenName', duration);
+
+      // Report slow loads to analytics
+      if (duration > PerformanceThresholds.screenLoad) {
+        await _analytics.logSlowLoad(
+          screenName: screenName,
+          loadTimeMs: duration,
+          itemCount: itemCount,
+        );
+        _logger.warning(
+          'Slow screen load: $screenName took ${duration}ms',
+          category: LogCategory.service,
+          tag: 'Performance',
+        );
+      }
+
+      return result;
+    } catch (e) {
+      stopwatch.stop();
+      await stopScreenTrace(traceId);
+      _recordMetric('screen_$screenName', stopwatch.elapsedMilliseconds,
+          hasError: true);
+      rethrow;
+    }
+  }
+
+  /// Measure AI response time with analytics reporting
+  Future<T> measureAIResponse<T>(
+    Future<T> Function() operation,
+  ) async {
+    final stopwatch = Stopwatch()..start();
+    final traceId = await startTrace(PerformanceTraces.aiResponseTime);
+
+    try {
+      final result = await operation();
+      stopwatch.stop();
+
+      final duration = stopwatch.elapsedMilliseconds;
+      await stopTrace(traceId, metrics: {'duration_ms': duration});
+      _recordMetric(PerformanceTraces.aiResponseTime, duration);
+
+      // Report to analytics
+      await _analytics.logAIResponseReceived(responseTimeMs: duration);
+
+      if (duration > PerformanceThresholds.aiResponse) {
+        _logger.warning(
+          'Slow AI response: ${duration}ms',
+          category: LogCategory.service,
+          tag: 'Performance',
+        );
+      }
+
+      return result;
+    } catch (e) {
+      stopwatch.stop();
+      await stopTrace(traceId, metrics: {
+        'duration_ms': stopwatch.elapsedMilliseconds,
+        'error': 1,
+      });
+      rethrow;
+    }
+  }
+
+  /// Measure data fetch with threshold checking
+  Future<T> measureDataFetch<T>(
+    String operationName,
+    Future<T> Function() operation, {
+    int? itemCount,
+  }) async {
+    final stopwatch = Stopwatch()..start();
+    final traceId = await startTrace(operationName, attributes: {
+      'trace_type': 'data_fetch',
+      if (itemCount != null) 'item_count': itemCount.toString(),
+    });
+
+    try {
+      final result = await operation();
+      stopwatch.stop();
+
+      final duration = stopwatch.elapsedMilliseconds;
+      await stopTrace(traceId, metrics: {
+        'duration_ms': duration,
+        if (itemCount != null) 'item_count': itemCount,
+      });
+      _recordMetric(operationName, duration);
+
+      if (duration > PerformanceThresholds.dataFetch) {
+        await _analytics.logSlowLoad(
+          screenName: operationName,
+          loadTimeMs: duration,
+          itemCount: itemCount,
+        );
+      }
+
+      return result;
+    } catch (e) {
+      stopwatch.stop();
+      await stopTrace(traceId, metrics: {
+        'duration_ms': stopwatch.elapsedMilliseconds,
+        'error': 1,
+      });
+      rethrow;
+    }
+  }
+
+  /// Track app cold start performance
+  Future<void> trackColdStart(DateTime appStartTime) async {
+    final duration = DateTime.now().difference(appStartTime).inMilliseconds;
+
+    final traceId = await startTrace(PerformanceTraces.appColdStart);
+    await stopTrace(traceId, metrics: {'duration_ms': duration});
+    _recordMetric(PerformanceTraces.appColdStart, duration);
+
+    if (duration > PerformanceThresholds.coldStart) {
+      await _analytics.logSlowLoad(
+        screenName: 'cold_start',
+        loadTimeMs: duration,
+      );
+      _logger.warning(
+        'Slow cold start: ${duration}ms (threshold: ${PerformanceThresholds.coldStart}ms)',
+        category: LogCategory.service,
+        tag: 'Performance',
+      );
+    }
+  }
+
+  /// Get health status of critical operations
+  Map<String, bool> getCriticalPathHealth() {
+    return {
+      'home_screen': _isOperationHealthy(PerformanceTraces.homeScreenLoad),
+      'relatives_list': _isOperationHealthy(PerformanceTraces.relativesListLoad),
+      'ai_response': _isOperationHealthy(PerformanceTraces.aiResponseTime),
+      'data_fetch': _isOperationHealthy(PerformanceTraces.relativesDataFetch),
+    };
+  }
+
+  bool _isOperationHealthy(String operationName) {
+    final summary = getPerformanceSummary(operationName);
+    return summary?.isHealthy ?? true;
   }
 }
 

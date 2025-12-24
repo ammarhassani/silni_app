@@ -5,6 +5,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../providers/stats_provider.dart';
 import '../widgets/stats/widgets.dart';
+import '../../../shared/widgets/premium_loading_indicator.dart';
 
 /// Detailed statistics screen showing comprehensive gamification data
 class DetailedStatsScreen extends ConsumerWidget {
@@ -28,7 +29,11 @@ class DetailedStatsScreen extends ConsumerWidget {
                 Expanded(
                   child: statsAsync.when(
                     data: (stats) => _buildContent(stats),
-                    loading: () => const Center(child: CircularProgressIndicator()),
+                    loading: () => const Center(
+                      child: PremiumLoadingIndicator(
+                        message: 'جاري تحميل الإحصائيات...',
+                      ),
+                    ),
                     error: (_, _) => _buildErrorState(context, ref),
                   ),
                 ),

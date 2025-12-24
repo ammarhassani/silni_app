@@ -7,6 +7,7 @@ import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_themes.dart';
 import '../../../../shared/widgets/relative_avatar.dart';
 import '../../../../shared/models/relative_model.dart';
+import '../../../ai_assistant/widgets/health_badge.dart';
 
 /// Header widget displaying relative avatar, name, and relationship
 class RelativeHeaderWidget extends ConsumerWidget {
@@ -139,6 +140,15 @@ class RelativeHeaderWidget extends ConsumerWidget {
                 ],
               ),
             ),
+
+          const SizedBox(height: AppSpacing.sm),
+
+          // Health badge with score
+          HealthBadge(
+            relative: relative,
+            showLabel: true,
+            showScore: true,
+          ),
 
           const SizedBox(height: AppSpacing.sm),
 

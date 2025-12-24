@@ -14,6 +14,24 @@ final relativesServiceProvider = Provider<RelativesService>((ref) {
   return RelativesService();
 });
 
+/// Result of a paginated relatives query
+class PaginatedRelativesResult {
+  final List<Relative> relatives;
+  final int totalCount;
+  final bool hasMore;
+  final int currentOffset;
+
+  const PaginatedRelativesResult({
+    required this.relatives,
+    required this.totalCount,
+    required this.hasMore,
+    required this.currentOffset,
+  });
+
+  /// Next offset for pagination
+  int get nextOffset => currentOffset + relatives.length;
+}
+
 class RelativesService {
   final SupabaseClient _supabase = SupabaseConfig.client;
   final AppLoggerService _logger = AppLoggerService();
@@ -90,6 +108,84 @@ class RelativesService {
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// Get paginated relatives for a user
+  /// Returns a page of relatives with cursor-based pagination for 10K+ scale
+  Future<PaginatedRelativesResult> getRelativesPaginated({
+    required String userId,
+    int pageSize = 20,
+    int offset = 0,
+    String? searchQuery,
+  }) async {
+    return _perfService.measureDatabaseOperation(
+      'select_paginated',
+      _table,
+      () async {
+        try {
+          var query = _supabase
+              .from(_table)
+              .select()
+              .eq('user_id', userId)
+              .eq('is_archived', false);
+
+          // Add search filter if provided
+          if (searchQuery != null && searchQuery.isNotEmpty) {
+            query = query.ilike('full_name', '%$searchQuery%');
+          }
+
+          // Get total count for pagination info
+          final countResponse = await _supabase
+              .from(_table)
+              .select()
+              .eq('user_id', userId)
+              .eq('is_archived', false)
+              .count();
+
+          final totalCount = countResponse.count;
+
+          // Get paginated data with sorting
+          final response = await query
+              .order('priority', ascending: true)
+              .order('full_name', ascending: true)
+              .range(offset, offset + pageSize - 1);
+
+          final relatives = (response as List)
+              .map((json) => Relative.fromJson(json))
+              .toList();
+
+          final hasMore = offset + relatives.length < totalCount;
+
+          _logger.debug(
+            'Fetched paginated relatives',
+            category: LogCategory.database,
+            tag: 'RelativesService',
+            metadata: {
+              'offset': offset,
+              'pageSize': pageSize,
+              'fetched': relatives.length,
+              'totalCount': totalCount,
+              'hasMore': hasMore,
+            },
+          );
+
+          return PaginatedRelativesResult(
+            relatives: relatives,
+            totalCount: totalCount,
+            hasMore: hasMore,
+            currentOffset: offset,
+          );
+        } catch (e) {
+          _logger.error(
+            'Failed to fetch paginated relatives',
+            category: LogCategory.database,
+            tag: 'RelativesService',
+            metadata: {'error': e.toString()},
+          );
+          rethrow;
+        }
+      },
+    );
   }
 
   /// Get a single relative by ID

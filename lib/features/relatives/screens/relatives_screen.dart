@@ -16,6 +16,7 @@ import '../../../core/router/app_routes.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../home/providers/home_providers.dart';
 import '../../../core/providers/realtime_provider.dart';
+import '../../../shared/widgets/premium_loading_indicator.dart';
 
 class RelativesScreen extends ConsumerStatefulWidget {
   const RelativesScreen({super.key});
@@ -106,10 +107,8 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
                         return _buildRelativesList(filteredRelatives);
                       },
                       loading: () => const Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
+                        child: PremiumLoadingIndicator(
+                          message: 'جاري تحميل الأقارب...',
                         ),
                       ),
                       error: (error, stack) =>
@@ -263,6 +262,10 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
   }
 
   Widget _buildRelativesList(List<Relative> relatives) {
+    // Watch user ONCE at the list level - not per item (O(1) instead of O(n))
+    final user = ref.watch(currentUserProvider);
+    final userId = user?.id ?? '';
+
     // Group relatives by relationship priority
     final Map<int, List<Relative>> grouped = {};
     for (final relative in relatives) {
@@ -277,14 +280,13 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
       ),
       itemCount: relatives.length,
       itemBuilder: (context, index) {
-        return _buildRelativeCard(relatives[index], index);
+        return _buildRelativeCard(relatives[index], index, userId);
       },
     );
   }
 
-  Widget _buildRelativeCard(Relative relative, int index) {
-    final user = ref.watch(currentUserProvider);
-    final userId = user?.id ?? '';
+  Widget _buildRelativeCard(Relative relative, int index, String userId) {
+    // userId is now passed from parent - no more O(n) rebuilds!
 
     return SwipeableRelativeCard(
           relative: relative,

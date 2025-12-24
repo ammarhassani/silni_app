@@ -8,6 +8,7 @@ import '../../../core/config/supabase_config.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../shared/widgets/premium_loading_indicator.dart';
 
 enum LeaderboardType {
   points,
@@ -198,7 +199,11 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                 // Leaderboard list
                 Expanded(
                   child: _isLoading
-                      ? const Center(child: CircularProgressIndicator())
+                      ? const Center(
+                          child: PremiumLoadingIndicator(
+                            message: 'جاري تحميل الترتيب...',
+                          ),
+                        )
                       : _leaderboardData.isEmpty
                           ? Center(
                               child: Text(

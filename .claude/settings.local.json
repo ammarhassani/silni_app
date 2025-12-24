@@ -89,7 +89,18 @@
       "Bash(firebase apps:sdkconfig:*)",
       "Bash(keytool -list:*)",
       "Bash(./gradlew signingReport:*)",
-      "Bash(xargs cat:*)"
+      "Bash(xargs cat:*)",
+      "Bash(supabase secrets set:*)",
+      "Bash(supabase db push:*)",
+      "Bash(supabase db execute:*)",
+      "Bash(supabase migration list:*)",
+      "Bash(supabase migration repair:*)",
+      "Bash(# Get the linked project and database connection info cat supabase/.temp/project-ref || supabase link 2>&1)",
+      "Bash(python3:*)",
+      "Bash(supabase projects list:*)",
+      "Bash(supabase functions logs:*)",
+      "Bash(supabase functions list:*)",
+      "Bash(supabase secrets list:*)"
     ],
     "deny": [],
     "ask": []

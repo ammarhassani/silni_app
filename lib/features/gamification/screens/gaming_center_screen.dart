@@ -10,6 +10,7 @@ import '../../../core/config/supabase_config.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../shared/widgets/premium_loading_indicator.dart';
 
 /// Gaming Center - Main gamification hub with exciting design
 class GamingCenterScreen extends ConsumerStatefulWidget {
@@ -101,7 +102,11 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                 // Content
                 Expanded(
                   child: _isLoading
-                      ? const Center(child: CircularProgressIndicator())
+                      ? const Center(
+                          child: PremiumLoadingIndicator(
+                            message: 'جاري تحميل مركز الألعاب...',
+                          ),
+                        )
                       : CustomScrollView(
                           slivers: [
                             // Hero Header

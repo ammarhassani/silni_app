@@ -1,12 +1,26 @@
 class AppRoutes {
   AppRoutes._();
 
-  // Auth routes
+  // Auth routes (public - no authentication required)
   static const String splash = '/';
   static const String onboarding = '/onboarding';
   static const String login = '/login';
   static const String signup = '/signup';
   static const String emailVerification = '/email-verification';
+
+  /// Routes that don't require authentication
+  static const Set<String> publicRoutes = {
+    splash,
+    onboarding,
+    login,
+    signup,
+    emailVerification,
+  };
+
+  /// Check if a route is public (doesn't require auth)
+  static bool isPublicRoute(String path) {
+    return publicRoutes.any((route) => path == route || path.startsWith('$route/'));
+  }
 
   // Main routes
   static const String home = '/home';
@@ -31,4 +45,13 @@ class AppRoutes {
   static const String badges = '/badges';
   static const String detailedStats = '/detailed-stats';
   static const String leaderboard = '/leaderboard';
+
+  // AI routes
+  static const String aiHub = '/ai-hub';
+  static const String aiChat = '/ai-chat';
+  static const String aiMemories = '/ai-memories';
+  static const String aiMessages = '/ai-messages';
+  static const String aiAnalysis = '/ai-analysis';
+  static const String aiScripts = '/ai-scripts';
+  static const String aiReport = '/ai-report';
 }

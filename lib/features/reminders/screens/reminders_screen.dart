@@ -6,6 +6,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
+import '../../../shared/widgets/premium_loading_indicator.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/services/reminder_schedules_service.dart';
@@ -48,12 +49,18 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                     data: (relatives) => schedulesAsync.when(
                       data: (schedules) =>
                           _buildContent(context, relatives, schedules),
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
+                      loading: () => const Center(
+                        child: PremiumLoadingIndicator(
+                          message: 'جاري تحميل التذكيرات...',
+                        ),
+                      ),
                       error: (_, _) => _buildError(),
                     ),
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
+                    loading: () => const Center(
+                      child: PremiumLoadingIndicator(
+                        message: 'جاري تحميل البيانات...',
+                      ),
+                    ),
                     error: (_, _) => _buildError(),
                   ),
                 ),
@@ -110,12 +117,21 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     }
 
     final unassignedRelatives = _getUnassignedRelatives(relatives, schedules);
+    final user = ref.watch(currentUserProvider);
+    final userId = user?.id ?? '';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Smart Suggestions Section
+          SmartSuggestionSection(
+            relatives: relatives,
+            schedules: schedules,
+            userId: userId,
+          ),
+
           // Reminder Templates Section
           Text(
             '✨ اختر نوع التذكير',

@@ -6,7 +6,9 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/models/gamification_event.dart';
 import '../../../core/providers/gamification_events_provider.dart';
+import '../../../core/providers/ai_preload_provider.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
+import '../../../shared/widgets/premium_loading_indicator.dart';
 import '../../../shared/widgets/floating_points_overlay.dart';
 import '../../../shared/widgets/level_up_modal.dart';
 import '../../../shared/widgets/badge_unlock_modal.dart';
@@ -136,7 +138,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final user = streamUser ?? fallbackUser;
 
     if (user == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(
+          child: PremiumLoadingIndicator(
+            message: 'جاري تحميل الصفحة الرئيسية...',
+          ),
+        ),
+      );
     }
 
     final displayName = user.userMetadata?['full_name'] as String? ??
@@ -170,6 +178,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
 
     ref.watch(autoRealtimeSubscriptionsProvider);
+
+    // Preload AI data in background for faster AI feature access
+    ref.watch(aiAutoPreloadProvider);
 
     final relativesAsync = ref.watch(relativesStreamProvider(userId));
     final todayInteractionsAsync = ref.watch(todayInteractionsStreamProvider(userId));

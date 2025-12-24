@@ -30,6 +30,12 @@ import '../../features/gamification/screens/gaming_center_screen.dart';
 import '../../features/gamification/screens/badges_screen.dart';
 import '../../features/gamification/screens/detailed_stats_screen.dart';
 import '../../features/gamification/screens/leaderboard_screen.dart';
+import '../../features/ai_assistant/screens/ai_chat_screen.dart';
+import '../../features/ai_assistant/screens/memory_viewer_screen.dart';
+import '../../features/ai_assistant/screens/message_composer_screen.dart';
+import '../../features/ai_assistant/screens/relationship_analysis_screen.dart';
+import '../../features/ai_assistant/screens/communication_scripts_screen.dart';
+import '../../features/ai_assistant/screens/weekly_report_screen.dart';
 import 'app_routes.dart';
 import 'navigation_service.dart';
 import '../services/analytics_service.dart';
@@ -44,15 +50,31 @@ final routerProvider = Provider<GoRouter>((ref) {
       AnalyticsService.observer,
       PerformanceNavigatorObserver(),
     ],
-    // Skip splash screen if user is already authenticated
+    // Comprehensive auth middleware for all routes
     redirect: (context, state) {
-      // Only redirect from splash screen
-      if (state.matchedLocation == AppRoutes.splash) {
-        // Check if user has a valid session (Supabase restores session on init)
-        if (SupabaseConfig.isInitialized && SupabaseConfig.currentUser != null) {
-          return AppRoutes.home;
-        }
+      final isAuthenticated =
+          SupabaseConfig.isInitialized && SupabaseConfig.currentUser != null;
+      final currentPath = state.matchedLocation;
+      final isPublicRoute = AppRoutes.isPublicRoute(currentPath);
+
+      // Case 1: Authenticated user on splash - skip to home
+      if (currentPath == AppRoutes.splash && isAuthenticated) {
+        return AppRoutes.home;
       }
+
+      // Case 2: Authenticated user on auth routes (login/signup) - redirect to home
+      if (isAuthenticated &&
+          (currentPath == AppRoutes.login || currentPath == AppRoutes.signup)) {
+        return AppRoutes.home;
+      }
+
+      // Case 3: Unauthenticated user on protected route - redirect to login
+      if (!isAuthenticated && !isPublicRoute) {
+        // Save intended destination for post-login redirect
+        final redirectPath = Uri.encodeComponent(currentPath);
+        return '${AppRoutes.login}?redirect=$redirectPath';
+      }
+
       return null; // No redirect needed
     },
     routes: [
@@ -257,6 +279,77 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'leaderboard',
         pageBuilder: (context, state) =>
             _buildPageWithTransition(context, state, const LeaderboardScreen()),
+      ),
+
+      // AI Routes
+      GoRoute(
+        path: AppRoutes.aiHub,
+        name: 'aiHub',
+        pageBuilder: (context, state) =>
+            _buildPageWithNavigation(context, state, const AIHubScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.aiChat,
+        name: 'aiChat',
+        pageBuilder: (context, state) {
+          final relativeId = state.uri.queryParameters['relativeId'];
+          return _buildPageWithTransition(
+            context,
+            state,
+            AIChatScreen(relativeId: relativeId),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.aiMemories,
+        name: 'aiMemories',
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          context,
+          state,
+          const MemoryViewerScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.aiMessages,
+        name: 'aiMessages',
+        pageBuilder: (context, state) {
+          final relativeId = state.uri.queryParameters['relativeId'];
+          return _buildPageWithTransition(
+            context,
+            state,
+            MessageComposerScreen(initialRelativeId: relativeId),
+          );
+        },
+      ),
+      // AI Analysis Route
+      GoRoute(
+        path: AppRoutes.aiAnalysis,
+        name: 'aiAnalysis',
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          context,
+          state,
+          const RelationshipAnalysisScreen(),
+        ),
+      ),
+      // Communication Scripts Route
+      GoRoute(
+        path: AppRoutes.aiScripts,
+        name: 'aiScripts',
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          context,
+          state,
+          const CommunicationScriptsScreen(),
+        ),
+      ),
+      // Weekly Report Route
+      GoRoute(
+        path: AppRoutes.aiReport,
+        name: 'aiReport',
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          context,
+          state,
+          const WeeklyReportScreen(),
+        ),
       ),
     ],
   );

@@ -75,7 +75,10 @@ class GlassCard extends StatelessWidget {
     );
 
     if (onTap != null) {
-      card = GestureDetector(onTap: onTap, child: card);
+      card = Semantics(
+        button: true,
+        child: GestureDetector(onTap: onTap, child: card),
+      );
     }
 
     return card;
@@ -149,7 +152,10 @@ class DramaticGlassCard extends StatelessWidget {
     );
 
     if (onTap != null) {
-      card = GestureDetector(onTap: onTap, child: card);
+      card = Semantics(
+        button: true,
+        child: GestureDetector(onTap: onTap, child: card),
+      );
     }
 
     return card;

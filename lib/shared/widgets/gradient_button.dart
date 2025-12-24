@@ -74,80 +74,86 @@ class _GradientButtonState extends State<GradientButton>
     final gradient = widget.gradient ?? AppColors.primaryGradient;
     final height = widget.height ?? AppSpacing.buttonHeight;
 
-    return GestureDetector(
-      onTapDown: widget.isLoading ? null : _onTapDown,
-      onTapUp: widget.isLoading ? null : _onTapUp,
-      onTapCancel: widget.isLoading ? null : _onTapCancel,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
-        width: widget.width ?? double.infinity,
-        height: height,
-        decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(
-            widget.dramatic ? AppSpacing.dramaticRadius : AppSpacing.buttonRadius,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.islamicGreenPrimary.withValues(alpha: _isPressed ? 0.3 : 0.5),
-              blurRadius: _isPressed ? 10 : 20,
-              offset: Offset(0, _isPressed ? 5 : 10),
-            ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
+    return Semantics(
+      label: widget.text,
+      button: true,
+      enabled: !widget.isLoading,
+      hint: widget.isLoading ? 'جاري التحميل' : null,
+      child: GestureDetector(
+        onTapDown: widget.isLoading ? null : _onTapDown,
+        onTapUp: widget.isLoading ? null : _onTapUp,
+        onTapCancel: widget.isLoading ? null : _onTapCancel,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 100),
+          width: widget.width ?? double.infinity,
+          height: height,
+          decoration: BoxDecoration(
+            gradient: gradient,
             borderRadius: BorderRadius.circular(
               widget.dramatic ? AppSpacing.dramaticRadius : AppSpacing.buttonRadius,
             ),
-            onTap: widget.isLoading ? null : widget.onPressed,
-            child: Center(
-              child: widget.isLoading
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (widget.icon != null) ...[
-                          Icon(
-                            widget.icon,
-                            color: Colors.white,
-                            size: AppSpacing.iconMd,
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                        ],
-                        Text(
-                          widget.text,
-                          style: widget.dramatic
-                              ? AppTypography.dramatic.copyWith(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                )
-                              : AppTypography.buttonLarge.copyWith(
-                                  color: Colors.white,
-                                ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.islamicGreenPrimary.withValues(alpha: _isPressed ? 0.3 : 0.5),
+                blurRadius: _isPressed ? 10 : 20,
+                offset: Offset(0, _isPressed ? 5 : 10),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(
+                widget.dramatic ? AppSpacing.dramaticRadius : AppSpacing.buttonRadius,
+              ),
+              onTap: widget.isLoading ? null : widget.onPressed,
+              child: Center(
+                child: widget.isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          strokeWidth: 2,
                         ),
-                      ],
-                    ),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (widget.icon != null) ...[
+                            Icon(
+                              widget.icon,
+                              color: Colors.white,
+                              size: AppSpacing.iconMd,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                          ],
+                          Text(
+                            widget.text,
+                            style: widget.dramatic
+                                ? AppTypography.dramatic.copyWith(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                  )
+                                : AppTypography.buttonLarge.copyWith(
+                                    color: Colors.white,
+                                  ),
+                          ),
+                        ],
+                      ),
+              ),
             ),
           ),
         ),
-      ),
-    )
-        .animate(
-          onPlay: (controller) => controller.repeat(reverse: true),
-        )
-        .shimmer(
-          duration: const Duration(seconds: 2),
-          color: Colors.white.withValues(alpha: 0.3),
-        );
+      )
+          .animate(
+            onPlay: (controller) => controller.repeat(reverse: true),
+          )
+          .shimmer(
+            duration: const Duration(seconds: 2),
+            color: Colors.white.withValues(alpha: 0.3),
+          ),
+    );
   }
 }
 
@@ -174,78 +180,82 @@ class OutlinedGradientButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final gradient = this.gradient ?? AppColors.primaryGradient;
 
-    return Container(
-      width: width ?? double.infinity,
-      height: height ?? AppSpacing.buttonHeight,
-      decoration: BoxDecoration(
-        gradient: gradient,
-        borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.islamicGreenPrimary.withValues(alpha: 0.4),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-          BoxShadow(
-            color: AppColors.islamicGreenLight.withValues(alpha: 0.2),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+    return Semantics(
+      label: text,
+      button: true,
       child: Container(
-        margin: const EdgeInsets.all(2),
+        width: width ?? double.infinity,
+        height: height ?? AppSpacing.buttonHeight,
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(AppSpacing.buttonRadius - 2),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white.withValues(alpha: 0.15),
-              Colors.white.withValues(alpha: 0.05),
-            ],
-          ),
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.islamicGreenPrimary.withValues(alpha: 0.4),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+            BoxShadow(
+              color: AppColors.islamicGreenLight.withValues(alpha: 0.2),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
+        child: Container(
+          margin: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(AppSpacing.buttonRadius - 2),
-            onTap: () {
-              HapticFeedback.mediumImpact();
-              onPressed();
-            },
-            child: Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (icon != null) ...[
-                    Icon(
-                      icon,
-                      color: Colors.white,
-                      size: AppSpacing.iconMd,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withValues(alpha: 0.15),
+                Colors.white.withValues(alpha: 0.05),
+              ],
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppSpacing.buttonRadius - 2),
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                onPressed();
+              },
+              child: Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(
+                        icon,
+                        color: Colors.white,
+                        size: AppSpacing.iconMd,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                    ],
+                    Text(
+                      text,
+                      style: AppTypography.buttonLarge.copyWith(
+                        color: Colors.white,
+                      ),
                     ),
-                    const SizedBox(width: AppSpacing.sm),
                   ],
-                  Text(
-                    text,
-                    style: AppTypography.buttonLarge.copyWith(
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
         ),
-      ),
-    )
-        .animate(
-          onPlay: (controller) => controller.repeat(reverse: true),
-        )
-        .shimmer(
-          duration: const Duration(seconds: 2),
-          color: Colors.white.withValues(alpha: 0.3),
-        );
+      )
+          .animate(
+            onPlay: (controller) => controller.repeat(reverse: true),
+          )
+          .shimmer(
+            duration: const Duration(seconds: 2),
+            color: Colors.white.withValues(alpha: 0.3),
+          ),
+    );
   }
 }
