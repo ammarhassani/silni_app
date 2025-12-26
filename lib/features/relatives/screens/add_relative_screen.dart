@@ -8,10 +8,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:confetti/confetti.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:uuid/uuid.dart';
+import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../core/errors/app_errors.dart';
 import '../../../core/services/error_handler_service.dart';
 import '../../../shared/widgets/gradient_background.dart';
@@ -224,6 +226,8 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = ref.watch(themeColorsProvider);
+
     return Stack(
       children: [
         Scaffold(
@@ -233,7 +237,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
               child: Column(
                 children: [
                   // Header
-                  _buildHeader(),
+                  _buildHeader(themeColors),
 
                   // Form
                   Expanded(
@@ -421,20 +425,24 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(dynamic themeColors) {
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
         children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-            onPressed: () => context.pop(),
+          Semantics(
+            label: 'رجوع',
+            button: true,
+            child: IconButton(
+              icon: Icon(Icons.arrow_back_rounded, color: themeColors.textOnGradient),
+              onPressed: () => context.pop(),
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Text(
             'إضافة قريب',
             style: AppTypography.headlineMedium.copyWith(
-              color: Colors.white,
+              color: themeColors.textOnGradient,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -442,7 +450,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
       ),
     )
         .animate()
-        .fadeIn(duration: const Duration(milliseconds: 400))
+        .fadeIn(duration: AppAnimations.normal)
         .slideY(begin: -0.2, end: 0);
   }
 

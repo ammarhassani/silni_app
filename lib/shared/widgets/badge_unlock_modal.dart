@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:confetti/confetti.dart';
+import '../../core/constants/app_animations.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 
@@ -34,7 +35,7 @@ class BadgeUnlockModal extends StatefulWidget {
     return showDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black87,
+      barrierColor: AppColors.islamicGreenDark.withValues(alpha: 0.9),
       builder: (context) => BadgeUnlockModal(
         badgeId: badgeId,
         badgeName: badgeName,
@@ -63,7 +64,7 @@ class _BadgeUnlockModalState extends State<BadgeUnlockModal>
     // Shine animation for the badge
     _shineController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: AppAnimations.loop,
     )..repeat();
 
     _shineAnimation = Tween<double>(begin: -2.0, end: 2.0).animate(
@@ -134,10 +135,13 @@ class _BadgeUnlockModalState extends State<BadgeUnlockModal>
     final badgeColor = _getBadgeColor(widget.badgeId);
     final badgeEmoji = _getBadgeEmoji(widget.badgeId);
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      child: Stack(
+    return Semantics(
+      label: 'تهانينا! حصلت على وسام ${widget.badgeName}',
+      liveRegion: true,
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Stack(
         alignment: Alignment.center,
         children: [
           // Confetti
@@ -372,6 +376,7 @@ class _BadgeUnlockModalState extends State<BadgeUnlockModal>
                 curve: Curves.easeOut,
               ),
         ],
+      ),
       ),
     );
   }

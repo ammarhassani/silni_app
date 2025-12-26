@@ -60,10 +60,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         extendBody: true,
-        body: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
+        body: Semantics(
+          label: 'إعدادات الإشعارات',
+          child: SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(themeColors),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.all(AppSpacing.md),
@@ -160,11 +162,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             ],
           ),
         ),
+        ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(dynamic themeColors) {
     return Padding(
       padding: const EdgeInsets.only(
         top: AppSpacing.sm,
@@ -174,9 +177,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white),
+          Semantics(
+            label: 'رجوع',
+            button: true,
+            child: IconButton(
+              onPressed: () => context.pop(),
+              icon: Icon(Icons.arrow_forward_rounded, color: themeColors.textOnGradient),
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
@@ -186,7 +193,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 Text(
                   'إعدادات الإشعارات',
                   style: AppTypography.headlineMedium.copyWith(
-                    color: Colors.white,
+                    color: themeColors.textOnGradient,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -194,7 +201,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 Text(
                   'تخصيص التذكيرات والإشعارات',
                   style: AppTypography.bodySmall.copyWith(
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: themeColors.textOnGradient.withValues(alpha: 0.8),
                   ),
                 ),
               ],

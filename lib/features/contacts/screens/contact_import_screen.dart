@@ -260,7 +260,9 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
           GradientBackground(
             animated: true,
             child: SafeArea(
-              child: Column(
+              child: Semantics(
+                label: 'شاشة استيراد جهات الاتصال',
+                child: Column(
                 children: [
                   _buildHeader(themeColors),
                   if (_isLoading)
@@ -283,6 +285,7 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
                     ),
                 ],
               ),
+            ),
             ),
           ),
 
@@ -350,9 +353,13 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white),
+          Semantics(
+            label: 'رجوع',
+            button: true,
+            child: IconButton(
+              onPressed: () => context.pop(),
+              icon: Icon(Icons.arrow_forward_rounded, color: themeColors.textOnGradient),
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
@@ -362,7 +369,7 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
                 Text(
                   'استيراد جهات الاتصال',
                   style: AppTypography.headlineMedium.copyWith(
-                    color: Colors.white,
+                    color: themeColors.textOnGradient,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -370,7 +377,7 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
                 Text(
                   'اختر جهات الاتصال لإضافتهم كأقارب',
                   style: AppTypography.bodySmall.copyWith(
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: themeColors.textOnGradient.withValues(alpha: 0.8),
                   ),
                 ),
               ],

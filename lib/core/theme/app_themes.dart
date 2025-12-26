@@ -38,6 +38,37 @@ class ThemeColors {
   final LinearGradient goldenGradient;
   final LinearGradient streakFire;
 
+  // Semantic colors for consistent theming
+  final Color onPrimary;
+  final Color onSecondary;
+  final Color surface;
+  final Color onSurface;
+  final Color surfaceVariant;
+  final Color onSurfaceVariant;
+
+  // Glass effect colors
+  final Color glassBackground;
+  final Color glassBorder;
+  final Color glassHighlight;
+
+  // Text colors
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color textHint;
+  final Color textOnGradient;
+
+  // Loading/shimmer colors
+  final Color shimmerBase;
+  final Color shimmerHighlight;
+
+  // Card colors
+  final Color cardBackground;
+  final Color cardBorder;
+
+  // Divider and disabled
+  final Color divider;
+  final Color disabled;
+
   const ThemeColors({
     required this.primary,
     required this.primaryLight,
@@ -51,6 +82,25 @@ class ThemeColors {
     required this.backgroundGradient,
     required this.goldenGradient,
     required this.streakFire,
+    required this.onPrimary,
+    required this.onSecondary,
+    required this.surface,
+    required this.onSurface,
+    required this.surfaceVariant,
+    required this.onSurfaceVariant,
+    required this.glassBackground,
+    required this.glassBorder,
+    required this.glassHighlight,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.textHint,
+    required this.textOnGradient,
+    required this.shimmerBase,
+    required this.shimmerHighlight,
+    required this.cardBackground,
+    required this.cardBorder,
+    required this.divider,
+    required this.disabled,
   });
 
   /// Silni Green Theme (Default)
@@ -83,6 +133,31 @@ class ThemeColors {
       end: Alignment.bottomRight,
       colors: [Color(0xFFFF6F00), Color(0xFFFF8F00), Color(0xFFFFA726)],
     ),
+    // Semantic colors
+    onPrimary: Color(0xFFFFFFFF),
+    onSecondary: Color(0xFF1B5E20),
+    surface: Color(0xFF1B5E20),
+    onSurface: Color(0xFFFFFFFF),
+    surfaceVariant: Color(0xFF2E7D32),
+    onSurfaceVariant: Color(0xFFE8F5E9),
+    // Glass effect colors
+    glassBackground: Color(0x26FFFFFF),
+    glassBorder: Color(0x33FFFFFF),
+    glassHighlight: Color(0x4DFFFFFF),
+    // Text colors
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0xB3FFFFFF),
+    textHint: Color(0x80FFFFFF),
+    textOnGradient: Color(0xFFFFFFFF),
+    // Loading/shimmer colors
+    shimmerBase: Color(0xFF2E7D32),
+    shimmerHighlight: Color(0xFF81C784),
+    // Card colors
+    cardBackground: Color(0x26FFFFFF),
+    cardBorder: Color(0x33FFFFFF),
+    // Divider and disabled
+    divider: Color(0x33FFFFFF),
+    disabled: Color(0x80FFFFFF),
   );
 
   /// Lavender Purple Theme (خزامى)
@@ -115,6 +190,31 @@ class ThemeColors {
       end: Alignment.bottomRight,
       colors: [Color(0xFFE040FB), Color(0xFFCE93D8), Color(0xFFBA68C8)],
     ),
+    // Semantic colors
+    onPrimary: Color(0xFFFFFFFF),
+    onSecondary: Color(0xFF4A148C),
+    surface: Color(0xFF4A148C),
+    onSurface: Color(0xFFFFFFFF),
+    surfaceVariant: Color(0xFF6A1B9A),
+    onSurfaceVariant: Color(0xFFF3E5F5),
+    // Glass effect colors
+    glassBackground: Color(0x26FFFFFF),
+    glassBorder: Color(0x33FFFFFF),
+    glassHighlight: Color(0x4DFFFFFF),
+    // Text colors
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0xB3FFFFFF),
+    textHint: Color(0x80FFFFFF),
+    textOnGradient: Color(0xFFFFFFFF),
+    // Loading/shimmer colors
+    shimmerBase: Color(0xFF7B1FA2),
+    shimmerHighlight: Color(0xFFBA68C8),
+    // Card colors
+    cardBackground: Color(0x26FFFFFF),
+    cardBorder: Color(0x33FFFFFF),
+    // Divider and disabled
+    divider: Color(0x33FFFFFF),
+    disabled: Color(0x80FFFFFF),
   );
 
   /// Royal Blue Theme
@@ -147,6 +247,31 @@ class ThemeColors {
       end: Alignment.bottomRight,
       colors: [Color(0xFF00B0FF), Color(0xFF40C4FF), Color(0xFF80D8FF)],
     ),
+    // Semantic colors
+    onPrimary: Color(0xFFFFFFFF),
+    onSecondary: Color(0xFF0D47A1),
+    surface: Color(0xFF0D47A1),
+    onSurface: Color(0xFFFFFFFF),
+    surfaceVariant: Color(0xFF1565C0),
+    onSurfaceVariant: Color(0xFFE3F2FD),
+    // Glass effect colors
+    glassBackground: Color(0x26FFFFFF),
+    glassBorder: Color(0x33FFFFFF),
+    glassHighlight: Color(0x4DFFFFFF),
+    // Text colors
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0xB3FFFFFF),
+    textHint: Color(0x80FFFFFF),
+    textOnGradient: Color(0xFFFFFFFF),
+    // Loading/shimmer colors
+    shimmerBase: Color(0xFF1565C0),
+    shimmerHighlight: Color(0xFF42A5F5),
+    // Card colors
+    cardBackground: Color(0x26FFFFFF),
+    cardBorder: Color(0x33FFFFFF),
+    // Divider and disabled
+    divider: Color(0x33FFFFFF),
+    disabled: Color(0x80FFFFFF),
   );
 
   /// Sunset Orange Theme
@@ -179,6 +304,31 @@ class ThemeColors {
       end: Alignment.bottomRight,
       colors: [Color(0xFFFF6F00), Color(0xFFFF8F00), Color(0xFFFFA726)],
     ),
+    // Semantic colors
+    onPrimary: Color(0xFFFFFFFF),
+    onSecondary: Color(0xFFBF360C),
+    surface: Color(0xFFBF360C),
+    onSurface: Color(0xFFFFFFFF),
+    surfaceVariant: Color(0xFFD84315),
+    onSurfaceVariant: Color(0xFFFBE9E7),
+    // Glass effect colors
+    glassBackground: Color(0x26FFFFFF),
+    glassBorder: Color(0x33FFFFFF),
+    glassHighlight: Color(0x4DFFFFFF),
+    // Text colors
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0xB3FFFFFF),
+    textHint: Color(0x80FFFFFF),
+    textOnGradient: Color(0xFFFFFFFF),
+    // Loading/shimmer colors
+    shimmerBase: Color(0xFFE65100),
+    shimmerHighlight: Color(0xFFFF9800),
+    // Card colors
+    cardBackground: Color(0x26FFFFFF),
+    cardBorder: Color(0x33FFFFFF),
+    // Divider and disabled
+    divider: Color(0x33FFFFFF),
+    disabled: Color(0x80FFFFFF),
   );
 
   /// Rose Gold Theme
@@ -211,6 +361,31 @@ class ThemeColors {
       end: Alignment.bottomRight,
       colors: [Color(0xFFFF4081), Color(0xFFFF80AB), Color(0xFFF48FB1)],
     ),
+    // Semantic colors
+    onPrimary: Color(0xFFFFFFFF),
+    onSecondary: Color(0xFF880E4F),
+    surface: Color(0xFF880E4F),
+    onSurface: Color(0xFFFFFFFF),
+    surfaceVariant: Color(0xFFAD1457),
+    onSurfaceVariant: Color(0xFFFCE4EC),
+    // Glass effect colors
+    glassBackground: Color(0x26FFFFFF),
+    glassBorder: Color(0x33FFFFFF),
+    glassHighlight: Color(0x4DFFFFFF),
+    // Text colors
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0xB3FFFFFF),
+    textHint: Color(0x80FFFFFF),
+    textOnGradient: Color(0xFFFFFFFF),
+    // Loading/shimmer colors
+    shimmerBase: Color(0xFFC2185B),
+    shimmerHighlight: Color(0xFFF06292),
+    // Card colors
+    cardBackground: Color(0x26FFFFFF),
+    cardBorder: Color(0x33FFFFFF),
+    // Divider and disabled
+    divider: Color(0x33FFFFFF),
+    disabled: Color(0x80FFFFFF),
   );
 
   /// Midnight Dark Theme
@@ -243,6 +418,31 @@ class ThemeColors {
       end: Alignment.bottomRight,
       colors: [Color(0xFF536DFE), Color(0xFF7C4DFF), Color(0xFFB388FF)],
     ),
+    // Semantic colors
+    onPrimary: Color(0xFFFFFFFF),
+    onSecondary: Color(0xFF0A0E27),
+    surface: Color(0xFF0A0E27),
+    onSurface: Color(0xFFFFFFFF),
+    surfaceVariant: Color(0xFF1A237E),
+    onSurfaceVariant: Color(0xFFE8EAF6),
+    // Glass effect colors
+    glassBackground: Color(0x26FFFFFF),
+    glassBorder: Color(0x33FFFFFF),
+    glassHighlight: Color(0x4DFFFFFF),
+    // Text colors
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0xB3FFFFFF),
+    textHint: Color(0x80FFFFFF),
+    textOnGradient: Color(0xFFFFFFFF),
+    // Loading/shimmer colors
+    shimmerBase: Color(0xFF1A237E),
+    shimmerHighlight: Color(0xFF3949AB),
+    // Card colors
+    cardBackground: Color(0x26FFFFFF),
+    cardBorder: Color(0x33FFFFFF),
+    // Divider and disabled
+    divider: Color(0x33FFFFFF),
+    disabled: Color(0x80FFFFFF),
   );
 
   /// Get theme colors by type

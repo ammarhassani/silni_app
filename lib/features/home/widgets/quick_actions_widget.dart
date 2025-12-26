@@ -17,67 +17,73 @@ class QuickActionsWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeColors = ref.watch(themeColorsProvider);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'إجراءات سريعة',
-          style: AppTypography.headlineSmall.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+    return Semantics(
+      label: 'إجراءات سريعة',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'إجراءات سريعة',
+            style: AppTypography.headlineSmall.copyWith(
+              color: themeColors.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Row(
-          children: [
-            Expanded(
-              child: _QuickActionCard(
-                icon: Icons.notifications_active_rounded,
-                title: 'التذكيرات',
-                subtitle: 'نظّم تذكيراتك',
-                gradient: themeColors.primaryGradient,
-                onTap: () => context.push(AppRoutes.reminders),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: _QuickActionCard(
-                icon: Icons.auto_awesome_rounded,
-                title: 'واصل',
-                subtitle: 'مساعدك الذكي',
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.emotionalPurple.withValues(alpha: 0.7),
-                    AppColors.calmBlue.withValues(alpha: 0.5),
-                  ],
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: _QuickActionCard(
+                  icon: Icons.notifications_active_rounded,
+                  title: 'التذكيرات',
+                  subtitle: 'نظّم تذكيراتك',
+                  gradient: themeColors.primaryGradient,
+                  themeColors: themeColors,
+                  onTap: () => context.push(AppRoutes.reminders),
                 ),
-                onTap: () => context.push(AppRoutes.aiHub),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Row(
-          children: [
-            Expanded(
-              child: _QuickActionCard(
-                icon: Icons.account_tree_rounded,
-                title: 'شجرة العائلة',
-                subtitle: 'تصور جميل لعائلتك',
-                gradient: LinearGradient(
-                  colors: [
-                    themeColors.primaryDark,
-                    themeColors.primary.withValues(alpha: 0.8),
-                  ],
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: _QuickActionCard(
+                  icon: Icons.auto_awesome_rounded,
+                  title: 'واصل',
+                  subtitle: 'مساعدك الذكي',
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.emotionalPurple.withValues(alpha: 0.7),
+                      AppColors.calmBlue.withValues(alpha: 0.5),
+                    ],
+                  ),
+                  themeColors: themeColors,
+                  onTap: () => context.push(AppRoutes.aiHub),
                 ),
-                onTap: () => context.push(AppRoutes.familyTree),
               ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            const Expanded(child: SizedBox()),
-          ],
-        ),
-      ],
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: _QuickActionCard(
+                  icon: Icons.account_tree_rounded,
+                  title: 'شجرة العائلة',
+                  subtitle: 'تصور جميل لعائلتك',
+                  gradient: LinearGradient(
+                    colors: [
+                      themeColors.primaryDark,
+                      themeColors.primary.withValues(alpha: 0.8),
+                    ],
+                  ),
+                  themeColors: themeColors,
+                  onTap: () => context.push(AppRoutes.familyTree),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              const Expanded(child: SizedBox()),
+            ],
+          ),
+        ],
+      ),
     )
         .animate(delay: const Duration(milliseconds: 300))
         .fadeIn()
@@ -91,6 +97,7 @@ class _QuickActionCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.gradient,
+    required this.themeColors,
     required this.onTap,
   });
 
@@ -98,49 +105,55 @@ class _QuickActionCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final Gradient gradient;
+  final dynamic themeColors;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: GlassCard(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        gradient: gradient,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 45,
-              height: 45,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.2),
+    return Semantics(
+      label: '$title - $subtitle',
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: GlassCard(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          gradient: gradient,
+          semanticsLabel: title,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 45,
+                height: 45,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: themeColors.textOnGradient.withValues(alpha: 0.2),
+                ),
+                child: Center(
+                  child: Icon(icon, color: themeColors.textOnGradient, size: 24),
+                ),
               ),
-              child: Center(
-                child: Icon(icon, color: Colors.white, size: 24),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                title,
+                style: AppTypography.titleMedium.copyWith(
+                  color: themeColors.textOnGradient,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              title,
-              style: AppTypography.titleMedium.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: AppTypography.bodySmall.copyWith(
+                  color: themeColors.textOnGradient.withValues(alpha: 0.8),
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: AppTypography.bodySmall.copyWith(
-                color: Colors.white.withValues(alpha: 0.8),
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

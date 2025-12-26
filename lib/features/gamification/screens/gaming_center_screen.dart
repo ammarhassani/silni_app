@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:confetti/confetti.dart';
+import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
@@ -71,156 +73,165 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = ref.watch(themeColorsProvider);
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
-      body: Stack(
-        children: [
-          // Confetti for celebrations
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConfettiWidget(
-              confettiController: _confettiController,
-              blastDirectionality: BlastDirectionality.explosive,
-              emissionFrequency: 0.05,
-              numberOfParticles: 30,
-              gravity: 0.1,
-              colors: const [
-                AppColors.premiumGold,
-                AppColors.islamicGreenPrimary,
-                AppColors.energeticRed,
-                AppColors.joyfulOrange,
-                AppColors.emotionalPurple,
-              ],
+      body: Semantics(
+        label: 'مركز الإنجازات والألعاب',
+        child: Stack(
+          children: [
+            // Confetti for celebrations
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                emissionFrequency: 0.05,
+                numberOfParticles: 30,
+                gravity: 0.1,
+                colors: [
+                  AppColors.premiumGold,
+                  themeColors.primary,
+                  AppColors.energeticRed,
+                  AppColors.joyfulOrange,
+                  AppColors.emotionalPurple,
+                ],
+              ),
             ),
-          ),
 
-          // Main content
-          SafeArea(
-            child: Column(
-              children: [
-                // Content
-                Expanded(
-                  child: _isLoading
-                      ? const Center(
-                          child: PremiumLoadingIndicator(
-                            message: 'جاري تحميل مركز الألعاب...',
+            // Main content
+            SafeArea(
+              child: Column(
+                children: [
+                  // Content
+                  Expanded(
+                    child: _isLoading
+                        ? const Center(
+                            child: PremiumLoadingIndicator(
+                              message: 'جاري تحميل مركز الألعاب...',
+                            ),
+                          )
+                        : CustomScrollView(
+                            slivers: [
+                              // Hero Header
+                              SliverToBoxAdapter(child: _buildHeroHeader(themeColors)),
+
+                              // Main Stats Display
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(AppSpacing.lg),
+                                  child: _buildMainStatsDisplay(themeColors),
+                                ),
+                              ),
+
+                              // Gaming Features Grid
+                              SliverPadding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.lg,
+                                ),
+                                sliver: SliverGrid(
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: 2,
+                                        childAspectRatio: 0.85,
+                                        crossAxisSpacing: AppSpacing.md,
+                                        mainAxisSpacing: AppSpacing.md,
+                                      ),
+                                  delegate: SliverChildListDelegate([
+                                    _buildFeatureCard(
+                                      title: 'الأوسمة',
+                                      subtitle:
+                                          '${(_userStats?['badges'] as List?)?.length ?? 0}/19',
+                                      icon: Icons.emoji_events_rounded,
+                                      gradient: AppColors.goldenGradient,
+                                      onTap: () => context.push(AppRoutes.badges),
+                                      themeColors: themeColors,
+                                    ),
+                                    _buildFeatureCard(
+                                      title: 'المتصدرين',
+                                      subtitle: 'تنافس مع الجميع',
+                                      icon: Icons.leaderboard_rounded,
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color(0xFFFF6B35),
+                                          Color(0xFFFF9E00),
+                                        ],
+                                      ),
+                                      onTap: () =>
+                                          context.push(AppRoutes.leaderboard),
+                                      themeColors: themeColors,
+                                    ),
+                                    _buildFeatureCard(
+                                      title: 'الإحصائيات',
+                                      subtitle: 'تفاصيل تقدمك',
+                                      icon: Icons.analytics_rounded,
+                                      gradient: themeColors.primaryGradient,
+                                      onTap: () =>
+                                          context.push(AppRoutes.detailedStats),
+                                      themeColors: themeColors,
+                                    ),
+                                    _buildFeatureCard(
+                                      title: 'التحديات',
+                                      subtitle: 'قريباً',
+                                      icon: Icons.flag_rounded,
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          AppColors.emotionalPurple,
+                                          AppColors.emotionalPurple.withValues(
+                                            alpha: 0.7,
+                                          ),
+                                        ],
+                                      ),
+                                      onTap: () {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('قريباً!'),
+                                          ),
+                                        );
+                                      },
+                                      comingSoon: true,
+                                      themeColors: themeColors,
+                                    ),
+                                  ]),
+                                ),
+                              ),
+
+                              // Progress Section
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(AppSpacing.lg),
+                                  child: _buildProgressSection(themeColors),
+                                ),
+                              ),
+
+                              // Daily Motivation
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(AppSpacing.lg),
+                                  child: _buildMotivationCard(themeColors),
+                                ),
+                              ),
+
+                              const SliverToBoxAdapter(
+                                child: SizedBox(height: 100),
+                              ),
+                            ],
                           ),
-                        )
-                      : CustomScrollView(
-                          slivers: [
-                            // Hero Header
-                            SliverToBoxAdapter(child: _buildHeroHeader()),
-
-                            // Main Stats Display
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.all(AppSpacing.lg),
-                                child: _buildMainStatsDisplay(),
-                              ),
-                            ),
-
-                            // Gaming Features Grid
-                            SliverPadding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.lg,
-                              ),
-                              sliver: SliverGrid(
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 2,
-                                      childAspectRatio: 0.85,
-                                      crossAxisSpacing: AppSpacing.md,
-                                      mainAxisSpacing: AppSpacing.md,
-                                    ),
-                                delegate: SliverChildListDelegate([
-                                  _buildFeatureCard(
-                                    title: 'الأوسمة',
-                                    subtitle:
-                                        '${(_userStats?['badges'] as List?)?.length ?? 0}/19',
-                                    icon: Icons.emoji_events_rounded,
-                                    gradient: AppColors.goldenGradient,
-                                    onTap: () => context.push(AppRoutes.badges),
-                                  ),
-                                  _buildFeatureCard(
-                                    title: 'المتصدرين',
-                                    subtitle: 'تنافس مع الجميع',
-                                    icon: Icons.leaderboard_rounded,
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color(0xFFFF6B35),
-                                        Color(0xFFFF9E00),
-                                      ],
-                                    ),
-                                    onTap: () =>
-                                        context.push(AppRoutes.leaderboard),
-                                  ),
-                                  _buildFeatureCard(
-                                    title: 'الإحصائيات',
-                                    subtitle: 'تفاصيل تقدمك',
-                                    icon: Icons.analytics_rounded,
-                                    gradient: AppColors.primaryGradient,
-                                    onTap: () =>
-                                        context.push(AppRoutes.detailedStats),
-                                  ),
-                                  _buildFeatureCard(
-                                    title: 'التحديات',
-                                    subtitle: 'قريباً',
-                                    icon: Icons.flag_rounded,
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        AppColors.emotionalPurple,
-                                        AppColors.emotionalPurple.withValues(
-                                          alpha: 0.7,
-                                        ),
-                                      ],
-                                    ),
-                                    onTap: () {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('قريباً!'),
-                                        ),
-                                      );
-                                    },
-                                    comingSoon: true,
-                                  ),
-                                ]),
-                              ),
-                            ),
-
-                            // Progress Section
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.all(AppSpacing.lg),
-                                child: _buildProgressSection(),
-                              ),
-                            ),
-
-                            // Daily Motivation
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.all(AppSpacing.lg),
-                                child: _buildMotivationCard(),
-                              ),
-                            ),
-
-                            const SliverToBoxAdapter(
-                              child: SizedBox(height: 100),
-                            ),
-                          ],
-                        ),
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildHeroHeader() {
+  Widget _buildHeroHeader(dynamic themeColors) {
     final stats = _userStats ?? {};
     final level = stats['level'] ?? 1;
 
@@ -248,19 +259,19 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                     ),
                   ],
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.emoji_events_rounded,
                   size: 50,
-                  color: Colors.white,
+                  color: themeColors.textOnGradient,
                 ),
               )
               .animate(onPlay: (controller) => controller.repeat(reverse: true))
               .scale(
                 begin: const Offset(1.0, 1.0),
                 end: const Offset(1.1, 1.1),
-                duration: 2000.ms,
+                duration: AppAnimations.loop,
               )
-              .shimmer(duration: 2000.ms, color: Colors.white.withValues(alpha: 0.5)),
+              .shimmer(duration: AppAnimations.loop, color: themeColors.textOnGradient.withValues(alpha: 0.5)),
 
           const SizedBox(height: AppSpacing.lg),
 
@@ -271,7 +282,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                 child: Text(
                   'الإنجازات',
                   style: AppTypography.hero.copyWith(
-                    color: Colors.white,
+                    color: themeColors.textOnGradient,
                     fontSize: 32,
                   ),
                   maxLines: 1,
@@ -279,8 +290,8 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                 ),
               )
               .animate()
-              .fadeIn(duration: 600.ms)
-              .slideY(begin: -0.3, end: 0, duration: 600.ms),
+              .fadeIn(duration: AppAnimations.dramatic)
+              .slideY(begin: -0.3, end: 0, duration: AppAnimations.dramatic),
 
           const SizedBox(height: AppSpacing.sm),
 
@@ -291,11 +302,11 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                   vertical: AppSpacing.sm,
                 ),
                 decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
+                  gradient: themeColors.primaryGradient,
                   borderRadius: BorderRadius.circular(30),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.islamicGreenPrimary.withValues(alpha: 0.5),
+                      color: themeColors.primary.withValues(alpha: 0.5),
                       blurRadius: 20,
                       spreadRadius: 2,
                     ),
@@ -304,16 +315,16 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.workspace_premium_rounded,
-                      color: Colors.white,
+                      color: themeColors.textOnGradient,
                       size: 20,
                     ),
                     const SizedBox(width: AppSpacing.xs),
                     Text(
                       'المستوى $level',
                       style: AppTypography.titleMedium.copyWith(
-                        color: Colors.white,
+                        color: themeColors.textOnGradient,
                         fontWeight: FontWeight.bold,
                       ),
                       maxLines: 1,
@@ -323,7 +334,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                 ),
               )
               .animate()
-              .fadeIn(delay: 300.ms, duration: 600.ms)
+              .fadeIn(delay: AppAnimations.normal, duration: AppAnimations.dramatic)
               .scale(
                 begin: const Offset(0.8, 0.8),
                 end: const Offset(1.0, 1.0),
@@ -333,7 +344,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
     );
   }
 
-  Widget _buildMainStatsDisplay() {
+  Widget _buildMainStatsDisplay(dynamic themeColors) {
     final stats = _userStats ?? {};
     final points = stats['points'] ?? 0;
     final currentStreak = stats['current_streak'] ?? 0;
@@ -360,12 +371,13 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                     value: points.toString(),
                     label: 'النقاط',
                     color: AppColors.premiumGold,
+                    themeColors: themeColors,
                   ),
                 ),
                 Container(
                   width: 1,
                   height: 50,
-                  color: Colors.white.withValues(alpha: 0.3),
+                  color: themeColors.textOnGradient.withValues(alpha: 0.3),
                 ),
                 Flexible(
                   child: _buildStatColumn(
@@ -373,12 +385,13 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                     value: currentStreak.toString(),
                     label: 'السلسلة',
                     color: AppColors.energeticRed,
+                    themeColors: themeColors,
                   ),
                 ),
                 Container(
                   width: 1,
                   height: 50,
-                  color: Colors.white.withValues(alpha: 0.3),
+                  color: themeColors.textOnGradient.withValues(alpha: 0.3),
                 ),
                 Flexible(
                   child: _buildStatColumn(
@@ -386,6 +399,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                     value: badgesCount.toString(),
                     label: 'الأوسمة',
                     color: AppColors.joyfulOrange,
+                    themeColors: themeColors,
                   ),
                 ),
               ],
@@ -393,7 +407,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
           ),
         )
         .animate()
-        .fadeIn(delay: 600.ms, duration: 600.ms)
+        .fadeIn(delay: AppAnimations.dramatic, duration: AppAnimations.dramatic)
         .slideY(begin: 0.2, end: 0);
   }
 
@@ -402,6 +416,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
     required String value,
     required String label,
     required Color color,
+    required dynamic themeColors,
   }) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -411,7 +426,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
         Text(
           value,
           style: AppTypography.numberLarge.copyWith(
-            color: Colors.white,
+            color: themeColors.textOnGradient,
             fontSize: 24,
           ),
           maxLines: 1,
@@ -419,7 +434,9 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
         ),
         Text(
           label,
-          style: AppTypography.bodySmall.copyWith(color: Colors.white70),
+          style: AppTypography.bodySmall.copyWith(
+            color: themeColors.textOnGradient.withValues(alpha: 0.7),
+          ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -433,95 +450,100 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
     required IconData icon,
     required Gradient gradient,
     required VoidCallback onTap,
+    required dynamic themeColors,
     bool comingSoon = false,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child:
-          GlassCard(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: gradient.scale(0.3),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Stack(
-                    children: [
-                      // Content
-                      Padding(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(AppSpacing.xs),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                shape: BoxShape.circle,
+    return Semantics(
+      label: '$title - $subtitle',
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child:
+            GlassCard(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: gradient.scale(0.3),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Stack(
+                      children: [
+                        // Content
+                        Padding(
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(AppSpacing.xs),
+                                decoration: BoxDecoration(
+                                  color: themeColors.textOnGradient.withValues(alpha: 0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(icon, size: 28, color: themeColors.textOnGradient),
                               ),
-                              child: Icon(icon, size: 28, color: Colors.white),
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                              title,
-                              style: AppTypography.titleMedium.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(
+                                title,
+                                style: AppTypography.titleMedium.copyWith(
+                                  color: themeColors.textOnGradient,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              subtitle,
-                              textAlign: TextAlign.center,
-                              style: AppTypography.bodySmall.copyWith(
-                                color: Colors.white70,
+                              const SizedBox(height: 2),
+                              Text(
+                                subtitle,
+                                textAlign: TextAlign.center,
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: themeColors.textOnGradient.withValues(alpha: 0.7),
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
 
-                      // Coming Soon Badge
-                      if (comingSoon)
-                        Positioned(
-                          top: 8,
-                          right: 8,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.sm,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.joyfulOrange,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'قريباً',
-                              style: AppTypography.bodySmall.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 10,
+                        // Coming Soon Badge
+                        if (comingSoon)
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.sm,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.joyfulOrange,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                'قريباً',
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: themeColors.textOnGradient,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              )
-              .animate()
-              .fadeIn(delay: 900.ms, duration: 600.ms)
-              .scale(begin: const Offset(0.8, 0.8), end: const Offset(1.0, 1.0))
-              .then()
-              .shimmer(duration: 2000.ms, delay: 1500.ms),
+                )
+                .animate()
+                .fadeIn(delay: AppAnimations.celebration, duration: AppAnimations.dramatic)
+                .scale(begin: const Offset(0.8, 0.8), end: const Offset(1.0, 1.0))
+                .then()
+                .shimmer(duration: AppAnimations.loop, delay: AppAnimations.celebration),
+      ),
     );
   }
 
-  Widget _buildProgressSection() {
+  Widget _buildProgressSection(dynamic themeColors) {
     final stats = _userStats ?? {};
     final points = stats['points'] ?? 0;
     final level = stats['level'] ?? 1;
@@ -538,13 +560,13 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                   children: [
                     Icon(
                       Icons.trending_up_rounded,
-                      color: AppColors.islamicGreenPrimary,
+                      color: themeColors.primary,
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     Text(
                       'تقدمك للمستوى التالي',
                       style: AppTypography.titleMedium.copyWith(
-                        color: Colors.white,
+                        color: themeColors.textOnGradient,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -556,9 +578,9 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                   child: LinearProgressIndicator(
                     value: progress.clamp(0.0, 1.0),
                     minHeight: 20,
-                    backgroundColor: Colors.white.withValues(alpha: 0.2),
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      AppColors.islamicGreenPrimary,
+                    backgroundColor: themeColors.textOnGradient.withValues(alpha: 0.2),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      themeColors.primary,
                     ),
                   ),
                 ),
@@ -569,13 +591,13 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                     Text(
                       '$points نقطة',
                       style: AppTypography.bodyMedium.copyWith(
-                        color: Colors.white70,
+                        color: themeColors.textOnGradient.withValues(alpha: 0.7),
                       ),
                     ),
                     Text(
                       'بقي ${nextLevelXP - points}',
                       style: AppTypography.bodyMedium.copyWith(
-                        color: Colors.white70,
+                        color: themeColors.textOnGradient.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -585,11 +607,11 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
           ),
         )
         .animate()
-        .fadeIn(delay: 1200.ms, duration: 600.ms)
+        .fadeIn(delay: AppAnimations.celebration, duration: AppAnimations.dramatic)
         .slideX(begin: -0.2, end: 0);
   }
 
-  Widget _buildMotivationCard() {
+  Widget _buildMotivationCard(dynamic themeColors) {
     final motivations = [
       'استمر في صلة الرحم! 💪',
       'كل تواصل يقربك من الله ❤️',
@@ -624,7 +646,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                   child: Text(
                     randomMotivation,
                     style: AppTypography.titleMedium.copyWith(
-                      color: Colors.white,
+                      color: themeColors.textOnGradient,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -634,10 +656,10 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
           ),
         )
         .animate()
-        .fadeIn(delay: 1500.ms, duration: 600.ms)
+        .fadeIn(delay: AppAnimations.celebration, duration: AppAnimations.dramatic)
         .slideY(begin: 0.2, end: 0)
         .then()
-        .shimmer(duration: 2000.ms, delay: 2000.ms);
+        .shimmer(duration: AppAnimations.loop, delay: AppAnimations.loop);
   }
 
   int _getNextLevelXP(int level) {

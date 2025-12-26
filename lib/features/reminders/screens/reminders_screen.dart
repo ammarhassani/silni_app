@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
@@ -29,6 +30,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final userId = user?.id ?? '';
+    final themeColors = ref.watch(themeColorsProvider);
 
     // Initialize real-time subscriptions for this user
     ref.watch(autoRealtimeSubscriptionsProvider);
@@ -37,49 +39,56 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     final relativesAsync = ref.watch(relativesStreamProvider(userId));
 
     return Scaffold(
-      body: Stack(
-        children: [
-          const GradientBackground(animated: true, child: SizedBox.expand()),
-          SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(context),
-                Expanded(
-                  child: relativesAsync.when(
-                    data: (relatives) => schedulesAsync.when(
-                      data: (schedules) =>
-                          _buildContent(context, relatives, schedules),
+      body: Semantics(
+        label: 'شاشة التذكيرات',
+        child: Stack(
+          children: [
+            const GradientBackground(animated: true, child: SizedBox.expand()),
+            SafeArea(
+              child: Column(
+                children: [
+                  _buildHeader(context, themeColors),
+                  Expanded(
+                    child: relativesAsync.when(
+                      data: (relatives) => schedulesAsync.when(
+                        data: (schedules) =>
+                            _buildContent(context, relatives, schedules, themeColors),
+                        loading: () => const Center(
+                          child: PremiumLoadingIndicator(
+                            message: 'جاري تحميل التذكيرات...',
+                          ),
+                        ),
+                        error: (_, _) => _buildError(themeColors),
+                      ),
                       loading: () => const Center(
                         child: PremiumLoadingIndicator(
-                          message: 'جاري تحميل التذكيرات...',
+                          message: 'جاري تحميل البيانات...',
                         ),
                       ),
-                      error: (_, _) => _buildError(),
+                      error: (_, _) => _buildError(themeColors),
                     ),
-                    loading: () => const Center(
-                      child: PremiumLoadingIndicator(
-                        message: 'جاري تحميل البيانات...',
-                      ),
-                    ),
-                    error: (_, _) => _buildError(),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, dynamic themeColors) {
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+          Semantics(
+            label: 'رجوع',
+            button: true,
+            child: IconButton(
+              onPressed: () => context.pop(),
+              icon: Icon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
@@ -89,14 +98,14 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                 Text(
                   'تذكير صلة الرحم',
                   style: AppTypography.headlineLarge.copyWith(
-                    color: Colors.white,
+                    color: themeColors.textOnGradient,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'نظّم تذكيراتك للتواصل مع أحبتك',
                   style: AppTypography.bodySmall.copyWith(
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: themeColors.textOnGradient.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -111,9 +120,10 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     BuildContext context,
     List<Relative> relatives,
     List<ReminderSchedule> schedules,
+    dynamic themeColors,
   ) {
     if (relatives.isEmpty) {
-      return _buildEmptyState();
+      return _buildEmptyState(themeColors);
     }
 
     final unassignedRelatives = _getUnassignedRelatives(relatives, schedules);
@@ -135,7 +145,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
           // Reminder Templates Section
           Text(
             '✨ اختر نوع التذكير',
-            style: AppTypography.headlineMedium.copyWith(color: Colors.white),
+            style: AppTypography.headlineMedium.copyWith(color: themeColors.textOnGradient),
           ),
           const SizedBox(height: AppSpacing.md),
           ReminderTemplatesWidget(
@@ -156,17 +166,17 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
           // Schedule Cards
           Text(
             '📅 جداول التذكير',
-            style: AppTypography.headlineMedium.copyWith(color: Colors.white),
+            style: AppTypography.headlineMedium.copyWith(color: themeColors.textOnGradient),
           ),
           const SizedBox(height: AppSpacing.md),
-          _buildScheduleCards(schedules, relatives),
+          _buildScheduleCards(schedules, relatives, themeColors),
           const SizedBox(height: AppSpacing.xl),
 
           // Unassigned Relatives
           if (unassignedRelatives.isNotEmpty) ...[
             Text(
               '👥 الأقارب غير المضافين',
-              style: AppTypography.headlineMedium.copyWith(color: Colors.white),
+              style: AppTypography.headlineMedium.copyWith(color: themeColors.textOnGradient),
             ),
             const SizedBox(height: AppSpacing.md),
             UnassignedRelativesWidget(
@@ -182,6 +192,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   Widget _buildScheduleCards(
     List<ReminderSchedule> schedules,
     List<Relative> relatives,
+    dynamic themeColors,
   ) {
     if (schedules.isEmpty) {
       return GlassCard(
@@ -192,14 +203,14 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
             const SizedBox(height: AppSpacing.md),
             Text(
               'لا توجد جداول تذكير بعد',
-              style: AppTypography.bodyLarge.copyWith(color: Colors.white),
+              style: AppTypography.bodyLarge.copyWith(color: themeColors.textOnGradient),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
               'اختر نوع تذكير من الأعلى للبدء',
               style: AppTypography.bodySmall.copyWith(
-                color: Colors.white.withValues(alpha: 0.7),
+                color: themeColors.textOnGradient.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -238,7 +249,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         .toList();
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(dynamic themeColors) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
@@ -252,7 +263,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               Text(
                 'لا يوجد أقارب بعد',
                 style: AppTypography.headlineMedium.copyWith(
-                  color: Colors.white,
+                  color: themeColors.textOnGradient,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -260,7 +271,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               Text(
                 'أضف أقاربك أولاً لتتمكن من إنشاء تذكيرات',
                 style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: themeColors.textOnGradient.withValues(alpha: 0.7),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -277,7 +288,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     );
   }
 
-  Widget _buildError() {
+  Widget _buildError(dynamic themeColors) {
     final user = ref.read(currentUserProvider);
     return Center(
       child: GlassCard(
@@ -286,21 +297,21 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.error_outline_rounded,
-              color: Colors.white,
+              color: themeColors.textOnGradient,
               size: 48,
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
               'حدث خطأ في تحميل البيانات',
-              style: AppTypography.bodyLarge.copyWith(color: Colors.white),
+              style: AppTypography.bodyLarge.copyWith(color: themeColors.textOnGradient),
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
               'يرجى التحقق من الاتصال بالإنترنت والمحاولة مرة أخرى',
               style: AppTypography.bodySmall.copyWith(
-                color: Colors.white.withValues(alpha: 0.8),
+                color: themeColors.textOnGradient.withValues(alpha: 0.8),
               ),
               textAlign: TextAlign.center,
             ),

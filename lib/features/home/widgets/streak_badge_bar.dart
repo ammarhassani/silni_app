@@ -2,8 +2,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/theme/app_themes.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../core/utils/badge_prestige.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../providers/home_providers.dart';
@@ -27,16 +30,20 @@ class StreakBadgeBar extends ConsumerStatefulWidget {
 }
 
 class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
+  ThemeColors get _themeColors => ref.watch(themeColorsProvider);
 
   @override
   Widget build(BuildContext context) {
     final gamificationData =
         ref.watch(userGamificationDataProvider(widget.userId));
 
-    return gamificationData.when(
-      data: (data) => _buildBar(data),
-      loading: () => _buildSkeletonLoader(),
-      error: (_, _) => const SizedBox.shrink(),
+    return Semantics(
+      label: 'شريط الإنجازات',
+      child: gamificationData.when(
+        data: (data) => _buildBar(data),
+        loading: () => _buildSkeletonLoader(),
+        error: (_, _) => const SizedBox.shrink(),
+      ),
     );
   }
 
@@ -45,14 +52,18 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
     final badges = List<String>.from(data['badges'] ?? []);
     final highestBadge = BadgePrestige.getHighestPrestigeBadge(badges);
 
+    // Parse streak deadline for warning indicator
+    final deadlineStr = data['streak_deadline'] as String?;
+    final deadline = deadlineStr != null ? DateTime.tryParse(deadlineStr)?.toUtc() : null;
+
     return GlassCard(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Colors.white.withValues(alpha: 0.15),
-          Colors.white.withValues(alpha: 0.05),
+          _themeColors.glassHighlight,
+          _themeColors.glassBackground,
         ],
       ),
       child: Row(
@@ -70,13 +81,13 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
           // Divider
           _buildDivider(),
 
-          // Streak Section
-          _buildStreakSection(currentStreak),
+          // Streak Section with deadline for warning indicator
+          _buildStreakSection(currentStreak, deadline: deadline),
         ],
       ),
     )
         .animate()
-        .fadeIn(delay: 200.ms, duration: 400.ms)
+        .fadeIn(delay: AppAnimations.fast, duration: AppAnimations.modal)
         .slideY(begin: 0.1, end: 0);
   }
 
@@ -90,7 +101,7 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: widget.profilePhotoUrl == null
-                ? AppColors.primaryGradient
+                ? _themeColors.primaryGradient
                 : null,
           ),
           child: widget.profilePhotoUrl != null
@@ -112,7 +123,7 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
           child: Text(
             widget.displayName.split(' ').first,
             style: AppTypography.labelMedium.copyWith(
-              color: Colors.white,
+              color: _themeColors.textPrimary,
               fontWeight: FontWeight.bold,
             ),
             maxLines: 1,
@@ -124,10 +135,10 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
   }
 
   Widget _buildDefaultAvatar() {
-    return const Center(
+    return Center(
       child: Icon(
         Icons.person_rounded,
-        color: Colors.white,
+        color: _themeColors.onPrimary,
         size: 16,
       ),
     );
@@ -143,9 +154,9 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.white.withValues(alpha: 0),
-            Colors.white.withValues(alpha: 0.3),
-            Colors.white.withValues(alpha: 0),
+            _themeColors.divider.withValues(alpha: 0),
+            _themeColors.divider,
+            _themeColors.divider.withValues(alpha: 0),
           ],
         ),
       ),
@@ -164,16 +175,16 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.3),
+                color: _themeColors.glassBorder,
                 width: 1.5,
               ),
-              color: Colors.white.withValues(alpha: 0.1),
+              color: _themeColors.glassBackground,
             ),
-            child: const Center(
+            child: Center(
               child: Text(
                 '?',
                 style: TextStyle(
-                  color: Colors.white70,
+                  color: _themeColors.textHint,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -184,7 +195,7 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
           Text(
             'ابدأ رحلتك',
             style: AppTypography.labelSmall.copyWith(
-              color: Colors.white70,
+              color: _themeColors.textHint,
             ),
           ),
         ],
@@ -224,9 +235,9 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
           child: Container(
             margin: isHighPrestige ? const EdgeInsets.all(2) : null,
             decoration: isHighPrestige
-                ? const BoxDecoration(
+                ? BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Color(0xFF1B3D1E),
+                    color: _themeColors.primaryDark,
                   )
                 : null,
             alignment: Alignment.center,
@@ -251,18 +262,29 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
         Text(
           badgeInfo.name,
           style: AppTypography.labelSmall.copyWith(
-            color: Colors.white.withValues(alpha: 0.9),
+            color: _themeColors.textPrimary.withValues(alpha: 0.9),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildStreakSection(int streak) {
+  Widget _buildStreakSection(int streak, {DateTime? deadline}) {
+    // Determine warning state
+    final isEndangered = _isStreakEndangered(deadline);
+    final isCritical = _isStreakCritical(deadline);
+    final timeRemaining = _getTimeRemaining(deadline);
+
+    // Choose emoji based on state
+    final emoji = isEndangered ? '⏳' : '🔥';
+    final glowColor = isCritical
+        ? AppColors.error
+        : (isEndangered ? AppColors.warning : AppColors.joyfulOrange);
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Fire emoji with glow
+        // Emoji with glow and animation
         Container(
           padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
@@ -270,52 +292,125 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
             boxShadow: streak > 0
                 ? [
                     BoxShadow(
-                      color: const Color(0xFFFF6B35).withValues(alpha: 0.5),
-                      blurRadius: 8,
-                      spreadRadius: 1,
+                      color: glowColor.withValues(alpha: isEndangered ? 0.6 : 0.5),
+                      blurRadius: isEndangered ? 10 : 8,
+                      spreadRadius: isEndangered ? 2 : 1,
                     ),
                   ]
                 : null,
           ),
-          child: const Text(
-            '🔥',
-            style: TextStyle(fontSize: 18),
+          child: Text(
+            emoji,
+            style: const TextStyle(fontSize: 18),
           ),
         )
             .animate(
               onPlay: (controller) => streak > 0 ? controller.repeat() : null,
             )
+            .then() // Chain animations based on state
+            .custom(
+              builder: (context, value, child) {
+                if (isCritical) {
+                  // Critical: shake animation
+                  return child;
+                } else if (isEndangered) {
+                  // Warning: faster pulse
+                  return child;
+                }
+                // Normal: subtle pulse
+                return child;
+              },
+            )
             .scale(
               begin: const Offset(1.0, 1.0),
-              end: const Offset(1.1, 1.1),
-              duration: streak > 0 ? 1.seconds : Duration.zero,
+              end: Offset(isCritical ? 1.15 : 1.1, isCritical ? 1.15 : 1.1),
+              duration: streak > 0
+                  ? (isCritical
+                      ? AppAnimations.fast
+                      : (isEndangered
+                          ? AppAnimations.modal
+                          : AppAnimations.celebration))
+                  : Duration.zero,
               curve: Curves.easeInOut,
             )
             .then()
             .scale(
-              begin: const Offset(1.1, 1.1),
+              begin: Offset(isCritical ? 1.15 : 1.1, isCritical ? 1.15 : 1.1),
               end: const Offset(1.0, 1.0),
-              duration: streak > 0 ? 1.seconds : Duration.zero,
+              duration: streak > 0
+                  ? (isCritical
+                      ? AppAnimations.fast
+                      : (isEndangered
+                          ? AppAnimations.modal
+                          : AppAnimations.celebration))
+                  : Duration.zero,
               curve: Curves.easeInOut,
+            )
+            .then(delay: isCritical ? 50.ms : Duration.zero)
+            .shake(
+              hz: isCritical ? 4 : 0,
+              offset: Offset(isCritical ? 1.5 : 0, 0),
+              duration: isCritical ? AppAnimations.fast : Duration.zero,
             ),
         const SizedBox(width: 4),
         // Streak number
         Text(
           '$streak',
           style: AppTypography.numberSmall.copyWith(
-            color: Colors.white,
+            color: isEndangered ? glowColor : _themeColors.textPrimary,
             fontWeight: FontWeight.w800,
           ),
         ),
         const SizedBox(width: 4),
-        Text(
-          'يوم',
-          style: AppTypography.labelSmall.copyWith(
-            color: Colors.white.withValues(alpha: 0.7),
+        // Show countdown if endangered, otherwise just "يوم"
+        if (isEndangered && timeRemaining != null) ...[
+          Text(
+            _formatTimeRemaining(timeRemaining),
+            style: AppTypography.labelSmall.copyWith(
+              color: isCritical ? AppColors.error : AppColors.warning,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
+        ] else
+          Text(
+            'يوم',
+            style: AppTypography.labelSmall.copyWith(
+              color: _themeColors.textSecondary,
+            ),
+          ),
       ],
     );
+  }
+
+  /// Check if streak is endangered (less than 4 hours remaining)
+  bool _isStreakEndangered(DateTime? deadline) {
+    if (deadline == null) return false;
+    final remaining = deadline.difference(DateTime.now().toUtc());
+    return !remaining.isNegative && remaining.inHours < 4;
+  }
+
+  /// Check if streak is critical (less than 1 hour remaining)
+  bool _isStreakCritical(DateTime? deadline) {
+    if (deadline == null) return false;
+    final remaining = deadline.difference(DateTime.now().toUtc());
+    return !remaining.isNegative && remaining.inMinutes < 60;
+  }
+
+  /// Get time remaining until deadline
+  Duration? _getTimeRemaining(DateTime? deadline) {
+    if (deadline == null) return null;
+    return deadline.difference(DateTime.now().toUtc());
+  }
+
+  /// Format time remaining as a readable string
+  String _formatTimeRemaining(Duration duration) {
+    if (duration.isNegative) return 'انتهى';
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes % 60;
+    if (hours > 0) {
+      return '$hoursس $minutesد';
+    }
+    return '$minutesد';
   }
 
   Widget _buildSkeletonLoader() {
@@ -329,7 +424,7 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
             height: 32,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.1),
+              color: _themeColors.shimmerBase,
             ),
           ),
           const SizedBox(width: 8),
@@ -338,13 +433,13 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
             height: 12,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(4),
-              color: Colors.white.withValues(alpha: 0.1),
+              color: _themeColors.shimmerBase,
             ),
           ),
         ],
       ),
     )
         .animate(onPlay: (controller) => controller.repeat())
-        .shimmer(duration: 1500.ms, color: Colors.white.withValues(alpha: 0.1));
+        .shimmer(duration: AppAnimations.loop, color: _themeColors.shimmerHighlight);
   }
 }

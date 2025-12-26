@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../providers/stats_provider.dart';
 import '../widgets/stats/widgets.dart';
@@ -13,39 +14,43 @@ class DetailedStatsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
     final statsAsync = ref.watch(detailedStatsProvider);
 
     return Scaffold(
-      body: Stack(
-        children: [
-          const GradientBackground(animated: true, child: SizedBox.expand()),
-          SafeArea(
-            child: Column(
-              children: [
-                // Header
-                _buildHeader(context),
+      body: Semantics(
+        label: 'الإحصائيات التفصيلية',
+        child: Stack(
+          children: [
+            const GradientBackground(animated: true, child: SizedBox.expand()),
+            SafeArea(
+              child: Column(
+                children: [
+                  // Header
+                  _buildHeader(context, themeColors),
 
-                // Content
-                Expanded(
-                  child: statsAsync.when(
-                    data: (stats) => _buildContent(stats),
-                    loading: () => const Center(
-                      child: PremiumLoadingIndicator(
-                        message: 'جاري تحميل الإحصائيات...',
+                  // Content
+                  Expanded(
+                    child: statsAsync.when(
+                      data: (stats) => _buildContent(stats),
+                      loading: () => const Center(
+                        child: PremiumLoadingIndicator(
+                          message: 'جاري تحميل الإحصائيات...',
+                        ),
                       ),
+                      error: (_, _) => _buildErrorState(context, ref, themeColors),
                     ),
-                    error: (_, _) => _buildErrorState(context, ref),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, dynamic themeColors) {
     return Padding(
       padding: const EdgeInsets.only(
         top: AppSpacing.sm,
@@ -55,16 +60,20 @@ class DetailedStatsScreen extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back_ios_rounded),
-            color: Colors.white,
+          Semantics(
+            label: 'رجوع',
+            button: true,
+            child: IconButton(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.arrow_back_ios_rounded),
+              color: themeColors.textOnGradient,
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Text(
             'الإحصائيات التفصيلية',
             style: AppTypography.headlineMedium.copyWith(
-              color: Colors.white,
+              color: themeColors.textOnGradient,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -111,28 +120,34 @@ class DetailedStatsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildErrorState(BuildContext context, WidgetRef ref) {
+  Widget _buildErrorState(BuildContext context, WidgetRef ref, dynamic themeColors) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
+          Icon(
             Icons.error_outline_rounded,
-            color: Colors.white54,
+            color: themeColors.textOnGradient.withValues(alpha: 0.54),
             size: 64,
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
             'حدث خطأ في تحميل البيانات',
-            style: AppTypography.bodyLarge.copyWith(color: Colors.white70),
+            style: AppTypography.bodyLarge.copyWith(
+              color: themeColors.textOnGradient.withValues(alpha: 0.7),
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
-          TextButton.icon(
-            onPressed: () => ref.invalidate(detailedStatsProvider),
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-            label: Text(
-              'إعادة المحاولة',
-              style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+          Semantics(
+            label: 'إعادة المحاولة',
+            button: true,
+            child: TextButton.icon(
+              onPressed: () => ref.invalidate(detailedStatsProvider),
+              icon: Icon(Icons.refresh_rounded, color: themeColors.textOnGradient),
+              label: Text(
+                'إعادة المحاولة',
+                style: AppTypography.bodyMedium.copyWith(color: themeColors.textOnGradient),
+              ),
             ),
           ),
         ],

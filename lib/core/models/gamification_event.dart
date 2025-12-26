@@ -5,6 +5,10 @@ enum GamificationEventType {
   levelUp,
   streakIncreased,
   streakMilestone, // Special: 7, 14, 30, 50, 100 days
+  streakWarning, // 4 hours remaining
+  streakCritical, // 1 hour remaining
+  freezeEarned, // Freeze awarded at milestone
+  freezeUsed, // Freeze used to protect streak
 }
 
 /// Represents a gamification event that triggers UI feedback
@@ -105,13 +109,87 @@ class GamificationEvent {
     );
   }
 
+  /// Create a streak warning event (4 hours remaining)
+  factory GamificationEvent.streakWarning({
+    required String userId,
+    required int currentStreak,
+    required Duration timeRemaining,
+  }) {
+    return GamificationEvent(
+      type: GamificationEventType.streakWarning,
+      userId: userId,
+      data: {
+        'current_streak': currentStreak,
+        'hours_remaining': timeRemaining.inHours,
+        'minutes_remaining': timeRemaining.inMinutes % 60,
+      },
+    );
+  }
+
+  /// Create a streak critical event (1 hour remaining)
+  factory GamificationEvent.streakCritical({
+    required String userId,
+    required int currentStreak,
+    required Duration timeRemaining,
+  }) {
+    return GamificationEvent(
+      type: GamificationEventType.streakCritical,
+      userId: userId,
+      data: {
+        'current_streak': currentStreak,
+        'minutes_remaining': timeRemaining.inMinutes,
+      },
+    );
+  }
+
+  /// Create a freeze earned event
+  factory GamificationEvent.freezeEarned({
+    required String userId,
+    required String source, // e.g., 'milestone_7', 'milestone_30'
+  }) {
+    return GamificationEvent(
+      type: GamificationEventType.freezeEarned,
+      userId: userId,
+      data: {
+        'source': source,
+      },
+    );
+  }
+
+  /// Create a freeze used event
+  factory GamificationEvent.freezeUsed({
+    required String userId,
+    required int streakProtected,
+    required bool autoUsed,
+  }) {
+    return GamificationEvent(
+      type: GamificationEventType.freezeUsed,
+      userId: userId,
+      data: {
+        'streak_protected': streakProtected,
+        'auto_used': autoUsed,
+      },
+    );
+  }
+
   /// Check if this streak qualifies as a milestone
   static bool isStreakMilestone(int streak) {
-    return streak == 7 ||
+    return streak == 3 ||
+           streak == 7 ||
+           streak == 10 ||
            streak == 14 ||
+           streak == 21 ||
            streak == 30 ||
            streak == 50 ||
-           streak == 100;
+           streak == 100 ||
+           streak == 200 ||
+           streak == 365 ||
+           streak == 500;
+  }
+
+  /// Check if this streak qualifies for a freeze award
+  static bool isFreezeAwardMilestone(int streak) {
+    return streak == 7 || streak == 30 || streak == 100;
   }
 
   /// Get points from a points earned event

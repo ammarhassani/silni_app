@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -227,74 +229,78 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = ref.watch(themeColorsProvider);
+
     return Scaffold(
-      body: GradientBackground(
-        animated: true,
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Logo
-                    Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: AppColors.primaryGradient,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.islamicGreenPrimary.withValues(alpha: 0.5),
-                            blurRadius: 30,
-                            spreadRadius: 5,
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.person_add_rounded,
-                          size: 50,
-                          color: Colors.white,
+      body: Semantics(
+        label: 'شاشة إنشاء حساب جديد',
+        child: GradientBackground(
+          animated: true,
+          child: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Logo
+                      Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: themeColors.primaryGradient,
+                          boxShadow: [
+                            BoxShadow(
+                              color: themeColors.primary.withValues(alpha: 0.5),
+                              blurRadius: 30,
+                              spreadRadius: 5,
+                            ),
+                          ],
                         ),
-                      ),
-                    )
-                        .animate()
-                        .scale(
-                          duration: const Duration(milliseconds: 600),
-                          curve: Curves.elasticOut,
-                        )
-                        .fadeIn(),
+                        child: Center(
+                          child: Icon(
+                            Icons.person_add_rounded,
+                            size: 50,
+                            color: themeColors.textOnGradient,
+                          ),
+                        ),
+                      )
+                          .animate()
+                          .scale(
+                            duration: AppAnimations.dramatic,
+                            curve: Curves.elasticOut,
+                          )
+                          .fadeIn(),
 
-                    const SizedBox(height: AppSpacing.lg),
+                      const SizedBox(height: AppSpacing.lg),
 
-                    // Welcome text
-                    Text(
-                      'انضم إلينا',
-                      style: AppTypography.dramatic.copyWith(
-                        color: Colors.white,
-                      ),
-                    )
-                        .animate(delay: const Duration(milliseconds: 200))
-                        .fadeIn(duration: const Duration(milliseconds: 600))
-                        .slideY(begin: 0.3, end: 0),
+                      // Welcome text
+                      Text(
+                        'انضم إلينا',
+                        style: AppTypography.dramatic.copyWith(
+                          color: themeColors.textOnGradient,
+                        ),
+                      )
+                          .animate(delay: AppAnimations.fast)
+                          .fadeIn(duration: AppAnimations.dramatic)
+                          .slideY(begin: 0.3, end: 0),
 
-                    const SizedBox(height: AppSpacing.sm),
+                      const SizedBox(height: AppSpacing.sm),
 
-                    Text(
-                      'ابدأ رحلتك في صلة الرحم',
-                      style: AppTypography.bodyLarge.copyWith(
-                        color: Colors.white.withValues(alpha: 0.8),
-                      ),
-                    )
-                        .animate(delay: const Duration(milliseconds: 400))
-                        .fadeIn(duration: const Duration(milliseconds: 600))
-                        .slideY(begin: 0.3, end: 0),
+                      Text(
+                        'ابدأ رحلتك في صلة الرحم',
+                        style: AppTypography.bodyLarge.copyWith(
+                          color: themeColors.textOnGradient.withValues(alpha: 0.8),
+                        ),
+                      )
+                          .animate(delay: AppAnimations.normal)
+                          .fadeIn(duration: AppAnimations.dramatic)
+                          .slideY(begin: 0.3, end: 0),
 
-                    const SizedBox(height: AppSpacing.xl),
+                      const SizedBox(height: AppSpacing.xl),
 
                     // Sign up form in glass card
                     DramaticGlassCard(
@@ -306,6 +312,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                             label: 'الاسم الكامل',
                             hint: 'أدخل اسمك الكامل',
                             icon: Icons.person_outline,
+                            themeColors: themeColors,
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'الرجاء إدخال الاسم';
@@ -327,6 +334,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                             icon: Icons.email_outlined,
                             keyboardType: TextInputType.emailAddress,
                             textDirection: TextDirection.ltr,
+                            themeColors: themeColors,
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'الرجاء إدخال البريد الإلكتروني';
@@ -352,12 +360,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                             icon: Icons.lock_outline,
                             obscureText: _obscurePassword,
                             textDirection: TextDirection.ltr,
+                            themeColors: themeColors,
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscurePassword
                                     ? Icons.visibility_outlined
                                     : Icons.visibility_off_outlined,
-                                color: Colors.white.withValues(alpha: 0.7),
+                                color: themeColors.textOnGradient.withValues(alpha: 0.7),
                               ),
                               onPressed: () {
                                 setState(() {
@@ -395,12 +404,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                             icon: Icons.lock_outline,
                             obscureText: _obscureConfirmPassword,
                             textDirection: TextDirection.ltr,
+                            themeColors: themeColors,
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscureConfirmPassword
                                     ? Icons.visibility_outlined
                                     : Icons.visibility_off_outlined,
-                                color: Colors.white.withValues(alpha: 0.7),
+                                color: themeColors.textOnGradient.withValues(alpha: 0.7),
                               ),
                               onPressed: () {
                                 setState(() {
@@ -432,9 +442,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         ],
                       ),
                     )
-                        .animate(delay: const Duration(milliseconds: 600))
-                        .fadeIn(duration: const Duration(milliseconds: 800))
-                        .slideY(begin: 0.3, end: 0, curve: Curves.easeOut),
+                        .animate(delay: AppAnimations.dramatic)
+                        .fadeIn(duration: AppAnimations.slow)
+                        .slideY(begin: 0.3, end: 0, curve: AppAnimations.enterCurve),
 
                     const SizedBox(height: AppSpacing.xl),
 
@@ -446,25 +456,29 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         Text(
                           'لديك حساب بالفعل؟',
                           style: AppTypography.bodyMedium.copyWith(
-                            color: Colors.white.withValues(alpha: 0.8),
+                            color: themeColors.textOnGradient.withValues(alpha: 0.8),
                           ),
                         ),
-                        TextButton(
-                          onPressed: () {
-                            context.go(AppRoutes.login);
-                          },
-                          child: Text(
-                            'سجّل الدخول',
-                            style: AppTypography.labelLarge.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                        Semantics(
+                          label: 'تسجيل الدخول',
+                          button: true,
+                          child: TextButton(
+                            onPressed: () {
+                              context.go(AppRoutes.login);
+                            },
+                            child: Text(
+                              'سجّل الدخول',
+                              style: AppTypography.labelLarge.copyWith(
+                                color: themeColors.textOnGradient,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
                       ],
                     )
-                        .animate(delay: const Duration(milliseconds: 800))
-                        .fadeIn(duration: const Duration(milliseconds: 600)),
+                        .animate(delay: AppAnimations.slow)
+                        .fadeIn(duration: AppAnimations.dramatic),
                   ],
                 ),
               ),
@@ -472,6 +486,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -480,57 +495,62 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     required String label,
     required String hint,
     required IconData icon,
+    required dynamic themeColors,
     TextInputType? keyboardType,
     bool obscureText = false,
     TextDirection? textDirection,
     Widget? suffixIcon,
     String? Function(String?)? validator,
   }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      obscureText: obscureText,
-      textDirection: textDirection,
-      style: AppTypography.bodyMedium.copyWith(
-        color: Colors.white,
+    return Semantics(
+      label: label,
+      textField: true,
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        obscureText: obscureText,
+        textDirection: textDirection,
+        style: AppTypography.bodyMedium.copyWith(
+          color: themeColors.textOnGradient,
+        ),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: AppTypography.bodyMedium.copyWith(
+            color: themeColors.textOnGradient.withValues(alpha: 0.8),
+          ),
+          hintText: hint,
+          hintStyle: AppTypography.bodyMedium.copyWith(
+            color: themeColors.textOnGradient.withValues(alpha: 0.5),
+          ),
+          prefixIcon: Icon(
+            icon,
+            color: themeColors.textOnGradient.withValues(alpha: 0.7),
+          ),
+          suffixIcon: suffixIcon,
+          filled: true,
+          fillColor: themeColors.textOnGradient.withValues(alpha: 0.1),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            borderSide: BorderSide(
+              color: themeColors.textOnGradient.withValues(alpha: 0.3),
+            ),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            borderSide: BorderSide(
+              color: themeColors.textOnGradient.withValues(alpha: 0.3),
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            borderSide: BorderSide(
+              color: themeColors.textOnGradient,
+              width: 2,
+            ),
+          ),
+        ),
+        validator: validator,
       ),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: AppTypography.bodyMedium.copyWith(
-          color: Colors.white.withValues(alpha: 0.8),
-        ),
-        hintText: hint,
-        hintStyle: AppTypography.bodyMedium.copyWith(
-          color: Colors.white.withValues(alpha: 0.5),
-        ),
-        prefixIcon: Icon(
-          icon,
-          color: Colors.white.withValues(alpha: 0.7),
-        ),
-        suffixIcon: suffixIcon,
-        filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.1),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-          borderSide: BorderSide(
-            color: Colors.white.withValues(alpha: 0.3),
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-          borderSide: BorderSide(
-            color: Colors.white.withValues(alpha: 0.3),
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-          borderSide: const BorderSide(
-            color: Colors.white,
-            width: 2,
-          ),
-        ),
-      ),
-      validator: validator,
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -70,135 +71,149 @@ class DueRemindersCard extends ConsumerWidget {
   }
 
   Widget _buildNoRemindersState(BuildContext context, dynamic themeColors) {
-    return GlassCard(
-      gradient: LinearGradient(
-        colors: [
-          Colors.grey.withValues(alpha: 0.3),
-          Colors.grey.withValues(alpha: 0.1),
-        ],
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.notifications_none,
-            size: 48,
-            color: Colors.white.withValues(alpha: 0.6),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'لا توجد تذكيرات',
-            style: AppTypography.titleMedium.copyWith(
-              color: Colors.white,
+    return Semantics(
+      label: 'لا توجد تذكيرات - أضف تذكيرات للتواصل مع أقاربك',
+      child: GlassCard(
+        gradient: LinearGradient(
+          colors: [
+            themeColors.disabled.withValues(alpha: 0.3),
+            themeColors.disabled.withValues(alpha: 0.1),
+          ],
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.notifications_none,
+              size: 48,
+              color: themeColors.textSecondary,
             ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'أضف تذكيرات لتبقى على تواصل مع أقاربك',
-            style: AppTypography.bodySmall.copyWith(
-              color: Colors.white.withValues(alpha: 0.7),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'لا توجد تذكيرات',
+              style: AppTypography.titleMedium.copyWith(
+                color: themeColors.textPrimary,
+              ),
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          GestureDetector(
-            onTap: () => context.push(AppRoutes.reminders),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm,
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'أضف تذكيرات لتبقى على تواصل مع أقاربك',
+              style: AppTypography.bodySmall.copyWith(
+                color: themeColors.textSecondary,
               ),
-              decoration: BoxDecoration(
-                color: themeColors.primary.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-              ),
-              child: Text(
-                'إضافة تذكير',
-                style: AppTypography.labelMedium.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Semantics(
+              label: 'إضافة تذكير',
+              button: true,
+              child: GestureDetector(
+                onTap: () => context.push(AppRoutes.reminders),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    color: themeColors.primary.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  ),
+                  child: Text(
+                    'إضافة تذكير',
+                    style: AppTypography.labelMedium.copyWith(
+                      color: themeColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ).animate().fadeIn();
+    ).animate().fadeIn(duration: AppAnimations.normal);
   }
 
   Widget _buildAllDoneState(dynamic themeColors) {
-    return GlassCard(
-      gradient: LinearGradient(
-        colors: [
-          themeColors.primaryLight.withValues(alpha: 0.3),
-          AppColors.premiumGold.withValues(alpha: 0.2),
-        ],
-      ),
-      child: Row(
-        children: [
-          const Text('✅', style: TextStyle(fontSize: 40)),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'أنت على تواصل جيد!',
-                  style: AppTypography.titleMedium.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+    return Semantics(
+      label: 'أنت على تواصل جيد - لا توجد تذكيرات لليوم',
+      child: GlassCard(
+        gradient: LinearGradient(
+          colors: [
+            themeColors.primaryLight.withValues(alpha: 0.3),
+            AppColors.premiumGold.withValues(alpha: 0.2),
+          ],
+        ),
+        child: Row(
+          children: [
+            const Text('✅', style: TextStyle(fontSize: 40)),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'أنت على تواصل جيد!',
+                    style: AppTypography.titleMedium.copyWith(
+                      color: themeColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'لا توجد تذكيرات لليوم',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: Colors.white.withValues(alpha: 0.8),
+                  const SizedBox(height: 4),
+                  Text(
+                    'لا توجد تذكيرات لليوم',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: themeColors.textSecondary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ).animate().fadeIn();
+    ).animate().fadeIn(duration: AppAnimations.normal);
   }
 
   Widget _buildCelebrationState(dynamic themeColors) {
-    return GlassCard(
-      gradient: LinearGradient(
-        colors: [
-          AppColors.premiumGold.withValues(alpha: 0.4),
-          themeColors.primaryLight.withValues(alpha: 0.3),
-        ],
-      ),
-      child: Row(
-        children: [
-          const Text('🎉', style: TextStyle(fontSize: 40)),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'أحسنت! أكملت مهامك',
-                  style: AppTypography.titleMedium.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+    return Semantics(
+      label: 'أحسنت! تواصلت مع جميع الأقارب في تذكيراتك اليوم',
+      liveRegion: true,
+      child: GlassCard(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.premiumGold.withValues(alpha: 0.4),
+            themeColors.primaryLight.withValues(alpha: 0.3),
+          ],
+        ),
+        child: Row(
+          children: [
+            const Text('🎉', style: TextStyle(fontSize: 40)),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'أحسنت! أكملت مهامك',
+                    style: AppTypography.titleMedium.copyWith(
+                      color: themeColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'تواصلت مع جميع الأقارب في تذكيراتك اليوم',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: Colors.white.withValues(alpha: 0.8),
+                  const SizedBox(height: 4),
+                  Text(
+                    'تواصلت مع جميع الأقارب في تذكيراتك اليوم',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: themeColors.textSecondary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ).animate().fadeIn().scale(begin: const Offset(0.95, 0.95));
+    ).animate().fadeIn(duration: AppAnimations.normal).scale(begin: const Offset(0.95, 0.95));
   }
 
   Widget _buildTaskList(
@@ -208,85 +223,93 @@ class DueRemindersCard extends ConsumerWidget {
     int totalCount,
     dynamic themeColors,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header with progress
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'تذكيرات اليوم',
-              style: AppTypography.headlineSmall.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: AppSpacing.xs,
-              ),
-              decoration: BoxDecoration(
-                color: themeColors.primary.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-              ),
-              child: Text(
-                '$contactedCount / $totalCount',
-                style: AppTypography.labelMedium.copyWith(
-                  color: Colors.white,
+    return Semantics(
+      label: 'تذكيرات اليوم - $contactedCount من $totalCount مكتمل',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with progress
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'تذكيرات اليوم',
+                style: AppTypography.headlineSmall.copyWith(
+                  color: themeColors.textPrimary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
-
-        // Progress bar
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: totalCount > 0 ? contactedCount / totalCount : 0,
-            backgroundColor: Colors.white.withValues(alpha: 0.2),
-            valueColor: const AlwaysStoppedAnimation<Color>(
-              AppColors.premiumGold,
-            ),
-            minHeight: 6,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-
-        // Due relatives list
-        ...dueRelatives.take(5).map((dueRelative) {
-          final isContacted = contactedSet.contains(dueRelative.relative.id);
-          return Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: _DueRelativeCard(
-              dueRelative: dueRelative,
-              isContacted: isContacted,
-            ),
-          );
-        }),
-
-        // Show more button if more than 5
-        if (dueRelatives.length > 5)
-          GestureDetector(
-            onTap: () => context.push(AppRoutes.remindersDue),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-              child: Text(
-                'عرض ${dueRelatives.length - 5} المزيد...',
-                style: AppTypography.labelMedium.copyWith(
-                  color: Colors.white.withValues(alpha: 0.8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
                 ),
-                textAlign: TextAlign.center,
+                decoration: BoxDecoration(
+                  color: themeColors.primary.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                ),
+                child: Text(
+                  '$contactedCount / $totalCount',
+                  style: AppTypography.labelMedium.copyWith(
+                    color: themeColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+
+          // Progress bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: totalCount > 0 ? contactedCount / totalCount : 0,
+              backgroundColor: themeColors.glassHighlight,
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppColors.premiumGold,
+              ),
+              minHeight: 6,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Due relatives list
+          ...dueRelatives.take(5).map((dueRelative) {
+            final isContacted = contactedSet.contains(dueRelative.relative.id);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: _DueRelativeCard(
+                dueRelative: dueRelative,
+                isContacted: isContacted,
+                themeColors: themeColors,
+              ),
+            );
+          }),
+
+          // Show more button if more than 5
+          if (dueRelatives.length > 5)
+            Semantics(
+              label: 'عرض ${dueRelatives.length - 5} تذكيرات إضافية',
+              button: true,
+              child: GestureDetector(
+                onTap: () => context.push(AppRoutes.remindersDue),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                  child: Text(
+                    'عرض ${dueRelatives.length - 5} المزيد...',
+                    style: AppTypography.labelMedium.copyWith(
+                      color: themeColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               ),
             ),
-          ),
-      ],
-    ).animate().fadeIn().slideY(begin: 0.1, end: 0);
+        ],
+      ),
+    ).animate().fadeIn(duration: AppAnimations.normal).slideY(begin: 0.1, end: 0);
   }
 }
 
@@ -294,10 +317,12 @@ class _DueRelativeCard extends StatelessWidget {
   const _DueRelativeCard({
     required this.dueRelative,
     required this.isContacted,
+    required this.themeColors,
   });
 
   final DueRelativeWithFrequencies dueRelative;
   final bool isContacted;
+  final dynamic themeColors;
 
   static const _fridayGreen = Color(0xFF1B5E20);
   static const _fridayGreenLight = Color(0xFF4CAF50);
@@ -307,107 +332,115 @@ class _DueRelativeCard extends StatelessWidget {
     final relative = dueRelative.relative;
     final hasFriday = dueRelative.hasFridayReminder;
 
-    return GestureDetector(
-      onTap: () => context.push('${AppRoutes.relativeDetail}/${relative.id}'),
-      child: GlassCard(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        gradient: isContacted
-            ? LinearGradient(
-                colors: [
-                  Colors.green.withValues(alpha: 0.3),
-                  Colors.green.withValues(alpha: 0.1),
-                ],
-              )
-            : hasFriday
-                ? LinearGradient(
-                    colors: [
-                      _fridayGreen.withValues(alpha: 0.3),
-                      _fridayGreenLight.withValues(alpha: 0.15),
-                    ],
-                  )
-                : null,
-        child: Row(
-          children: [
-            // Checkbox/status indicator
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isContacted
-                    ? Colors.green
-                    : Colors.white.withValues(alpha: 0.2),
-                border: isContacted
-                    ? null
-                    : Border.all(color: Colors.white.withValues(alpha: 0.5), width: 2),
-              ),
-              child: isContacted
-                  ? const Icon(Icons.check, color: Colors.white, size: 18)
+    return Semantics(
+      label: '${relative.fullName} - ${isContacted ? "تم التواصل" : "بانتظار التواصل"}',
+      button: true,
+      child: GestureDetector(
+        onTap: () => context.push('${AppRoutes.relativeDetail}/${relative.id}'),
+        child: GlassCard(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          gradient: isContacted
+              ? LinearGradient(
+                  colors: [
+                    Colors.green.withValues(alpha: 0.3),
+                    Colors.green.withValues(alpha: 0.1),
+                  ],
+                )
+              : hasFriday
+                  ? LinearGradient(
+                      colors: [
+                        _fridayGreen.withValues(alpha: 0.3),
+                        _fridayGreenLight.withValues(alpha: 0.15),
+                      ],
+                    )
                   : null,
-            ),
-            const SizedBox(width: AppSpacing.md),
-
-            // Relative info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    relative.fullName,
-                    style: AppTypography.titleSmall.copyWith(
-                      color: Colors.white,
-                      decoration: isContacted ? TextDecoration.lineThrough : null,
-                      decorationColor: Colors.white.withValues(alpha: 0.5),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Text(
-                        relative.relationshipType.arabicName,
-                        style: AppTypography.bodySmall.copyWith(
-                          color: Colors.white.withValues(alpha: 0.7),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      ...dueRelative.sortedFrequencies.map((freq) => Padding(
-                        padding: const EdgeInsets.only(left: 4),
-                        child: _FrequencyBadge(frequency: freq),
-                      )),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Show contacted badge or arrow
-            if (isContacted)
+          child: Row(
+            children: [
+              // Checkbox/status indicator
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: AppSpacing.xs,
-                ),
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                  shape: BoxShape.circle,
+                  color: isContacted
+                      ? Colors.green
+                      : themeColors.glassHighlight,
+                  border: isContacted
+                      ? null
+                      : Border.all(color: themeColors.textSecondary, width: 2),
                 ),
-                child: Text(
-                  'تم',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              )
-            else
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: Colors.white.withValues(alpha: 0.5),
-                size: 16,
+                child: isContacted
+                    ? Icon(Icons.check, color: themeColors.textOnGradient, size: 18)
+                    : null,
               ),
-          ],
+              const SizedBox(width: AppSpacing.md),
+
+              // Relative info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      relative.fullName,
+                      style: AppTypography.titleSmall.copyWith(
+                        color: themeColors.textPrimary,
+                        decoration: isContacted ? TextDecoration.lineThrough : null,
+                        decorationColor: themeColors.textSecondary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            relative.relationshipType.arabicName,
+                            style: AppTypography.bodySmall.copyWith(
+                              color: themeColors.textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ...dueRelative.sortedFrequencies.take(2).map((freq) => Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: _FrequencyBadge(frequency: freq, themeColors: themeColors),
+                        )),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Show contacted badge or arrow
+              if (isContacted)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                  ),
+                  child: Text(
+                    'تم',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: themeColors.textOnGradient,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                )
+              else
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: themeColors.textHint,
+                  size: 16,
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -415,9 +448,13 @@ class _DueRelativeCard extends StatelessWidget {
 }
 
 class _FrequencyBadge extends StatelessWidget {
-  const _FrequencyBadge({required this.frequency});
+  const _FrequencyBadge({
+    required this.frequency,
+    required this.themeColors,
+  });
 
   final ReminderFrequency frequency;
+  final dynamic themeColors;
 
   static const _fridayGreen = Color(0xFF1B5E20);
   static const _fridayGreenLight = Color(0xFF4CAF50);
@@ -431,7 +468,7 @@ class _FrequencyBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: isFriday
             ? _fridayGreen.withValues(alpha: 0.6)
-            : Colors.white.withValues(alpha: 0.15),
+            : themeColors.glassHighlight,
         borderRadius: BorderRadius.circular(4),
         border: isFriday
             ? Border.all(color: _fridayGreenLight.withValues(alpha: 0.5), width: 1)
@@ -447,7 +484,7 @@ class _FrequencyBadge extends StatelessWidget {
           Text(
             frequency.arabicName,
             style: AppTypography.labelSmall.copyWith(
-              color: Colors.white,
+              color: themeColors.textPrimary,
               fontSize: 9,
               fontWeight: isFriday ? FontWeight.bold : FontWeight.normal,
             ),

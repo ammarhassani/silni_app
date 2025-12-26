@@ -2,18 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:confetti/confetti.dart';
+import '../../core/constants/app_animations.dart';
+import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
+import '../../core/models/gamification_event.dart';
+
+/// Milestone tier for visual customization
+enum MilestoneTier {
+  starter,   // 3 days
+  common,    // 7, 10, 14, 21 days
+  rare,      // 30, 50 days
+  epic,      // 100, 200 days
+  legendary, // 365, 500 days
+}
 
 /// Dramatic streak milestone celebration modal
-/// Shows when user reaches a streak milestone (7, 30, 100, 365 days)
+/// Shows when user reaches a streak milestone (3, 7, 10, 14, 21, 30, 50, 100, 200, 365, 500 days)
 class StreakMilestoneModal extends StatefulWidget {
   final int streak;
   final VoidCallback? onDismiss;
+  final bool freezeAwarded; // Whether a freeze was awarded at this milestone
 
   const StreakMilestoneModal({
     super.key,
     required this.streak,
     this.onDismiss,
+    this.freezeAwarded = false,
   });
 
   @override
@@ -23,13 +37,18 @@ class StreakMilestoneModal extends StatefulWidget {
   static Future<void> show(
     BuildContext context, {
     required int streak,
+    bool freezeAwarded = false,
   }) {
+    // Check if freeze should be awarded
+    final shouldAwardFreeze = freezeAwarded || GamificationEvent.isFreezeAwardMilestone(streak);
+
     return showDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black87,
+      barrierColor: AppColors.islamicGreenDark.withValues(alpha: 0.9),
       builder: (context) => StreakMilestoneModal(
         streak: streak,
+        freezeAwarded: shouldAwardFreeze,
         onDismiss: () => Navigator.of(context).pop(),
       ),
     );
@@ -54,7 +73,7 @@ class _StreakMilestoneModalState extends State<StreakMilestoneModal>
     // Flame animation
     _flameController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: AppAnimations.celebration,
     )..repeat(reverse: true);
 
     _flameAnimation = Tween<double>(begin: 0.9, end: 1.1).animate(
@@ -79,16 +98,132 @@ class _StreakMilestoneModalState extends State<StreakMilestoneModal>
     super.dispose();
   }
 
+  /// Get milestone tier for customization
+  MilestoneTier _getMilestoneTier() {
+    if (widget.streak >= 365) return MilestoneTier.legendary;
+    if (widget.streak >= 100) return MilestoneTier.epic;
+    if (widget.streak >= 30) return MilestoneTier.rare;
+    if (widget.streak >= 7) return MilestoneTier.common;
+    return MilestoneTier.starter;
+  }
+
+  /// Get gradient colors for tier
+  List<Color> _getTierGradient() {
+    switch (_getMilestoneTier()) {
+      case MilestoneTier.legendary:
+        return [
+          const Color(0xFFFFD700), // Gold
+          const Color(0xFFFF8C00), // Dark orange
+          const Color(0xFFFF4500), // Red orange
+        ];
+      case MilestoneTier.epic:
+        return [
+          const Color(0xFF9B59B6), // Purple
+          const Color(0xFF8E44AD), // Darker purple
+          const Color(0xFFE91E63), // Pink
+        ];
+      case MilestoneTier.rare:
+        return [
+          const Color(0xFF3498DB), // Blue
+          const Color(0xFF2980B9), // Darker blue
+          const Color(0xFF1ABC9C), // Teal
+        ];
+      case MilestoneTier.common:
+        return [
+          const Color(0xFFFF6B35),
+          const Color(0xFFFF9E00),
+          const Color(0xFFFFD60A),
+        ];
+      case MilestoneTier.starter:
+        return [
+          const Color(0xFF4CAF50),
+          const Color(0xFF81C784),
+          const Color(0xFFA5D6A7),
+        ];
+    }
+  }
+
+  /// Get confetti colors for tier
+  List<Color> _getConfettiColors() {
+    switch (_getMilestoneTier()) {
+      case MilestoneTier.legendary:
+        return [
+          const Color(0xFFFFD700),
+          const Color(0xFFFFC107),
+          const Color(0xFFFF9800),
+          Colors.white,
+        ];
+      case MilestoneTier.epic:
+        return [
+          const Color(0xFF9B59B6),
+          const Color(0xFFE91E63),
+          const Color(0xFFFF69B4),
+          Colors.white,
+        ];
+      case MilestoneTier.rare:
+        return [
+          const Color(0xFF3498DB),
+          const Color(0xFF1ABC9C),
+          const Color(0xFF00BCD4),
+          Colors.white,
+        ];
+      case MilestoneTier.common:
+        return [
+          const Color(0xFFFF6B35),
+          const Color(0xFFFF9E00),
+          const Color(0xFFFFD60A),
+          const Color(0xFFFFE55C),
+        ];
+      case MilestoneTier.starter:
+        return [
+          const Color(0xFF4CAF50),
+          const Color(0xFF8BC34A),
+          const Color(0xFFCDDC39),
+          Colors.white,
+        ];
+    }
+  }
+
+  /// Get particle count for tier
+  int _getParticleCount() {
+    switch (_getMilestoneTier()) {
+      case MilestoneTier.legendary:
+        return 50;
+      case MilestoneTier.epic:
+        return 40;
+      case MilestoneTier.rare:
+        return 30;
+      case MilestoneTier.common:
+        return 25;
+      case MilestoneTier.starter:
+        return 15;
+    }
+  }
+
   /// Get milestone message based on streak
   String _getMilestoneMessage() {
-    if (widget.streak >= 365) {
+    if (widget.streak >= 500) {
+      return 'إنجاز أسطوري! 500 يوم!';
+    } else if (widget.streak >= 365) {
       return 'سنة كاملة من التواصل المستمر!';
+    } else if (widget.streak >= 200) {
+      return '200 يوم! مثابرة استثنائية!';
     } else if (widget.streak >= 100) {
       return '100 يوم متتالي! إنجاز رائع!';
+    } else if (widget.streak >= 50) {
+      return '50 يوم من الالتزام!';
     } else if (widget.streak >= 30) {
       return 'شهر كامل من التواصل!';
+    } else if (widget.streak >= 21) {
+      return '21 يوم! عادة راسخة!';
+    } else if (widget.streak >= 14) {
+      return 'أسبوعان متتاليان!';
+    } else if (widget.streak >= 10) {
+      return '10 أيام متتالية!';
     } else if (widget.streak >= 7) {
       return 'أسبوع متتالي رائع!';
+    } else if (widget.streak >= 3) {
+      return 'ثلاثة أيام متتالية!';
     } else {
       return 'استمر في التواصل!';
     }
@@ -109,49 +244,57 @@ class _StreakMilestoneModalState extends State<StreakMilestoneModal>
     }
   }
 
+  /// Get next milestone
+  int _getNextMilestone() {
+    const milestones = [3, 7, 10, 14, 21, 30, 50, 100, 200, 365, 500];
+    for (final m in milestones) {
+      if (m > widget.streak) return m;
+    }
+    return widget.streak + 100; // Beyond 500, show +100 increments
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      child: Stack(
+    final gradientColors = _getTierGradient();
+    final confettiColors = _getConfettiColors();
+    final particleCount = _getParticleCount();
+    final nextMilestone = _getNextMilestone();
+
+    return Semantics(
+      label: 'تهانينا! ${widget.streak} يوم متتالي من التواصل',
+      liveRegion: true,
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Stack(
         alignment: Alignment.center,
         children: [
-          // Confetti
+          // Confetti with tier-specific colors
           Align(
             alignment: Alignment.topCenter,
             child: ConfettiWidget(
               confettiController: _confettiController,
               blastDirection: 3.14 / 2, // Down
               emissionFrequency: 0.03,
-              numberOfParticles: 25,
+              numberOfParticles: particleCount,
               gravity: 0.2,
-              colors: const [
-                Color(0xFFFF6B35),
-                Color(0xFFFF9E00),
-                Color(0xFFFFD60A),
-                Color(0xFFFFE55C),
-              ],
+              colors: confettiColors,
             ),
           ),
 
-          // Modal content
+          // Modal content with tier-specific gradient
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0xFFFF6B35),
-                  Color(0xFFFF9E00),
-                  Color(0xFFFFD60A),
-                ],
+              gradient: LinearGradient(
+                colors: gradientColors,
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFFF9E00).withValues(alpha: 0.6),
+                  color: gradientColors[1].withValues(alpha: 0.6),
                   blurRadius: 40,
                   spreadRadius: 10,
                 ),
@@ -314,16 +457,110 @@ class _StreakMilestoneModalState extends State<StreakMilestoneModal>
                   ),
                 ).animate().fadeIn(delay: 600.ms, duration: 400.ms),
 
-                const SizedBox(height: 32),
+                // Freeze earned banner (if applicable)
+                if (widget.freezeAwarded) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.5),
+                        width: 2,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('❄️', style: TextStyle(fontSize: 24)),
+                        const SizedBox(width: 12),
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'حصلت على حماية شعلة!',
+                                style: AppTypography.labelMedium.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                'تحمي شعلتك عند نسيان التفاعل',
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                      .animate()
+                      .fadeIn(delay: 700.ms, duration: 400.ms)
+                      .slideY(begin: 0.1, end: 0, delay: 700.ms, duration: 400.ms)
+                      .shimmer(
+                        delay: 1200.ms,
+                        duration: 1500.ms,
+                        color: Colors.white.withValues(alpha: 0.3),
+                      ),
+                ],
 
-                // Close button
+                // Progress to next milestone
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'الهدف التالي:',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: Colors.white.withValues(alpha: 0.9),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '$nextMilestone يوم',
+                        style: AppTypography.labelMedium.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '(${nextMilestone - widget.streak} متبقي)',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: Colors.white.withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ).animate().fadeIn(delay: 750.ms, duration: 400.ms),
+
+                const SizedBox(height: 24),
+
+                // Close button with tier-specific color
                 ElevatedButton(
                   onPressed: () {
                     widget.onDismiss?.call();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFFFF6B35),
+                    foregroundColor: gradientColors[0],
                     padding: const EdgeInsets.symmetric(
                       horizontal: 48,
                       vertical: 16,
@@ -336,7 +573,7 @@ class _StreakMilestoneModalState extends State<StreakMilestoneModal>
                   child: Text(
                     'رائع!',
                     style: AppTypography.buttonLarge.copyWith(
-                      color: const Color(0xFFFF6B35),
+                      color: gradientColors[0],
                     ),
                   ),
                 )
@@ -360,6 +597,7 @@ class _StreakMilestoneModalState extends State<StreakMilestoneModal>
                 curve: Curves.easeOut,
               ),
         ],
+      ),
       ),
     );
   }

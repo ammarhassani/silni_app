@@ -38,9 +38,11 @@ class _NotificationHistoryScreenState
         children: [
           const GradientBackground(animated: true, child: SizedBox.expand()),
           SafeArea(
-            child: Column(
+            child: Semantics(
+              label: 'شاشة سجل الإشعارات',
+              child: Column(
               children: [
-                _buildHeader(context, userId),
+                _buildHeader(context, userId, themeColors),
                 Expanded(
                   child: notificationsAsync.when(
                     data: (notifications) =>
@@ -56,21 +58,26 @@ class _NotificationHistoryScreenState
               ],
             ),
           ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context, String userId) {
+  Widget _buildHeader(BuildContext context, String userId, dynamic themeColors) {
     final service = ref.read(notificationHistoryServiceProvider);
 
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+          Semantics(
+            label: 'رجوع',
+            button: true,
+            child: IconButton(
+              onPressed: () => context.pop(),
+              icon: Icon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
@@ -80,14 +87,14 @@ class _NotificationHistoryScreenState
                 Text(
                   'الإشعارات',
                   style: AppTypography.headlineLarge.copyWith(
-                    color: Colors.white,
+                    color: themeColors.textOnGradient,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   'سجل الإشعارات السابقة',
                   style: AppTypography.bodyMedium.copyWith(
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: themeColors.textOnGradient.withValues(alpha: 0.7),
                   ),
                 ),
               ],

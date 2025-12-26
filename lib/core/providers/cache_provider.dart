@@ -4,6 +4,7 @@ import '../services/cache_service.dart';
 import '../services/offline_queue_service.dart';
 import '../services/sync_service.dart';
 import '../services/gamification_service.dart';
+import '../services/relative_streak_service.dart';
 import '../../shared/repositories/relatives_repository.dart';
 import '../../shared/repositories/interactions_repository.dart';
 import '../../shared/repositories/reminder_schedules_repository.dart';
@@ -36,8 +37,12 @@ final interactionsRepositoryProvider = Provider<InteractionsRepository>((ref) {
   final gamificationService = GamificationService(
     eventsController: eventsController,
   );
+  final relativeStreakService = RelativeStreakService(
+    eventsController: eventsController,
+  );
   final interactionsService = InteractionsService(
     gamificationService: gamificationService,
+    relativeStreakService: relativeStreakService,
   );
   return InteractionsRepository(service: interactionsService);
 });

@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -687,221 +689,233 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = ref.watch(themeColorsProvider);
+
     return Scaffold(
-      body: GradientBackground(
-        animated: true,
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: constraints.maxHeight - (AppSpacing.lg * 2),
-                  ),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                    // Logo
-                    Container(
-                          width: 100,
-                          height: 100,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: AppColors.goldenGradient,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.premiumGold.withValues(alpha: 0.5),
-                                blurRadius: 30,
-                                spreadRadius: 5,
-                              ),
-                            ],
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.people_alt_rounded,
-                              size: 50,
-                              color: Colors.white,
+      body: Semantics(
+        label: 'شاشة تسجيل الدخول',
+        child: GradientBackground(
+          animated: true,
+          child: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight - (AppSpacing.lg * 2),
+                    ),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                      // Logo
+                      Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: AppColors.goldenGradient,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.premiumGold.withValues(alpha: 0.5),
+                                  blurRadius: 30,
+                                  spreadRadius: 5,
+                                ),
+                              ],
                             ),
-                          ),
-                        )
-                        .animate()
-                        .scale(
-                          duration: const Duration(milliseconds: 600),
-                          curve: Curves.elasticOut,
-                        )
-                        .fadeIn(),
+                            child: Center(
+                              child: Icon(
+                                Icons.people_alt_rounded,
+                                size: 50,
+                                color: themeColors.textOnGradient,
+                              ),
+                            ),
+                          )
+                          .animate()
+                          .scale(
+                            duration: AppAnimations.dramatic,
+                            curve: Curves.elasticOut,
+                          )
+                          .fadeIn(),
 
-                    const SizedBox(height: AppSpacing.lg),
+                      const SizedBox(height: AppSpacing.lg),
 
-                    // Welcome text
-                    Text(
-                          'مرحباً بعودتك',
-                          style: AppTypography.dramatic.copyWith(
-                            color: Colors.white,
-                          ),
-                        )
-                        .animate(delay: const Duration(milliseconds: 200))
-                        .fadeIn(duration: const Duration(milliseconds: 600))
-                        .slideY(begin: 0.3, end: 0),
+                      // Welcome text
+                      Text(
+                            'مرحباً بعودتك',
+                            style: AppTypography.dramatic.copyWith(
+                              color: themeColors.textOnGradient,
+                            ),
+                          )
+                          .animate(delay: AppAnimations.fast)
+                          .fadeIn(duration: AppAnimations.dramatic)
+                          .slideY(begin: 0.3, end: 0),
 
-                    const SizedBox(height: AppSpacing.sm),
+                      const SizedBox(height: AppSpacing.sm),
 
-                    Text(
-                          'سجّل الدخول للمتابعة',
-                          style: AppTypography.bodyLarge.copyWith(
-                            color: Colors.white.withValues(alpha: 0.8),
-                          ),
-                        )
-                        .animate(delay: const Duration(milliseconds: 400))
-                        .fadeIn(duration: const Duration(milliseconds: 600))
-                        .slideY(begin: 0.3, end: 0),
+                      Text(
+                            'سجّل الدخول للمتابعة',
+                            style: AppTypography.bodyLarge.copyWith(
+                              color: themeColors.textOnGradient.withValues(alpha: 0.8),
+                            ),
+                          )
+                          .animate(delay: AppAnimations.normal)
+                          .fadeIn(duration: AppAnimations.dramatic)
+                          .slideY(begin: 0.3, end: 0),
 
-                    const SizedBox(height: AppSpacing.xxxl),
+                      const SizedBox(height: AppSpacing.xxxl),
 
                     // Login form in glass card
                     DramaticGlassCard(
                           child: Column(
                             children: [
                               // Email field
-                              TextFormField(
-                                controller: _emailController,
-                                keyboardType: TextInputType.emailAddress,
-                                textDirection: TextDirection.ltr,
-                                style: AppTypography.bodyMedium.copyWith(
-                                  color: Colors.white,
+                              Semantics(
+                                label: 'حقل البريد الإلكتروني',
+                                textField: true,
+                                child: TextFormField(
+                                  controller: _emailController,
+                                  keyboardType: TextInputType.emailAddress,
+                                  textDirection: TextDirection.ltr,
+                                  style: AppTypography.bodyMedium.copyWith(
+                                    color: themeColors.textOnGradient,
+                                  ),
+                                  decoration: InputDecoration(
+                                    labelText: 'البريد الإلكتروني',
+                                    labelStyle: AppTypography.bodyMedium.copyWith(
+                                      color: themeColors.textOnGradient.withValues(alpha: 0.8),
+                                    ),
+                                    hintText: 'example@email.com',
+                                    hintStyle: AppTypography.bodyMedium.copyWith(
+                                      color: themeColors.textOnGradient.withValues(alpha: 0.5),
+                                    ),
+                                    prefixIcon: Icon(
+                                      Icons.email_outlined,
+                                      color: themeColors.textOnGradient.withValues(alpha: 0.7),
+                                    ),
+                                    filled: true,
+                                    fillColor: themeColors.textOnGradient.withValues(alpha: 0.1),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        AppSpacing.radiusLg,
+                                      ),
+                                      borderSide: BorderSide(
+                                        color: themeColors.textOnGradient.withValues(alpha: 0.3),
+                                      ),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        AppSpacing.radiusLg,
+                                      ),
+                                      borderSide: BorderSide(
+                                        color: themeColors.textOnGradient.withValues(alpha: 0.3),
+                                      ),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        AppSpacing.radiusLg,
+                                      ),
+                                      borderSide: BorderSide(
+                                        color: themeColors.textOnGradient,
+                                        width: 2,
+                                      ),
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'الرجاء إدخال البريد الإلكتروني';
+                                    }
+                                    // Email regex validation
+                                    final emailRegex = RegExp(
+                                      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                                    );
+                                    if (!emailRegex.hasMatch(value)) {
+                                      return 'البريد الإلكتروني غير صحيح';
+                                    }
+                                    return null;
+                                  },
                                 ),
-                                decoration: InputDecoration(
-                                  labelText: 'البريد الإلكتروني',
-                                  labelStyle: AppTypography.bodyMedium.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.8),
-                                  ),
-                                  hintText: 'example@email.com',
-                                  hintStyle: AppTypography.bodyMedium.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.5),
-                                  ),
-                                  prefixIcon: Icon(
-                                    Icons.email_outlined,
-                                    color: Colors.white.withValues(alpha: 0.7),
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.white.withValues(alpha: 0.1),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      AppSpacing.radiusLg,
-                                    ),
-                                    borderSide: BorderSide(
-                                      color: Colors.white.withValues(alpha: 0.3),
-                                    ),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      AppSpacing.radiusLg,
-                                    ),
-                                    borderSide: BorderSide(
-                                      color: Colors.white.withValues(alpha: 0.3),
-                                    ),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      AppSpacing.radiusLg,
-                                    ),
-                                    borderSide: const BorderSide(
-                                      color: Colors.white,
-                                      width: 2,
-                                    ),
-                                  ),
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'الرجاء إدخال البريد الإلكتروني';
-                                  }
-                                  // Email regex validation
-                                  final emailRegex = RegExp(
-                                    r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-                                  );
-                                  if (!emailRegex.hasMatch(value)) {
-                                    return 'البريد الإلكتروني غير صحيح';
-                                  }
-                                  return null;
-                                },
                               ),
 
                               const SizedBox(height: AppSpacing.md),
 
                               // Password field
-                              TextFormField(
-                                controller: _passwordController,
-                                obscureText: _obscurePassword,
-                                textDirection: TextDirection.ltr,
-                                style: AppTypography.bodyMedium.copyWith(
-                                  color: Colors.white,
+                              Semantics(
+                                label: 'حقل كلمة المرور',
+                                textField: true,
+                                child: TextFormField(
+                                  controller: _passwordController,
+                                  obscureText: _obscurePassword,
+                                  textDirection: TextDirection.ltr,
+                                  style: AppTypography.bodyMedium.copyWith(
+                                    color: themeColors.textOnGradient,
+                                  ),
+                                  decoration: InputDecoration(
+                                    labelText: 'كلمة المرور',
+                                    labelStyle: AppTypography.bodyMedium.copyWith(
+                                      color: themeColors.textOnGradient.withValues(alpha: 0.8),
+                                    ),
+                                    hintText: '••••••••',
+                                    hintStyle: AppTypography.bodyMedium.copyWith(
+                                      color: themeColors.textOnGradient.withValues(alpha: 0.5),
+                                    ),
+                                    prefixIcon: Icon(
+                                      Icons.lock_outline,
+                                      color: themeColors.textOnGradient.withValues(alpha: 0.7),
+                                    ),
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        _obscurePassword
+                                            ? Icons.visibility_outlined
+                                            : Icons.visibility_off_outlined,
+                                        color: themeColors.textOnGradient.withValues(alpha: 0.7),
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _obscurePassword = !_obscurePassword;
+                                        });
+                                      },
+                                    ),
+                                    filled: true,
+                                    fillColor: themeColors.textOnGradient.withValues(alpha: 0.1),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        AppSpacing.radiusLg,
+                                      ),
+                                      borderSide: BorderSide(
+                                        color: themeColors.textOnGradient.withValues(alpha: 0.3),
+                                      ),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        AppSpacing.radiusLg,
+                                      ),
+                                      borderSide: BorderSide(
+                                        color: themeColors.textOnGradient.withValues(alpha: 0.3),
+                                      ),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        AppSpacing.radiusLg,
+                                      ),
+                                      borderSide: BorderSide(
+                                        color: themeColors.textOnGradient,
+                                        width: 2,
+                                      ),
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'الرجاء إدخال كلمة المرور';
+                                    }
+                                    if (value.length < 8) {
+                                      return 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
+                                    }
+                                    return null;
+                                  },
                                 ),
-                                decoration: InputDecoration(
-                                  labelText: 'كلمة المرور',
-                                  labelStyle: AppTypography.bodyMedium.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.8),
-                                  ),
-                                  hintText: '••••••••',
-                                  hintStyle: AppTypography.bodyMedium.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.5),
-                                  ),
-                                  prefixIcon: Icon(
-                                    Icons.lock_outline,
-                                    color: Colors.white.withValues(alpha: 0.7),
-                                  ),
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      _obscurePassword
-                                          ? Icons.visibility_outlined
-                                          : Icons.visibility_off_outlined,
-                                      color: Colors.white.withValues(alpha: 0.7),
-                                    ),
-                                    onPressed: () {
-                                      setState(() {
-                                        _obscurePassword = !_obscurePassword;
-                                      });
-                                    },
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.white.withValues(alpha: 0.1),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      AppSpacing.radiusLg,
-                                    ),
-                                    borderSide: BorderSide(
-                                      color: Colors.white.withValues(alpha: 0.3),
-                                    ),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      AppSpacing.radiusLg,
-                                    ),
-                                    borderSide: BorderSide(
-                                      color: Colors.white.withValues(alpha: 0.3),
-                                    ),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      AppSpacing.radiusLg,
-                                    ),
-                                    borderSide: const BorderSide(
-                                      color: Colors.white,
-                                      width: 2,
-                                    ),
-                                  ),
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'الرجاء إدخال كلمة المرور';
-                                  }
-                                  if (value.length < 8) {
-                                    return 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
-                                  }
-                                  return null;
-                                },
                               ),
 
                               const SizedBox(height: AppSpacing.sm),
@@ -910,22 +924,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  TextButton(
-                                    onPressed: () => context.go(AppRoutes.signup),
-                                    child: Text(
-                                      'إنشاء حساب جديد',
-                                      style: AppTypography.labelMedium.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
+                                  Semantics(
+                                    label: 'إنشاء حساب جديد',
+                                    button: true,
+                                    child: TextButton(
+                                      onPressed: () => context.go(AppRoutes.signup),
+                                      child: Text(
+                                        'إنشاء حساب جديد',
+                                        style: AppTypography.labelMedium.copyWith(
+                                          color: themeColors.textOnGradient,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                  TextButton(
-                                    onPressed: _showForgotPasswordDialog,
-                                    child: Text(
-                                      'نسيت كلمة المرور؟',
-                                      style: AppTypography.labelMedium.copyWith(
-                                        color: Colors.white.withValues(alpha: 0.8),
+                                  Semantics(
+                                    label: 'نسيت كلمة المرور',
+                                    button: true,
+                                    child: TextButton(
+                                      onPressed: _showForgotPasswordDialog,
+                                      child: Text(
+                                        'نسيت كلمة المرور؟',
+                                        style: AppTypography.labelMedium.copyWith(
+                                          color: themeColors.textOnGradient.withValues(alpha: 0.8),
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -949,7 +971,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   children: [
                                     Expanded(
                                       child: Divider(
-                                        color: Colors.white.withValues(alpha: 0.3),
+                                        color: themeColors.textOnGradient.withValues(alpha: 0.3),
                                       ),
                                     ),
                                     Padding(
@@ -959,42 +981,46 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       child: Text(
                                         'أو',
                                         style: AppTypography.bodySmall.copyWith(
-                                          color: Colors.white.withValues(alpha: 0.7),
+                                          color: themeColors.textOnGradient.withValues(alpha: 0.7),
                                         ),
                                       ),
                                     ),
                                     Expanded(
                                       child: Divider(
-                                        color: Colors.white.withValues(alpha: 0.3),
+                                        color: themeColors.textOnGradient.withValues(alpha: 0.3),
                                       ),
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: AppSpacing.md),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: OutlinedButton.icon(
-                                    onPressed: _isLoading ? null : _authenticateWithBiometrics,
-                                    icon: const Icon(
-                                      Icons.face,
-                                      color: Colors.white,
-                                    ),
-                                    label: Text(
-                                      'تسجيل الدخول بـ Face ID',
-                                      style: AppTypography.labelLarge.copyWith(
-                                        color: Colors.white,
+                                Semantics(
+                                  label: 'تسجيل الدخول بالبصمة',
+                                  button: true,
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      onPressed: _isLoading ? null : _authenticateWithBiometrics,
+                                      icon: Icon(
+                                        Icons.face,
+                                        color: themeColors.textOnGradient,
                                       ),
-                                    ),
-                                    style: OutlinedButton.styleFrom(
-                                      side: BorderSide(
-                                        color: Colors.white.withValues(alpha: 0.5),
+                                      label: Text(
+                                        'تسجيل الدخول بـ Face ID',
+                                        style: AppTypography.labelLarge.copyWith(
+                                          color: themeColors.textOnGradient,
+                                        ),
                                       ),
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: AppSpacing.md,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(
-                                          AppSpacing.radiusLg,
+                                      style: OutlinedButton.styleFrom(
+                                        side: BorderSide(
+                                          color: themeColors.textOnGradient.withValues(alpha: 0.5),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: AppSpacing.md,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            AppSpacing.radiusLg,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -1004,9 +1030,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ],
                           ),
                         )
-                        .animate(delay: const Duration(milliseconds: 600))
-                        .fadeIn(duration: const Duration(milliseconds: 800))
-                        .slideY(begin: 0.3, end: 0, curve: Curves.easeOut),
+                        .animate(delay: AppAnimations.dramatic)
+                        .fadeIn(duration: AppAnimations.slow)
+                        .slideY(begin: 0.3, end: 0, curve: AppAnimations.enterCurve),
 
                     const SizedBox(height: AppSpacing.lg),
 
@@ -1017,25 +1043,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: AppSpacing.md),
 
                         // Google Sign-In button
-                        SocialLoginButton(
-                          provider: SocialProvider.google,
-                          onPressed: _signInWithGoogle,
-                          isLoading: _isGoogleLoading,
+                        Semantics(
+                          label: 'تسجيل الدخول بحساب Google',
+                          button: true,
+                          child: SocialLoginButton(
+                            provider: SocialProvider.google,
+                            onPressed: _signInWithGoogle,
+                            isLoading: _isGoogleLoading,
+                          ),
                         ),
 
                         // Apple Sign-In button (iOS only)
                         if (!kIsWeb && Platform.isIOS) ...[
                           const SizedBox(height: AppSpacing.sm),
-                          SocialLoginButton(
-                            provider: SocialProvider.apple,
-                            onPressed: _signInWithApple,
-                            isLoading: _isAppleLoading,
+                          Semantics(
+                            label: 'تسجيل الدخول بحساب Apple',
+                            button: true,
+                            child: SocialLoginButton(
+                              provider: SocialProvider.apple,
+                              onPressed: _signInWithApple,
+                              isLoading: _isAppleLoading,
+                            ),
                           ),
                         ],
                       ],
                     )
-                        .animate(delay: const Duration(milliseconds: 700))
-                        .fadeIn(duration: const Duration(milliseconds: 600)),
+                        .animate(delay: AppAnimations.celebration)
+                        .fadeIn(duration: AppAnimations.dramatic),
 
                     const SizedBox(height: AppSpacing.lg),
                       ],
@@ -1047,6 +1081,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 }

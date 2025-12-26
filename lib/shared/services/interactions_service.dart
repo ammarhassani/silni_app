@@ -1,17 +1,22 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
 import '../../core/services/gamification_service.dart';
+import '../../core/services/relative_streak_service.dart';
 import '../../core/services/app_logger_service.dart';
 import '../models/interaction_model.dart';
 
 class InteractionsService {
   final SupabaseClient _supabase = SupabaseConfig.client;
   final GamificationService? _gamificationService;
+  final RelativeStreakService? _relativeStreakService;
   final AppLoggerService _logger = AppLoggerService();
   static const String _table = 'interactions';
 
-  InteractionsService({GamificationService? gamificationService})
-    : _gamificationService = gamificationService;
+  InteractionsService({
+    GamificationService? gamificationService,
+    RelativeStreakService? relativeStreakService,
+  })  : _gamificationService = gamificationService,
+        _relativeStreakService = relativeStreakService;
 
   /// Create a new interaction
   /// Uses RPC function to atomically create interaction and update relative
@@ -49,6 +54,28 @@ class InteractionsService {
             category: LogCategory.gamification,
             tag: 'InteractionsService',
             metadata: {'userId': interaction.userId, 'error': e.toString()},
+          );
+        }
+      }
+
+      // Update per-relative streak
+      if (_relativeStreakService != null) {
+        try {
+          await _relativeStreakService.updateRelativeStreak(
+            userId: interaction.userId,
+            relativeId: interaction.relativeId,
+          );
+        } catch (e) {
+          // Don't fail interaction creation if relative streak fails, but log it
+          _logger.warning(
+            'Relative streak update failed',
+            category: LogCategory.gamification,
+            tag: 'InteractionsService',
+            metadata: {
+              'userId': interaction.userId,
+              'relativeId': interaction.relativeId,
+              'error': e.toString(),
+            },
           );
         }
       }

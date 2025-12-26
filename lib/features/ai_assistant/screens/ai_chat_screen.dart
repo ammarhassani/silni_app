@@ -4,9 +4,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../core/ai/ai_models.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../providers/ai_chat_provider.dart';
@@ -117,6 +119,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
     final chatState = ref.watch(aiChatProvider);
     final currentMode = ref.watch(counselingModeProvider);
     final suggestedPrompts = ref.watch(suggestedPromptsProvider);
+    final themeColors = ref.watch(themeColorsProvider);
 
     // Listen for new messages to scroll
     ref.listen<AIChatState>(aiChatProvider, (previous, next) {
@@ -129,48 +132,55 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
       child: Scaffold(
         key: _scaffoldKey,
         backgroundColor: Colors.transparent,
-        appBar: _buildAppBar(context),
+        appBar: _buildAppBar(context, themeColors),
         endDrawer: ChatHistoryDrawer(
           onNewChat: _startNewChat,
           onSelectConversation: _loadConversation,
         ),
-        body: Column(
-          children: [
-            // Chat messages
-            Expanded(
-              child: chatState.messages.isEmpty && !chatState.isStreaming && !chatState.isLoading
-                  ? _buildEmptyState(currentMode, suggestedPrompts)
-                  : _buildMessagesList(chatState),
-            ),
-
-            // Memory saved indicator (like ChatGPT)
-            if (chatState.memorySavedCount > 0)
-              Center(
-                child: MemorySavedIndicator(
-                  count: chatState.memorySavedCount,
-                  onTap: () => context.push(AppRoutes.aiMemories),
-                  onDismiss: () => ref.read(aiChatProvider.notifier).clearMemoryIndicator(),
-                ),
+        body: Semantics(
+          label: 'محادثة واصل المساعد الذكي',
+          child: Column(
+            children: [
+              // Chat messages
+              Expanded(
+                child: chatState.messages.isEmpty && !chatState.isStreaming && !chatState.isLoading
+                    ? _buildEmptyState(currentMode, suggestedPrompts, themeColors)
+                    : _buildMessagesList(chatState, themeColors),
               ),
 
-            // Error banner
-            if (chatState.error != null) _buildErrorBanner(chatState.error!),
+              // Memory saved indicator (like ChatGPT)
+              if (chatState.memorySavedCount > 0)
+                Center(
+                  child: MemorySavedIndicator(
+                    count: chatState.memorySavedCount,
+                    onTap: () => context.push(AppRoutes.aiMemories),
+                    onDismiss: () => ref.read(aiChatProvider.notifier).clearMemoryIndicator(),
+                  ),
+                ),
 
-            // Input area
-            _buildInputArea(chatState),
-          ],
+              // Error banner
+              if (chatState.error != null) _buildErrorBanner(chatState.error!, themeColors),
+
+              // Input area
+              _buildInputArea(chatState, themeColors),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
+  PreferredSizeWidget _buildAppBar(BuildContext context, dynamic themeColors) {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-        onPressed: () => context.pop(),
+      leading: Semantics(
+        label: 'رجوع',
+        button: true,
+        child: IconButton(
+          icon: Icon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
+          onPressed: () => context.pop(),
+        ),
       ),
       title: Row(
         mainAxisSize: MainAxisSize.min,
@@ -180,19 +190,21 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
             height: 36,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: AppColors.primaryGradient,
+              gradient: LinearGradient(
+                colors: [themeColors.primary, themeColors.primaryLight],
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.islamicGreenPrimary.withValues(alpha: 0.4),
+                  color: themeColors.primary.withValues(alpha: 0.4),
                   blurRadius: 8,
                   spreadRadius: 1,
                 ),
               ],
             ),
-            child: const Icon(
+            child: Icon(
               Icons.smart_toy_rounded,
               size: 20,
-              color: Colors.white,
+              color: themeColors.textOnGradient,
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -202,14 +214,14 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
               Text(
                 'واصل',
                 style: AppTypography.titleMedium.copyWith(
-                  color: Colors.white,
+                  color: themeColors.textOnGradient,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
                 ref.watch(counselingModeProvider).arabicName,
                 style: AppTypography.labelSmall.copyWith(
-                  color: Colors.white60,
+                  color: themeColors.textOnGradient.withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -217,29 +229,41 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
         ],
       ),
       actions: [
-        IconButton(
-          icon: const Icon(Icons.psychology_outlined, color: Colors.white70),
-          onPressed: () => context.push(AppRoutes.aiMemories),
-          tooltip: 'ذاكرة واصل',
+        Semantics(
+          label: 'ذاكرة واصل',
+          button: true,
+          child: IconButton(
+            icon: Icon(Icons.psychology_outlined, color: themeColors.textOnGradient.withValues(alpha: 0.7)),
+            onPressed: () => context.push(AppRoutes.aiMemories),
+            tooltip: 'ذاكرة واصل',
+          ),
         ),
-        IconButton(
-          icon: const Icon(Icons.history_rounded, color: Colors.white70),
-          onPressed: _openHistoryDrawer,
-          tooltip: 'المحادثات السابقة',
+        Semantics(
+          label: 'المحادثات السابقة',
+          button: true,
+          child: IconButton(
+            icon: Icon(Icons.history_rounded, color: themeColors.textOnGradient.withValues(alpha: 0.7)),
+            onPressed: _openHistoryDrawer,
+            tooltip: 'المحادثات السابقة',
+          ),
         ),
-        IconButton(
-          icon: const Icon(Icons.refresh_rounded, color: Colors.white70),
-          onPressed: () {
-            HapticFeedback.mediumImpact();
-            _showClearConfirmation();
-          },
-          tooltip: 'محادثة جديدة',
+        Semantics(
+          label: 'محادثة جديدة',
+          button: true,
+          child: IconButton(
+            icon: Icon(Icons.refresh_rounded, color: themeColors.textOnGradient.withValues(alpha: 0.7)),
+            onPressed: () {
+              HapticFeedback.mediumImpact();
+              _showClearConfirmation(themeColors);
+            },
+            tooltip: 'محادثة جديدة',
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildEmptyState(CounselingMode mode, List<String> prompts) {
+  Widget _buildEmptyState(CounselingMode mode, List<String> prompts, dynamic themeColors) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -252,25 +276,27 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
             height: 80,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: AppColors.primaryGradient,
+              gradient: LinearGradient(
+                colors: [themeColors.primary, themeColors.primaryLight],
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.islamicGreenPrimary.withValues(alpha: 0.5),
+                  color: themeColors.primary.withValues(alpha: 0.5),
                   blurRadius: 24,
                   spreadRadius: 2,
                 ),
               ],
             ),
-            child: const Icon(
+            child: Icon(
               Icons.smart_toy_rounded,
               size: 44,
-              color: Colors.white,
+              color: themeColors.textOnGradient,
             ),
           )
               .animate(onPlay: (controller) => controller.repeat())
               .shimmer(
-                duration: const Duration(seconds: 3),
-                color: Colors.white24,
+                duration: AppAnimations.loop,
+                color: themeColors.textOnGradient.withValues(alpha: 0.24),
               ),
 
           const SizedBox(height: AppSpacing.lg),
@@ -278,19 +304,19 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           Text(
             'مرحباً، أنا واصل',
             style: AppTypography.headlineSmall.copyWith(
-              color: Colors.white,
+              color: themeColors.textOnGradient,
               fontWeight: FontWeight.bold,
             ),
-          ).animate().fadeIn().slideY(begin: 0.2, end: 0),
+          ).animate().fadeIn(duration: AppAnimations.normal).slideY(begin: 0.2, end: 0),
 
           const SizedBox(height: AppSpacing.xs),
 
           Text(
             'مساعدك الذكي في صلة الرحم',
             style: AppTypography.bodyMedium.copyWith(
-              color: Colors.white70,
+              color: themeColors.textOnGradient.withValues(alpha: 0.7),
             ),
-          ).animate(delay: const Duration(milliseconds: 100)).fadeIn(),
+          ).animate(delay: AppAnimations.instant).fadeIn(duration: AppAnimations.normal),
 
           const SizedBox(height: AppSpacing.xl),
 
@@ -299,15 +325,15 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
             Text(
               'اختر نوع المحادثة',
               style: AppTypography.titleSmall.copyWith(
-                color: Colors.white70,
+                color: themeColors.textOnGradient.withValues(alpha: 0.7),
               ),
-            ).animate(delay: const Duration(milliseconds: 200)).fadeIn(),
+            ).animate(delay: AppAnimations.fast).fadeIn(duration: AppAnimations.normal),
 
             const SizedBox(height: AppSpacing.md),
 
-            _buildModeSelector()
-                .animate(delay: const Duration(milliseconds: 300))
-                .fadeIn()
+            _buildModeSelector(themeColors)
+                .animate(delay: AppAnimations.normal)
+                .fadeIn(duration: AppAnimations.normal)
                 .slideY(begin: 0.1, end: 0),
 
             const SizedBox(height: AppSpacing.xl),
@@ -317,9 +343,9 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           Text(
             'أو جرب أحد هذه الأسئلة',
             style: AppTypography.titleSmall.copyWith(
-              color: Colors.white70,
+              color: themeColors.textOnGradient.withValues(alpha: 0.7),
             ),
-          ).animate(delay: const Duration(milliseconds: 400)).fadeIn(),
+          ).animate(delay: AppAnimations.modal).fadeIn(duration: AppAnimations.normal),
 
           const SizedBox(height: AppSpacing.md),
 
@@ -334,7 +360,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
               )
                   .animate(
                       delay: Duration(milliseconds: 500 + (entry.key * 100)))
-                  .fadeIn()
+                  .fadeIn(duration: AppAnimations.normal)
                   .scale(begin: const Offset(0.8, 0.8), end: const Offset(1, 1));
             }).toList(),
           ),
@@ -343,7 +369,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
     );
   }
 
-  Widget _buildModeSelector() {
+  Widget _buildModeSelector(dynamic themeColors) {
     final currentMode = ref.watch(counselingModeProvider);
 
     return GridView.count(
@@ -503,7 +529,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
     );
   }
 
-  Widget _buildMessagesList(AIChatState chatState) {
+  Widget _buildMessagesList(AIChatState chatState, dynamic themeColors) {
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.sm),
@@ -515,9 +541,9 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           if (chatState.isStreaming && chatState.currentStreamContent.isNotEmpty) {
             return StreamingMessage(content: chatState.currentStreamContent)
                 .animate()
-                .fadeIn();
+                .fadeIn(duration: AppAnimations.fast);
           }
-          return const TypingIndicator().animate().fadeIn();
+          return const TypingIndicator().animate().fadeIn(duration: AppAnimations.fast);
         }
 
         final message = chatState.messages[index];
@@ -529,12 +555,12 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           isLast: isLast,
           onEdit: isUser ? () => _showEditDialog(message) : null,
           onRegenerate: !isUser && isLast ? _regenerateLastResponse : null,
-        ).animate().fadeIn(duration: const Duration(milliseconds: 200));
+        ).animate().fadeIn(duration: AppAnimations.fast);
       },
     );
   }
 
-  Widget _buildErrorBanner(String error) {
+  Widget _buildErrorBanner(String error, dynamic themeColors) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       padding: const EdgeInsets.all(AppSpacing.sm),
@@ -553,20 +579,20 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
             child: Text(
               error,
               style: AppTypography.bodySmall.copyWith(
-                color: Colors.white,
+                color: themeColors.textOnGradient,
               ),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+            icon: Icon(Icons.close_rounded, color: themeColors.textOnGradient.withValues(alpha: 0.7), size: 20),
             onPressed: () => ref.read(aiChatProvider.notifier).clearError(),
           ),
         ],
       ),
-    ).animate().fadeIn().slideY(begin: -0.2, end: 0);
+    ).animate().fadeIn(duration: AppAnimations.fast).slideY(begin: -0.2, end: 0);
   }
 
-  Widget _buildInputArea(AIChatState chatState) {
+  Widget _buildInputArea(AIChatState chatState, dynamic themeColors) {
     final isDisabled = chatState.isLoading || chatState.isStreaming;
 
     return Container(
@@ -578,7 +604,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
         color: Colors.black.withValues(alpha: 0.3),
         border: Border(
           top: BorderSide(
-            color: Colors.white.withValues(alpha: 0.1),
+            color: themeColors.textOnGradient.withValues(alpha: 0.1),
           ),
         ),
       ),
@@ -589,38 +615,43 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           textDirection: TextDirection.rtl, // RTL: send button on right
           children: [
             // Send button (on right for RTL)
-            GestureDetector(
-              onTap: isDisabled ? null : _sendMessage,
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: isDisabled
-                      ? LinearGradient(
-                          colors: [
-                            Colors.grey.shade600,
-                            Colors.grey.shade700,
-                          ],
-                        )
-                      : AppColors.primaryGradient,
-                  boxShadow: isDisabled
-                      ? null
-                      : [
-                          BoxShadow(
-                            color: AppColors.islamicGreenPrimary
-                                .withValues(alpha: 0.4),
-                            blurRadius: 12,
-                            spreadRadius: 1,
+            Semantics(
+              label: 'إرسال الرسالة',
+              button: true,
+              child: GestureDetector(
+                onTap: isDisabled ? null : _sendMessage,
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: isDisabled
+                        ? LinearGradient(
+                            colors: [
+                              Colors.grey.shade600,
+                              Colors.grey.shade700,
+                            ],
+                          )
+                        : LinearGradient(
+                            colors: [themeColors.primary, themeColors.primaryLight],
                           ),
-                        ],
-                ),
-                child: Transform.rotate(
-                  angle: 3.14159, // Rotate 180 degrees for RTL send icon
-                  child: Icon(
-                    Icons.send_rounded,
-                    color: Colors.white.withValues(alpha: isDisabled ? 0.5 : 1),
-                    size: 22,
+                    boxShadow: isDisabled
+                        ? null
+                        : [
+                            BoxShadow(
+                              color: themeColors.primary.withValues(alpha: 0.4),
+                              blurRadius: 12,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                  ),
+                  child: Transform.rotate(
+                    angle: 3.14159, // Rotate 180 degrees for RTL send icon
+                    child: Icon(
+                      Icons.send_rounded,
+                      color: themeColors.textOnGradient.withValues(alpha: isDisabled ? 0.5 : 1.0),
+                      size: 22,
+                    ),
                   ),
                 ),
               ),
@@ -630,50 +661,54 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
 
             // Text field (on left for RTL)
             Expanded(
-              child: TextField(
-                controller: _messageController,
-                focusNode: _focusNode,
-                enabled: !isDisabled,
-                maxLines: 4,
-                minLines: 1,
-                textDirection: TextDirection.rtl,
-                textAlign: TextAlign.right,
-                cursorColor: Colors.white,
-                style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white,
+              child: Semantics(
+                label: 'حقل كتابة الرسالة',
+                textField: true,
+                child: TextField(
+                  controller: _messageController,
+                  focusNode: _focusNode,
+                  enabled: !isDisabled,
+                  maxLines: 4,
+                  minLines: 1,
+                  textDirection: TextDirection.rtl,
+                  textAlign: TextAlign.right,
+                  cursorColor: themeColors.textOnGradient,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: themeColors.textOnGradient,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'اكتب رسالتك...',
+                    hintStyle: AppTypography.bodyMedium.copyWith(
+                      color: themeColors.textOnGradient.withValues(alpha: 0.54),
+                    ),
+                    filled: true,
+                    fillColor: themeColors.primary.withValues(alpha: 0.2),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide(
+                        color: themeColors.primary.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide(
+                        color: themeColors.primary.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide(
+                        color: themeColors.primary,
+                        width: 1.5,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm + 4,
+                    ),
+                  ),
+                  onSubmitted: (_) => _sendMessage(),
                 ),
-                decoration: InputDecoration(
-                  hintText: 'اكتب رسالتك...',
-                  hintStyle: AppTypography.bodyMedium.copyWith(
-                    color: Colors.white54,
-                  ),
-                  filled: true,
-                  fillColor: AppColors.islamicGreenDark.withValues(alpha: 0.6),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide(
-                      color: AppColors.islamicGreenPrimary.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide(
-                      color: AppColors.islamicGreenPrimary.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide(
-                      color: AppColors.islamicGreenPrimary,
-                      width: 1.5,
-                    ),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm + 4,
-                  ),
-                ),
-                onSubmitted: (_) => _sendMessage(),
               ),
             ),
           ],
@@ -682,7 +717,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
     );
   }
 
-  void _showClearConfirmation() {
+  void _showClearConfirmation(dynamic themeColors) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -690,25 +725,25 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
         margin: const EdgeInsets.all(AppSpacing.md),
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: AppColors.islamicGreenDark,
+          color: themeColors.background2,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.2),
+            color: themeColors.textOnGradient.withValues(alpha: 0.2),
           ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.refresh_rounded,
               size: 48,
-              color: Colors.white,
+              color: themeColors.textOnGradient,
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
               'بدء محادثة جديدة؟',
               style: AppTypography.titleLarge.copyWith(
-                color: Colors.white,
+                color: themeColors.textOnGradient,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -716,7 +751,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
             Text(
               'سيتم مسح المحادثة الحالية وبدء محادثة جديدة',
               style: AppTypography.bodyMedium.copyWith(
-                color: Colors.white70,
+                color: themeColors.textOnGradient.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -724,37 +759,45 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
             Row(
               children: [
                 Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      'إلغاء',
-                      style: AppTypography.buttonMedium.copyWith(
-                        color: Colors.white70,
+                  child: Semantics(
+                    label: 'إلغاء',
+                    button: true,
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'إلغاء',
+                        style: AppTypography.buttonMedium.copyWith(
+                          color: themeColors.textOnGradient.withValues(alpha: 0.7),
+                        ),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      ref.read(aiChatProvider.notifier).clearConversation();
-                      setState(() {
-                        _showModeSelector = true;
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.islamicGreenPrimary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppSpacing.buttonRadius),
+                  child: Semantics(
+                    label: 'بدء محادثة جديدة',
+                    button: true,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        ref.read(aiChatProvider.notifier).clearConversation();
+                        setState(() {
+                          _showModeSelector = true;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: themeColors.primary,
+                        foregroundColor: themeColors.textOnGradient,
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.buttonRadius),
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      'بدء جديدة',
-                      style: AppTypography.buttonMedium,
+                      child: Text(
+                        'بدء جديدة',
+                        style: AppTypography.buttonMedium,
+                      ),
                     ),
                   ),
                 ),

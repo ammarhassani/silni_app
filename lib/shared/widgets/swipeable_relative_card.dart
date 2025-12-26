@@ -1,15 +1,18 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
+import '../../core/theme/app_themes.dart';
+import '../../core/theme/theme_provider.dart';
 import '../../features/ai_assistant/widgets/health_badge.dart';
 import '../models/relative_model.dart';
 import 'glass_card.dart';
 
-class SwipeableRelativeCard extends StatelessWidget {
+class SwipeableRelativeCard extends ConsumerWidget {
   final Relative relative;
   final VoidCallback? onTap;
   final Future<void> Function()? onMarkContacted;
@@ -24,10 +27,12 @@ class SwipeableRelativeCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
+
     if (!showContactActions || (relative.phoneNumber == null && relative.email == null)) {
       // No swipe actions if contact info not available
-      return _buildCard(context);
+      return _buildCard(context, themeColors);
     }
 
     return Slidable(
@@ -38,16 +43,16 @@ class SwipeableRelativeCard extends StatelessWidget {
           if (relative.phoneNumber != null) ...[
             SlidableAction(
               onPressed: (_) => _makeCall(relative.phoneNumber!),
-              backgroundColor: AppColors.islamicGreenPrimary,
-              foregroundColor: Colors.white,
+              backgroundColor: themeColors.primary,
+              foregroundColor: themeColors.onPrimary,
               icon: Icons.phone_rounded,
               label: 'اتصال',
               borderRadius: const BorderRadius.horizontal(right: Radius.circular(AppSpacing.radiusLg)),
             ),
             SlidableAction(
               onPressed: (_) => _sendMessage(relative.phoneNumber!),
-              backgroundColor: AppColors.calmBlue,
-              foregroundColor: Colors.white,
+              backgroundColor: themeColors.secondary,
+              foregroundColor: themeColors.onSecondary,
               icon: Icons.message_rounded,
               label: 'رسالة',
             ),
@@ -68,7 +73,7 @@ class SwipeableRelativeCard extends StatelessWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('تم تسجيل التواصل مع ${relative.fullName}'),
-                      backgroundColor: AppColors.islamicGreenPrimary,
+                      backgroundColor: themeColors.primary,
                       behavior: SnackBarBehavior.floating,
                     ),
                   );
@@ -82,11 +87,11 @@ class SwipeableRelativeCard extends StatelessWidget {
             ),
         ],
       ),
-      child: _buildCard(context),
+      child: _buildCard(context, themeColors),
     );
   }
 
-  Widget _buildCard(BuildContext context) {
+  Widget _buildCard(BuildContext context, ThemeColors themeColors) {
     final needsAttention = relative.needsContact;
 
     return Semantics(
@@ -104,7 +109,7 @@ class SwipeableRelativeCard extends StatelessWidget {
             ? LinearGradient(
                 colors: [
                   AppColors.joyfulOrange.withValues(alpha: 0.2),
-                  AppColors.islamicGreenPrimary.withValues(alpha: 0.1),
+                  themeColors.primary.withValues(alpha: 0.1),
                 ],
               )
             : null,
@@ -122,12 +127,12 @@ class SwipeableRelativeCard extends StatelessWidget {
                       shape: BoxShape.circle,
                       gradient: needsAttention
                           ? AppColors.streakFire
-                          : AppColors.primaryGradient,
+                          : themeColors.primaryGradient,
                       boxShadow: [
                         BoxShadow(
                           color: (needsAttention
                                   ? AppColors.joyfulOrange
-                                  : AppColors.islamicGreenPrimary)
+                                  : themeColors.primary)
                               .withValues(alpha: 0.3),
                           blurRadius: 8,
                           spreadRadius: 1,
@@ -158,12 +163,12 @@ class SwipeableRelativeCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: AppColors.joyfulOrange,
-                        border: Border.all(color: Colors.white, width: 2),
+                        border: Border.all(color: themeColors.surface, width: 2),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.warning_rounded,
                         size: 10,
-                        color: Colors.white,
+                        color: themeColors.onPrimary,
                       ),
                     ),
                   ),
@@ -178,12 +183,12 @@ class SwipeableRelativeCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: AppColors.goldenGradient,
-                        border: Border.all(color: Colors.white, width: 2),
+                        border: Border.all(color: themeColors.surface, width: 2),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.star_rounded,
                         size: 10,
-                        color: Colors.white,
+                        color: themeColors.onPrimary,
                       ),
                     ),
                   ),
@@ -209,7 +214,7 @@ class SwipeableRelativeCard extends StatelessWidget {
                         child: Text(
                           relative.fullName,
                           style: AppTypography.titleMedium.copyWith(
-                            color: Colors.white,
+                            color: themeColors.textPrimary,
                             fontWeight: FontWeight.bold,
                           ),
                           maxLines: 1,
@@ -229,7 +234,7 @@ class SwipeableRelativeCard extends StatelessWidget {
                           child: Text(
                             'عالي',
                             style: AppTypography.labelSmall.copyWith(
-                              color: Colors.white,
+                              color: themeColors.onPrimary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -240,7 +245,7 @@ class SwipeableRelativeCard extends StatelessWidget {
                   Text(
                     relative.relationshipType.arabicName,
                     style: AppTypography.bodySmall.copyWith(
-                      color: Colors.white.withValues(alpha: 0.7),
+                      color: themeColors.textSecondary,
                     ),
                   ),
                   if (needsAttention) ...[
@@ -253,12 +258,16 @@ class SwipeableRelativeCard extends StatelessWidget {
                           color: AppColors.joyfulOrange,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          relative.daysSinceLastContact != null
-                              ? 'آخر تواصل منذ ${relative.daysSinceLastContact} يوم'
-                              : 'لم يتم التواصل بعد',
-                          style: AppTypography.labelSmall.copyWith(
-                            color: AppColors.joyfulOrange,
+                        Flexible(
+                          child: Text(
+                            relative.daysSinceLastContact != null
+                                ? 'آخر تواصل منذ ${relative.daysSinceLastContact} يوم'
+                                : 'لم يتم التواصل بعد',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: AppColors.joyfulOrange,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -271,7 +280,7 @@ class SwipeableRelativeCard extends StatelessWidget {
             // Arrow icon
             Icon(
               Icons.arrow_forward_ios_rounded,
-              color: Colors.white.withValues(alpha: 0.5),
+              color: themeColors.textHint,
               size: 16,
             ),
           ],

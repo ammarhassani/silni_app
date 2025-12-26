@@ -54,12 +54,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final interactionsAsync = ref.watch(userInteractionsProvider(userId));
 
     return Scaffold(
-      body: GradientBackground(
-        animated: true,
-        child: SafeArea(
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
+      body: Semantics(
+        label: 'الملف الشخصي',
+        child: GradientBackground(
+          animated: true,
+          child: SafeArea(
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
               // Header with avatar
               SliverToBoxAdapter(
                 child: ProfileHeaderWidget(
@@ -92,7 +94,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   child: Text(
                     '📊 إحصائياتي',
                     style: AppTypography.headlineMedium.copyWith(
-                      color: Colors.white,
+                      color: themeColors.textOnGradient,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -118,7 +120,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   child: Text(
                     '📊 إحصائياتي',
                     style: AppTypography.headlineMedium.copyWith(
-                      color: Colors.white,
+                      color: themeColors.textOnGradient,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -155,7 +157,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   child: Text(
                     '⚙️ إعدادات الحساب',
                     style: AppTypography.headlineMedium.copyWith(
-                      color: Colors.white,
+                      color: themeColors.textOnGradient,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -195,6 +197,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

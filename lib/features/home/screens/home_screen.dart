@@ -128,6 +128,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
       case GamificationEventType.streakIncreased:
         break;
+
+      case GamificationEventType.streakWarning:
+        // TODO: Show streak warning banner/notification
+        break;
+
+      case GamificationEventType.streakCritical:
+        // TODO: Show critical streak warning
+        break;
+
+      case GamificationEventType.freezeEarned:
+        // Freeze earned is shown in the milestone modal
+        break;
+
+      case GamificationEventType.freezeUsed:
+        // TODO: Show freeze used notification
+        break;
     }
   }
 

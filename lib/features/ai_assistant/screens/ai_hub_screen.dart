@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_animations.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -30,13 +31,15 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            // Header
-            SliverToBoxAdapter(
-              child: _buildHeader(themeColors),
-            ),
+      body: Semantics(
+        label: 'مركز واصل الذكي',
+        child: SafeArea(
+          child: CustomScrollView(
+            slivers: [
+              // Header
+              SliverToBoxAdapter(
+                child: _buildHeader(themeColors),
+              ),
 
             // AI Features Grid
             SliverPadding(
@@ -124,6 +127,7 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen> {
               child: SizedBox(height: 100),
             ),
           ],
+          ),
         ),
       ),
     );
@@ -188,7 +192,7 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen> {
             ],
           )
               .animate()
-              .fadeIn(duration: const Duration(milliseconds: 400))
+              .fadeIn(duration: AppAnimations.modal)
               .slideX(begin: -0.1, end: 0),
         ],
       ),

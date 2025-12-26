@@ -66,7 +66,9 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
         children: [
           const GradientBackground(animated: true, child: SizedBox.expand()),
           SafeArea(
-            child: Column(
+            child: Semantics(
+              label: 'شاشة الأوسمة والإنجازات',
+              child: Column(
               children: [
                 // Header
                 Padding(
@@ -78,16 +80,19 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
                   ),
                   child: Row(
                     children: [
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.arrow_back_ios_rounded),
-                        color: Colors.white,
+                      Semantics(
+                        label: 'رجوع',
+                        button: true,
+                        child: IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: Icon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
+                        ),
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       Text(
                         'الأوسمة والإنجازات',
                         style: AppTypography.headlineMedium.copyWith(
-                          color: Colors.white,
+                          color: themeColors.textOnGradient,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -177,6 +182,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
                 ),
               ],
             ),
+          ),
           ),
         ],
       ),

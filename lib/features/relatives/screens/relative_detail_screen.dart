@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
@@ -46,112 +45,119 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
     final relativeAsync = ref.watch(relativeDetailProvider(widget.relativeId));
 
     return Scaffold(
-      body: GradientBackground(
-        animated: true,
-        child: SafeArea(
-          child: relativeAsync.when(
-            loading: () => Center(
-              child: CircularProgressIndicator(color: themeColors.primary),
-            ),
-            error: (_, _) => _buildErrorState(context),
-            data: (relative) {
-              if (relative == null) {
-                return _buildErrorState(context);
-              }
+      body: Semantics(
+        label: 'تفاصيل القريب',
+        child: GradientBackground(
+          animated: true,
+          child: SafeArea(
+            child: relativeAsync.when(
+              loading: () => Center(
+                child: CircularProgressIndicator(color: themeColors.primary),
+              ),
+              error: (_, _) => _buildErrorState(context, themeColors),
+              data: (relative) {
+                if (relative == null) {
+                  return _buildErrorState(context, themeColors);
+                }
 
-              return CustomScrollView(
-                slivers: [
-                  // Header with avatar and name
-                  SliverToBoxAdapter(
-                    child: RelativeHeaderWidget(
-                      relative: relative,
-                      themeColors: themeColors,
-                      onDelete: () => _showDeleteConfirmation(relative),
-                    ),
-                  ),
-
-                  // Contact actions
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      child: RelativeContactActions(
+                return CustomScrollView(
+                  slivers: [
+                    // Header with avatar and name
+                    SliverToBoxAdapter(
+                      child: RelativeHeaderWidget(
                         relative: relative,
-                        onCall: () => _handleCall(relative.phoneNumber!),
-                        onWhatsApp: () => _handleWhatsApp(relative.phoneNumber!),
-                        onSms: () => _handleSms(relative.phoneNumber!),
-                        onDetails: _scrollToDetails,
+                        themeColors: themeColors,
+                        onDelete: () => _showDeleteConfirmation(relative),
                       ),
                     ),
-                  ),
 
-                  // Stats card
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                      child: RelativeStatsCard(relative: relative),
-                    ),
-                  ),
-
-                  // Details card
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      child: RelativeDetailsCard(relative: relative),
-                    ),
-                  ),
-
-                  // Recent interactions header
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                      child: Text(
-                        'التفاعلات الأخيرة',
-                        style: AppTypography.headlineSmall.copyWith(
-                          color: Colors.white,
+                    // Contact actions
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        child: RelativeContactActions(
+                          relative: relative,
+                          onCall: () => _handleCall(relative.phoneNumber!),
+                          onWhatsApp: () => _handleWhatsApp(relative.phoneNumber!),
+                          onSms: () => _handleSms(relative.phoneNumber!),
+                          onDetails: _scrollToDetails,
                         ),
                       ),
                     ),
-                  ),
 
-                  // Recent interactions list
-                  SliverToBoxAdapter(
-                    child: RelativeInteractionsList(relativeId: relative.id),
-                  ),
+                    // Stats card
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                        child: RelativeStatsCard(relative: relative),
+                      ),
+                    ),
 
-                  // Bottom spacing
-                  const SliverToBoxAdapter(
-                    child: SizedBox(height: AppSpacing.xxl),
-                  ),
-                ],
-              );
-            },
+                    // Details card
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        child: RelativeDetailsCard(relative: relative),
+                      ),
+                    ),
+
+                    // Recent interactions header
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                        child: Text(
+                          'التفاعلات الأخيرة',
+                          style: AppTypography.headlineSmall.copyWith(
+                            color: themeColors.textOnGradient,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Recent interactions list
+                    SliverToBoxAdapter(
+                      child: RelativeInteractionsList(relativeId: relative.id),
+                    ),
+
+                    // Bottom spacing
+                    const SliverToBoxAdapter(
+                      child: SizedBox(height: AppSpacing.xxl),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildErrorState(BuildContext context) {
+  Widget _buildErrorState(BuildContext context, dynamic themeColors) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
+          Icon(
             Icons.error_outline,
             size: 64,
-            color: Colors.white70,
+            color: themeColors.textOnGradient.withValues(alpha: 0.7),
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(
             'لم يتم العثور على القريب',
             style: AppTypography.headlineMedium.copyWith(
-              color: Colors.white,
+              color: themeColors.textOnGradient,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          ElevatedButton(
-            onPressed: () => context.pop(),
-            child: const Text('رجوع'),
+          Semantics(
+            label: 'رجوع',
+            button: true,
+            child: ElevatedButton(
+              onPressed: () => context.pop(),
+              child: const Text('رجوع'),
+            ),
           ),
         ],
       ),
@@ -209,13 +215,14 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
       await repository.createInteraction(interaction);
 
       if (mounted) {
+        final themeColors = ref.read(themeColorsProvider);
         HapticFeedback.lightImpact();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('تم تسجيل التواصل: ${type.arabicName}'),
             duration: const Duration(seconds: 1),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.islamicGreenPrimary,
+            backgroundColor: themeColors.primary,
           ),
         );
       }
@@ -240,9 +247,12 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
           children: [
             const Icon(Icons.warning_rounded, color: Colors.red),
             const SizedBox(width: AppSpacing.sm),
-            Text(
-              'تأكيد الحذف',
-              style: AppTypography.titleLarge.copyWith(color: Colors.white),
+            Flexible(
+              child: Text(
+                'تأكيد الحذف',
+                style: AppTypography.titleLarge.copyWith(color: themeColors.textOnGradient),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -252,21 +262,23 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
           children: [
             Text(
               'هل أنت متأكد من حذف هذا القريب؟',
-              style: AppTypography.bodyLarge.copyWith(color: Colors.white),
+              style: AppTypography.bodyLarge.copyWith(color: themeColors.textOnGradient),
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
               'اسم: ${relative.fullName}',
               style: AppTypography.bodyMedium.copyWith(
-                color: Colors.white70,
+                color: themeColors.textOnGradient.withValues(alpha: 0.7),
                 fontWeight: FontWeight.bold,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
               'صلة القرابة: ${relative.relationshipType.arabicName}',
               style: AppTypography.bodyMedium.copyWith(
-                color: Colors.white70,
+                color: themeColors.textOnGradient.withValues(alpha: 0.7),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -290,24 +302,32 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(
-              'إلغاء',
-              style: AppTypography.labelLarge.copyWith(color: Colors.white70),
+          Semantics(
+            label: 'إلغاء',
+            button: true,
+            child: TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(
+                'إلغاء',
+                style: AppTypography.labelLarge.copyWith(color: themeColors.textOnGradient.withValues(alpha: 0.7)),
+              ),
             ),
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(
-              'حذف',
-              style: AppTypography.labelLarge.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+          Semantics(
+            label: 'حذف القريب',
+            button: true,
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: themeColors.textOnGradient,
+              ),
+              child: Text(
+                'حذف',
+                style: AppTypography.labelLarge.copyWith(
+                  color: themeColors.textOnGradient,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -326,10 +346,11 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
 
       if (!mounted) return;
 
+      final themeColors = ref.read(themeColorsProvider);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('تم حذف ${relative.fullName} بنجاح'),
-          backgroundColor: Colors.green,
+          backgroundColor: themeColors.primary,
           duration: const Duration(seconds: 3),
         ),
       );

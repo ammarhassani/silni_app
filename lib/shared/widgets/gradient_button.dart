@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../core/constants/app_colors.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/constants/app_animations.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
+import '../../core/theme/theme_provider.dart';
 
-class GradientButton extends StatefulWidget {
+class GradientButton extends ConsumerStatefulWidget {
   final String text;
   final VoidCallback onPressed;
   final Gradient? gradient;
@@ -14,6 +16,8 @@ class GradientButton extends StatefulWidget {
   final bool isLoading;
   final IconData? icon;
   final bool dramatic;
+  final bool enabled;
+  final String? semanticsHint;
 
   const GradientButton({
     super.key,
@@ -25,13 +29,15 @@ class GradientButton extends StatefulWidget {
     this.isLoading = false,
     this.icon,
     this.dramatic = false,
+    this.enabled = true,
+    this.semanticsHint,
   });
 
   @override
-  State<GradientButton> createState() => _GradientButtonState();
+  ConsumerState<GradientButton> createState() => _GradientButtonState();
 }
 
-class _GradientButtonState extends State<GradientButton>
+class _GradientButtonState extends ConsumerState<GradientButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   bool _isPressed = false;
@@ -41,7 +47,7 @@ class _GradientButtonState extends State<GradientButton>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 100),
+      duration: AppAnimations.instant,
     );
   }
 
@@ -51,14 +57,18 @@ class _GradientButtonState extends State<GradientButton>
     super.dispose();
   }
 
+  bool get _isEnabled => widget.enabled && !widget.isLoading;
+
   void _onTapDown(TapDownDetails details) {
-    HapticFeedback.lightImpact(); // Subtle feedback on press
+    if (!_isEnabled) return;
+    HapticFeedback.lightImpact();
     setState(() => _isPressed = true);
     _controller.forward();
   }
 
   void _onTapUp(TapUpDetails details) {
-    HapticFeedback.mediumImpact(); // Confirming feedback on release
+    if (!_isEnabled) return;
+    HapticFeedback.mediumImpact();
     setState(() => _isPressed = false);
     _controller.reverse();
     widget.onPressed();
@@ -71,100 +81,121 @@ class _GradientButtonState extends State<GradientButton>
 
   @override
   Widget build(BuildContext context) {
-    final gradient = widget.gradient ?? AppColors.primaryGradient;
+    final themeColors = ref.watch(themeColorsProvider);
+    final gradient = widget.gradient ?? themeColors.primaryGradient;
     final height = widget.height ?? AppSpacing.buttonHeight;
+    final textColor = themeColors.onPrimary;
 
     return Semantics(
       label: widget.text,
       button: true,
-      enabled: !widget.isLoading,
-      hint: widget.isLoading ? 'جاري التحميل' : null,
+      enabled: _isEnabled,
+      hint: widget.isLoading
+          ? 'جاري التحميل'
+          : (widget.semanticsHint ?? (widget.enabled ? null : 'غير مفعل')),
       child: GestureDetector(
-        onTapDown: widget.isLoading ? null : _onTapDown,
-        onTapUp: widget.isLoading ? null : _onTapUp,
-        onTapCancel: widget.isLoading ? null : _onTapCancel,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 100),
-          width: widget.width ?? double.infinity,
-          height: height,
-          decoration: BoxDecoration(
-            gradient: gradient,
-            borderRadius: BorderRadius.circular(
-              widget.dramatic ? AppSpacing.dramaticRadius : AppSpacing.buttonRadius,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.islamicGreenPrimary.withValues(alpha: _isPressed ? 0.3 : 0.5),
-                blurRadius: _isPressed ? 10 : 20,
-                offset: Offset(0, _isPressed ? 5 : 10),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
+        onTapDown: _isEnabled ? _onTapDown : null,
+        onTapUp: _isEnabled ? _onTapUp : null,
+        onTapCancel: _isEnabled ? _onTapCancel : null,
+        child: AnimatedOpacity(
+          duration: AppAnimations.fast,
+          opacity: _isEnabled ? 1.0 : AppAnimations.disabledOpacity,
+          child: AnimatedContainer(
+            duration: AppAnimations.instant,
+            curve: AppAnimations.toggleCurve,
+            width: widget.width ?? double.infinity,
+            height: height,
+            decoration: BoxDecoration(
+              gradient: gradient,
               borderRadius: BorderRadius.circular(
-                widget.dramatic ? AppSpacing.dramaticRadius : AppSpacing.buttonRadius,
+                widget.dramatic
+                    ? AppSpacing.dramaticRadius
+                    : AppSpacing.buttonRadius,
               ),
-              onTap: widget.isLoading ? null : widget.onPressed,
-              child: Center(
-                child: widget.isLoading
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (widget.icon != null) ...[
-                            Icon(
-                              widget.icon,
-                              color: Colors.white,
-                              size: AppSpacing.iconMd,
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                          ],
-                          Text(
-                            widget.text,
-                            style: widget.dramatic
-                                ? AppTypography.dramatic.copyWith(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                  )
-                                : AppTypography.buttonLarge.copyWith(
-                                    color: Colors.white,
-                                  ),
+              boxShadow: [
+                BoxShadow(
+                  color: themeColors.primary.withValues(
+                    alpha: _isPressed ? 0.3 : 0.5,
+                  ),
+                  blurRadius: _isPressed ? 10 : 20,
+                  offset: Offset(0, _isPressed ? 5 : 10),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(
+                  widget.dramatic
+                      ? AppSpacing.dramaticRadius
+                      : AppSpacing.buttonRadius,
+                ),
+                splashColor: themeColors.onPrimary.withValues(alpha: 0.2),
+                highlightColor: themeColors.onPrimary.withValues(alpha: 0.1),
+                onTap: _isEnabled ? widget.onPressed : null,
+                child: Center(
+                  child: widget.isLoading
+                      ? SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(textColor),
+                            strokeWidth: 2,
                           ),
-                        ],
-                      ),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (widget.icon != null) ...[
+                              Icon(
+                                widget.icon,
+                                color: textColor,
+                                size: AppSpacing.iconMd,
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                            ],
+                            Flexible(
+                              child: Text(
+                                widget.text,
+                                style: widget.dramatic
+                                    ? AppTypography.dramatic.copyWith(
+                                        color: textColor,
+                                        fontSize: 18,
+                                      )
+                                    : AppTypography.buttonLarge.copyWith(
+                                        color: textColor,
+                                      ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
               ),
             ),
           ),
         ),
-      )
-          .animate(
-            onPlay: (controller) => controller.repeat(reverse: true),
-          )
-          .shimmer(
-            duration: const Duration(seconds: 2),
-            color: Colors.white.withValues(alpha: 0.3),
-          ),
+      ).animate(
+        onPlay: (controller) => controller.repeat(reverse: true),
+      ).shimmer(
+        duration: AppAnimations.loop,
+        color: themeColors.onPrimary.withValues(alpha: 0.3),
+      ),
     );
   }
 }
 
 /// Outlined Gradient Button with glass effect, glow, and animation
-class OutlinedGradientButton extends StatelessWidget {
+class OutlinedGradientButton extends ConsumerWidget {
   final String text;
   final VoidCallback onPressed;
   final Gradient? gradient;
   final double? width;
   final double? height;
   final IconData? icon;
+  final bool enabled;
 
   const OutlinedGradientButton({
     super.key,
@@ -174,88 +205,103 @@ class OutlinedGradientButton extends StatelessWidget {
     this.width,
     this.height,
     this.icon,
+    this.enabled = true,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final gradient = this.gradient ?? AppColors.primaryGradient;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
+    final buttonGradient = gradient ?? themeColors.primaryGradient;
+    final textColor = themeColors.onPrimary;
 
     return Semantics(
       label: text,
       button: true,
-      child: Container(
-        width: width ?? double.infinity,
-        height: height ?? AppSpacing.buttonHeight,
-        decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.islamicGreenPrimary.withValues(alpha: 0.4),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-            BoxShadow(
-              color: AppColors.islamicGreenLight.withValues(alpha: 0.2),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
+      enabled: enabled,
+      child: AnimatedOpacity(
+        duration: AppAnimations.fast,
+        opacity: enabled ? 1.0 : AppAnimations.disabledOpacity,
         child: Container(
-          margin: const EdgeInsets.all(2),
+          width: width ?? double.infinity,
+          height: height ?? AppSpacing.buttonHeight,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(AppSpacing.buttonRadius - 2),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withValues(alpha: 0.15),
-                Colors.white.withValues(alpha: 0.05),
-              ],
-            ),
+            gradient: buttonGradient,
+            borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
+            boxShadow: [
+              BoxShadow(
+                color: themeColors.primary.withValues(alpha: 0.4),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+              BoxShadow(
+                color: themeColors.primaryLight.withValues(alpha: 0.2),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
+          child: Container(
+            margin: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              color: themeColors.glassBackground,
               borderRadius: BorderRadius.circular(AppSpacing.buttonRadius - 2),
-              onTap: () {
-                HapticFeedback.mediumImpact();
-                onPressed();
-              },
-              child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (icon != null) ...[
-                      Icon(
-                        icon,
-                        color: Colors.white,
-                        size: AppSpacing.iconMd,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  themeColors.glassHighlight,
+                  themeColors.glassBackground,
+                ],
+              ),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(AppSpacing.buttonRadius - 2),
+                splashColor: themeColors.onPrimary.withValues(alpha: 0.2),
+                highlightColor: themeColors.onPrimary.withValues(alpha: 0.1),
+                onTap: enabled
+                    ? () {
+                        HapticFeedback.mediumImpact();
+                        onPressed();
+                      }
+                    : null,
+                child: Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (icon != null) ...[
+                        Icon(
+                          icon,
+                          color: textColor,
+                          size: AppSpacing.iconMd,
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                      ],
+                      Flexible(
+                        child: Text(
+                          text,
+                          style: AppTypography.buttonLarge.copyWith(
+                            color: textColor,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
                       ),
-                      const SizedBox(width: AppSpacing.sm),
                     ],
-                    Text(
-                      text,
-                      style: AppTypography.buttonLarge.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
-      )
-          .animate(
-            onPlay: (controller) => controller.repeat(reverse: true),
-          )
-          .shimmer(
-            duration: const Duration(seconds: 2),
-            color: Colors.white.withValues(alpha: 0.3),
-          ),
+      ).animate(
+        onPlay: (controller) => controller.repeat(reverse: true),
+      ).shimmer(
+        duration: AppAnimations.loop,
+        color: themeColors.onPrimary.withValues(alpha: 0.3),
+      ),
     );
   }
 }

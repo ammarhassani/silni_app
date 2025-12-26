@@ -134,14 +134,18 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
 
     final relativesAsync = ref.watch(relativesStreamProvider(userId));
 
+    final themeColors = ref.watch(themeColorsProvider);
+
     return Scaffold(
-      body: Stack(
-        children: [
-          const GradientBackground(animated: true, child: SizedBox.expand()),
-          SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(context),
+      body: Semantics(
+        label: 'شجرة العائلة',
+        child: Stack(
+          children: [
+            const GradientBackground(animated: true, child: SizedBox.expand()),
+            SafeArea(
+              child: Column(
+                children: [
+                  _buildHeader(context, themeColors),
                 Expanded(
                   child: relativesAsync.when(
                     data: (relatives) => _buildTreeContent(
@@ -169,10 +173,11 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
           ),
         ],
       ),
+      ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, dynamic themeColors) {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -180,16 +185,20 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+          Semantics(
+            label: 'رجوع',
+            button: true,
+            child: IconButton(
+              onPressed: () => context.pop(),
+              icon: Icon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               'شجرة العائلة',
               style: AppTypography.headlineMedium.copyWith(
-                color: Colors.white,
+                color: themeColors.textOnGradient,
                 fontWeight: FontWeight.bold,
               ),
               maxLines: 1,
@@ -197,19 +206,23 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
             ),
           ),
           // Share button only
-          IconButton(
-            onPressed: _isExporting ? null : _exportTree,
-            icon: _isExporting
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Icon(Icons.share_rounded, color: Colors.white),
-            tooltip: 'مشاركة الشجرة',
+          Semantics(
+            label: 'مشاركة الشجرة',
+            button: true,
+            child: IconButton(
+              onPressed: _isExporting ? null : _exportTree,
+              icon: _isExporting
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: themeColors.textOnGradient,
+                      ),
+                    )
+                  : Icon(Icons.share_rounded, color: themeColors.textOnGradient),
+              tooltip: 'مشاركة الشجرة',
+            ),
           ),
         ],
       ),

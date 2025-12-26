@@ -1,14 +1,17 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/widgets/glass_card.dart';
 
 /// Carousel showing tomorrow/yesterday reminders by frequency
-class FrequencyCarousel extends StatefulWidget {
+class FrequencyCarousel extends ConsumerStatefulWidget {
   const FrequencyCarousel({
     super.key,
     required this.relatives,
@@ -19,10 +22,10 @@ class FrequencyCarousel extends StatefulWidget {
   final List<ReminderSchedule> schedules;
 
   @override
-  State<FrequencyCarousel> createState() => _FrequencyCarouselState();
+  ConsumerState<FrequencyCarousel> createState() => _FrequencyCarouselState();
 }
 
-class _FrequencyCarouselState extends State<FrequencyCarousel> {
+class _FrequencyCarouselState extends ConsumerState<FrequencyCarousel> {
   final PageController _pageController = PageController();
   Timer? _autoSlideTimer;
   int _currentPage = 0;
@@ -134,6 +137,7 @@ class _FrequencyCarouselState extends State<FrequencyCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = ref.watch(themeColorsProvider);
     final tomorrow = DateTime.now().add(const Duration(days: 1));
     final yesterday = DateTime.now().subtract(const Duration(days: 1));
 
@@ -153,52 +157,56 @@ class _FrequencyCarouselState extends State<FrequencyCarousel> {
       _startAutoSlide(allFrequencies.length);
     });
 
-    return Column(
-      children: [
-        SizedBox(
-          height: 140,
-          child: PageView.builder(
-            controller: _pageController,
-            itemCount: allFrequencies.length,
-            onPageChanged: (index) {
-              setState(() => _currentPage = index);
-            },
-            itemBuilder: (context, index) {
-              final frequency = allFrequencies[index];
-              return _buildFrequencySlide(frequency, tomorrow, yesterday);
-            },
+    return Semantics(
+      label: 'تذكيرات الأسبوع - ${allFrequencies.length} نوع',
+      child: Column(
+        children: [
+          SizedBox(
+            height: 140,
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: allFrequencies.length,
+              onPageChanged: (index) {
+                setState(() => _currentPage = index);
+              },
+              itemBuilder: (context, index) {
+                final frequency = allFrequencies[index];
+                return _buildFrequencySlide(frequency, tomorrow, yesterday, themeColors);
+              },
+            ),
           ),
-        ),
-        if (allFrequencies.length > 1)
-          Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.sm),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                allFrequencies.length,
-                (index) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  width: _currentPage == index ? 20 : 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
-                    color: _currentPage == index
-                        ? _getFrequencyColor(allFrequencies[index])
-                        : Colors.white.withValues(alpha: 0.3),
+          if (allFrequencies.length > 1)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.sm),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  allFrequencies.length,
+                  (index) => AnimatedContainer(
+                    duration: AppAnimations.normal,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: _currentPage == index ? 20 : 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(4),
+                      color: _currentPage == index
+                          ? _getFrequencyColor(allFrequencies[index])
+                          : themeColors.glassHighlight,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-      ],
-    ).animate().fadeIn(delay: const Duration(milliseconds: 100));
+        ],
+      ),
+    ).animate().fadeIn(delay: AppAnimations.instant, duration: AppAnimations.normal);
   }
 
   Widget _buildFrequencySlide(
     ReminderFrequency frequency,
     DateTime tomorrow,
     DateTime yesterday,
+    dynamic themeColors,
   ) {
     final tomorrowRelatives = _getRelativesByFrequencyOnDate(tomorrow, frequency);
     final yesterdayRelatives = _getRelativesByFrequencyOnDate(yesterday, frequency);
@@ -218,6 +226,7 @@ class _FrequencyCarouselState extends State<FrequencyCarousel> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
+        semanticsLabel: 'تذكيرات ${frequency.arabicName}',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -238,11 +247,15 @@ class _FrequencyCarouselState extends State<FrequencyCarousel> {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
-                Text(
-                  frequency.arabicName,
-                  style: AppTypography.titleSmall.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                Flexible(
+                  child: Text(
+                    frequency.arabicName,
+                    style: AppTypography.titleSmall.copyWith(
+                      color: themeColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -254,6 +267,7 @@ class _FrequencyCarouselState extends State<FrequencyCarousel> {
                 relatives: tomorrowRelatives,
                 color: color,
                 isPast: false,
+                themeColors: themeColors,
               ),
             if (yesterdayRelatives.isNotEmpty)
               _buildFrequencyRow(
@@ -261,13 +275,14 @@ class _FrequencyCarouselState extends State<FrequencyCarousel> {
                 relatives: yesterdayRelatives,
                 color: color,
                 isPast: true,
+                themeColors: themeColors,
               ),
             if (tomorrowRelatives.isEmpty && yesterdayRelatives.isEmpty)
               Center(
                 child: Text(
                   'لا يوجد تذكيرات',
                   style: AppTypography.bodySmall.copyWith(
-                    color: Colors.white.withValues(alpha: 0.5),
+                    color: themeColors.textHint,
                   ),
                 ),
               ),
@@ -282,6 +297,7 @@ class _FrequencyCarouselState extends State<FrequencyCarousel> {
     required List<Relative> relatives,
     required Color color,
     required bool isPast,
+    required dynamic themeColors,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -296,7 +312,7 @@ class _FrequencyCarouselState extends State<FrequencyCarousel> {
           Text(
             label,
             style: AppTypography.labelSmall.copyWith(
-              color: Colors.white.withValues(alpha: isPast ? 0.5 : 0.8),
+              color: themeColors.textPrimary.withValues(alpha: isPast ? 0.5 : 0.8),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -305,9 +321,9 @@ class _FrequencyCarouselState extends State<FrequencyCarousel> {
             child: Text(
               _buildRelativesHint(relatives),
               style: AppTypography.labelSmall.copyWith(
-                color: Colors.white.withValues(alpha: isPast ? 0.4 : 0.7),
+                color: themeColors.textPrimary.withValues(alpha: isPast ? 0.4 : 0.7),
                 decoration: isPast ? TextDecoration.lineThrough : null,
-                decorationColor: Colors.white.withValues(alpha: 0.3),
+                decorationColor: themeColors.textSecondary,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -322,7 +338,7 @@ class _FrequencyCarouselState extends State<FrequencyCarousel> {
             child: Text(
               '${relatives.length}',
               style: AppTypography.labelSmall.copyWith(
-                color: Colors.white.withValues(alpha: isPast ? 0.6 : 1.0),
+                color: themeColors.textPrimary.withValues(alpha: isPast ? 0.6 : 1.0),
                 fontWeight: FontWeight.bold,
               ),
             ),

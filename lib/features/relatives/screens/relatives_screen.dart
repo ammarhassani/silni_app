@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -66,6 +67,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final userId = user?.id ?? '';
+    final themeColors = ref.watch(themeColorsProvider);
 
     // Initialize real-time subscriptions for this user
     ref.watch(autoRealtimeSubscriptionsProvider);
@@ -75,61 +77,64 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
-      body: Stack(
-        children: [
-          // Main content
-          SafeArea(
-            child: Column(
-                children: [
-                  // Header
-                  _buildHeader(context),
+      body: Semantics(
+        label: 'قائمة الأقارب',
+        child: Stack(
+          children: [
+            // Main content
+            SafeArea(
+              child: Column(
+                  children: [
+                    // Header
+                    _buildHeader(context, themeColors),
 
-                  // Search bar
-                  _buildSearchBar(),
+                    // Search bar
+                    _buildSearchBar(themeColors),
 
-                  // Filter chips
-                  _buildFilterChips(),
+                    // Filter chips
+                    _buildFilterChips(themeColors),
 
-                  // Relatives list
-                  Expanded(
-                    child: relativesAsync.when(
-                      data: (relatives) {
-                        final filteredRelatives = _filterRelatives(relatives);
+                    // Relatives list
+                    Expanded(
+                      child: relativesAsync.when(
+                        data: (relatives) {
+                          final filteredRelatives = _filterRelatives(relatives);
 
-                        if (relatives.isEmpty) {
-                          return _buildEmptyState(context);
-                        }
+                          if (relatives.isEmpty) {
+                            return _buildEmptyState(context, themeColors);
+                          }
 
-                        if (filteredRelatives.isEmpty) {
-                          return _buildNoResults();
-                        }
+                          if (filteredRelatives.isEmpty) {
+                            return _buildNoResults(themeColors);
+                          }
 
-                        return _buildRelativesList(filteredRelatives);
-                      },
-                      loading: () => const Center(
-                        child: PremiumLoadingIndicator(
-                          message: 'جاري تحميل الأقارب...',
+                          return _buildRelativesList(filteredRelatives);
+                        },
+                        loading: () => const Center(
+                          child: PremiumLoadingIndicator(
+                            message: 'جاري تحميل الأقارب...',
+                          ),
                         ),
+                        error: (error, stack) =>
+                            _buildErrorState(error.toString(), themeColors),
                       ),
-                      error: (error, stack) =>
-                          _buildErrorState(error.toString()),
                     ),
-                  ),
-                ],
+                  ],
+              ),
             ),
-          ),
-          // Glassmorphism FAB positioned on left
-          Positioned(
-            bottom: 100, // Above navigation bar
-            left: 20, // Left side instead of right
-            child: _buildGlassmorphismFAB(context),
-          ),
-        ],
+            // Glassmorphism FAB positioned on left
+            Positioned(
+              bottom: 100, // Above navigation bar
+              left: 20, // Left side instead of right
+              child: _buildGlassmorphismFAB(context, themeColors),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, dynamic themeColors) {
     return Padding(
           padding: const EdgeInsets.only(
             top: AppSpacing.sm,
@@ -143,7 +148,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
               Text(
                 'الأقارب',
                 style: AppTypography.headlineMedium.copyWith(
-                  color: Colors.white,
+                  color: themeColors.textOnGradient,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -152,109 +157,115 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
           ),
         )
         .animate()
-        .fadeIn(duration: const Duration(milliseconds: 400))
+        .fadeIn(duration: AppAnimations.modal)
         .slideY(begin: -0.2, end: 0);
   }
 
-  Widget _buildSearchBar() {
-    // Use theme-aware colors
-    final themeColors = ref.watch(themeColorsProvider);
-
+  Widget _buildSearchBar(dynamic themeColors) {
     return Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          child: GlassCard(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: 4,
-            ),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
-              style: AppTypography.bodyMedium.copyWith(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'ابحث عن قريب...',
-                hintStyle: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white.withValues(alpha: 0.6),
+          child: Semantics(
+            label: 'البحث عن قريب',
+            textField: true,
+            child: GlassCard(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: 4,
+              ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value;
+                  });
+                },
+                style: AppTypography.bodyMedium.copyWith(color: themeColors.textOnGradient),
+                decoration: InputDecoration(
+                  hintText: 'ابحث عن قريب...',
+                  hintStyle: AppTypography.bodyMedium.copyWith(
+                    color: themeColors.textOnGradient.withValues(alpha: 0.6),
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search_rounded,
+                    color: themeColors.primary.withValues(alpha: 0.8),
+                  ),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(
+                            Icons.clear_rounded,
+                            color: themeColors.primary.withValues(alpha: 0.8),
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {
+                              _searchQuery = '';
+                            });
+                          },
+                        )
+                      : null,
+                  border: InputBorder.none,
+                  filled: false,
                 ),
-                prefixIcon: Icon(
-                  Icons.search_rounded,
-                  color: themeColors.primary.withValues(alpha: 0.8),
-                ),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(
-                          Icons.clear_rounded,
-                          color: themeColors.primary.withValues(alpha: 0.8),
-                        ),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchQuery = '';
-                          });
-                        },
-                      )
-                    : null,
-                border: InputBorder.none,
-                filled: false, // Make background transparent
               ),
             ),
           ),
         )
-        .animate(delay: const Duration(milliseconds: 200))
-        .fadeIn()
+        .animate(delay: AppAnimations.fast)
+        .fadeIn(duration: AppAnimations.normal)
         .slideX(begin: 0.2, end: 0);
   }
 
-  Widget _buildFilterChips() {
+  Widget _buildFilterChips(dynamic themeColors) {
     return Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: [
-              _buildFilterChip('الكل', 'all'),
-              _buildFilterChip('يحتاجون تواصل', 'needs_contact'),
-              _buildFilterChip('المفضلة', 'favorites'),
+              _buildFilterChip('الكل', 'all', themeColors),
+              _buildFilterChip('يحتاجون تواصل', 'needs_contact', themeColors),
+              _buildFilterChip('المفضلة', 'favorites', themeColors),
             ],
           ),
         )
-        .animate(delay: const Duration(milliseconds: 400))
-        .fadeIn()
+        .animate(delay: AppAnimations.modal)
+        .fadeIn(duration: AppAnimations.normal)
         .slideY(begin: 0.2, end: 0);
   }
 
-  Widget _buildFilterChip(String label, String value) {
+  Widget _buildFilterChip(String label, String value, dynamic themeColors) {
     final isSelected = _filterType == value;
 
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _filterType = value;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          gradient: isSelected ? AppColors.primaryGradient : null,
-          color: isSelected ? null : Colors.white.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: isSelected ? 0.5 : 0.3),
-            width: 1.5,
+    return Semantics(
+      label: label,
+      button: true,
+      selected: isSelected,
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _filterType = value;
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
           ),
-        ),
-        child: Text(
-          label,
-          style: AppTypography.labelMedium.copyWith(
-            color: Colors.white,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          decoration: BoxDecoration(
+            gradient: isSelected ? LinearGradient(colors: [themeColors.primary, themeColors.primaryLight]) : null,
+            color: isSelected ? null : themeColors.textOnGradient.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            border: Border.all(
+              color: themeColors.textOnGradient.withValues(alpha: isSelected ? 0.5 : 0.3),
+              width: 1.5,
+            ),
+          ),
+          child: Text(
+            label,
+            style: AppTypography.labelMedium.copyWith(
+              color: themeColors.textOnGradient,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
           ),
         ),
       ),
@@ -313,7 +324,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
         .slideX(begin: 0.2, end: 0);
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(BuildContext context, dynamic themeColors) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
@@ -324,14 +335,14 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
                     Icon(
                           Icons.people_outline,
                           size: 120,
-                          color: Colors.white.withValues(alpha: 0.5),
+                          color: themeColors.textOnGradient.withValues(alpha: 0.5),
                         )
                         .animate(
                           onPlay: (controller) =>
                               controller.repeat(reverse: true),
                         )
                         .scale(
-                          duration: const Duration(seconds: 2),
+                          duration: AppAnimations.loop,
                           begin: const Offset(1.0, 1.0),
                           end: const Offset(1.1, 1.1),
                         ),
@@ -339,7 +350,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
                     Text(
                       'لا يوجد أقارب بعد',
                       style: AppTypography.headlineSmall.copyWith(
-                        color: Colors.white,
+                        color: themeColors.textOnGradient,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -347,26 +358,30 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
                     Text(
                       'ابدأ بإضافة أفراد عائلتك\nوالديك، إخوتك، أجدادك',
                       style: AppTypography.bodyMedium.copyWith(
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: themeColors.textOnGradient.withValues(alpha: 0.8),
                       ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: AppSpacing.xl),
-                    GradientButton(
-                      text: 'إضافة أول قريب',
-                      onPressed: () => context.push(AppRoutes.addRelative),
-                      icon: Icons.person_add,
+                    Semantics(
+                      label: 'إضافة أول قريب',
+                      button: true,
+                      child: GradientButton(
+                        text: 'إضافة أول قريب',
+                        onPressed: () => context.push(AppRoutes.addRelative),
+                        icon: Icons.person_add,
+                      ),
                     ),
                   ],
                 )
                 .animate()
-                .fadeIn(duration: const Duration(milliseconds: 600))
+                .fadeIn(duration: AppAnimations.slow)
                 .slideY(begin: 0.2, end: 0),
       ),
     );
   }
 
-  Widget _buildNoResults() {
+  Widget _buildNoResults(dynamic themeColors) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -374,26 +389,26 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
           Icon(
             Icons.search_off_rounded,
             size: 80,
-            color: Colors.white.withValues(alpha: 0.5),
+            color: themeColors.textOnGradient.withValues(alpha: 0.5),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
             'لا توجد نتائج',
-            style: AppTypography.titleLarge.copyWith(color: Colors.white),
+            style: AppTypography.titleLarge.copyWith(color: themeColors.textOnGradient),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             'جرب البحث بكلمة أخرى',
             style: AppTypography.bodyMedium.copyWith(
-              color: Colors.white.withValues(alpha: 0.7),
+              color: themeColors.textOnGradient.withValues(alpha: 0.7),
             ),
           ),
         ],
-      ).animate().fadeIn().scale(),
+      ).animate().fadeIn(duration: AppAnimations.normal).scale(),
     );
   }
 
-  Widget _buildErrorState(String error) {
+  Widget _buildErrorState(String error, dynamic themeColors) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -406,13 +421,13 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
           const SizedBox(height: AppSpacing.md),
           Text(
             'حدث خطأ',
-            style: AppTypography.titleLarge.copyWith(color: Colors.white),
+            style: AppTypography.titleLarge.copyWith(color: themeColors.textOnGradient),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             error,
             style: AppTypography.bodySmall.copyWith(
-              color: Colors.white.withValues(alpha: 0.7),
+              color: themeColors.textOnGradient.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -421,53 +436,57 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
     );
   }
 
-  Widget _buildGlassmorphismFAB(BuildContext context) {
-    return Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.premiumGold,
-                AppColors.joyfulOrange,
+  Widget _buildGlassmorphismFAB(BuildContext context, dynamic themeColors) {
+    return Semantics(
+      label: 'إضافة قريب جديد',
+      button: true,
+      child: Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.premiumGold,
+                  AppColors.joyfulOrange,
+                ],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.premiumGold.withValues(alpha: 0.5),
+                  blurRadius: 16,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 4),
+                ),
               ],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.premiumGold.withValues(alpha: 0.5),
-                blurRadius: 16,
-                spreadRadius: 2,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(28),
-              onTap: () {
-                context.push(AppRoutes.addRelative);
-              },
-              child: const Center(
-                child: Icon(
-                  Icons.add_rounded,
-                  color: Colors.white,
-                  size: 28,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(28),
+                onTap: () {
+                  context.push(AppRoutes.addRelative);
+                },
+                child: Center(
+                  child: Icon(
+                    Icons.add_rounded,
+                    color: themeColors.textOnGradient,
+                    size: 28,
+                  ),
                 ),
               ),
             ),
-          ),
-        )
-        .animate(onPlay: (controller) => controller.repeat(reverse: true))
-        .scale(
-          duration: const Duration(seconds: 2),
-          begin: const Offset(1.0, 1.0),
-          end: const Offset(1.05, 1.05),
-        )
-        .animate()
-        .fadeIn(duration: const Duration(milliseconds: 600));
+          )
+          .animate(onPlay: (controller) => controller.repeat(reverse: true))
+          .scale(
+            duration: AppAnimations.loop,
+            begin: const Offset(1.0, 1.0),
+            end: const Offset(1.05, 1.05),
+          )
+          .animate()
+          .fadeIn(duration: AppAnimations.slow),
+    );
   }
 }

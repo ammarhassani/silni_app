@@ -16,33 +16,36 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentTheme = ref.watch(themeProvider);
+    final themeColors = ref.watch(themeColorsProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.only(
-                top: AppSpacing.sm,
-                left: AppSpacing.md,
-                right: AppSpacing.md,
-                bottom: AppSpacing.sm,
-              ),
-              child: Row(
-                children: [
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    'الإعدادات',
-                    style: AppTypography.headlineMedium.copyWith(
-                      color: Colors.white,
+      body: Semantics(
+        label: 'شاشة الإعدادات',
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.only(
+                  top: AppSpacing.sm,
+                  left: AppSpacing.md,
+                  right: AppSpacing.md,
+                  bottom: AppSpacing.sm,
+                ),
+                child: Row(
+                  children: [
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      'الإعدادات',
+                      style: AppTypography.headlineMedium.copyWith(
+                        color: themeColors.textOnGradient,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
             // Settings list
             Expanded(
@@ -173,6 +176,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

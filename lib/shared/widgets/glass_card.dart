@@ -1,10 +1,14 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/constants/app_animations.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
+import '../../core/theme/theme_provider.dart';
 import '../utils/ui_helpers.dart';
 
-class GlassCard extends StatelessWidget {
+class GlassCard extends ConsumerStatefulWidget {
   final Widget child;
   final double? width;
   final double? height;
@@ -16,6 +20,8 @@ class GlassCard extends StatelessWidget {
   final Border? border;
   final Gradient? gradient;
   final VoidCallback? onTap;
+  final String? semanticsLabel;
+  final bool enablePressAnimation;
 
   const GlassCard({
     super.key,
@@ -30,54 +36,147 @@ class GlassCard extends StatelessWidget {
     this.border,
     this.gradient,
     this.onTap,
+    this.semanticsLabel,
+    this.enablePressAnimation = true,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final defaultColor = isDark
-        ? UIHelpers.withOpacity(AppColors.glassWhite, 0.1)
-        : UIHelpers.withOpacity(AppColors.glassWhite, 0.3);
+  ConsumerState<GlassCard> createState() => _GlassCardState();
+}
 
-    Widget card = ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blurStrength, sigmaY: blurStrength),
-        child: Container(
-          width: width,
-          height: height,
-          padding: padding ?? const EdgeInsets.all(AppSpacing.md),
-          margin: margin,
-          decoration: BoxDecoration(
-            color: gradient == null ? (color ?? defaultColor) : null,
-            borderRadius: BorderRadius.circular(borderRadius),
-            border:
-                border ??
-                Border.all(
-                  color: UIHelpers.withOpacity(Colors.white, 0.2),
-                  width: 1.5,
-                ),
-            gradient:
-                gradient ??
-                LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    UIHelpers.withOpacity(Colors.white, 0.2),
-                    UIHelpers.withOpacity(Colors.white, 0.05),
-                  ],
-                ),
-            boxShadow: UIHelpers.softShadow(opacity: 0.1, blurRadius: 20),
-          ),
+class _GlassCardState extends ConsumerState<GlassCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pressController;
+  late Animation<double> _scaleAnimation;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pressController = AnimationController(
+      duration: AppAnimations.instant,
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(
+      begin: AppAnimations.normalScale,
+      end: AppAnimations.pressedScale,
+    ).animate(CurvedAnimation(
+      parent: _pressController,
+      curve: AppAnimations.toggleCurve,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _pressController.dispose();
+    super.dispose();
+  }
+
+  void _handleTapDown(TapDownDetails details) {
+    if (widget.onTap != null && widget.enablePressAnimation) {
+      setState(() => _isPressed = true);
+      _pressController.forward();
+      HapticFeedback.lightImpact();
+    }
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    if (widget.onTap != null && widget.enablePressAnimation) {
+      setState(() => _isPressed = false);
+      _pressController.reverse();
+    }
+  }
+
+  void _handleTapCancel() {
+    if (widget.onTap != null && widget.enablePressAnimation) {
+      setState(() => _isPressed = false);
+      _pressController.reverse();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final themeColors = ref.watch(themeColorsProvider);
+
+    Widget card = AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: widget.enablePressAnimation ? _scaleAnimation.value : 1.0,
           child: child,
+        );
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(widget.borderRadius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: widget.blurStrength,
+            sigmaY: widget.blurStrength,
+          ),
+          child: AnimatedContainer(
+            duration: AppAnimations.fast,
+            curve: AppAnimations.toggleCurve,
+            width: widget.width,
+            height: widget.height,
+            padding: widget.padding ?? const EdgeInsets.all(AppSpacing.md),
+            margin: widget.margin,
+            decoration: BoxDecoration(
+              color: widget.gradient == null
+                  ? (widget.color ?? themeColors.glassBackground)
+                  : null,
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+              border: widget.border ??
+                  Border.all(
+                    color: _isPressed
+                        ? themeColors.glassHighlight
+                        : themeColors.glassBorder,
+                    width: 1.5,
+                  ),
+              gradient: widget.gradient ??
+                  LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      themeColors.glassHighlight,
+                      themeColors.glassBackground,
+                    ],
+                  ),
+              boxShadow: [
+                BoxShadow(
+                  color: UIHelpers.withOpacity(
+                    themeColors.primaryDark,
+                    _isPressed ? 0.15 : 0.1,
+                  ),
+                  blurRadius: _isPressed ? 15 : 20,
+                  offset: Offset(0, _isPressed ? 4 : 8),
+                ),
+              ],
+            ),
+            child: widget.child,
+          ),
         ),
       ),
     );
 
-    if (onTap != null) {
+    if (widget.onTap != null) {
       card = Semantics(
+        label: widget.semanticsLabel,
         button: true,
-        child: GestureDetector(onTap: onTap, child: card),
+        child: GestureDetector(
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            widget.onTap?.call();
+          },
+          onTapDown: _handleTapDown,
+          onTapUp: _handleTapUp,
+          onTapCancel: _handleTapCancel,
+          child: card,
+        ),
+      );
+    } else if (widget.semanticsLabel != null) {
+      card = Semantics(
+        label: widget.semanticsLabel,
+        child: card,
       );
     }
 
@@ -86,13 +185,15 @@ class GlassCard extends StatelessWidget {
 }
 
 /// Dramatic Glass Card with stronger effects
-class DramaticGlassCard extends StatelessWidget {
+class DramaticGlassCard extends ConsumerStatefulWidget {
   final Widget child;
   final double? width;
   final double? height;
   final EdgeInsetsGeometry? padding;
   final Gradient? gradient;
   final VoidCallback? onTap;
+  final String? semanticsLabel;
+  final bool enablePressAnimation;
 
   const DramaticGlassCard({
     super.key,
@@ -102,59 +203,147 @@ class DramaticGlassCard extends StatelessWidget {
     this.padding,
     this.gradient,
     this.onTap,
+    this.semanticsLabel,
+    this.enablePressAnimation = true,
   });
 
   @override
+  ConsumerState<DramaticGlassCard> createState() => _DramaticGlassCardState();
+}
+
+class _DramaticGlassCardState extends ConsumerState<DramaticGlassCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pressController;
+  late Animation<double> _scaleAnimation;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pressController = AnimationController(
+      duration: AppAnimations.instant,
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(
+      begin: AppAnimations.normalScale,
+      end: AppAnimations.pressedScale,
+    ).animate(CurvedAnimation(
+      parent: _pressController,
+      curve: AppAnimations.toggleCurve,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _pressController.dispose();
+    super.dispose();
+  }
+
+  void _handleTapDown(TapDownDetails details) {
+    if (widget.onTap != null && widget.enablePressAnimation) {
+      setState(() => _isPressed = true);
+      _pressController.forward();
+      HapticFeedback.lightImpact();
+    }
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    if (widget.onTap != null && widget.enablePressAnimation) {
+      setState(() => _isPressed = false);
+      _pressController.reverse();
+    }
+  }
+
+  void _handleTapCancel() {
+    if (widget.onTap != null && widget.enablePressAnimation) {
+      setState(() => _isPressed = false);
+      _pressController.reverse();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    Widget card = ClipRRect(
-      borderRadius: BorderRadius.circular(AppSpacing.dramaticRadius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-        child: Container(
-          width: width,
-          height: height,
-          padding: padding ?? const EdgeInsets.all(AppSpacing.lg),
-          decoration: BoxDecoration(
-            gradient:
-                gradient ??
-                LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    UIHelpers.withOpacity(Colors.white, 0.25),
-                    UIHelpers.withOpacity(Colors.white, 0.1),
-                  ],
-                ),
-            borderRadius: BorderRadius.circular(AppSpacing.dramaticRadius),
-            border: Border.all(
-              color: UIHelpers.withOpacity(Colors.white, 0.3),
-              width: 2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: UIHelpers.withOpacity(Colors.black, 0.2),
-                blurRadius: 40,
-                offset: const Offset(0, 20),
-              ),
-              BoxShadow(
-                color: UIHelpers.withOpacity(
-                  AppColors.islamicGreenPrimary,
-                  0.1,
-                ),
-                blurRadius: 60,
-                offset: const Offset(0, 30),
-              ),
-            ],
-          ),
+    final themeColors = ref.watch(themeColorsProvider);
+
+    Widget card = AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: widget.enablePressAnimation ? _scaleAnimation.value : 1.0,
           child: child,
+        );
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppSpacing.dramaticRadius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+          child: AnimatedContainer(
+            duration: AppAnimations.fast,
+            curve: AppAnimations.toggleCurve,
+            width: widget.width,
+            height: widget.height,
+            padding: widget.padding ?? const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              gradient: widget.gradient ??
+                  LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      UIHelpers.withOpacity(themeColors.glassHighlight, 1.5),
+                      themeColors.glassBackground,
+                    ],
+                  ),
+              borderRadius: BorderRadius.circular(AppSpacing.dramaticRadius),
+              border: Border.all(
+                color: _isPressed
+                    ? themeColors.glassHighlight
+                    : themeColors.glassBorder,
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: UIHelpers.withOpacity(
+                    themeColors.primaryDark,
+                    _isPressed ? 0.25 : 0.2,
+                  ),
+                  blurRadius: _isPressed ? 30 : 40,
+                  offset: Offset(0, _isPressed ? 15 : 20),
+                ),
+                BoxShadow(
+                  color: UIHelpers.withOpacity(
+                    themeColors.primary,
+                    _isPressed ? 0.15 : 0.1,
+                  ),
+                  blurRadius: _isPressed ? 50 : 60,
+                  offset: Offset(0, _isPressed ? 25 : 30),
+                ),
+              ],
+            ),
+            child: widget.child,
+          ),
         ),
       ),
     );
 
-    if (onTap != null) {
+    if (widget.onTap != null) {
       card = Semantics(
+        label: widget.semanticsLabel,
         button: true,
-        child: GestureDetector(onTap: onTap, child: card),
+        child: GestureDetector(
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            widget.onTap?.call();
+          },
+          onTapDown: _handleTapDown,
+          onTapUp: _handleTapUp,
+          onTapCancel: _handleTapCancel,
+          child: card,
+        ),
+      );
+    } else if (widget.semanticsLabel != null) {
+      card = Semantics(
+        label: widget.semanticsLabel,
+        child: card,
       );
     }
 

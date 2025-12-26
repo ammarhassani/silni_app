@@ -41,14 +41,18 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
     // Watch today's contacted relatives from database (persists across navigation)
     final todayContactedAsync = ref.watch(todayContactedRelativesProvider(userId));
 
+    final themeColors = ref.watch(themeColorsProvider);
+
     return Scaffold(
       body: Stack(
         children: [
           const GradientBackground(animated: true, child: SizedBox.expand()),
           SafeArea(
-            child: Column(
+            child: Semantics(
+              label: 'شاشة التذكيرات المستحقة',
+              child: Column(
               children: [
-                _buildHeader(context),
+                _buildHeader(context, themeColors),
                 Expanded(
                   child: relativesAsync.when(
                     data: (relatives) {
@@ -68,19 +72,24 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
               ],
             ),
           ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, dynamic themeColors) {
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+          Semantics(
+            label: 'رجوع',
+            button: true,
+            child: IconButton(
+              onPressed: () => context.pop(),
+              icon: Icon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
@@ -90,14 +99,14 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
                 Text(
                   'حان وقت التواصل',
                   style: AppTypography.headlineLarge.copyWith(
-                    color: Colors.white,
+                    color: themeColors.textOnGradient,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'تواصل مع أحبتك اليوم',
                   style: AppTypography.bodySmall.copyWith(
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: themeColors.textOnGradient.withValues(alpha: 0.8),
                   ),
                 ),
               ],

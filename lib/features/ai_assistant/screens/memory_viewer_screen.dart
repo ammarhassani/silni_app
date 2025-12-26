@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ai/ai_models.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../shared/services/chat_history_service.dart';
 import '../providers/ai_chat_provider.dart';
 
@@ -27,6 +29,7 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
   @override
   Widget build(BuildContext context) {
     final memoriesAsync = ref.watch(aiMemoriesProvider);
+    final themeColors = ref.watch(themeColorsProvider);
 
     // Update local list when provider data changes (but preserve deletions)
     memoriesAsync.whenData((memories) {
@@ -39,66 +42,77 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
     });
 
     return Scaffold(
-      backgroundColor: AppColors.islamicGreenDark,
+      backgroundColor: themeColors.background1,
       appBar: AppBar(
-        backgroundColor: AppColors.islamicGreenDark,
+        backgroundColor: themeColors.background1,
         title: Text(
           'ذاكرة واصل',
-          style: AppTypography.headlineSmall.copyWith(color: Colors.white),
+          style: AppTypography.headlineSmall.copyWith(color: themeColors.textOnGradient),
         ),
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+        leading: Semantics(
+          label: 'رجوع',
+          button: true,
+          child: IconButton(
+            icon: Icon(Icons.arrow_back_ios, color: themeColors.textOnGradient),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.info_outline, color: Colors.white70),
-            onPressed: _showInfoDialog,
+          Semantics(
+            label: 'معلومات عن ذاكرة واصل',
+            button: true,
+            child: IconButton(
+              icon: Icon(Icons.info_outline, color: themeColors.textOnGradient.withValues(alpha: 0.7)),
+              onPressed: () => _showInfoDialog(themeColors),
+            ),
           ),
         ],
       ),
-      body: memoriesAsync.when(
-        data: (memories) {
-          // Use local list for immediate Dismissible removal
-          final displayList = _localMemories ?? memories;
-          return displayList.isEmpty
-              ? _buildEmptyState()
-              : _buildMemoriesList(displayList);
-        },
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.islamicGreenLight),
+      body: Semantics(
+        label: 'قائمة ذكريات واصل',
+        child: memoriesAsync.when(
+          data: (memories) {
+            // Use local list for immediate Dismissible removal
+            final displayList = _localMemories ?? memories;
+            return displayList.isEmpty
+                ? _buildEmptyState(themeColors)
+                : _buildMemoriesList(displayList, themeColors);
+          },
+          loading: () => Center(
+            child: CircularProgressIndicator(color: themeColors.primaryLight),
+          ),
+          error: (error, stack) => _buildErrorState(error.toString(), themeColors),
         ),
-        error: (error, stack) => _buildErrorState(error.toString()),
       ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(dynamic themeColors) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.psychology_outlined,
               size: 80,
-              color: Colors.white.withValues(alpha: 0.3),
+              color: themeColors.textOnGradient.withValues(alpha: 0.3),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             Text(
               'لا توجد ذكريات محفوظة',
               style: AppTypography.headlineSmall.copyWith(
-                color: Colors.white70,
+                color: themeColors.textOnGradient.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               'عندما تتحدث مع واصل، سيتذكر المعلومات المهمة عنك وعن عائلتك',
               style: AppTypography.bodyMedium.copyWith(
-                color: Colors.white54,
+                color: themeColors.textOnGradient.withValues(alpha: 0.54),
               ),
               textAlign: TextAlign.center,
             ),
@@ -108,10 +122,10 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
     );
   }
 
-  Widget _buildErrorState(String error) {
+  Widget _buildErrorState(String error, dynamic themeColors) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -120,10 +134,12 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
               size: 64,
               color: Colors.red.withValues(alpha: 0.7),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             Text(
               'حدث خطأ في تحميل الذكريات',
-              style: AppTypography.bodyLarge.copyWith(color: Colors.white70),
+              style: AppTypography.bodyLarge.copyWith(
+                color: themeColors.textOnGradient.withValues(alpha: 0.7),
+              ),
             ),
           ],
         ),
@@ -131,7 +147,7 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
     );
   }
 
-  Widget _buildMemoriesList(List<AIMemory> memories) {
+  Widget _buildMemoriesList(List<AIMemory> memories, dynamic themeColors) {
     // Group memories by category
     final grouped = <AIMemoryCategory, List<AIMemory>>{};
     for (final memory in memories) {
@@ -148,34 +164,34 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
     ].where((cat) => grouped.containsKey(cat)).toList();
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.md),
       itemCount: sortedCategories.length,
       itemBuilder: (context, index) {
         final category = sortedCategories[index];
         final categoryMemories = grouped[category]!;
-        return _buildCategorySection(category, categoryMemories);
+        return _buildCategorySection(category, categoryMemories, themeColors);
       },
     );
   }
 
-  Widget _buildCategorySection(AIMemoryCategory category, List<AIMemory> memories) {
+  Widget _buildCategorySection(AIMemoryCategory category, List<AIMemory> memories, dynamic themeColors) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
           child: Row(
             children: [
               Icon(
                 _getCategoryIcon(category),
                 size: 20,
-                color: AppColors.islamicGreenLight,
+                color: themeColors.primaryLight,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.xs),
               Text(
                 category.arabicName,
                 style: AppTypography.titleMedium.copyWith(
-                  color: AppColors.islamicGreenLight,
+                  color: themeColors.primaryLight,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -183,19 +199,19 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
               Text(
                 '${memories.length}',
                 style: AppTypography.bodySmall.copyWith(
-                  color: Colors.white54,
+                  color: themeColors.textOnGradient.withValues(alpha: 0.54),
                 ),
               ),
             ],
           ),
         ),
-        ...memories.map((memory) => _buildMemoryCard(memory)),
-        const SizedBox(height: 16),
+        ...memories.map((memory) => _buildMemoryCard(memory, themeColors)),
+        const SizedBox(height: AppSpacing.md),
       ],
     );
   }
 
-  Widget _buildMemoryCard(AIMemory memory) {
+  Widget _buildMemoryCard(AIMemory memory, dynamic themeColors) {
     return Dismissible(
       key: Key(memory.id),
       direction: DismissDirection.endToStart,
@@ -208,59 +224,62 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
         ),
         child: const Icon(Icons.delete_outline, color: Colors.red),
       ),
-      confirmDismiss: (direction) => _confirmDelete(memory),
-      onDismissed: (direction) => _deleteMemory(memory),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.1),
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    memory.content,
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: Colors.white,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      // Importance indicator
-                      ...List.generate(
-                        5,
-                        (i) => Icon(
-                          Icons.star,
-                          size: 12,
-                          color: i < (memory.importance / 2).ceil()
-                              ? AppColors.premiumGold
-                              : Colors.white.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        _formatDate(memory.createdAt),
-                        style: AppTypography.bodySmall.copyWith(
-                          color: Colors.white38,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+      confirmDismiss: (direction) => _confirmDelete(memory, themeColors),
+      onDismissed: (direction) => _deleteMemory(memory, themeColors),
+      child: Semantics(
+        label: 'ذكرى: ${memory.content}',
+        child: Container(
+          margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: themeColors.textOnGradient.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: themeColors.textOnGradient.withValues(alpha: 0.1),
             ),
-          ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      memory.content,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: themeColors.textOnGradient,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Row(
+                      children: [
+                        // Importance indicator
+                        ...List.generate(
+                          5,
+                          (i) => Icon(
+                            Icons.star,
+                            size: 12,
+                            color: i < (memory.importance / 2).ceil()
+                                ? AppColors.premiumGold
+                                : themeColors.textOnGradient.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          _formatDate(memory.createdAt),
+                          style: AppTypography.bodySmall.copyWith(
+                            color: themeColors.textOnGradient.withValues(alpha: 0.38),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -298,33 +317,45 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
     }
   }
 
-  Future<bool> _confirmDelete(AIMemory memory) async {
+  Future<bool> _confirmDelete(AIMemory memory, dynamic themeColors) async {
     HapticFeedback.lightImpact();
     return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            backgroundColor: AppColors.islamicGreenDark,
+            backgroundColor: themeColors.background2,
             title: Text(
               'حذف الذكرى؟',
-              style: AppTypography.titleLarge.copyWith(color: Colors.white),
+              style: AppTypography.titleLarge.copyWith(color: themeColors.textOnGradient),
             ),
             content: Text(
               'هل تريد حذف هذه المعلومة من ذاكرة واصل؟',
-              style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+              style: AppTypography.bodyMedium.copyWith(
+                color: themeColors.textOnGradient.withValues(alpha: 0.7),
+              ),
             ),
             actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(
-                  'إلغاء',
-                  style: AppTypography.labelLarge.copyWith(color: Colors.white54),
+              Semantics(
+                label: 'إلغاء',
+                button: true,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text(
+                    'إلغاء',
+                    style: AppTypography.labelLarge.copyWith(
+                      color: themeColors.textOnGradient.withValues(alpha: 0.54),
+                    ),
+                  ),
                 ),
               ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(
-                  'حذف',
-                  style: AppTypography.labelLarge.copyWith(color: Colors.red),
+              Semantics(
+                label: 'حذف الذكرى',
+                button: true,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text(
+                    'حذف',
+                    style: AppTypography.labelLarge.copyWith(color: Colors.red),
+                  ),
                 ),
               ),
             ],
@@ -333,7 +364,7 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
         false;
   }
 
-  Future<void> _deleteMemory(AIMemory memory) async {
+  Future<void> _deleteMemory(AIMemory memory, dynamic themeColors) async {
     // Immediately remove from local list (Dismissible requires sync removal)
     setState(() {
       _deletingIds.add(memory.id);
@@ -352,27 +383,27 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
         SnackBar(
           content: Text(
             'تم حذف الذكرى',
-            style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+            style: AppTypography.bodyMedium.copyWith(color: themeColors.textOnGradient),
           ),
-          backgroundColor: AppColors.islamicGreenDark,
+          backgroundColor: themeColors.background2,
           behavior: SnackBarBehavior.floating,
         ),
       );
     }
   }
 
-  void _showInfoDialog() {
+  void _showInfoDialog(dynamic themeColors) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.islamicGreenDark,
+        backgroundColor: themeColors.background2,
         title: Row(
           children: [
-            Icon(Icons.psychology, color: AppColors.islamicGreenLight),
-            const SizedBox(width: 8),
+            Icon(Icons.psychology, color: themeColors.primaryLight),
+            const SizedBox(width: AppSpacing.xs),
             Text(
               'عن ذاكرة واصل',
-              style: AppTypography.titleLarge.copyWith(color: Colors.white),
+              style: AppTypography.titleLarge.copyWith(color: themeColors.textOnGradient),
             ),
           ],
         ),
@@ -385,17 +416,21 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
           '• أنماط عائلتك\n\n'
           'يمكنك حذف أي معلومة بالسحب لليسار.',
           style: AppTypography.bodyMedium.copyWith(
-            color: Colors.white70,
+            color: themeColors.textOnGradient.withValues(alpha: 0.7),
             height: 1.6,
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'فهمت',
-              style: AppTypography.labelLarge.copyWith(
-                color: AppColors.islamicGreenLight,
+          Semantics(
+            label: 'فهمت',
+            button: true,
+            child: TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'فهمت',
+                style: AppTypography.labelLarge.copyWith(
+                  color: themeColors.primaryLight,
+                ),
               ),
             ),
           ),

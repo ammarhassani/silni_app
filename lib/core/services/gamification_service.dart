@@ -136,7 +136,8 @@ class GamificationService {
 
       // Use UTC for consistent timezone handling
       final now = DateTime.now().toUtc();
-      final newDeadline = now.add(const Duration(hours: 24));
+      // 26-hour window instead of 24 - gives 2 hours of grace period for daily interactions
+      final newDeadline = now.add(const Duration(hours: 26));
 
       int newStreak;
       DateTime newDayStart;
@@ -204,6 +205,11 @@ class GamificationService {
             streak: newStreak,
           ));
           _analytics?.logStreakMilestone(newStreak);
+
+          // Award freeze at freeze milestones (7, 30, 100 days)
+          if (GamificationEvent.isFreezeAwardMilestone(newStreak)) {
+            await _awardStreakFreeze(userId, newStreak);
+          }
         }
       }
 
@@ -217,6 +223,48 @@ class GamificationService {
       };
     } catch (e) {
       rethrow;
+    }
+  }
+
+  // =====================================================
+  // STREAK FREEZE AWARDS
+  // =====================================================
+
+  /// Award a streak freeze at milestone (7, 30, 100 days)
+  Future<void> _awardStreakFreeze(String userId, int milestone) async {
+    try {
+      // Get or create freeze inventory
+      final existingData = await _supabase
+          .from('streak_freezes')
+          .select()
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      final currentCount = existingData?['freeze_count'] as int? ?? 0;
+
+      // Upsert freeze inventory
+      await _supabase.from('streak_freezes').upsert({
+        'user_id': userId,
+        'freeze_count': currentCount + 1,
+        'last_earned_at': DateTime.now().toUtc().toIso8601String(),
+      }, onConflict: 'user_id');
+
+      // Record in history
+      await _supabase.from('freeze_usage_history').insert({
+        'user_id': userId,
+        'freeze_type': 'earned',
+        'streak_at_time': milestone,
+        'source': 'milestone_$milestone',
+      });
+
+      // Emit freeze earned event
+      _eventsController?.emit(GamificationEvent.freezeEarned(
+        userId: userId,
+        source: 'milestone_$milestone',
+      ));
+    } catch (e) {
+      // Don't fail streak update if freeze award fails
+      // Just log and continue
     }
   }
 

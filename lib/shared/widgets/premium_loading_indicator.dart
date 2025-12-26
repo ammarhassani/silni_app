@@ -1,12 +1,14 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../core/constants/app_colors.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/constants/app_animations.dart';
 import '../../core/constants/app_spacing.dart';
+import '../../core/theme/theme_provider.dart';
 
 /// A premium loading indicator with glassmorphism and gradient animation
 /// Use this instead of plain CircularProgressIndicator for a polished look
-class PremiumLoadingIndicator extends StatelessWidget {
+class PremiumLoadingIndicator extends ConsumerWidget {
   final double size;
   final Color? color;
   final String? message;
@@ -19,34 +21,42 @@ class PremiumLoadingIndicator extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _GradientSpinner(size: size, color: color),
-        if (message != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            message!,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.7),
-              fontSize: 14,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
+
+    return Semantics(
+      label: message ?? 'جاري التحميل',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _GradientSpinner(size: size, color: color),
+          if (message != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              message!,
+              style: TextStyle(
+                color: themeColors.textSecondary,
+                fontSize: 14,
+              ),
             ),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
 
-class _GradientSpinner extends StatelessWidget {
+class _GradientSpinner extends ConsumerWidget {
   final double size;
   final Color? color;
 
   const _GradientSpinner({required this.size, this.color});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
+    final spinnerColor = color ?? themeColors.primary;
+
     return SizedBox(
       width: size,
       height: size,
@@ -61,8 +71,7 @@ class _GradientSpinner extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: (color ?? AppColors.primaryGradient.colors.first)
-                      .withValues(alpha: 0.3),
+                  color: spinnerColor.withValues(alpha: 0.3),
                   blurRadius: 20,
                   spreadRadius: 5,
                 ),
@@ -82,12 +91,12 @@ class _GradientSpinner extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Colors.white.withValues(alpha: 0.15),
-                      Colors.white.withValues(alpha: 0.05),
+                      themeColors.glassHighlight,
+                      themeColors.glassBackground,
                     ],
                   ),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: themeColors.glassBorder,
                     width: 1.5,
                   ),
                 ),
@@ -100,13 +109,11 @@ class _GradientSpinner extends StatelessWidget {
             height: size - 8,
             child: CircularProgressIndicator(
               strokeWidth: 3,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                color ?? AppColors.primaryGradient.colors.first,
-              ),
+              valueColor: AlwaysStoppedAnimation<Color>(spinnerColor),
             ),
           )
               .animate(onPlay: (controller) => controller.repeat())
-              .rotate(duration: 1200.ms),
+              .rotate(duration: AppAnimations.celebration),
         ],
       ),
     );
@@ -114,7 +121,7 @@ class _GradientSpinner extends StatelessWidget {
 }
 
 /// A full-screen premium loading overlay
-class PremiumLoadingOverlay extends StatelessWidget {
+class PremiumLoadingOverlay extends ConsumerWidget {
   final String? message;
   final bool isVisible;
   final Widget child;
@@ -127,14 +134,16 @@ class PremiumLoadingOverlay extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
+
     return Stack(
       children: [
         child,
         if (isVisible)
           Positioned.fill(
             child: Container(
-              color: Colors.black.withValues(alpha: 0.5),
+              color: themeColors.primaryDark.withValues(alpha: 0.6),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                 child: Center(
@@ -144,14 +153,14 @@ class PremiumLoadingOverlay extends StatelessWidget {
             ),
           )
               .animate()
-              .fadeIn(duration: 200.ms),
+              .fadeIn(duration: AppAnimations.fast),
       ],
     );
   }
 }
 
 /// A compact inline loading indicator
-class InlineLoadingIndicator extends StatelessWidget {
+class InlineLoadingIndicator extends ConsumerWidget {
   final double size;
   final Color? color;
 
@@ -162,14 +171,19 @@ class InlineLoadingIndicator extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CircularProgressIndicator(
-        strokeWidth: 2,
-        valueColor: AlwaysStoppedAnimation<Color>(
-          color ?? Colors.white.withValues(alpha: 0.7),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
+
+    return Semantics(
+      label: 'جاري التحميل',
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(
+            color ?? themeColors.onPrimary.withValues(alpha: 0.8),
+          ),
         ),
       ),
     );
@@ -189,32 +203,37 @@ class ScreenLoadingSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: itemCount,
-      itemBuilder: (context, index) {
-        if (itemBuilder != null) {
-          return itemBuilder!(index);
-        }
-        return _DefaultSkeletonItem(index: index);
-      },
+    return Semantics(
+      label: 'جاري تحميل المحتوى',
+      child: ListView.builder(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: itemCount,
+        itemBuilder: (context, index) {
+          if (itemBuilder != null) {
+            return itemBuilder!(index);
+          }
+          return _DefaultSkeletonItem(index: index);
+        },
+      ),
     );
   }
 }
 
-class _DefaultSkeletonItem extends StatelessWidget {
+class _DefaultSkeletonItem extends ConsumerWidget {
   final int index;
 
   const _DefaultSkeletonItem({required this.index});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
+
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: themeColors.shimmerBase,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
       child: Row(
@@ -224,7 +243,7 @@ class _DefaultSkeletonItem extends StatelessWidget {
             height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.1),
+              color: themeColors.shimmerHighlight,
             ),
           ),
           const SizedBox(width: AppSpacing.md),
@@ -236,7 +255,7 @@ class _DefaultSkeletonItem extends StatelessWidget {
                   width: 120,
                   height: 16,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
+                    color: themeColors.shimmerHighlight,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -245,7 +264,7 @@ class _DefaultSkeletonItem extends StatelessWidget {
                   width: 80,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
+                    color: themeColors.shimmerBase,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -256,7 +275,11 @@ class _DefaultSkeletonItem extends StatelessWidget {
       ),
     )
         .animate(delay: Duration(milliseconds: 100 * index))
-        .shimmer(duration: 1500.ms, delay: 500.ms)
-        .fadeIn(duration: 300.ms);
+        .shimmer(
+          duration: AppAnimations.loop,
+          delay: AppAnimations.slow,
+          color: themeColors.shimmerHighlight,
+        )
+        .fadeIn(duration: AppAnimations.normal);
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:confetti/confetti.dart';
+import '../../core/constants/app_animations.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 
@@ -37,7 +38,7 @@ class LevelUpModal extends StatefulWidget {
     return showDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black87,
+      barrierColor: AppColors.islamicGreenDark.withValues(alpha: 0.9),
       builder: (context) => LevelUpModal(
         oldLevel: oldLevel,
         newLevel: newLevel,
@@ -67,7 +68,7 @@ class _LevelUpModalState extends State<LevelUpModal>
     // Glow animation for the level number
     _glowController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: AppAnimations.celebration,
     )..repeat(reverse: true);
 
     _glowAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
@@ -94,10 +95,13 @@ class _LevelUpModalState extends State<LevelUpModal>
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      child: Stack(
+    return Semantics(
+      label: 'تهانينا! لقد وصلت للمستوى ${widget.newLevel}',
+      liveRegion: true,
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Stack(
         alignment: Alignment.center,
         children: [
           // Confetti
@@ -321,6 +325,7 @@ class _LevelUpModalState extends State<LevelUpModal>
                 curve: Curves.easeOut,
               ),
         ],
+      ),
       ),
     );
   }

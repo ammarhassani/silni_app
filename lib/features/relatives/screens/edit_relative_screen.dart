@@ -9,6 +9,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/services/error_handler_service.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
@@ -219,13 +220,15 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = ref.watch(themeColorsProvider);
+
     if (_relative == null) {
       return Scaffold(
         body: GradientBackground(
           animated: true,
-          child: const Center(
+          child: Center(
             child: CircularProgressIndicator(
-              color: AppColors.islamicGreenPrimary,
+              color: themeColors.primary,
             ),
           ),
         ),
@@ -233,38 +236,47 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
     }
 
     return Scaffold(
-      body: GradientBackground(
-        animated: true,
-        child: SafeArea(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                // Header
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.arrow_forward_rounded,
-                          color: Colors.white,
+      body: Semantics(
+        label: 'تعديل بيانات القريب',
+        child: GradientBackground(
+          animated: true,
+          child: SafeArea(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Row(
+                      children: [
+                        Semantics(
+                          label: 'رجوع',
+                          button: true,
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.arrow_forward_rounded,
+                              color: themeColors.textOnGradient,
+                            ),
+                            onPressed: () => context.pop(),
+                          ),
                         ),
-                        onPressed: () => context.pop(),
-                      ),
-                      const Spacer(),
-                      Text(
-                        'تعديل بيانات القريب',
-                        style: AppTypography.headlineSmall.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                        const Spacer(),
+                        Flexible(
+                          child: Text(
+                            'تعديل بيانات القريب',
+                            style: AppTypography.headlineSmall.copyWith(
+                              color: themeColors.textOnGradient,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                      const Spacer(),
-                      const SizedBox(width: 48), // Balance the back button
-                    ],
+                        const Spacer(),
+                        const SizedBox(width: 48), // Balance the back button
+                      ],
+                    ),
                   ),
-                ),
 
                 // Form content
                 Expanded(
@@ -373,6 +385,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

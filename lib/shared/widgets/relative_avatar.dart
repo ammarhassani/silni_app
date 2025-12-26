@@ -1,17 +1,21 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/theme/app_themes.dart';
+import '../../core/theme/theme_provider.dart';
 import '../models/relative_model.dart';
 
 /// Unified avatar widget for displaying relative photos
 /// Shows photo if available, emoji fallback otherwise
-class RelativeAvatar extends StatelessWidget {
+class RelativeAvatar extends ConsumerWidget {
   final Relative relative;
   final double size;
   final bool showNeedsAttentionBadge;
   final bool showFavoriteBadge;
   final String? heroTag;
   final Gradient? gradient;
+  final String? semanticsLabel;
 
   const RelativeAvatar({
     super.key,
@@ -21,6 +25,7 @@ class RelativeAvatar extends StatelessWidget {
     this.showFavoriteBadge = true,
     this.heroTag,
     this.gradient,
+    this.semanticsLabel,
   });
 
   /// Predefined sizes for consistency
@@ -30,10 +35,11 @@ class RelativeAvatar extends StatelessWidget {
   static const double sizeXLarge = 120;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
     final needsAttention = relative.needsContact;
     final effectiveGradient = gradient ??
-        (needsAttention ? AppColors.streakFire : AppColors.primaryGradient);
+        (needsAttention ? AppColors.streakFire : themeColors.primaryGradient);
 
     Widget avatar = Stack(
       children: [
@@ -48,7 +54,7 @@ class RelativeAvatar extends StatelessWidget {
               BoxShadow(
                 color: (needsAttention
                         ? AppColors.joyfulOrange
-                        : AppColors.islamicGreenPrimary)
+                        : themeColors.primary)
                     .withValues(alpha: 0.3),
                 blurRadius: 8,
                 spreadRadius: 1,
@@ -66,6 +72,7 @@ class RelativeAvatar extends StatelessWidget {
             child: _buildBadge(
               icon: Icons.warning_rounded,
               color: AppColors.joyfulOrange,
+              borderColor: themeColors.surface,
             ),
           ),
 
@@ -77,6 +84,7 @@ class RelativeAvatar extends StatelessWidget {
             child: _buildBadge(
               icon: Icons.star_rounded,
               gradient: AppColors.goldenGradient,
+              borderColor: themeColors.surface,
             ),
           ),
       ],
@@ -90,7 +98,17 @@ class RelativeAvatar extends StatelessWidget {
       );
     }
 
-    return avatar;
+    // Wrap with Semantics for accessibility
+    final label = semanticsLabel ??
+        'صورة ${relative.fullName}'
+            '${needsAttention ? '، يحتاج تواصل' : ''}'
+            '${relative.isFavorite ? '، مفضل' : ''}';
+
+    return Semantics(
+      label: label,
+      image: true,
+      child: avatar,
+    );
   }
 
   Widget _buildAvatarContent() {
@@ -124,6 +142,7 @@ class RelativeAvatar extends StatelessWidget {
     required IconData icon,
     Color? color,
     Gradient? gradient,
+    required Color borderColor,
   }) {
     final badgeSize = size * 0.3;
     final iconSize = badgeSize * 0.55;
@@ -135,7 +154,7 @@ class RelativeAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         color: gradient == null ? color : null,
         gradient: gradient,
-        border: Border.all(color: Colors.white, width: 2),
+        border: Border.all(color: borderColor, width: 2),
       ),
       child: Icon(
         icon,
@@ -147,7 +166,7 @@ class RelativeAvatar extends StatelessWidget {
 }
 
 /// Simple avatar widget for displaying user profile pictures
-class UserAvatar extends StatelessWidget {
+class UserAvatar extends ConsumerWidget {
   final String? photoUrl;
   final String? fallbackText;
   final double size;
@@ -155,6 +174,7 @@ class UserAvatar extends StatelessWidget {
   final String? heroTag;
   final VoidCallback? onTap;
   final bool showEditButton;
+  final String? semanticsLabel;
 
   const UserAvatar({
     super.key,
@@ -165,10 +185,12 @@ class UserAvatar extends StatelessWidget {
     this.heroTag,
     this.onTap,
     this.showEditButton = false,
+    this.semanticsLabel,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
     final effectiveGradient = gradient ?? AppColors.goldenGradient;
 
     Widget avatar = Stack(
@@ -187,7 +209,7 @@ class UserAvatar extends StatelessWidget {
               ),
             ],
           ),
-          child: _buildAvatarContent(),
+          child: _buildAvatarContent(themeColors),
         ),
 
         // Edit button
@@ -200,12 +222,12 @@ class UserAvatar extends StatelessWidget {
               height: size * 0.33,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: AppColors.primaryGradient,
-                border: Border.all(color: Colors.white, width: 2),
+                gradient: themeColors.primaryGradient,
+                border: Border.all(color: themeColors.surface, width: 2),
               ),
               child: Icon(
                 Icons.camera_alt,
-                color: Colors.white,
+                color: themeColors.onPrimary,
                 size: size * 0.17,
               ),
             ),
@@ -223,8 +245,19 @@ class UserAvatar extends StatelessWidget {
 
     // Wrap with GestureDetector if onTap provided
     if (onTap != null) {
-      avatar = GestureDetector(
-        onTap: onTap,
+      avatar = Semantics(
+        label: semanticsLabel ?? 'الصورة الشخصية',
+        button: true,
+        hint: showEditButton ? 'انقر لتغيير الصورة' : null,
+        child: GestureDetector(
+          onTap: onTap,
+          child: avatar,
+        ),
+      );
+    } else {
+      avatar = Semantics(
+        label: semanticsLabel ?? 'الصورة الشخصية',
+        image: true,
         child: avatar,
       );
     }
@@ -232,7 +265,7 @@ class UserAvatar extends StatelessWidget {
     return avatar;
   }
 
-  Widget _buildAvatarContent() {
+  Widget _buildAvatarContent(ThemeColors themeColors) {
     if (photoUrl != null && photoUrl!.isNotEmpty) {
       return ClipOval(
         child: CachedNetworkImage(
@@ -240,15 +273,15 @@ class UserAvatar extends StatelessWidget {
           fit: BoxFit.cover,
           width: size,
           height: size,
-          placeholder: (context, url) => _buildFallbackAvatar(),
-          errorWidget: (context, url, error) => _buildFallbackAvatar(),
+          placeholder: (context, url) => _buildFallbackAvatar(themeColors),
+          errorWidget: (context, url, error) => _buildFallbackAvatar(themeColors),
         ),
       );
     }
-    return _buildFallbackAvatar();
+    return _buildFallbackAvatar(themeColors);
   }
 
-  Widget _buildFallbackAvatar() {
+  Widget _buildFallbackAvatar(ThemeColors themeColors) {
     final initial = (fallbackText?.isNotEmpty == true)
         ? fallbackText![0].toUpperCase()
         : '?';
@@ -260,7 +293,7 @@ class UserAvatar extends StatelessWidget {
         style: TextStyle(
           fontSize: textSize,
           fontWeight: FontWeight.bold,
-          color: Colors.white,
+          color: themeColors.onPrimary,
         ),
       ),
     );

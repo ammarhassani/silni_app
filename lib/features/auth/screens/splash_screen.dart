@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:silni_app/core/constants/app_animations.dart';
 import 'package:silni_app/core/constants/app_typography.dart';
 import 'package:silni_app/core/router/app_routes.dart';
 import 'package:silni_app/core/theme/theme_provider.dart';
@@ -124,99 +125,105 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     final themeColors = ref.watch(themeColorsProvider);
 
     return Scaffold(
-      body: GradientBackground(
-        animated: true,
-        child: Center(
-          child: AnimatedOpacity(
-            opacity: _fontLoaded ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 300),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // App Name with animated glow - using Reem Kufi Fun
-                AnimatedBuilder(
-                animation: _glowController,
-                builder: (context, child) {
-                  final glowValue = _glowController.value;
-                  return Text(
-                    'صِـلْـنِـي',
-                    style: GoogleFonts.reemKufiFun(
-                      fontSize: 80,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      shadows: [
-                        Shadow(
-                          color: themeColors.secondary.withValues(alpha: 0.6 + glowValue * 0.4),
-                          blurRadius: 25 + glowValue * 30,
-                        ),
-                        Shadow(
-                          color: themeColors.primary.withValues(alpha: 0.4 + glowValue * 0.4),
-                          blurRadius: 50 + glowValue * 35,
-                        ),
-                        Shadow(
-                          color: themeColors.accent.withValues(alpha: 0.3 + glowValue * 0.3),
-                          blurRadius: 80 + glowValue * 25,
-                        ),
-                      ],
+      body: Semantics(
+        label: 'شاشة التحميل - صِلْني، صِلْ رَحِمَكَ بِحُبٍّ',
+        child: GradientBackground(
+          animated: true,
+          child: Center(
+            child: AnimatedOpacity(
+              opacity: _fontLoaded ? 1.0 : 0.0,
+              duration: AppAnimations.normal,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // App Name with animated glow - using Reem Kufi Fun
+                  AnimatedBuilder(
+                  animation: _glowController,
+                  builder: (context, child) {
+                    final glowValue = _glowController.value;
+                    return Text(
+                      'صِـلْـنِـي',
+                      style: GoogleFonts.reemKufiFun(
+                        fontSize: 80,
+                        fontWeight: FontWeight.w700,
+                        color: themeColors.textOnGradient,
+                        shadows: [
+                          Shadow(
+                            color: themeColors.secondary.withValues(alpha: 0.6 + glowValue * 0.4),
+                            blurRadius: 25 + glowValue * 30,
+                          ),
+                          Shadow(
+                            color: themeColors.primary.withValues(alpha: 0.4 + glowValue * 0.4),
+                            blurRadius: 50 + glowValue * 35,
+                          ),
+                          Shadow(
+                            color: themeColors.accent.withValues(alpha: 0.3 + glowValue * 0.3),
+                            blurRadius: 80 + glowValue * 25,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                )
+                    .animate()
+                    // Blur to clear reveal
+                    .blur(begin: const Offset(20, 20), end: Offset.zero, duration: AppAnimations.slow, curve: AppAnimations.enterCurve)
+                    .fadeIn(duration: AppAnimations.modal)
+                    // Scale with bounce
+                    .scale(
+                      begin: const Offset(0.5, 0.5),
+                      end: const Offset(1, 1),
+                      duration: AppAnimations.dramatic,
+                      curve: AppAnimations.bounceCurve,
+                    )
+                    // Slight float up
+                    .moveY(begin: 30, end: 0, duration: AppAnimations.slow, curve: Curves.easeOutCubic)
+                    .then(delay: AppAnimations.fast)
+                    // Shimmer sweep
+                    .shimmer(
+                      duration: AppAnimations.loop,
+                      color: themeColors.textOnGradient.withValues(alpha: 0.4),
                     ),
-                  );
-                },
-              )
-                  .animate()
-                  // Blur to clear reveal
-                  .blur(begin: const Offset(20, 20), end: Offset.zero, duration: 600.ms, curve: Curves.easeOut)
-                  .fadeIn(duration: 400.ms)
-                  // Scale with bounce
-                  .scale(
-                    begin: const Offset(0.5, 0.5),
-                    end: const Offset(1, 1),
-                    duration: 800.ms,
-                    curve: Curves.elasticOut,
-                  )
-                  // Slight float up
-                  .moveY(begin: 30, end: 0, duration: 600.ms, curve: Curves.easeOutCubic)
-                  .then(delay: 200.ms)
-                  // Shimmer sweep
-                  .shimmer(
-                    duration: 2000.ms,
-                    color: Colors.white.withValues(alpha: 0.4),
+
+                const SizedBox(height: 48),
+
+                // Tagline with app font (Cairo)
+                Text(
+                  'صِلْ رَحِمَكَ بِحُبٍّ',
+                  style: AppTypography.titleLarge.copyWith(
+                    color: themeColors.textOnGradient.withValues(alpha: 0.9),
                   ),
+                )
+                    .animate(delay: AppAnimations.dramatic)
+                    // Typewriter-like letter spacing animation
+                    .fadeIn(duration: AppAnimations.slow)
+                    .blur(begin: const Offset(8, 0), end: Offset.zero, duration: AppAnimations.slow)
+                    .slideY(begin: 0.5, end: 0, duration: AppAnimations.slow, curve: AppAnimations.overshootCurve),
 
-              const SizedBox(height: 48),
+                const SizedBox(height: 100),
 
-              // Tagline with app font (Cairo)
-              Text(
-                'صِلْ رَحِمَكَ بِحُبٍّ',
-                style: AppTypography.titleLarge.copyWith(
-                  color: Colors.white.withValues(alpha: 0.9),
-                ),
-              )
-                  .animate(delay: 900.ms)
-                  // Typewriter-like letter spacing animation
-                  .fadeIn(duration: 500.ms)
-                  .blur(begin: const Offset(8, 0), end: Offset.zero, duration: 500.ms)
-                  .slideY(begin: 0.5, end: 0, duration: 600.ms, curve: Curves.easeOutBack),
-
-              const SizedBox(height: 100),
-
-              // Loading with pulse
-              SizedBox(
-                width: 36,
-                height: 36,
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    themeColors.secondary.withValues(alpha: 0.8),
+                // Loading with pulse
+                Semantics(
+                  label: 'جاري التحميل',
+                  child: SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        themeColors.secondary.withValues(alpha: 0.8),
+                      ),
+                      strokeWidth: 2.5,
+                    ),
                   ),
-                  strokeWidth: 2.5,
-                ),
-              )
-                  .animate(delay: 1500.ms)
-                  .fadeIn(duration: 400.ms)
-                  .scale(begin: const Offset(0, 0), end: const Offset(1, 1), duration: 500.ms, curve: Curves.easeOutBack)
-                  .then()
-                  .animate(onPlay: (controller) => controller.repeat(reverse: true))
-                  .scale(begin: const Offset(1, 1), end: const Offset(1.1, 1.1), duration: 800.ms),
-              ],
+                )
+                    .animate(delay: AppAnimations.celebration)
+                    .fadeIn(duration: AppAnimations.modal)
+                    .scale(begin: const Offset(0, 0), end: const Offset(1, 1), duration: AppAnimations.slow, curve: AppAnimations.overshootCurve)
+                    .then()
+                    .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                    .scale(begin: const Offset(1, 1), end: const Offset(1.1, 1.1), duration: AppAnimations.dramatic),
+                ],
+              ),
             ),
           ),
         ),

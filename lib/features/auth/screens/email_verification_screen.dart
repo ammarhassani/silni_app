@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -183,184 +185,203 @@ class _EmailVerificationScreenState
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = ref.watch(themeColorsProvider);
     final user = Supabase.instance.client.auth.currentUser;
     final email = user?.email ?? '';
 
     return Scaffold(
-      body: GradientBackground(
-        animated: true,
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Email icon
-                  Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: AppColors.goldenGradient,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.premiumGold.withValues(alpha: 0.5),
-                              blurRadius: 30,
-                              spreadRadius: 5,
-                            ),
-                          ],
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.mark_email_unread_rounded,
-                            size: 50,
-                            color: Colors.white,
-                          ),
-                        ),
-                      )
-                      .animate()
-                      .scale(
-                        duration: const Duration(milliseconds: 600),
-                        curve: Curves.elasticOut,
-                      )
-                      .fadeIn(),
-
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // Title
-                  Text(
-                        'تحقق من بريدك الإلكتروني',
-                        style: AppTypography.dramatic.copyWith(
-                          color: Colors.white,
-                        ),
-                        textAlign: TextAlign.center,
-                      )
-                      .animate(delay: const Duration(milliseconds: 200))
-                      .fadeIn(duration: const Duration(milliseconds: 600))
-                      .slideY(begin: 0.3, end: 0),
-
-                  const SizedBox(height: AppSpacing.sm),
-
-                  Text(
-                        'أرسلنا رابط التحقق إلى',
-                        style: AppTypography.bodyLarge.copyWith(
-                          color: Colors.white.withValues(alpha: 0.8),
-                        ),
-                        textAlign: TextAlign.center,
-                      )
-                      .animate(delay: const Duration(milliseconds: 300))
-                      .fadeIn(duration: const Duration(milliseconds: 600)),
-
-                  const SizedBox(height: AppSpacing.xs),
-
-                  Text(
-                        email,
-                        style: AppTypography.labelLarge.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                        textDirection: TextDirection.ltr,
-                      )
-                      .animate(delay: const Duration(milliseconds: 400))
-                      .fadeIn(duration: const Duration(milliseconds: 600)),
-
-                  const SizedBox(height: AppSpacing.xxxl),
-
-                  // Instructions card
-                  DramaticGlassCard(
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.info_outline_rounded,
-                              color: Colors.white.withValues(alpha: 0.8),
-                              size: 32,
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                            Text(
-                              'افتح بريدك الإلكتروني واضغط على رابط التحقق للمتابعة',
-                              style: AppTypography.bodyMedium.copyWith(
-                                color: Colors.white.withValues(alpha: 0.9),
+      body: Semantics(
+        label: 'شاشة التحقق من البريد الإلكتروني',
+        child: GradientBackground(
+          animated: true,
+          child: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Email icon
+                    Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: AppColors.goldenGradient,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.premiumGold.withValues(alpha: 0.5),
+                                blurRadius: 30,
+                                spreadRadius: 5,
                               ),
-                              textAlign: TextAlign.center,
+                            ],
+                          ),
+                          child: Center(
+                            child: Icon(
+                              Icons.mark_email_unread_rounded,
+                              size: 50,
+                              color: themeColors.textOnGradient,
                             ),
-                            const SizedBox(height: AppSpacing.lg),
+                          ),
+                        )
+                        .animate()
+                        .scale(
+                          duration: AppAnimations.dramatic,
+                          curve: Curves.elasticOut,
+                        )
+                        .fadeIn(),
 
-                            // Resend button
-                            if (_canResend)
-                              GradientButton(
-                                text: 'إعادة إرسال الرابط',
-                                onPressed: _resendVerificationEmail,
-                                isLoading: _isResending,
-                                icon: Icons.refresh_rounded,
-                              )
-                            else
-                              SizedBox(
-                                width: double.infinity,
-                                child: OutlinedButton.icon(
-                                  onPressed: null,
-                                  icon: const Icon(Icons.timer_outlined),
-                                  label: Text(
-                                    'انتظر $_resendCooldown ثانية',
-                                    style: AppTypography.labelLarge.copyWith(
-                                      color: Colors.white.withValues(alpha: 0.5),
-                                    ),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // Title
+                    Text(
+                          'تحقق من بريدك الإلكتروني',
+                          style: AppTypography.dramatic.copyWith(
+                            color: themeColors.textOnGradient,
+                          ),
+                          textAlign: TextAlign.center,
+                        )
+                        .animate(delay: AppAnimations.fast)
+                        .fadeIn(duration: AppAnimations.dramatic)
+                        .slideY(begin: 0.3, end: 0),
+
+                    const SizedBox(height: AppSpacing.sm),
+
+                    Text(
+                          'أرسلنا رابط التحقق إلى',
+                          style: AppTypography.bodyLarge.copyWith(
+                            color: themeColors.textOnGradient.withValues(alpha: 0.8),
+                          ),
+                          textAlign: TextAlign.center,
+                        )
+                        .animate(delay: AppAnimations.normal)
+                        .fadeIn(duration: AppAnimations.dramatic),
+
+                    const SizedBox(height: AppSpacing.xs),
+
+                    Text(
+                          email,
+                          style: AppTypography.labelLarge.copyWith(
+                            color: themeColors.textOnGradient,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                          textDirection: TextDirection.ltr,
+                        )
+                        .animate(delay: AppAnimations.normal)
+                        .fadeIn(duration: AppAnimations.dramatic),
+
+                    const SizedBox(height: AppSpacing.xxxl),
+
+                    // Instructions card
+                    DramaticGlassCard(
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.info_outline_rounded,
+                                color: themeColors.textOnGradient.withValues(alpha: 0.8),
+                                size: 32,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              Text(
+                                'افتح بريدك الإلكتروني واضغط على رابط التحقق للمتابعة',
+                                style: AppTypography.bodyMedium.copyWith(
+                                  color: themeColors.textOnGradient.withValues(alpha: 0.9),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: AppSpacing.lg),
+
+                              // Resend button
+                              if (_canResend)
+                                Semantics(
+                                  label: 'إعادة إرسال رابط التحقق',
+                                  button: true,
+                                  child: GradientButton(
+                                    text: 'إعادة إرسال الرابط',
+                                    onPressed: _resendVerificationEmail,
+                                    isLoading: _isResending,
+                                    icon: Icons.refresh_rounded,
                                   ),
-                                  style: OutlinedButton.styleFrom(
-                                    side: BorderSide(
-                                      color: Colors.white.withValues(alpha: 0.3),
+                                )
+                              else
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: null,
+                                    icon: Icon(
+                                      Icons.timer_outlined,
+                                      color: themeColors.textOnGradient.withValues(alpha: 0.5),
                                     ),
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: AppSpacing.md,
+                                    label: Text(
+                                      'انتظر $_resendCooldown ثانية',
+                                      style: AppTypography.labelLarge.copyWith(
+                                        color: themeColors.textOnGradient.withValues(alpha: 0.5),
+                                      ),
                                     ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(
-                                        AppSpacing.radiusLg,
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(
+                                        color: themeColors.textOnGradient.withValues(alpha: 0.3),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: AppSpacing.md,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                          AppSpacing.radiusLg,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
 
-                            const SizedBox(height: AppSpacing.md),
+                              const SizedBox(height: AppSpacing.md),
 
-                            // Check manually button
-                            TextButton.icon(
-                              onPressed: _checkEmailVerification,
-                              icon: Icon(
-                                Icons.check_circle_outline,
-                                color: Colors.white.withValues(alpha: 0.8),
-                              ),
-                              label: Text(
-                                'لقد تحققت بالفعل',
-                                style: AppTypography.labelMedium.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.8),
+                              // Check manually button
+                              Semantics(
+                                label: 'تحقق من حالة البريد الإلكتروني',
+                                button: true,
+                                child: TextButton.icon(
+                                  onPressed: _checkEmailVerification,
+                                  icon: Icon(
+                                    Icons.check_circle_outline,
+                                    color: themeColors.textOnGradient.withValues(alpha: 0.8),
+                                  ),
+                                  label: Text(
+                                    'لقد تحققت بالفعل',
+                                    style: AppTypography.labelMedium.copyWith(
+                                      color: themeColors.textOnGradient.withValues(alpha: 0.8),
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      )
-                      .animate(delay: const Duration(milliseconds: 500))
-                      .fadeIn(duration: const Duration(milliseconds: 800))
-                      .slideY(begin: 0.3, end: 0, curve: Curves.easeOut),
-
-                  const SizedBox(height: AppSpacing.xl),
-
-                  // Back to login
-                  TextButton(
-                        onPressed: _signOut,
-                        child: Text(
-                          'العودة لتسجيل الدخول',
-                          style: AppTypography.labelMedium.copyWith(
-                            color: Colors.white.withValues(alpha: 0.8),
+                            ],
                           ),
-                        ),
-                      )
-                      .animate(delay: const Duration(milliseconds: 700))
-                      .fadeIn(duration: const Duration(milliseconds: 600)),
-                ],
+                        )
+                        .animate(delay: AppAnimations.slow)
+                        .fadeIn(duration: AppAnimations.slow)
+                        .slideY(begin: 0.3, end: 0, curve: AppAnimations.enterCurve),
+
+                    const SizedBox(height: AppSpacing.xl),
+
+                    // Back to login
+                    Semantics(
+                      label: 'العودة لتسجيل الدخول',
+                      button: true,
+                      child: TextButton(
+                            onPressed: _signOut,
+                            child: Text(
+                              'العودة لتسجيل الدخول',
+                              style: AppTypography.labelMedium.copyWith(
+                                color: themeColors.textOnGradient.withValues(alpha: 0.8),
+                              ),
+                            ),
+                          )
+                          .animate(delay: AppAnimations.celebration)
+                          .fadeIn(duration: AppAnimations.dramatic),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
