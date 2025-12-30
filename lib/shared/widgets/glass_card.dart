@@ -118,7 +118,7 @@ class _GlassCardState extends ConsumerState<GlassCard>
             curve: AppAnimations.toggleCurve,
             width: widget.width,
             height: widget.height,
-            padding: widget.padding ?? const EdgeInsets.all(AppSpacing.md),
+            padding: widget.padding ?? const EdgeInsets.all(AppSpacing.sm),
             margin: widget.margin,
             decoration: BoxDecoration(
               color: widget.gradient == null
@@ -145,7 +145,7 @@ class _GlassCardState extends ConsumerState<GlassCard>
                 BoxShadow(
                   color: UIHelpers.withOpacity(
                     themeColors.primaryDark,
-                    _isPressed ? 0.15 : 0.1,
+                    _isPressed ? 0.2 : 0.15,
                   ),
                   blurRadius: _isPressed ? 15 : 20,
                   offset: Offset(0, _isPressed ? 4 : 8),
@@ -282,14 +282,14 @@ class _DramaticGlassCardState extends ConsumerState<DramaticGlassCard>
             curve: AppAnimations.toggleCurve,
             width: widget.width,
             height: widget.height,
-            padding: widget.padding ?? const EdgeInsets.all(AppSpacing.lg),
+            padding: widget.padding ?? const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
               gradient: widget.gradient ??
                   LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      UIHelpers.withOpacity(themeColors.glassHighlight, 1.5),
+                      UIHelpers.withOpacity(themeColors.glassHighlight, 0.4),
                       themeColors.glassBackground,
                     ],
                   ),

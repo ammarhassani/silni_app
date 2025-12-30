@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_spacing.dart';
+import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/services/reminder_schedules_service.dart';
 import '../../../shared/widgets/collapsible_picker.dart';
 import 'day_selector_widget.dart';
+import '../../../shared/utils/ui_helpers.dart';
+import '../../../shared/widgets/theme_aware_dialog.dart';
 
 /// Dialog for creating a new reminder schedule
 class CreateScheduleDialog extends ConsumerStatefulWidget {
@@ -66,6 +69,26 @@ class _CreateScheduleDialogState extends ConsumerState<CreateScheduleDialog> {
   }
 
   void _createSchedule() async {
+    // Validate weekly schedule has at least one day selected
+    if (widget.template.frequency == ReminderFrequency.weekly && _selectedDays.isEmpty) {
+      UIHelpers.showSnackBar(
+        context,
+        'يرجى اختيار يوم من أيام الأسبوع',
+        isError: true,
+      );
+      return;
+    }
+
+    // Validate monthly schedule has a day selected
+    if (widget.template.frequency == ReminderFrequency.monthly && _selectedDayOfMonth == null) {
+      UIHelpers.showSnackBar(
+        context,
+        'يرجى اختيار يوم من الشهر',
+        isError: true,
+      );
+      return;
+    }
+
     final service = ref.read(reminderSchedulesServiceProvider);
 
     try {
@@ -89,14 +112,18 @@ class _CreateScheduleDialogState extends ConsumerState<CreateScheduleDialog> {
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم إنشاء التذكير بنجاح')),
+        UIHelpers.showSnackBar(
+          context,
+          'تم إنشاء التذكير بنجاح',
+          backgroundColor: AppColors.islamicGreenPrimary,
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e')),
+        UIHelpers.showSnackBar(
+          context,
+          'حدث خطأ أثناء إنشاء التذكير',
+          isError: true,
         );
       }
     }
@@ -106,12 +133,9 @@ class _CreateScheduleDialogState extends ConsumerState<CreateScheduleDialog> {
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
 
-    return AlertDialog(
-      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
-      title: Text(
-        'إنشاء ${widget.template.title}',
-        style: AppTypography.headlineMedium.copyWith(color: Colors.white),
-      ),
+    return ThemeAwareAlertDialog(
+      title: 'إنشاء ${widget.template.title}',
+      titleIcon: const Icon(Icons.add_alarm_rounded, color: Colors.white),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,

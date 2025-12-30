@@ -33,4 +33,12 @@ abstract class EnvServices {
   /// Google OAuth - Web Client ID (for Supabase OAuth)
   @EnviedField(varName: 'GOOGLE_WEB_CLIENT_ID', defaultValue: '')
   static String googleWebClientId = _EnvServices.googleWebClientId;
+
+  /// RevenueCat API Key for iOS (obfuscated)
+  @EnviedField(varName: 'REVENUECAT_APPLE_API_KEY', obfuscate: true, defaultValue: '')
+  static String revenueCatAppleApiKey = _EnvServices.revenueCatAppleApiKey;
+
+  /// RevenueCat API Key for Android (obfuscated)
+  @EnviedField(varName: 'REVENUECAT_GOOGLE_API_KEY', obfuscate: true, defaultValue: '')
+  static String revenueCatGoogleApiKey = _EnvServices.revenueCatGoogleApiKey;
 }

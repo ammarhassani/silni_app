@@ -13,6 +13,8 @@ import '../providers/message_composer_provider.dart';
 import '../widgets/ai_error_card.dart';
 import '../widgets/ai_loading_indicator.dart';
 import '../widgets/relative_selector.dart';
+import '../../../shared/utils/ui_helpers.dart';
+import '../../../shared/widgets/theme_aware_dialog.dart';
 
 /// Screen for AI-powered message composition
 class MessageComposerScreen extends ConsumerWidget {
@@ -508,16 +510,11 @@ class _MessageCard extends ConsumerWidget {
                     : () {
                         Clipboard.setData(ClipboardData(text: message));
                         HapticFeedback.lightImpact();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'تم نسخ الرسالة',
-                              style: AppTypography.bodyMedium.copyWith(color: Colors.white),
-                            ),
-                            backgroundColor: themeColors.primary,
-                            behavior: SnackBarBehavior.floating,
-                            duration: const Duration(seconds: 2),
-                          ),
+                        UIHelpers.showSnackBar(
+                          context,
+                          'تم نسخ الرسالة',
+                          backgroundColor: themeColors.primary,
+                          duration: const Duration(seconds: 2),
                         );
                       },
                 padding: EdgeInsets.zero,
@@ -583,16 +580,9 @@ class _MessageCard extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: themeColors.background2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        ),
-        title: Text(
-          'تعديل الرسالة',
-          style: AppTypography.titleMedium.copyWith(color: Colors.white),
-          textAlign: TextAlign.center,
-        ),
+      builder: (context) => ThemeAwareAlertDialog(
+        title: 'تعديل الرسالة',
+        titleIcon: const Icon(Icons.edit_note_rounded, color: Colors.white),
         content: TextField(
           controller: controller,
           maxLines: 8,

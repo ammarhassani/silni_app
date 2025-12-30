@@ -17,6 +17,7 @@ import '../../../shared/services/auth_service.dart';
 import '../providers/auth_provider.dart';
 import '../../../core/services/app_logger_service.dart';
 import '../../../core/errors/app_errors.dart';
+import '../../../shared/utils/ui_helpers.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -182,12 +183,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       String errorMessage = AuthService.getErrorMessage(e.message);
       logger.debug('Showing error to user', category: LogCategory.auth, tag: 'SignUpScreen', metadata: {'errorMessage': errorMessage});
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: AppColors.error,
-          duration: const Duration(seconds: 3),
-        ),
+      UIHelpers.showSnackBar(
+        context,
+        errorMessage,
+        isError: true,
       );
 
       logger.error('Signup failed with auth error', category: LogCategory.auth, tag: 'SignUpScreen');
@@ -215,12 +214,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       String errorMessage = AuthService.getErrorMessage(e.toString());
       logger.debug('Showing error to user', category: LogCategory.auth, tag: 'SignUpScreen', metadata: {'errorMessage': errorMessage});
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: AppColors.error,
-          duration: const Duration(seconds: 3),
-        ),
+      UIHelpers.showSnackBar(
+        context,
+        errorMessage,
+        isError: true,
       );
 
       logger.error('Signup failed with unexpected error', category: LogCategory.auth, tag: 'SignUpScreen');

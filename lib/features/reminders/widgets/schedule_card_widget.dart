@@ -63,7 +63,7 @@ class ScheduleCard extends ConsumerWidget {
               : null,
           child: GlassCard(
             padding: const EdgeInsets.all(AppSpacing.md),
-            margin: const EdgeInsets.only(bottom: AppSpacing.md),
+            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
             gradient: isHovering
                 ? LinearGradient(
                     colors: [
@@ -90,13 +90,13 @@ class ScheduleCard extends ConsumerWidget {
                           Text(
                             schedule.frequency.arabicName,
                             style: AppTypography.headlineSmall.copyWith(
-                              color: Colors.white,
+                              color: themeColors.textPrimary, // Better contrast
                             ),
                           ),
                           Text(
                             schedule.description,
                             style: AppTypography.bodySmall.copyWith(
-                              color: Colors.white.withValues(alpha: 0.7),
+                              color: themeColors.textSecondary, // Better contrast
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -134,7 +134,7 @@ class ScheduleCard extends ConsumerWidget {
                   Text(
                     'لا يوجد أقارب في هذا التذكير',
                     style: AppTypography.bodySmall.copyWith(
-                      color: Colors.white.withValues(alpha: 0.5),
+                      color: themeColors.textSecondary,
                     ),
                   )
                 else

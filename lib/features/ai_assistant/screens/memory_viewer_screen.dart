@@ -9,6 +9,8 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/services/chat_history_service.dart';
 import '../providers/ai_chat_provider.dart';
+import '../../../shared/utils/ui_helpers.dart';
+import '../../../shared/widgets/theme_aware_dialog.dart';
 
 /// Screen to view and manage AI memories
 class MemoryViewerScreen extends ConsumerStatefulWidget {
@@ -321,41 +323,30 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
     HapticFeedback.lightImpact();
     return await showDialog<bool>(
           context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: themeColors.background2,
-            title: Text(
-              'حذف الذكرى؟',
-              style: AppTypography.titleLarge.copyWith(color: themeColors.textOnGradient),
-            ),
+          builder: (context) => ThemeAwareAlertDialog(
+            title: 'حذف المعلومة؟',
+            titleIcon: const Icon(Icons.delete_forever_rounded, color: Colors.red),
             content: Text(
               'هل تريد حذف هذه المعلومة من ذاكرة واصل؟',
               style: AppTypography.bodyMedium.copyWith(
-                color: themeColors.textOnGradient.withValues(alpha: 0.7),
+                color: themeColors.textOnGradient.withValues(alpha: 0.9),
               ),
             ),
             actions: [
-              Semantics(
-                label: 'إلغاء',
-                button: true,
-                child: TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text(
-                    'إلغاء',
-                    style: AppTypography.labelLarge.copyWith(
-                      color: themeColors.textOnGradient.withValues(alpha: 0.54),
-                    ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(
+                  'إلغاء',
+                  style: AppTypography.labelLarge.copyWith(
+                    color: themeColors.textOnGradient.withValues(alpha: 0.54),
                   ),
                 ),
               ),
-              Semantics(
-                label: 'حذف الذكرى',
-                button: true,
-                child: TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: Text(
-                    'حذف',
-                    style: AppTypography.labelLarge.copyWith(color: Colors.red),
-                  ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(
+                  'حذف',
+                  style: AppTypography.labelLarge.copyWith(color: Colors.red),
                 ),
               ),
             ],
@@ -379,15 +370,10 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
     _deletingIds.remove(memory.id);
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'تم حذف الذكرى',
-            style: AppTypography.bodyMedium.copyWith(color: themeColors.textOnGradient),
-          ),
-          backgroundColor: themeColors.background2,
-          behavior: SnackBarBehavior.floating,
-        ),
+      UIHelpers.showSnackBar(
+        context,
+        'تم حذف الذكرى',
+        backgroundColor: themeColors.background2,
       );
     }
   }
@@ -395,18 +381,9 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
   void _showInfoDialog(dynamic themeColors) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: themeColors.background2,
-        title: Row(
-          children: [
-            Icon(Icons.psychology, color: themeColors.primaryLight),
-            const SizedBox(width: AppSpacing.xs),
-            Text(
-              'عن ذاكرة واصل',
-              style: AppTypography.titleLarge.copyWith(color: themeColors.textOnGradient),
-            ),
-          ],
-        ),
+      builder: (context) => ThemeAwareAlertDialog(
+        title: 'عن ذاكرة واصل',
+        titleIcon: Icon(Icons.psychology, color: themeColors.primaryLight),
         content: Text(
           'واصل يتذكر المعلومات المهمة من محادثاتكم لتقديم نصائح شخصية أفضل.\n\n'
           'يحفظ:\n'
@@ -416,21 +393,17 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
           '• أنماط عائلتك\n\n'
           'يمكنك حذف أي معلومة بالسحب لليسار.',
           style: AppTypography.bodyMedium.copyWith(
-            color: themeColors.textOnGradient.withValues(alpha: 0.7),
+            color: themeColors.textOnGradient.withValues(alpha: 0.8),
             height: 1.6,
           ),
         ),
         actions: [
-          Semantics(
-            label: 'فهمت',
-            button: true,
-            child: TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'فهمت',
-                style: AppTypography.labelLarge.copyWith(
-                  color: themeColors.primaryLight,
-                ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'فهمت',
+              style: AppTypography.labelLarge.copyWith(
+                color: themeColors.primaryLight,
               ),
             ),
           ),

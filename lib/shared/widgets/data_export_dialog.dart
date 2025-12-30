@@ -7,6 +7,8 @@ import '../../core/theme/app_themes.dart';
 import '../../core/theme/theme_provider.dart';
 import '../providers/data_export_provider.dart';
 import '../services/data_export_service.dart';
+import '../../shared/utils/ui_helpers.dart';
+import '../../shared/widgets/theme_aware_dialog.dart';
 
 /// Dialog for data export progress and completion
 class DataExportDialog extends ConsumerStatefulWidget {
@@ -56,11 +58,10 @@ class _DataExportDialogState extends ConsumerState<DataExportDialog> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('حدث خطأ أثناء المشاركة: $e'),
-            backgroundColor: Colors.red,
-          ),
+        UIHelpers.showSnackBar(
+          context,
+          'حدث خطأ أثناء المشاركة: $e',
+          isError: true,
         );
       }
     }
@@ -358,15 +359,9 @@ Future<bool?> showDataExportConfirmationDialog(
 ) {
   return showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-      ),
-      title: Text(
-        'تصدير بياناتي',
-        style: AppTypography.headlineSmall.copyWith(color: Colors.white),
-      ),
+    builder: (context) => ThemeAwareAlertDialog(
+      title: 'تصدير بياناتي',
+      titleIcon: const Icon(Icons.download_rounded, color: Colors.white),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

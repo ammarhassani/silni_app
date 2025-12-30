@@ -15,6 +15,8 @@ import '../../../shared/services/relatives_service.dart';
 import '../../../shared/services/auth_service.dart';
 import '../../../core/services/error_handler_service.dart';
 import '../widgets/detail/widgets.dart';
+import '../../../shared/utils/ui_helpers.dart';
+import '../../../shared/widgets/theme_aware_dialog.dart';
 
 /// Provider for watching a single relative (cache-first)
 final relativeDetailProvider =
@@ -217,13 +219,10 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
       if (mounted) {
         final themeColors = ref.read(themeColorsProvider);
         HapticFeedback.lightImpact();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تم تسجيل التواصل: ${type.arabicName}'),
-            duration: const Duration(seconds: 1),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: themeColors.primary,
-          ),
+        UIHelpers.showSnackBar(
+          context,
+          'تم تسجيل التواصل: ${type.arabicName}',
+          backgroundColor: themeColors.primary,
         );
       }
     } catch (e) {
@@ -241,21 +240,9 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: themeColors.background1.withValues(alpha: 0.95),
-        title: Row(
-          children: [
-            const Icon(Icons.warning_rounded, color: Colors.red),
-            const SizedBox(width: AppSpacing.sm),
-            Flexible(
-              child: Text(
-                'تأكيد الحذف',
-                style: AppTypography.titleLarge.copyWith(color: themeColors.textOnGradient),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
+      builder: (context) => ThemeAwareAlertDialog(
+        title: 'تأكيد الحذف',
+        titleIcon: const Icon(Icons.warning_rounded, color: Colors.red),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,32 +289,24 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
           ],
         ),
         actions: [
-          Semantics(
-            label: 'إلغاء',
-            button: true,
-            child: TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(
-                'إلغاء',
-                style: AppTypography.labelLarge.copyWith(color: themeColors.textOnGradient.withValues(alpha: 0.7)),
-              ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              'إلغاء',
+              style: AppTypography.labelLarge.copyWith(color: themeColors.textOnGradient.withValues(alpha: 0.7)),
             ),
           ),
-          Semantics(
-            label: 'حذف القريب',
-            button: true,
-            child: ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: themeColors.textOnGradient,
-              ),
-              child: Text(
-                'حذف',
-                style: AppTypography.labelLarge.copyWith(
-                  color: themeColors.textOnGradient,
-                  fontWeight: FontWeight.bold,
-                ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: themeColors.textOnGradient,
+            ),
+            child: Text(
+              'حذف',
+              style: AppTypography.labelLarge.copyWith(
+                color: themeColors.textOnGradient,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
@@ -347,24 +326,20 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
       if (!mounted) return;
 
       final themeColors = ref.read(themeColorsProvider);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('تم حذف ${relative.fullName} بنجاح'),
-          backgroundColor: themeColors.primary,
-          duration: const Duration(seconds: 3),
-        ),
+      UIHelpers.showSnackBar(
+        context,
+        'تم حذف ${relative.fullName} بنجاح',
+        backgroundColor: themeColors.primary,
       );
 
       context.pop();
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorHandler.getArabicMessage(e)),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
+      UIHelpers.showSnackBar(
+        context,
+        errorHandler.getArabicMessage(e),
+        isError: true,
       );
     }
   }

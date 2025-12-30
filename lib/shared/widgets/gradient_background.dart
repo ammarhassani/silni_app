@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/providers/pattern_animation_provider.dart';
 import '../../core/theme/theme_provider.dart';
+import 'animated_islamic_pattern_background.dart';
 import 'islamic_pattern_background.dart';
 
 class GradientBackground extends ConsumerWidget {
@@ -11,6 +13,9 @@ class GradientBackground extends ConsumerWidget {
   final bool showPattern;
   final double patternOpacity;
 
+  /// Optional scroll controller for parallax effect on pattern
+  final ScrollController? scrollController;
+
   const GradientBackground({
     super.key,
     required this.child,
@@ -18,12 +23,14 @@ class GradientBackground extends ConsumerWidget {
     this.animated = false,
     this.showPattern = true,
     this.patternOpacity = 0.08,
+    this.scrollController,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeType = ref.watch(themeProvider);
     final themeColors = ref.watch(themeColorsProvider);
+    final isPatternAnimationEnabled = ref.watch(isPatternAnimationEnabledProvider);
 
     // Use theme-aware gradient
     final defaultGradient = themeColors.backgroundGradient;
@@ -32,11 +39,22 @@ class GradientBackground extends ConsumerWidget {
 
     // Wrap with Islamic pattern if enabled
     if (showPattern) {
-      backgroundChild = IslamicPatternBackground(
-        themeType: themeType,
-        opacity: patternOpacity,
-        child: child,
-      );
+      if (isPatternAnimationEnabled) {
+        // Use animated pattern with touch and motion effects
+        backgroundChild = AnimatedIslamicPatternBackground(
+          themeType: themeType,
+          opacity: patternOpacity,
+          scrollController: scrollController,
+          child: child,
+        );
+      } else {
+        // Use static pattern for better battery life
+        backgroundChild = IslamicPatternBackground(
+          themeType: themeType,
+          opacity: patternOpacity,
+          child: child,
+        );
+      }
     }
 
     if (animated) {

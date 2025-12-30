@@ -25,6 +25,16 @@ class RealtimeSubscriptionsNotifier
 
   /// Subscribe to all real-time updates for the current user
   Future<void> subscribeToUserUpdates(String userId) async {
+    // Guard against empty userId to prevent silent failures
+    if (userId.isEmpty) {
+      _logger.warning(
+        'Cannot subscribe to real-time updates: userId is empty',
+        category: LogCategory.database,
+        tag: 'RealtimeSubscriptionsNotifier',
+      );
+      return;
+    }
+
     _logger.info(
       'Setting up real-time subscriptions for user',
       category: LogCategory.database,
@@ -307,6 +317,10 @@ final autoRealtimeSubscriptionsProvider = Provider<void>((ref) {
   final authState = ref.watch(authStateProvider);
   final logger = AppLoggerService();
 
+  // Track last subscribed userId to avoid duplicate subscriptions
+  String? lastSubscribedUserId;
+  bool isSetupScheduled = false;
+
   logger.info(
     'Auto real-time subscriptions provider checking auth state',
     category: LogCategory.database,
@@ -316,6 +330,43 @@ final autoRealtimeSubscriptionsProvider = Provider<void>((ref) {
       'userId': authState.value?.id,
     },
   );
+
+  void setupSubscriptions(String userId) {
+    // Avoid duplicate setup for same user
+    if (lastSubscribedUserId == userId) {
+      logger.info(
+        'Skipping duplicate subscription setup for same user',
+        category: LogCategory.database,
+        tag: 'AutoRealtimeSubscriptions',
+        metadata: {'userId': userId},
+      );
+      return;
+    }
+
+    if (isSetupScheduled) return;
+    isSetupScheduled = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      isSetupScheduled = false;
+      final subscriptionsNotifier = ref.read(
+        realtimeSubscriptionsProvider.notifier,
+      );
+      subscriptionsNotifier.subscribeToUserUpdates(userId);
+      lastSubscribedUserId = userId;
+    });
+  }
+
+  void cleanupSubscriptions() {
+    if (lastSubscribedUserId == null) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final subscriptionsNotifier = ref.read(
+        realtimeSubscriptionsProvider.notifier,
+      );
+      subscriptionsNotifier.unsubscribeFromAll();
+      lastSubscribedUserId = null;
+    });
+  }
 
   // When auth state changes, update subscriptions
   ref.listen(authStateProvider, (previous, next) {
@@ -331,31 +382,16 @@ final autoRealtimeSubscriptionsProvider = Provider<void>((ref) {
     );
 
     if (next.value != null) {
-      // User logged in, set up subscriptions - defer to avoid provider lifecycle violation
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final subscriptionsNotifier = ref.read(
-          realtimeSubscriptionsProvider.notifier,
-        );
-        subscriptionsNotifier.subscribeToUserUpdates(next.value!.id);
-      });
+      // User logged in, set up subscriptions
+      setupSubscriptions(next.value!.id);
     } else {
       // User logged out, clean up subscriptions
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final subscriptionsNotifier = ref.read(
-          realtimeSubscriptionsProvider.notifier,
-        );
-        subscriptionsNotifier.unsubscribeFromAll();
-      });
+      cleanupSubscriptions();
     }
   });
 
   // Initial setup - defer to avoid provider lifecycle violation
   if (authState.value != null) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final subscriptionsNotifier = ref.read(
-        realtimeSubscriptionsProvider.notifier,
-      );
-      subscriptionsNotifier.subscribeToUserUpdates(authState.value!.id);
-    });
+    setupSubscriptions(authState.value!.id);
   }
 });

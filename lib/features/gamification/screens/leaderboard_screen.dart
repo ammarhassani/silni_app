@@ -6,11 +6,14 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/config/supabase_config.dart';
+import '../../../core/models/subscription_tier.dart';
+import '../../../core/providers/subscription_provider.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
+import '../../subscription/screens/paywall_screen.dart';
 
 enum LeaderboardType {
   points,
@@ -134,6 +137,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
   @override
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
+    final hasAccess = ref.watch(featureAccessProvider(FeatureIds.leaderboard));
 
     return Scaffold(
       body: Semantics(
@@ -167,83 +171,116 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                           ),
                         ),
                         const Spacer(),
-                        Semantics(
-                          label: 'تحديث',
-                          button: true,
-                          child: IconButton(
-                            onPressed: _loadLeaderboard,
-                            icon: const Icon(Icons.refresh_rounded),
-                            color: themeColors.textOnGradient,
+                        // Pro badge
+                        if (!hasAccess)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [AppColors.premiumGold, AppColors.premiumGoldDark],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.lock, size: 14, color: Colors.black87),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'PRO',
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: Colors.black87,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
+                        if (hasAccess)
+                          Semantics(
+                            label: 'تحديث',
+                            button: true,
+                            child: IconButton(
+                              onPressed: _loadLeaderboard,
+                              icon: const Icon(Icons.refresh_rounded),
+                              color: themeColors.textOnGradient,
+                            ),
+                          ),
                       ],
                     ),
                   ),
 
-                  // Tabs
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                    child: GlassCard(
-                      child: TabBar(
-                        controller: _tabController,
-                        indicatorColor: AppColors.premiumGold,
-                        labelColor: themeColors.textOnGradient,
-                        unselectedLabelColor: themeColors.textOnGradient.withValues(alpha: 0.6),
-                        labelStyle: AppTypography.titleSmall,
-                        tabs: const [
-                          Tab(text: 'النقاط'),
-                          Tab(text: 'السلسلة'),
-                          Tab(text: 'المستوى'),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: AppSpacing.md),
-
-                  // Current user rank
-                  if (_currentUserRank != null)
+                  // Show upgrade prompt if no access, otherwise show leaderboard
+                  if (!hasAccess)
+                    Expanded(
+                      child: _buildUpgradePrompt(themeColors),
+                    )
+                  else ...[
+                    // Tabs
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                      child: _buildUserRankCard(_currentUserRank!, isCurrentUser: true, themeColors: themeColors),
+                      child: GlassCard(
+                        child: TabBar(
+                          controller: _tabController,
+                          indicatorColor: AppColors.premiumGold,
+                          labelColor: themeColors.textOnGradient,
+                          unselectedLabelColor: themeColors.textOnGradient.withValues(alpha: 0.6),
+                          labelStyle: AppTypography.titleSmall,
+                          tabs: const [
+                            Tab(text: 'النقاط'),
+                            Tab(text: 'السلسلة'),
+                            Tab(text: 'المستوى'),
+                          ],
+                        ),
+                      ),
                     ),
 
-                  const SizedBox(height: AppSpacing.md),
+                    const SizedBox(height: AppSpacing.md),
 
-                  // Leaderboard list
-                  Expanded(
-                    child: _isLoading
-                        ? const Center(
-                            child: PremiumLoadingIndicator(
-                              message: 'جاري تحميل الترتيب...',
-                            ),
-                          )
-                        : _leaderboardData.isEmpty
-                            ? Center(
-                                child: Text(
-                                  'لا توجد بيانات',
-                                  style: AppTypography.bodyLarge.copyWith(
-                                    color: themeColors.textOnGradient.withValues(alpha: 0.7),
-                                  ),
-                                ),
-                              )
-                            : ListView.builder(
-                                padding: const EdgeInsets.all(AppSpacing.md),
-                                itemCount: _leaderboardData.length,
-                                itemBuilder: (context, index) {
-                                  final userData = _leaderboardData[index];
-                                  final user = ref.read(currentUserProvider);
-                                  final isCurrentUser = userData['id'] == user?.id;
+                    // Current user rank
+                    if (_currentUserRank != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                        child: _buildUserRankCard(_currentUserRank!, isCurrentUser: true, themeColors: themeColors),
+                      ),
 
-                                  return _buildLeaderboardItem(
-                                    userData,
-                                    index + 1,
-                                    isCurrentUser,
-                                    themeColors,
-                                  );
-                                },
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Leaderboard list
+                    Expanded(
+                      child: _isLoading
+                          ? const Center(
+                              child: PremiumLoadingIndicator(
+                                message: 'جاري تحميل الترتيب...',
                               ),
-                  ),
+                            )
+                          : _leaderboardData.isEmpty
+                              ? Center(
+                                  child: Text(
+                                    'لا توجد بيانات',
+                                    style: AppTypography.bodyLarge.copyWith(
+                                      color: themeColors.textOnGradient.withValues(alpha: 0.7),
+                                    ),
+                                  ),
+                                )
+                              : ListView.builder(
+                                  padding: const EdgeInsets.all(AppSpacing.md),
+                                  itemCount: _leaderboardData.length,
+                                  itemBuilder: (context, index) {
+                                    final userData = _leaderboardData[index];
+                                    final user = ref.read(currentUserProvider);
+                                    final isCurrentUser = userData['id'] == user?.id;
+
+                                    return _buildLeaderboardItem(
+                                      userData,
+                                      index + 1,
+                                      isCurrentUser,
+                                      themeColors,
+                                    );
+                                  },
+                                ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -516,5 +553,119 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     if (parts.isEmpty) return '؟';
     if (parts.length == 1) return parts[0][0].toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  /// Build upgrade prompt for non-pro users
+  Widget _buildUpgradePrompt(dynamic themeColors) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Lock icon with glow
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.premiumGold.withValues(alpha: 0.3),
+                    AppColors.premiumGoldDark.withValues(alpha: 0.2),
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.premiumGold.withValues(alpha: 0.3),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.leaderboard_rounded,
+                size: 64,
+                color: AppColors.premiumGold,
+              ),
+            )
+                .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                .scale(
+                  begin: const Offset(1, 1),
+                  end: const Offset(1.05, 1.05),
+                  duration: const Duration(seconds: 2),
+                ),
+
+            const SizedBox(height: AppSpacing.xl),
+
+            Text(
+              'لوحة المتصدرين',
+              style: AppTypography.headlineMedium.copyWith(
+                color: themeColors.textOnGradient,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.sm),
+
+            Text(
+              'ميزة حصرية للمشتركين',
+              style: AppTypography.bodyLarge.copyWith(
+                color: themeColors.textOnGradient.withValues(alpha: 0.7),
+              ),
+              textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: AppSpacing.md),
+
+            Text(
+              'اشترك في الباقة الاحترافية لمقارنة ترتيبك مع الآخرين',
+              style: AppTypography.bodyMedium.copyWith(
+                color: themeColors.textOnGradient.withValues(alpha: 0.6),
+              ),
+              textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: AppSpacing.xl),
+
+            // Upgrade button
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const PaywallScreen(
+                      featureToUnlock: FeatureIds.leaderboard,
+                    ),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.premiumGold,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl,
+                  vertical: AppSpacing.md,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.workspace_premium_rounded),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    'ترقية إلى PRO',
+                    style: AppTypography.titleMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

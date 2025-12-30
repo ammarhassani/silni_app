@@ -28,6 +28,7 @@ import 'shared/services/unified_notification_service.dart';
 import 'core/services/analytics_service.dart';
 import 'core/services/performance_monitoring_service.dart';
 import 'core/services/app_health_service.dart';
+import 'core/services/subscription_service.dart';
 import 'shared/widgets/error_boundary.dart';
 import 'shared/widgets/premium_loading_indicator.dart';
 
@@ -312,6 +313,35 @@ void main() async {
       stackTrace: stackTrace,
     );
     // Don't rethrow - app can work without notifications
+  }
+
+  // Initialize subscription service (RevenueCat)
+  // Only pass userId if Supabase is initialized and user is authenticated
+  logger.info(
+    'Initializing subscription service...',
+    category: LogCategory.service,
+    tag: 'Subscription',
+  );
+  try {
+    final currentUserId = SupabaseConfig.isInitialized ? SupabaseConfig.currentUserId : null;
+    await SubscriptionService.instance.initialize(
+      userId: currentUserId,
+    );
+    logger.info(
+      'Subscription service initialized successfully',
+      category: LogCategory.service,
+      tag: 'Subscription',
+      metadata: {'hasUserId': currentUserId != null},
+    );
+  } catch (e, stackTrace) {
+    logger.error(
+      'Subscription service initialization failed',
+      category: LogCategory.service,
+      tag: 'Subscription',
+      metadata: {'error': e.toString()},
+      stackTrace: stackTrace,
+    );
+    // Don't rethrow - app can work without subscriptions (defaults to free tier)
   }
 
   // Configure global error handlers with device context

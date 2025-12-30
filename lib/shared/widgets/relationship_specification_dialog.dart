@@ -83,6 +83,12 @@ class _RelationshipSpecificationDialogState
     });
   }
 
+  void _updateRelationshipType(int index, RelationshipType type) {
+    setState(() {
+      _contactsWithRelationship[index].relationshipType = type;
+    });
+  }
+
   void _updateCustomRelationship(int index, String customRelationship) {
     setState(() {
       _contactsWithRelationship[index].customRelationship = customRelationship;
@@ -92,24 +98,35 @@ class _RelationshipSpecificationDialogState
   @override
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
+    final mediaQuery = MediaQuery.of(context);
+    final safeHeight = mediaQuery.size.height -
+        mediaQuery.padding.top -
+        mediaQuery.padding.bottom;
 
     return Dialog(
       backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xl,
+      ),
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
-        height: MediaQuery.of(context).size.height * 0.8,
+        width: mediaQuery.size.width * 0.9,
+        constraints: BoxConstraints(
+          maxHeight: safeHeight * 0.85,
+        ),
         decoration: BoxDecoration(
           color: themeColors.background1.withValues(alpha: 0.95),
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           border: Border.all(color: themeColors.primary.withValues(alpha: 0.3)),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Header
             _buildHeader(themeColors),
 
             // Content
-            Expanded(child: _buildContactsList(themeColors)),
+            Flexible(child: _buildContactsList(themeColors)),
 
             // Actions
             _buildActions(themeColors),
@@ -299,29 +316,33 @@ class _RelationshipSpecificationDialogState
       runSpacing: AppSpacing.xs,
       children: RelationshipType.values.map((type) {
         final isSelected = type == currentType;
-        return Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.xs,
-          ),
-          decoration: BoxDecoration(
-            gradient: isSelected ? themeColors.primaryGradient : null,
-            color: isSelected ? null : Colors.white.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            border: Border.all(
-              color: isSelected
-                  ? Colors.transparent
-                  : Colors.white.withValues(alpha: 0.3),
-              width: 1,
+        return GestureDetector(
+          onTap: () => _updateRelationshipType(index, type),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.xs,
             ),
-          ),
-          child: Text(
-            type == RelationshipType.other
-                ? 'أخرى'
-                : _getRelationshipArabicName(type),
-            style: AppTypography.bodySmall.copyWith(
-              color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.8),
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            decoration: BoxDecoration(
+              gradient: isSelected ? themeColors.primaryGradient : null,
+              color: isSelected ? null : Colors.white.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              border: Border.all(
+                color: isSelected
+                    ? Colors.transparent
+                    : Colors.white.withValues(alpha: 0.3),
+                width: 1,
+              ),
+            ),
+            child: Text(
+              type == RelationshipType.other
+                  ? 'أخرى'
+                  : _getRelationshipArabicName(type),
+              style: AppTypography.bodySmall.copyWith(
+                color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.8),
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+              textAlign: TextAlign.center,
             ),
           ),
         );
@@ -372,6 +393,7 @@ class _RelationshipSpecificationDialogState
                       ? FontWeight.bold
                       : FontWeight.normal,
                 ),
+                textAlign: TextAlign.center,
               ),
             ),
           ),
@@ -413,6 +435,7 @@ class _RelationshipSpecificationDialogState
                       ? FontWeight.bold
                       : FontWeight.normal,
                 ),
+                textAlign: TextAlign.center,
               ),
             ),
           ),
@@ -435,21 +458,21 @@ class _RelationshipSpecificationDialogState
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           // Cancel button
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.3),
-                width: 1,
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.md,
               ),
-            ),
-            child: GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
               child: Text(
                 'إلغاء',
                 style: AppTypography.labelLarge.copyWith(

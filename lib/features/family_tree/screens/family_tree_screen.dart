@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +22,10 @@ import '../models/tree_node.dart';
 import '../../../core/providers/realtime_provider.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/theme/app_themes.dart';
+import '../../../core/models/subscription_tier.dart';
+import '../../../core/providers/subscription_provider.dart';
+import '../../subscription/screens/paywall_screen.dart';
+import '../../../shared/utils/ui_helpers.dart';
 
 // Note: relativesStreamProvider is now imported from features/home/screens/home_screen.dart
 
@@ -57,22 +62,16 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       if (mounted) {
         setState(() => _showWatermark = true);
         // Show snackbar with branding
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Image.asset(
-                  'assets/images/silni_branding.png',
-                  width: 40,
-                  height: 40,
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                const Text('شجرة عائلتي من صلني 🌳'),
-              ],
-            ),
-            backgroundColor: AppColors.islamicGreenDark,
-            duration: const Duration(seconds: 3),
-          ),
+        // Show snackbar with branding
+        // Hide previous snackbars
+        ScaffoldMessenger.of(context).clearSnackBars();
+        
+        // Show custom branded snackbar
+        UIHelpers.showSnackBar(
+          context,
+          'شجرة عائلتي من صلني 🌳',
+          backgroundColor: AppColors.islamicGreenDark,
+          duration: const Duration(seconds: 3),
         );
         // Hide watermark after delay
         Future.delayed(const Duration(seconds: 3), () {
@@ -129,12 +128,20 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     final displayName =
         user?.userMetadata?['full_name'] ?? user?.email ?? 'أنا';
 
+    // Check feature access
+    final hasFamilyTreeAccess = ref.watch(featureAccessProvider(FeatureIds.familyTree));
+
     // Initialize real-time subscriptions for this user
     ref.watch(autoRealtimeSubscriptionsProvider);
 
     final relativesAsync = ref.watch(relativesStreamProvider(userId));
 
     final themeColors = ref.watch(themeColorsProvider);
+
+    // Show locked state for free users
+    if (!hasFamilyTreeAccess) {
+      return _buildLockedState(context, themeColors);
+    }
 
     return Scaffold(
       body: Semantics(
@@ -329,7 +336,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                 }
               },
               child: Container(
-                padding: const EdgeInsets.all(AppSpacing.xl),
+                padding: const EdgeInsets.all(AppSpacing.sm),
                 color: Colors.transparent,
                 child: _buildTreeLayout(treeData, relatives, nodeSize),
               ),
@@ -547,12 +554,12 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         if (root.children.isNotEmpty &&
             root.children.first.children.isNotEmpty) ...[
           _buildGeneration(root.children.first.children, relatives, -2, nodeSize),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm), // Increased spacing
           _buildConnectionLines(
             root.children.first.children.length,
             vertical: true,
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm), // Increased spacing
         ],
 
         // Parents (Level -1)
@@ -563,25 +570,28 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
             -1,
             nodeSize,
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm), // Increased spacing
           _buildConnectionLines(
             root.children.where((n) => n.level == -1).length,
             vertical: true,
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm), // Increased spacing
         ],
 
         // User + Siblings + Spouse (Level 0)
-        _buildSiblingRow(root, relatives, nodeSize),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+          child: _buildSiblingRow(root, relatives, nodeSize),
+        ),
 
         // Children + Extended (Level 1+)
         if (root.children.where((n) => n.level >= 1).isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
           _buildConnectionLines(
             root.children.where((n) => n.level >= 1).length,
             vertical: true,
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
           _buildGeneration(
             root.children.where((n) => n.level >= 1).toList(),
             relatives,
@@ -602,7 +612,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     if (nodes.isEmpty) return const SizedBox.shrink();
 
     return Wrap(
-      spacing: AppSpacing.md,
+      spacing: AppSpacing.md, // Increased spacing between nodes
       runSpacing: AppSpacing.md,
       alignment: WrapAlignment.center,
       children: nodes.map((node) {
@@ -677,22 +687,13 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
 
   Widget _buildHorizontalConnection({bool isSpouseConnection = false}) {
     return Container(
-      width: 40,
-      height: 3,
+      width: 20,
+      height: 2,
       decoration: BoxDecoration(
         gradient: isSpouseConnection
             ? AppColors.goldenGradient  // Golden for spouse connection (marriage)
             : AppColors.primaryGradient, // Green for sibling connection
-        borderRadius: BorderRadius.circular(2),
-        boxShadow: [
-          BoxShadow(
-            color: isSpouseConnection
-                ? AppColors.premiumGold.withValues(alpha: 0.4)
-                : AppColors.islamicGreenPrimary.withValues(alpha: 0.4),
-            blurRadius: 4,
-            spreadRadius: 1,
-          ),
-        ],
+        borderRadius: BorderRadius.circular(1),
       ),
     );
   }
@@ -702,20 +703,20 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
 
     if (vertical) {
       return Container(
-        height: 30,
-        width: 3,
+        height: 16,
+        width: 2,
         decoration: BoxDecoration(
           gradient: AppColors.primaryGradient,
-          borderRadius: BorderRadius.circular(2),
+          borderRadius: BorderRadius.circular(1),
         ),
       );
     } else {
       return Container(
-        width: 30,
-        height: 3,
+        width: 16,
+        height: 2,
         decoration: BoxDecoration(
           gradient: AppColors.primaryGradient,
-          borderRadius: BorderRadius.circular(2),
+          borderRadius: BorderRadius.circular(1),
         ),
       );
     }
@@ -924,6 +925,363 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildLockedState(BuildContext context, dynamic themeColors) {
+    final user = ref.watch(currentUserProvider);
+    final userId = user?.id ?? '';
+    final displayName = user?.userMetadata?['full_name'] ?? user?.email ?? 'أنا';
+    final relativesAsync = ref.watch(relativesStreamProvider(userId));
+
+    return Scaffold(
+      body: Stack(
+        children: [
+          const GradientBackground(animated: true, child: SizedBox.expand()),
+          SafeArea(
+            child: Column(
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => context.pop(),
+                        icon: Icon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        'شجرة العائلة',
+                        style: AppTypography.headlineMedium.copyWith(
+                          color: themeColors.textOnGradient,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Blurred preview content
+                Expanded(
+                  child: Stack(
+                    children: [
+                      // Blurred tree preview
+                      ClipRRect(
+                        child: ImageFiltered(
+                          imageFilter: ui.ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
+                          child: relativesAsync.when(
+                            data: (relatives) => _buildPreviewTree(
+                              relatives.isNotEmpty ? relatives : null,
+                              displayName,
+                            ),
+                            loading: () => _buildPreviewTree(null, displayName),
+                            error: (e, s) => _buildPreviewTree(null, displayName),
+                          ),
+                        ),
+                      ),
+                      // Gradient fade overlay
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                themeColors.background1.withValues(alpha: 0.2),
+                                themeColors.background1.withValues(alpha: 0.65),
+                              ],
+                              stops: const [0.0, 0.5, 1.0],
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Upgrade CTA at bottom
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        child: _buildUpgradeCTA(context, themeColors),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build a preview tree using user's data or demo data
+  Widget _buildPreviewTree(List<Relative>? relatives, String userName) {
+    // Demo data for users without family members
+    final demoNodes = [
+      _PreviewNode('👨', 'الأب', -1),
+      _PreviewNode('👩', 'الأم', -1),
+      _PreviewNode('👤', 'أنت', 0, isRoot: true),
+      _PreviewNode('👦', 'الأخ', 0),
+      _PreviewNode('👧', 'الأخت', 0),
+      _PreviewNode('👶', 'الابن', 1),
+    ];
+
+    // Use user's actual data if available
+    final List<_PreviewNode> previewNodes;
+    if (relatives != null && relatives.isNotEmpty) {
+      previewNodes = [
+        _PreviewNode('👤', userName, 0, isRoot: true),
+        ...relatives.take(5).map((r) => _PreviewNode(
+              r.displayEmoji,
+              r.fullName,
+              _getLevelForRelationship(r.relationshipType),
+            )),
+      ];
+    } else {
+      previewNodes = demoNodes;
+    }
+
+    // Group by level
+    final parentsLevel = previewNodes.where((n) => n.level == -1).toList();
+    final userLevel = previewNodes.where((n) => n.level == 0).toList();
+    final childrenLevel = previewNodes.where((n) => n.level == 1).toList();
+
+    return SingleChildScrollView(
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(height: AppSpacing.xl),
+            // Parents level
+            if (parentsLevel.isNotEmpty) ...[
+              _buildPreviewGeneration(parentsLevel, 70),
+              const SizedBox(height: AppSpacing.md),
+              _buildConnectionLines(parentsLevel.length, vertical: true),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            // User + siblings level
+            if (userLevel.isNotEmpty) ...[
+              _buildPreviewGeneration(userLevel, 80),
+            ],
+            // Children level
+            if (childrenLevel.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              _buildConnectionLines(childrenLevel.length, vertical: true),
+              const SizedBox(height: AppSpacing.md),
+              _buildPreviewGeneration(childrenLevel, 60),
+            ],
+            const SizedBox(height: AppSpacing.ctaCardPadding), // Space for CTA card
+          ],
+        ),
+      ),
+    );
+  }
+
+  int _getLevelForRelationship(RelationshipType type) {
+    switch (type) {
+      case RelationshipType.father:
+      case RelationshipType.mother:
+      case RelationshipType.grandfather:
+      case RelationshipType.grandmother:
+        return -1;
+      case RelationshipType.brother:
+      case RelationshipType.sister:
+      case RelationshipType.husband:
+      case RelationshipType.wife:
+        return 0;
+      case RelationshipType.son:
+      case RelationshipType.daughter:
+      case RelationshipType.uncle:
+      case RelationshipType.aunt:
+      case RelationshipType.cousin:
+      case RelationshipType.nephew:
+      case RelationshipType.niece:
+      case RelationshipType.other:
+        return 1;
+    }
+  }
+
+  Widget _buildPreviewGeneration(List<_PreviewNode> nodes, double nodeSize) {
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      alignment: WrapAlignment.center,
+      children: nodes.map((node) => _buildPreviewNode(node, nodeSize)).toList(),
+    );
+  }
+
+  Widget _buildPreviewNode(_PreviewNode node, double nodeSize) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: nodeSize,
+          height: nodeSize,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: node.isRoot
+                ? const LinearGradient(
+                    colors: [AppColors.premiumGold, AppColors.premiumGoldDark],
+                  )
+                : LinearGradient(
+                    colors: [
+                      AppColors.islamicGreenPrimary.withValues(alpha: 0.8),
+                      AppColors.islamicGreenDark.withValues(alpha: 0.8),
+                    ],
+                  ),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.5),
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: (node.isRoot ? AppColors.premiumGold : AppColors.islamicGreenPrimary)
+                    .withValues(alpha: 0.3),
+                blurRadius: 8,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: Center(
+            child: Text(
+              node.emoji,
+              style: TextStyle(fontSize: nodeSize * 0.4),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          node.name,
+          style: AppTypography.labelSmall.copyWith(
+            color: Colors.white,
+            fontWeight: node.isRoot ? FontWeight.bold : FontWeight.normal,
+          ),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUpgradeCTA(BuildContext context, dynamic themeColors) {
+    return Container(
+      margin: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.premiumGold.withValues(alpha: 0.25),
+            AppColors.premiumGoldDark.withValues(alpha: 0.2),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        border: Border.all(
+          color: AppColors.premiumGold.withValues(alpha: 0.6),
+          width: 2,
+        ),
+        boxShadow: [
+          // Gold outer glow
+          BoxShadow(
+            color: AppColors.premiumGold.withValues(alpha: 0.3),
+            blurRadius: 24,
+            spreadRadius: 2,
+          ),
+          // Depth shadow
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Lock icon with gradient + glow
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.premiumGold, AppColors.premiumGoldDark],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.premiumGold.withValues(alpha: 0.5),
+                  blurRadius: 16,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: const Icon(Icons.lock_rounded, size: 32, color: Colors.black87),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // Title
+          Text(
+            'اكتشف شجرة عائلتك',
+            style: AppTypography.titleLarge.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          // Description
+          Text(
+            'اعرض شجرة عائلتك بشكل تفاعلي وشاركها مع أفراد عائلتك',
+            style: AppTypography.bodyMedium.copyWith(
+              color: Colors.white70,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          // Upgrade button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const PaywallScreen(
+                      featureToUnlock: FeatureIds.familyTree,
+                    ),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.premiumGold,
+                foregroundColor: Colors.black87,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.workspace_premium, size: 22),
+                  const SizedBox(width: 8),
+                  Text(
+                    'ترقية للاشتراك المميز',
+                    style: AppTypography.titleMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1255,4 +1613,14 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       ),
     );
   }
+}
+
+/// Simple data class for preview tree nodes
+class _PreviewNode {
+  final String emoji;
+  final String name;
+  final int level;
+  final bool isRoot;
+
+  _PreviewNode(this.emoji, this.name, this.level, {this.isRoot = false});
 }

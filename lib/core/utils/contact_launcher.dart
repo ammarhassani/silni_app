@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../shared/utils/ui_helpers.dart';
 
 /// Utility class for launching contact-related URLs
 class ContactLauncher {
@@ -19,8 +20,10 @@ class ContactLauncher {
       return true;
     } else {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('لا يمكن إجراء المكالمة')),
+        UIHelpers.showSnackBar(
+          context,
+          'لا يمكن إجراء المكالمة',
+          isError: true,
         );
       }
       return false;
@@ -42,8 +45,10 @@ class ContactLauncher {
       return true;
     } else {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('لا يمكن فتح واتساب')),
+        UIHelpers.showSnackBar(
+           context,
+          'لا يمكن فتح واتساب',
+          isError: true,
         );
       }
       return false;
@@ -61,8 +66,10 @@ class ContactLauncher {
       return true;
     } else {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('لا يمكن إرسال رسالة')),
+        UIHelpers.showSnackBar(
+          context,
+          'لا يمكن إرسال رسالة',
+          isError: true,
         );
       }
       return false;

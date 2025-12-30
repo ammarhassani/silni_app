@@ -9,7 +9,9 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../core/services/error_handler_service.dart';
 import '../../../shared/providers/data_export_provider.dart';
+import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/data_export_dialog.dart';
+import '../../../shared/widgets/theme_aware_dialog.dart';
 import '../../auth/providers/auth_provider.dart';
 
 /// Show image source selection dialog
@@ -21,12 +23,8 @@ void showImageSourceDialog({
   showDialog(
     context: context,
     builder: (BuildContext context) {
-      return AlertDialog(
-        backgroundColor: themeColors.background1.withValues(alpha: 0.95),
-        title: Text(
-          'اختر مصدر الصورة',
-          style: AppTypography.headlineSmall.copyWith(color: Colors.white),
-        ),
+      return ThemeAwareAlertDialog(
+        title: 'اختر مصدر الصورة',
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -79,12 +77,8 @@ void showChangePasswordDialog({
 
   showDialog(
     context: context,
-    builder: (dialogContext) => AlertDialog(
-      backgroundColor: const Color(0xFF1A1A1A),
-      title: Text(
-        'تغيير كلمة المرور',
-        style: AppTypography.headlineMedium.copyWith(color: Colors.white),
-      ),
+    builder: (dialogContext) => ThemeAwareAlertDialog(
+      title: 'تغيير كلمة المرور',
       content: Text(
         'سيتم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني',
         style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
@@ -101,11 +95,10 @@ void showChangePasswordDialog({
             try {
               final user = SupabaseConfig.client.auth.currentUser;
               if (user == null || user.email == null) {
-                scaffoldMessenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('البريد الإلكتروني غير متوفر'),
-                    backgroundColor: AppColors.error,
-                  ),
+                UIHelpers.showSnackBar(
+                  context,
+                  'البريد الإلكتروني غير متوفر',
+                  isError: true,
                 );
                 return;
               }
@@ -113,22 +106,20 @@ void showChangePasswordDialog({
               final authService = ref.read(authServiceProvider);
               await authService.resetPassword(user.email!);
 
-              scaffoldMessenger.showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني',
-                  ),
-                  backgroundColor: AppColors.success,
-                  duration: Duration(seconds: 4),
-                ),
-              );
+              if (context.mounted) {
+                UIHelpers.showSnackBar(
+                  context,
+                  'تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني',
+                );
+              }
             } catch (e) {
-              scaffoldMessenger.showSnackBar(
-                SnackBar(
-                  content: Text(errorHandler.getArabicMessage(e)),
-                  backgroundColor: AppColors.error,
-                ),
-              );
+              if (context.mounted) {
+                UIHelpers.showSnackBar(
+                  context,
+                  errorHandler.getArabicMessage(e),
+                  isError: true,
+                );
+              }
             }
           },
           child: const Text('إرسال'),
@@ -147,11 +138,10 @@ Future<void> showExportDataDialogFlow({
   final userId = SupabaseConfig.currentUserId;
 
   if (userId == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('يرجى تسجيل الدخول أولاً'),
-        backgroundColor: Colors.red,
-      ),
+    UIHelpers.showSnackBar(
+      context,
+      'يرجى تسجيل الدخول أولاً',
+      isError: true,
     );
     return;
   }
@@ -185,12 +175,8 @@ void showDeleteAccountDialog({
 
   showDialog(
     context: context,
-    builder: (dialogContext) => AlertDialog(
-      backgroundColor: const Color(0xFF1A1A1A),
-      title: Text(
-        'حذف الحساب',
-        style: AppTypography.headlineMedium.copyWith(color: Colors.red),
-      ),
+    builder: (dialogContext) => ThemeAwareAlertDialog(
+      title: 'حذف الحساب',
       content: Text(
         'هل أنت متأكد من حذف حسابك؟ سيتم حذف جميع بياناتك بشكل نهائي ولا يمكن التراجع عن هذا الإجراء.',
         style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
@@ -218,26 +204,25 @@ void showDeleteAccountDialog({
               await authService.deleteAccount();
 
               // Close loading dialog and navigate
-              navigator.pop();
-              router.go(AppRoutes.login);
-
-              scaffoldMessenger.showSnackBar(
-                const SnackBar(
-                  content: Text('تم حذف حسابك بنجاح'),
-                  backgroundColor: AppColors.success,
-                ),
-              );
+              if (context.mounted) {
+                Navigator.of(context).pop(); // Close loading
+                GoRouter.of(context).go(AppRoutes.login);
+                
+                UIHelpers.showSnackBar(
+                  context,
+                  'تم حذف حسابك بنجاح',
+                );
+              }
             } catch (e) {
               // Close loading dialog
-              navigator.pop();
-
-              scaffoldMessenger.showSnackBar(
-                SnackBar(
-                  content: Text(errorHandler.getArabicMessage(e)),
-                  backgroundColor: AppColors.error,
-                  duration: const Duration(seconds: 4),
-                ),
-              );
+              if (context.mounted) {
+                Navigator.of(context).pop(); // Close loading
+                UIHelpers.showSnackBar(
+                  context,
+                  errorHandler.getArabicMessage(e),
+                  isError: true,
+                );
+              }
             }
           },
           child: const Text('حذف', style: TextStyle(color: Colors.red)),

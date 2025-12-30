@@ -7,6 +7,7 @@ import '../../../core/constants/app_typography.dart';
 
 /// Visible action buttons for chat messages (Claude-style)
 /// Shows Copy, Edit (for user messages), Regenerate (for AI messages)
+import '../../../shared/utils/ui_helpers.dart';
 class MessageActionsRow extends StatelessWidget {
   final bool isUserMessage;
   final String content;
@@ -60,16 +61,11 @@ class MessageActionsRow extends StatelessWidget {
   void _copyToClipboard(BuildContext context) {
     HapticFeedback.lightImpact();
     Clipboard.setData(ClipboardData(text: content));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('تم نسخ الرسالة'),
-        backgroundColor: AppColors.islamicGreenPrimary,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
+    UIHelpers.showSnackBar(
+      context,
+      'تم نسخ الرسالة',
+      backgroundColor: AppColors.islamicGreenPrimary,
+      duration: const Duration(seconds: 2),
     );
   }
 }
@@ -160,16 +156,11 @@ class CopyCodeButton extends StatelessWidget {
         onTap: () {
           HapticFeedback.lightImpact();
           Clipboard.setData(ClipboardData(text: code));
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('تم نسخ الكود'),
-              backgroundColor: AppColors.islamicGreenPrimary,
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 2),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
+          UIHelpers.showSnackBar(
+            context,
+            'تم نسخ الكود',
+            backgroundColor: AppColors.islamicGreenPrimary,
+            duration: const Duration(seconds: 2),
           );
         },
         child: Container(

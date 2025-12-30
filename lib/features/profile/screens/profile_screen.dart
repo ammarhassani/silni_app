@@ -16,6 +16,7 @@ import '../../home/providers/home_providers.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/services/error_handler_service.dart';
 import '../widgets/widgets.dart';
+import '../../../shared/utils/ui_helpers.dart';
 
 // Provider for all user interactions (uses cache-first repository pattern)
 final userInteractionsProvider =
@@ -176,8 +177,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ref: ref,
                     ),
                     onPrivacySettings: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('إعدادات الخصوصية قريباً')),
+                      UIHelpers.showSnackBar(
+                        context,
+                        'إعدادات الخصوصية قريباً',
                       );
                     },
                     onExportData: () => showExportDataDialogFlow(
@@ -246,21 +248,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
             if (mounted) {
               setState(() {});
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('تم تحديث الصورة الشخصية بنجاح! ✅'),
-                  backgroundColor: AppColors.success,
-                ),
+              UIHelpers.showSnackBar(
+                context,
+                'تم تحديث الصورة الشخصية بنجاح! ✅',
               );
             }
           }
         } catch (e) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(errorHandler.getArabicMessage(e)),
-                backgroundColor: AppColors.error,
-              ),
+            UIHelpers.showSnackBar(
+              context,
+              errorHandler.getArabicMessage(e),
+              isError: true,
             );
           }
         } finally {
@@ -271,11 +270,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorHandler.getArabicMessage(e)),
-            backgroundColor: AppColors.error,
-          ),
+        UIHelpers.showSnackBar(
+          context,
+          errorHandler.getArabicMessage(e),
+          isError: true,
         );
       }
     }
@@ -284,21 +282,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _saveName() async {
     final newName = _nameController.text.trim();
     if (newName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('الاسم لا يمكن أن يكون فارغاً'),
-          backgroundColor: AppColors.error,
-        ),
+      UIHelpers.showSnackBar(
+        context,
+        'الاسم لا يمكن أن يكون فارغاً',
+        isError: true,
       );
       return;
     }
 
     if (newName.length < 2) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('الاسم يجب أن يكون حرفين على الأقل'),
-          backgroundColor: AppColors.error,
-        ),
+      UIHelpers.showSnackBar(
+        context,
+        'الاسم يجب أن يكون حرفين على الأقل',
+        isError: true,
       );
       return;
     }
@@ -321,20 +317,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
       if (mounted) {
         setState(() => _isEditingName = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تم حفظ الاسم بنجاح'),
-            backgroundColor: AppColors.success,
-          ),
+        UIHelpers.showSnackBar(
+          context,
+          'تم حفظ الاسم بنجاح',
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorHandler.getArabicMessage(e)),
-            backgroundColor: AppColors.error,
-          ),
+        UIHelpers.showSnackBar(
+          context,
+          errorHandler.getArabicMessage(e),
+          isError: true,
         );
       }
     }

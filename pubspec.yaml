@@ -75,8 +75,8 @@ dependencies:
   # Charts & Visualization
   fl_chart: ^0.70.2
 
-  # Hardware Features (can add later if needed)
-  # sensors_plus: ^6.1.1
+  # Hardware Features
+  sensors_plus: ^6.1.1
   # camera: ^0.11.0+2
   # geolocator: ^13.0.2
 
@@ -100,12 +100,16 @@ dependencies:
   http: ^1.2.2
   dio: ^5.7.0
 
+  # In-App Purchases - RevenueCat
+  purchases_flutter: ^9.10.2
+
   # UI Helpers
   flutter_svg: ^2.0.16
   flutter_slidable: ^3.1.1
   google_fonts: ^6.3.3
   screenshot_callback: ^3.0.1
   flutter_markdown: ^0.7.4+2
+  purchases_ui_flutter: ^9.10.2
 
 dev_dependencies:
   flutter_test:

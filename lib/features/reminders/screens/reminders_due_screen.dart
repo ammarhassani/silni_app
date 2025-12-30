@@ -19,6 +19,7 @@ import '../../../shared/models/interaction_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../home/providers/home_providers.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
+import '../../../shared/utils/ui_helpers.dart';
 
 /// Screen that shows relatives due for contact from reminder notifications
 class RemindersDueScreen extends ConsumerStatefulWidget {
@@ -601,20 +602,18 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
       await repository.createInteraction(interaction);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تم تسجيل التواصل مع ${relative.fullName}'),
-            backgroundColor: Colors.green,
-          ),
+        UIHelpers.showSnackBar(
+          context,
+          'تم تسجيل التواصل مع ${relative.fullName}',
+          backgroundColor: Colors.green,
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('حدث خطأ أثناء تسجيل التواصل'),
-            backgroundColor: Colors.red,
-          ),
+        UIHelpers.showSnackBar(
+          context,
+          'حدث خطأ أثناء تسجيل التواصل',
+          isError: true,
         );
       }
     }

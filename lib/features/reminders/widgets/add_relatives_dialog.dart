@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_spacing.dart';
+import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/services/reminder_schedules_service.dart';
+import '../../../shared/utils/ui_helpers.dart';
+import '../../../shared/widgets/theme_aware_dialog.dart';
 
 /// Dialog for adding relatives to a reminder schedule
 class AddRelativesDialog extends ConsumerStatefulWidget {
@@ -41,18 +44,18 @@ class _AddRelativesDialogState extends ConsumerState<AddRelativesDialog> {
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'تم إضافة ${_selectedRelativeIds.length} أقارب للتذكير',
-            ),
-          ),
+        UIHelpers.showSnackBar(
+          context,
+          'تم إضافة ${_selectedRelativeIds.length} أقارب للتذكير',
+          backgroundColor: AppColors.islamicGreenPrimary,
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e')),
+        UIHelpers.showSnackBar(
+          context,
+          'خطأ: $e',
+          isError: true,
         );
       }
     }
@@ -62,12 +65,10 @@ class _AddRelativesDialogState extends ConsumerState<AddRelativesDialog> {
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
 
-    return AlertDialog(
-      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
-      title: Text(
-        'إضافة أقارب للتذكير',
-        style: AppTypography.headlineMedium.copyWith(color: Colors.white),
-      ),
+    return ThemeAwareAlertDialog(
+      title: 'إضافة أقارب للتذكير',
+      titleIcon: const Icon(Icons.person_add_rounded, color: Colors.white),
+      padding: const EdgeInsets.only(top: AppSpacing.md),
       content: SizedBox(
         width: double.maxFinite,
         child: widget.relatives.isEmpty

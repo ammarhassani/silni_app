@@ -42,6 +42,8 @@ class ProfileActionsWidget extends StatelessWidget {
               HapticFeedback.lightImpact();
               onChangePassword();
             },
+            // Semantics for ListTile are handled by default but can be enhanced
+            // No explicit wrapper needed as ListTile is already semantic
           ),
         ),
         const SizedBox(height: AppSpacing.sm),

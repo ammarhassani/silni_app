@@ -24,6 +24,7 @@ import '../../../core/providers/cache_provider.dart';
 import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/widgets/health_status_picker.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../shared/utils/ui_helpers.dart';
 
 class AddRelativeScreen extends ConsumerStatefulWidget {
   const AddRelativeScreen({super.key});
@@ -154,12 +155,10 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
       HapticFeedback.mediumImpact();
 
       // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('تم حفظ ${relative.fullName} بنجاح! 🎉'),
-          backgroundColor: AppColors.islamicGreenPrimary,
-          duration: const Duration(seconds: 1),
-        ),
+      UIHelpers.showSnackBar(
+        context,
+        'تم حفظ ${relative.fullName} بنجاح! 🎉',
+        backgroundColor: AppColors.islamicGreenPrimary,
       );
 
       // Reset loading state before navigation
@@ -191,12 +190,10 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.islamicGreenPrimary,
-      ),
+    UIHelpers.showSnackBar(
+       context,
+      message,
+      backgroundColor: AppColors.islamicGreenPrimary,
     );
   }
 

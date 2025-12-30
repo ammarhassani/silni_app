@@ -26,13 +26,22 @@ final todayContactedRelativesProvider =
         final todayInteractions = data.where((interaction) {
           final dateStr = interaction['date'] as String?;
           if (dateStr == null) return false;
-          final date = DateTime.parse(dateStr).toLocal();
-          // Check both start and end of day boundaries
-          return (date.isAfter(startOfDay) || date.isAtSameMomentAs(startOfDay))
-              && date.isBefore(endOfDay);
+          try {
+            final date = DateTime.parse(dateStr).toLocal();
+            // Check both start and end of day boundaries
+            return (date.isAfter(startOfDay) || date.isAtSameMomentAs(startOfDay))
+                && date.isBefore(endOfDay);
+          } catch (e) {
+            // Skip malformed dates instead of crashing the stream
+            return false;
+          }
         });
         return todayInteractions
-            .map((i) => i['relative_id'] as String)
+            .map((i) {
+              final relativeId = i['relative_id'];
+              return relativeId is String ? relativeId : '';
+            })
+            .where((id) => id.isNotEmpty)
             .toSet();
       });
 });

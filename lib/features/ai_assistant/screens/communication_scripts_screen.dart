@@ -16,7 +16,9 @@ import '../../../shared/models/relative_model.dart';
 import '../../../shared/services/relatives_service.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../widgets/ai_error_card.dart';
+import '../widgets/ai_error_card.dart';
 import '../widgets/ai_loading_indicator.dart';
+import '../../../shared/utils/ui_helpers.dart';
 
 /// Predefined communication scenarios
 class ScenarioTemplate {
@@ -668,15 +670,10 @@ class _ScriptResultView extends StatelessWidget {
 
     Clipboard.setData(ClipboardData(text: buffer.toString()));
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'تم نسخ السيناريو كاملاً',
-          style: AppTypography.bodyMedium.copyWith(color: Colors.white),
-        ),
-        backgroundColor: themeColors.primary,
-        behavior: SnackBarBehavior.floating,
-      ),
+    UIHelpers.showSnackBar(
+      context,
+      'تم نسخ السيناريو كاملاً',
+      backgroundColor: themeColors.primary,
     );
   }
 }
@@ -737,13 +734,11 @@ class _ScriptSection extends StatelessWidget {
                 onPressed: () {
                   final text = content ?? items?.join('\n') ?? '';
                   Clipboard.setData(ClipboardData(text: text));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('تم النسخ'),
-                      backgroundColor: themeColors.primary,
-                      behavior: SnackBarBehavior.floating,
-                      duration: const Duration(seconds: 1),
-                    ),
+                  UIHelpers.showSnackBar(
+                    context,
+                    'تم النسخ',
+                    backgroundColor: themeColors.primary,
+                    duration: const Duration(seconds: 1),
                   );
                 },
                 tooltip: 'نسخ',

@@ -1,0 +1,163 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "E660D730",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6756042988",
+    "_askToBuyEnabled" : false,
+    "_billingGracePeriodEnabled" : false,
+    "_billingIssuesEnabled" : false,
+    "_developerTeamID" : "3SPV37F368",
+    "_disableDialogs" : false,
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 788696706.17700899,
+    "_locale" : "en_US",
+    "_renewalBillingIssuesEnabled" : false,
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ],
+    "_timeRate" : 0
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21872134",
+      "localizations" : [
+
+      ],
+      "name" : "Silni Premium",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "79.99",
+          "familyShareable" : false,
+          "groupNumber" : 4,
+          "internalID" : "6757142369",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "جميع الميزات + الذكاء الاصطناعي وتذكيرات غير محدودة",
+              "displayName" : "صلني ماكس - سنوي",
+              "locale" : "ar"
+            }
+          ],
+          "productID" : "silni_max_annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "MAX Annual",
+          "subscriptionGroupID" : "21872134",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "7.99",
+          "familyShareable" : false,
+          "groupNumber" : 3,
+          "internalID" : "6757142104",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "جميع الميزات + الذكاء الاصطناعي وتذكيرات غير محدودة",
+              "displayName" : "صلني ماكس - شهري",
+              "locale" : "ar"
+            }
+          ],
+          "productID" : "silni_max_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "MAX Monthly",
+          "subscriptionGroupID" : "21872134",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "34.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6757142324",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "شجرة العائلة والمظاهر المخصصة و10 تذكيرات",
+              "displayName" : "صلني برو - سنوي",
+              "locale" : "ar"
+            }
+          ],
+          "productID" : "silni_pro_annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "PRO Annual",
+          "subscriptionGroupID" : "21872134",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "2.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6757142091",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "شجرة العائلة والمظاهر المخصصة و10 تذكيرات",
+              "displayName" : "صلني برو - شهري",
+              "locale" : "ar"
+            }
+          ],
+          "productID" : "silni_pro_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "PRO Monthly",
+          "subscriptionGroupID" : "21872134",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

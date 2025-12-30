@@ -61,26 +61,18 @@ class QuickActionsWidget extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: _QuickActionCard(
-                  icon: Icons.account_tree_rounded,
-                  title: 'شجرة العائلة',
-                  subtitle: 'تصور جميل لعائلتك',
-                  gradient: LinearGradient(
-                    colors: [
-                      themeColors.primaryDark,
-                      themeColors.primary.withValues(alpha: 0.8),
-                    ],
-                  ),
-                  themeColors: themeColors,
-                  onTap: () => context.push(AppRoutes.familyTree),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              const Expanded(child: SizedBox()),
-            ],
+          _QuickActionCard(
+            icon: Icons.account_tree_rounded,
+            title: 'شجرة العائلة',
+            subtitle: 'تصور جميل لعائلتك',
+            gradient: LinearGradient(
+              colors: [
+                themeColors.primaryDark,
+                themeColors.primary.withValues(alpha: 0.8),
+              ],
+            ),
+            themeColors: themeColors,
+            onTap: () => context.push(AppRoutes.familyTree),
           ),
         ],
       ),
@@ -110,44 +102,69 @@ class _QuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gradientColors = (gradient as LinearGradient).colors;
+
     return Semantics(
       label: '$title - $subtitle',
       button: true,
       child: GestureDetector(
         onTap: onTap,
         child: GlassCard(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          gradient: gradient,
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              gradientColors.first.withValues(alpha: 0.35),
+              gradientColors.last.withValues(alpha: 0.2),
+            ],
+          ),
           semanticsLabel: title,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Hero icon container with full gradient + glow
               Container(
-                width: 45,
-                height: 45,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: themeColors.textOnGradient.withValues(alpha: 0.2),
+                  gradient: gradient,
+                  boxShadow: [
+                    // Primary shadow
+                    BoxShadow(
+                      color: gradientColors.first.withValues(alpha: 0.5),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 4),
+                    ),
+                    // Outer glow
+                    BoxShadow(
+                      color: gradientColors.first.withValues(alpha: 0.3),
+                      blurRadius: 30,
+                      spreadRadius: 0,
+                    ),
+                  ],
                 ),
                 child: Center(
-                  child: Icon(icon, color: themeColors.textOnGradient, size: 24),
+                  child: Icon(icon, color: Colors.white, size: 40),
                 ),
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.lg),
               Text(
                 title,
-                style: AppTypography.titleMedium.copyWith(
+                style: AppTypography.titleLarge.copyWith(
                   color: themeColors.textOnGradient,
                   fontWeight: FontWeight.bold,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Text(
                 subtitle,
-                style: AppTypography.bodySmall.copyWith(
-                  color: themeColors.textOnGradient.withValues(alpha: 0.8),
+                style: AppTypography.bodyMedium.copyWith(
+                  color: themeColors.textOnGradient.withValues(alpha: 0.85),
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,

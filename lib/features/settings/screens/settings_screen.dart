@@ -1,14 +1,26 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/models/subscription_tier.dart';
+import '../../../core/providers/pattern_animation_provider.dart';
+import '../../../core/providers/subscription_provider.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/services/gyroscope_service.dart';
+import '../../../core/services/subscription_service.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../subscription/screens/paywall_screen.dart';
+import '../../../shared/utils/ui_helpers.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -52,6 +64,10 @@ class SettingsScreen extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
+                  // Subscription Card
+                  _buildSubscriptionCard(context, ref, themeColors),
+                  const SizedBox(height: AppSpacing.md),
+
                   // Theme Selector
                   GlassCard(
                     padding: const EdgeInsets.all(AppSpacing.lg),
@@ -88,8 +104,9 @@ class SettingsScreen extends ConsumerWidget {
                           crossAxisCount: 3,
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          crossAxisSpacing: AppSpacing.sm,
-                          mainAxisSpacing: AppSpacing.sm,
+                          crossAxisSpacing: AppSpacing.md,
+                          mainAxisSpacing: AppSpacing.md,
+                          childAspectRatio: 0.85,
                           children: AppThemeType.values.map((theme) {
                             return _buildThemeCard(
                               context,
@@ -102,6 +119,11 @@ class SettingsScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
+
+                  const SizedBox(height: AppSpacing.md),
+
+                  // Pattern Animation Settings
+                  _buildPatternAnimationSettings(context, ref),
 
                   const SizedBox(height: AppSpacing.sm),
 
@@ -181,6 +203,289 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildSubscriptionCard(BuildContext context, WidgetRef ref, dynamic themeColors) {
+    final currentTier = ref.watch(subscriptionTierProvider);
+    final isTrialActive = ref.watch(isTrialActiveProvider);
+    final trialDays = ref.watch(trialDaysRemainingProvider);
+    final expirationDate = ref.watch(subscriptionExpirationProvider);
+    final isFreeUser = currentTier == SubscriptionTier.free;
+    final canUpgrade = currentTier.canUpgrade && currentTier != SubscriptionTier.free;
+
+    // Determine badge color based on tier
+    final badgeColor = currentTier.isMax
+        ? AppColors.premiumGold
+        : Colors.grey;
+
+    return GlassCard(
+      gradient: currentTier.isMax
+          ? LinearGradient(
+              colors: [
+                AppColors.premiumGold.withValues(alpha: 0.2),
+                AppColors.premiumGoldDark.withValues(alpha: 0.1),
+              ],
+            )
+          : null,
+      border: isFreeUser ? null : Border.all(color: badgeColor.withValues(alpha: 0.5)),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: isFreeUser
+                        ? [Colors.grey, Colors.grey.shade700]
+                        : currentTier.isMax
+                            ? [AppColors.premiumGold, AppColors.premiumGoldDark]
+                            : [AppColors.islamicGreenPrimary, AppColors.islamicGreenDark],
+                  ),
+                ),
+                child: Icon(
+                  isFreeUser ? Icons.person : Icons.workspace_premium,
+                  color: isFreeUser ? Colors.white : (currentTier.isMax ? Colors.black87 : Colors.white),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'الاشتراك',
+                          style: AppTypography.titleLarge.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            gradient: currentTier.isMax
+                                ? AppColors.goldenGradient
+                                : null,
+                            color: currentTier.isMax ? null : badgeColor,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            currentTier.englishName,
+                            style: AppTypography.labelSmall.copyWith(
+                              color: currentTier.isMax ? Colors.black87 : Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isTrialActive
+                          ? 'تجربة مجانية - متبقي $trialDays أيام'
+                          : isFreeUser
+                              ? 'ترقية للحصول على ميزات أكثر'
+                              : currentTier.arabicDescription,
+                      style: AppTypography.bodySmall.copyWith(
+                        color: Colors.white70,
+                      ),
+                    ),
+                    // Show expiration date for paid users
+                    if (!isFreeUser && expirationDate != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'ينتهي في: ${_formatDate(expirationDate)}',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: Colors.white54,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          // Action buttons
+          if (isFreeUser) ...[
+            // Free user - show upgrade button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => _openPaywall(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.premiumGold,
+                  foregroundColor: Colors.black87,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.star_rounded, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'ترقية الآن',
+                      style: AppTypography.titleMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ] else ...[
+            // Paid user - show manage and optionally upgrade
+            Row(
+              children: [
+                // Manage subscription button
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openSubscriptionManagement(context),
+                    icon: const Icon(Icons.settings_outlined, size: 18),
+                    label: const Text('إدارة'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+                // Upgrade button (only for PRO users, not MAX)
+                if (canUpgrade) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _openPaywall(context),
+                      icon: const Icon(Icons.arrow_upward_rounded, size: 18),
+                      label: const Text('ترقية لـ MAX'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.premiumGold,
+                        foregroundColor: Colors.black87,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            // Restore purchases link
+            const SizedBox(height: AppSpacing.sm),
+            Center(
+              child: TextButton(
+                onPressed: () => _restorePurchases(context, ref),
+                child: Text(
+                  'استعادة المشتريات',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: Colors.white54,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final months = [
+      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
+  void _openPaywall(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const PaywallScreen(),
+      ),
+    );
+  }
+
+  Future<void> _openSubscriptionManagement(BuildContext context) async {
+    HapticFeedback.lightImpact();
+
+    // iOS App Store subscription management URL
+    if (Platform.isIOS || Platform.isMacOS) {
+      final uri = Uri.parse('https://apps.apple.com/account/subscriptions');
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (context.mounted) {
+          UIHelpers.showSnackBar(
+            context,
+            'افتح الإعدادات > Apple ID > الاشتراكات',
+            backgroundColor: AppColors.info,
+          );
+        }
+      }
+    } else if (Platform.isAndroid) {
+      // Google Play subscription management
+      final uri = Uri.parse('https://play.google.com/store/account/subscriptions');
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (context.mounted) {
+          UIHelpers.showSnackBar(
+            context,
+            'افتح متجر Google Play > الاشتراكات',
+            backgroundColor: AppColors.info,
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _restorePurchases(BuildContext context, WidgetRef ref) async {
+    HapticFeedback.lightImpact();
+
+    UIHelpers.showSnackBar(
+      context,
+      'جاري استعادة المشتريات...',
+      backgroundColor: AppColors.info,
+    );
+
+    try {
+      final restored = await SubscriptionService.instance.restorePurchases();
+      ref.invalidate(subscriptionStateProvider);
+
+      if (context.mounted) {
+        UIHelpers.showSnackBar(
+          context,
+          restored
+              ? 'تم استعادة الاشتراك بنجاح!'
+              : 'لم يتم العثور على مشتريات سابقة',
+          isError: !restored,
+          backgroundColor: restored ? AppColors.success : AppColors.warning,
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        UIHelpers.showSnackBar(
+          context,
+          'حدث خطأ أثناء استعادة المشتريات',
+          isError: true,
+        );
+      }
+    }
+  }
+
   Widget _buildThemeCard(
     BuildContext context,
     WidgetRef ref,
@@ -188,66 +493,440 @@ class SettingsScreen extends ConsumerWidget {
     bool isSelected,
   ) {
     final themeColors = ThemeColors.getTheme(theme);
+    final hasThemeAccess = ref.watch(featureAccessProvider(FeatureIds.customThemes));
+
+    // Default theme (defaultGreen) is always free, others require premium
+    final isDefaultTheme = theme == AppThemeType.defaultGreen;
+    final isLocked = !isDefaultTheme && !hasThemeAccess;
 
     return GestureDetector(
       onTap: () {
+        HapticFeedback.lightImpact();
+
+        if (isLocked) {
+          // Show paywall for locked themes
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const PaywallScreen(
+                featureToUnlock: FeatureIds.customThemes,
+              ),
+            ),
+          );
+          return;
+        }
+
         ref.read(themeProvider.notifier).setTheme(theme);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تم تغيير المظهر إلى ${theme.arabicName}'),
-            backgroundColor: themeColors.primary,
-            duration: const Duration(seconds: 2),
-          ),
+        UIHelpers.showSnackBar(
+          context,
+          'تم تغيير المظهر إلى ${theme.arabicName}',
+          backgroundColor: themeColors.primary,
         );
       },
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: themeColors.primaryGradient,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.premiumGold
-                : Colors.white.withValues(alpha: 0.2),
-            width: isSelected ? 3 : 1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppColors.premiumGold.withValues(alpha: 0.5),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  ),
-                ]
-              : null,
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (isSelected)
-              const Icon(Icons.check_circle, color: Colors.white, size: 32)
-            else
-              Container(
-                width: 32,
-                height: 32,
+      child: Stack(
+        clipBehavior: Clip.none,
+        fit: StackFit.expand,
+        children: [
+          // Theme card with blur only for locked themes (no grayscale)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            child: ImageFiltered(
+              imageFilter: isLocked
+                  ? ui.ImageFilter.blur(sigmaX: 4.0, sigmaY: 4.0)
+                  : ui.ImageFilter.blur(sigmaX: 0, sigmaY: 0),
+              child: Container(
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.3),
+                  gradient: themeColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
                 ),
-                child: Icon(Icons.palette, color: Colors.white, size: 20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Theme icon
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.3),
+                      ),
+                      child: const Icon(
+                        Icons.palette_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    // Theme name
+                    Text(
+                      theme.arabicName,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: Colors.white,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    // Selected indicator text (Reserved space)
+                    AnimatedOpacity(
+                      duration: const Duration(milliseconds: 200),
+                      opacity: isSelected ? 1.0 : 0.0,
+                      child: Text(
+                        'مُختار',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.premiumGold,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            const SizedBox(height: AppSpacing.xs),
+            ),
+          ),
+          // Subtle dark overlay for locked themes
+          if (isLocked)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                  color: Colors.black.withValues(alpha: 0.1),
+                ),
+              ),
+            ),
+          // External selection ring (gold glow)
+          if (isSelected)
+            Positioned(
+              top: -4,
+              bottom: -4,
+              left: -4,
+              right: -4,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg + 4),
+                  border: Border.all(
+                    color: AppColors.premiumGold,
+                    width: 3,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.premiumGold.withValues(alpha: 0.5),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          // Premium badge for locked themes
+          if (isLocked)
+            Positioned(
+              top: 6,
+              left: 6,
+              child: Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.premiumGold, AppColors.premiumGoldDark],
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.lock, size: 12, color: Colors.black87),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPatternAnimationSettings(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(patternAnimationProvider);
+    final notifier = ref.read(patternAnimationProvider.notifier);
+    final gyroscopeAvailable = GyroscopeService.instance.isAvailable;
+
+    return GlassCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              const Icon(
+                Icons.auto_awesome,
+                color: AppColors.premiumGold,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                'تأثيرات الخلفية',
+                style: AppTypography.titleLarge.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              // Master toggle
+              Switch(
+                value: settings.isAnimationEnabled,
+                onChanged: (enabled) {
+                  HapticFeedback.lightImpact();
+                  if (enabled) {
+                    notifier.updateSettings(const PatternAnimationSettings());
+                  } else {
+                    notifier.disableAll();
+                  }
+                },
+                activeTrackColor: AppColors.premiumGold,
+                thumbColor: WidgetStateProperty.resolveWith((states) =>
+                    states.contains(WidgetState.selected)
+                        ? AppColors.premiumGold
+                        : Colors.white70),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'تحريك الأنماط الإسلامية في الخلفية',
+            style: AppTypography.bodySmall.copyWith(
+              color: Colors.white70,
+            ),
+          ),
+
+          // Only show options if animations are enabled
+          if (settings.isAnimationEnabled) ...[
+            const SizedBox(height: AppSpacing.lg),
+            const Divider(color: Colors.white24),
+            const SizedBox(height: AppSpacing.sm),
+
+            // Animation Effects Section
             Text(
-              theme.arabicName,
-              style: AppTypography.labelSmall.copyWith(
+              'تأثيرات الحركة',
+              style: AppTypography.titleSmall.copyWith(
                 color: Colors.white,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontWeight: FontWeight.w600,
               ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+
+            // Vertical flow toggle
+            _buildAnimationToggle(
+              icon: Icons.arrow_upward,
+              title: 'التدفق العمودي',
+              subtitle: 'حركة صعود لطيفة للأنماط',
+              value: settings.rotationEnabled,
+              onChanged: (_) {
+                HapticFeedback.lightImpact();
+                notifier.toggleRotation();
+              },
+            ),
+
+            // Pulse toggle
+            _buildAnimationToggle(
+              icon: Icons.favorite_border,
+              title: 'التنفس',
+              subtitle: 'تغير لطيف في الشفافية',
+              value: settings.pulseEnabled,
+              onChanged: (_) {
+                HapticFeedback.lightImpact();
+                notifier.togglePulse();
+              },
+            ),
+
+            // Parallax toggle
+            _buildAnimationToggle(
+              icon: Icons.layers,
+              title: 'التأثير ثلاثي الأبعاد',
+              subtitle: 'حركة الأنماط مع التمرير',
+              value: settings.parallaxEnabled,
+              onChanged: (_) {
+                HapticFeedback.lightImpact();
+                notifier.toggleParallax();
+              },
+            ),
+
+            // Shimmer toggle
+            _buildAnimationToggle(
+              icon: Icons.auto_awesome,
+              title: 'التلألؤ',
+              subtitle: 'موجة ضوئية عبر الأنماط',
+              value: settings.shimmerEnabled,
+              onChanged: (_) {
+                HapticFeedback.lightImpact();
+                notifier.toggleShimmer();
+              },
+            ),
+
+            const SizedBox(height: AppSpacing.md),
+            const Divider(color: Colors.white24),
+            const SizedBox(height: AppSpacing.sm),
+
+            // Touch Effects Section
+            Text(
+              'تأثيرات اللمس',
+              style: AppTypography.titleSmall.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+
+            // Touch ripple toggle
+            _buildAnimationToggle(
+              icon: Icons.touch_app,
+              title: 'موجات اللمس',
+              subtitle: 'دوائر متوسعة عند النقر',
+              value: settings.touchRippleEnabled,
+              onChanged: (_) {
+                HapticFeedback.lightImpact();
+                notifier.toggleTouchRipple();
+              },
+            ),
+
+            // Follow touch toggle
+            _buildAnimationToggle(
+              icon: Icons.highlight,
+              title: 'توهج المتابعة',
+              subtitle: 'إضاءة تتبع حركة إصبعك',
+              value: settings.followTouchEnabled,
+              onChanged: (_) {
+                HapticFeedback.lightImpact();
+                notifier.toggleFollowTouch();
+              },
+            ),
+
+            // Gyroscope toggle (only if available)
+            if (gyroscopeAvailable)
+              _buildAnimationToggle(
+                icon: Icons.screen_rotation,
+                title: 'حركة الجهاز',
+                subtitle: 'الأنماط تتحرك مع إمالة الجهاز',
+                value: settings.gyroscopeEnabled,
+                onChanged: (_) {
+                  HapticFeedback.lightImpact();
+                  notifier.toggleGyroscope();
+                },
+              ),
+
+            const SizedBox(height: AppSpacing.md),
+            const Divider(color: Colors.white24),
+            const SizedBox(height: AppSpacing.sm),
+
+            // Intensity slider
+            Row(
+              children: [
+                const Icon(
+                  Icons.speed,
+                  color: Colors.white70,
+                  size: 20,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  'شدة التأثيرات',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: AppColors.premiumGold,
+                inactiveTrackColor: Colors.white24,
+                thumbColor: AppColors.premiumGold,
+                overlayColor: AppColors.premiumGold.withValues(alpha: 0.2),
+              ),
+              child: Slider(
+                value: settings.animationIntensity,
+                min: 0.1,
+                max: 1.0,
+                divisions: 9,
+                label: '${(settings.animationIntensity * 100).round()}%',
+                onChanged: (value) {
+                  notifier.setIntensity(value);
+                },
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'خفيف',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: Colors.white54,
+                  ),
+                ),
+                Text(
+                  'قوي',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: Colors.white54,
+                  ),
+                ),
+              ],
             ),
           ],
-        ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnimationToggle({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: value ? AppColors.premiumGold : Colors.white54,
+            size: 20,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: Colors.white54,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeTrackColor: AppColors.premiumGold,
+                thumbColor: WidgetStateProperty.resolveWith((states) =>
+                    states.contains(WidgetState.selected)
+                        ? AppColors.premiumGold
+                        : Colors.white70),
+          ),
+        ],
       ),
     );
   }

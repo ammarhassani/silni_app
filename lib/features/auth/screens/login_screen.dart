@@ -24,7 +24,10 @@ import '../../../core/errors/app_errors.dart';
 import '../../../core/services/error_handler_service.dart';
 import '../widgets/social_login_button.dart';
 import '../widgets/name_prompt_dialog.dart';
+import '../../../shared/utils/ui_helpers.dart';
+import '../../../shared/widgets/theme_aware_dialog.dart';
 import 'dart:io' show Platform;
+
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -435,56 +438,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.cardDark.withValues(alpha: 0.95),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'إعادة تعيين كلمة المرور',
-          style: TextStyle(color: Colors.white),
-          textAlign: TextAlign.center,
-        ),
+      builder: (context) => ThemeAwareAlertDialog(
+        title: 'إعادة تعيين كلمة المرور',
         content: Form(
           key: formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 'سنرسل لك رابط لإعادة تعيين كلمة المرور',
-                style: TextStyle(color: Colors.white70),
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
-              TextFormField(
+              ThemeAwareTextField(
                 controller: emailController,
+                label: 'البريد الإلكتروني',
+                hintText: 'user@example.com',
                 keyboardType: TextInputType.emailAddress,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'البريد الإلكتروني',
-                  labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
-                  prefixIcon: const Icon(Icons.email, color: Colors.white70),
-                  filled: true,
-                  fillColor: Colors.white.withValues(alpha: 0.1),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.white, width: 2),
-                  ),
-                ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'يرجى إدخال البريد الإلكتروني';
                   }
-                  // Email regex validation
-                  final emailRegex = RegExp(
-                    r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-                  );
+                  final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
                   if (!emailRegex.hasMatch(value)) {
                     return 'يرجى إدخال بريد إلكتروني صحيح';
                   }
@@ -588,23 +564,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       setState(() => _isGoogleLoading = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AuthService.getErrorMessage(e.message)),
-          backgroundColor: AppColors.error,
-          duration: const Duration(seconds: 3),
-        ),
+      UIHelpers.showSnackBar(
+        context,
+        AuthService.getErrorMessage(e.message),
+        isError: true,
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _isGoogleLoading = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AuthService.getErrorMessage(e.toString())),
-          backgroundColor: AppColors.error,
-          duration: const Duration(seconds: 3),
-        ),
+      UIHelpers.showSnackBar(
+        context,
+        AuthService.getErrorMessage(e.toString()),
+        isError: true,
       );
     }
   }
@@ -712,8 +684,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         children: [
                       // Logo
                       Container(
-                            width: 100,
-                            height: 100,
+                            width: 120, // Increased slightly for better visibility
+                            height: 120,
+                            constraints: const BoxConstraints(
+                              maxWidth: 150,
+                              maxHeight: 150,
+                            ),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: AppColors.goldenGradient,
@@ -728,7 +704,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             child: Center(
                               child: Icon(
                                 Icons.people_alt_rounded,
-                                size: 50,
+                                size: 60,
                                 color: themeColors.textOnGradient,
                               ),
                             ),
@@ -738,6 +714,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             duration: AppAnimations.dramatic,
                             curve: Curves.elasticOut,
                           )
+
                           .fadeIn(),
 
                       const SizedBox(height: AppSpacing.lg),
@@ -910,9 +887,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     if (value == null || value.isEmpty) {
                                       return 'الرجاء إدخال كلمة المرور';
                                     }
-                                    if (value.length < 8) {
-                                      return 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
-                                    }
+                                    // Note: Don't validate password rules on login
+                                    // Old users may have passwords that don't meet current requirements
+                                    // Supabase will validate the actual password
                                     return null;
                                   },
                                 ),

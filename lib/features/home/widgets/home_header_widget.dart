@@ -59,7 +59,7 @@ class HomeHeaderWidget extends ConsumerWidget {
                 asBadge: true,
                 size: 24,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.md),
               // Notification bell icon with unread badge
               Semantics(
                 label: 'الإشعارات',
@@ -101,7 +101,7 @@ class HomeHeaderWidget extends ConsumerWidget {
                                     child: Center(
                                       child: Text(
                                         count > 99 ? '99+' : count.toString(),
-                                        style: TextStyle(
+                                        style: AppTypography.labelSmall.copyWith(
                                           color: themeColors.onPrimary,
                                           fontSize: 10,
                                           fontWeight: FontWeight.bold,

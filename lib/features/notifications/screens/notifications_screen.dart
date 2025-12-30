@@ -10,6 +10,7 @@ import '../../../core/theme/app_themes.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/services/supabase_notification_service.dart';
+import '../../../shared/utils/ui_helpers.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -41,11 +42,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     } catch (e) {
       // Show error to user if mounted
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('فشل تهيئة خدمة الإشعارات'),
-            backgroundColor: Colors.red,
-          ),
+        UIHelpers.showSnackBar(
+          context,
+          'فشل تهيئة خدمة الإشعارات',
+          isError: true,
         );
       }
     }

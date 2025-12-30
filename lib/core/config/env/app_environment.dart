@@ -150,4 +150,22 @@ class AppEnvironment {
 
   /// Firebase measurement ID
   static String get firebaseMeasurementId => EnvFirebase.measurementId;
+
+  // ===========================================
+  // REVENUECAT CONFIGURATION
+  // ===========================================
+
+  /// RevenueCat API Key for iOS
+  static String get revenueCatAppleApiKey {
+    const dartDefine = String.fromEnvironment('REVENUECAT_APPLE_API_KEY', defaultValue: '');
+    if (dartDefine.isNotEmpty) return dartDefine;
+    return EnvServices.revenueCatAppleApiKey;
+  }
+
+  /// RevenueCat API Key for Android
+  static String get revenueCatGoogleApiKey {
+    const dartDefine = String.fromEnvironment('REVENUECAT_GOOGLE_API_KEY', defaultValue: '');
+    if (dartDefine.isNotEmpty) return dartDefine;
+    return EnvServices.revenueCatGoogleApiKey;
+  }
 }

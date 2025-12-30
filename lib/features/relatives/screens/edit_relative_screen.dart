@@ -17,6 +17,7 @@ import '../../../shared/models/relative_model.dart';
 import '../../../core/providers/cache_provider.dart';
 import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/widgets/health_status_picker.dart';
+import '../../../shared/utils/ui_helpers.dart';
 
 class EditRelativeScreen extends ConsumerStatefulWidget {
   final String relativeId;
@@ -180,12 +181,10 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
 
       // Show success message
       HapticFeedback.mediumImpact();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('تم تحديث ${_nameController.text.trim()} بنجاح! ✅'),
-          backgroundColor: AppColors.islamicGreenPrimary,
-          duration: const Duration(seconds: 1),
-        ),
+      UIHelpers.showSnackBar(
+        context,
+        'تم تحديث ${_nameController.text.trim()} بنجاح! ✅',
+        backgroundColor: AppColors.islamicGreenPrimary,
       );
 
       // Reset loading state before navigation
@@ -201,11 +200,10 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
 
       // Use ErrorHandlerService for user-friendly Arabic messages
       final errorMessage = errorHandler.getArabicMessage(e);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: Colors.red.shade700,
-        ),
+      UIHelpers.showSnackBar(
+        context,
+        errorMessage,
+        isError: true,
       );
 
       // Report error to Sentry

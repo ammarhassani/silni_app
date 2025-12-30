@@ -37,7 +37,11 @@ class AppColors {
   static const glassDark = Color(0x66000000);
   static const glassWhite = Color(0x33FFFFFF);
   static const glassBlack = Color(0x33000000);
+
+  // Glassmorphism blur values
   static const blurStrength = 20.0;
+  static const blurStrengthLight = 15.0;
+  static const blurStrengthDramatic = 30.0;
 
   // Background Gradients - DRAMATIC & COLORFUL
   static const backgroundGradientLight = LinearGradient(

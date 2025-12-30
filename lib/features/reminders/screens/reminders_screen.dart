@@ -14,6 +14,8 @@ import '../../../shared/services/reminder_schedules_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../home/providers/home_providers.dart';
 import '../../../core/providers/realtime_provider.dart';
+import '../../../shared/utils/ui_helpers.dart';
+import '../../../shared/widgets/theme_aware_dialog.dart';
 import '../widgets/widgets.dart';
 
 class RemindersScreen extends ConsumerStatefulWidget {
@@ -79,7 +81,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
 
   Widget _buildHeader(BuildContext context, dynamic themeColors) {
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       child: Row(
         children: [
           Semantics(
@@ -131,7 +133,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     final userId = user?.id ?? '';
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -161,7 +163,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               }
             },
           ),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.md),
 
           // Schedule Cards
           Text(
@@ -170,7 +172,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           _buildScheduleCards(schedules, relatives, themeColors),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.md),
 
           // Unassigned Relatives
           if (unassignedRelatives.isNotEmpty) ...[
@@ -182,7 +184,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
             UnassignedRelativesWidget(
               unassignedRelatives: unassignedRelatives,
             ),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.md),
           ],
         ],
       ),
@@ -381,8 +383,10 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e')),
+        UIHelpers.showSnackBar(
+          context,
+          'حدث خطأ أثناء تحديث التذكير',
+          isError: true,
         );
       }
     }
@@ -391,8 +395,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   void _deleteSchedule(ReminderSchedule schedule) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('حذف التذكير'),
+      builder: (context) => ThemeAwareAlertDialog(
+        title: 'حذف التذكير',
         content: const Text('هل أنت متأكد من حذف هذا التذكير؟'),
         actions: [
           TextButton(
@@ -412,14 +416,17 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       try {
         await service.deleteSchedule(schedule.id);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('تم حذف التذكير')),
+          UIHelpers.showSnackBar(
+            context,
+            'تم حذف التذكير',
           );
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('خطأ: $e')),
+          UIHelpers.showSnackBar(
+            context,
+            'حدث خطأ أثناء حذف التذكير',
+            isError: true,
           );
         }
       }
@@ -441,8 +448,10 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e')),
+        UIHelpers.showSnackBar(
+          context,
+          'حدث خطأ أثناء إزالة القريب من التذكير',
+          isError: true,
         );
       }
     }
@@ -458,17 +467,17 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تمت إضافة ${relative.fullName} إلى التذكير'),
-            backgroundColor: Colors.green,
-          ),
+        UIHelpers.showSnackBar(
+          context,
+          'تمت إضافة ${relative.fullName} إلى التذكير',
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e')),
+        UIHelpers.showSnackBar(
+          context,
+          'حدث خطأ أثناء إضافة القريب إلى التذكير',
+          isError: true,
         );
       }
     }

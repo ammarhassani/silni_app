@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
+import 'glass_card.dart';
 
 /// A theme-aware dialog that automatically inherits theme colors
 /// This ensures consistent theming across all dialogs and prevents white-on-white issues
@@ -25,72 +26,69 @@ class ThemeAwareDialog extends ConsumerWidget {
     final themeColors = ref.watch(themeColorsProvider);
 
     return Dialog(
-      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-      ),
-      child: Padding(
-        padding: padding ?? const EdgeInsets.all(AppSpacing.lg),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.all(AppSpacing.md),
+      child: GlassCard(
+        padding: EdgeInsets.zero,
+        borderRadius: AppSpacing.radiusLg,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Header
             Container(
-              width: double.infinity,
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: themeColors.primary.withValues(alpha: 0.1),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(AppSpacing.radiusLg),
-                  bottomRight: Radius.circular(AppSpacing.radiusLg),
+                color: themeColors.primary.withValues(alpha: 0.15),
+                border: Border(
+                  bottom: BorderSide(
+                    color: themeColors.primary.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
                 ),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Text(
-                  title,
-                  style: AppTypography.headlineSmall.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
+              child: Text(
+                title,
+                style: AppTypography.titleLarge.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
                 ),
+                textAlign: TextAlign.center,
               ),
             ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: const BoxDecoration(color: Colors.transparent),
+            
+            // Content
+            Padding(
+              padding: padding ?? const EdgeInsets.all(AppSpacing.lg),
               child: content,
             ),
-            if (actions.isNotEmpty) ...[
+            
+            // Actions
+            if (actions.isNotEmpty)
               Container(
-                width: double.infinity,
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
                   color: themeColors.background1.withValues(alpha: 0.1),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(AppSpacing.radiusLg),
-                    topRight: Radius.circular(AppSpacing.radiusLg),
+                  border: Border(
+                    top: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      width: 1,
+                    ),
                   ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: actions
-                      .map(
-                        (action) => Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.sm,
-                              vertical: AppSpacing.xs,
+                      .map((action) => Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                              child: action,
                             ),
-                            child: action,
-                          ),
-                        ),
-                      )
+                          ))
                       .toList(),
                 ),
               ),
-            ],
           ],
         ),
       ),
@@ -118,81 +116,74 @@ class ScrollableThemeAwareDialog extends ConsumerWidget {
     final themeColors = ref.watch(themeColorsProvider);
 
     return Dialog(
-      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-      ),
-      child: Padding(
-        padding: padding ?? const EdgeInsets.all(AppSpacing.lg),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.all(AppSpacing.md),
+      child: GlassCard(
+        padding: EdgeInsets.zero,
+        borderRadius: AppSpacing.radiusLg,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Header
             Container(
-              width: double.infinity,
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: themeColors.primary.withValues(alpha: 0.1),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(AppSpacing.radiusLg),
-                  bottomRight: Radius.circular(AppSpacing.radiusLg),
+                color: themeColors.primary.withValues(alpha: 0.15),
+                border: Border(
+                  bottom: BorderSide(
+                    color: themeColors.primary.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
                 ),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Text(
-                  title,
-                  style: AppTypography.headlineSmall.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
+              child: Text(
+                title,
+                style: AppTypography.titleLarge.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
                 ),
+                textAlign: TextAlign.center,
               ),
             ),
+            
+            // Content
             Container(
-              width: double.infinity,
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.of(context).size.height * 0.6,
               ),
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: const BoxDecoration(color: Colors.transparent),
-              child: SingleChildScrollView(child: content),
+              child: SingleChildScrollView(
+                padding: padding ?? const EdgeInsets.all(AppSpacing.lg),
+                child: content,
+              ),
             ),
-            if (actions.isNotEmpty) ...[
+            
+            // Actions
+            if (actions.isNotEmpty)
               Container(
-                width: double.infinity,
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
                   color: themeColors.background1.withValues(alpha: 0.1),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(AppSpacing.radiusLg),
-                    topRight: Radius.circular(AppSpacing.radiusLg),
+                  border: Border(
+                    top: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      width: 1,
+                    ),
                   ),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.xs,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: actions
-                        .map(
-                          (action) => Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: actions
+                      .map((action) => Expanded(
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.sm,
-                                vertical: AppSpacing.xs,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                               child: action,
                             ),
-                          ),
-                        )
-                        .toList(),
-                  ),
+                          ))
+                      .toList(),
                 ),
               ),
-            ],
           ],
         ),
       ),
@@ -207,10 +198,12 @@ class ThemeAwareAlertDialog extends ConsumerWidget {
     required this.title,
     required this.content,
     this.actions = const [],
+    this.titleIcon,
     this.padding,
   });
 
   final String title;
+  final Widget? titleIcon;
   final Widget content;
   final List<Widget> actions;
   final EdgeInsets? padding;
@@ -219,45 +212,53 @@ class ThemeAwareAlertDialog extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeColors = ref.watch(themeColorsProvider);
 
-    return AlertDialog(
-      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-      ),
-      title: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Text(
-          title,
-          style: AppTypography.headlineSmall.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-      content: Padding(
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.all(AppSpacing.md),
+      child: GlassCard(
         padding: padding ?? const EdgeInsets.all(AppSpacing.lg),
-        child: content,
-      ),
-      actions: actions.isNotEmpty
-          ? [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: actions
-                    .map(
-                      (action) => Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm,
-                            vertical: AppSpacing.xs,
-                          ),
-                          child: action,
+        borderRadius: AppSpacing.radiusLg,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (title.isNotEmpty || titleIcon != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: Column(
+                  children: [
+                    if (titleIcon != null) ...[
+                      titleIcon!,
+                      const SizedBox(height: AppSpacing.sm),
+                    ],
+                    if (title.isNotEmpty)
+                      Text(
+                        title,
+                        style: AppTypography.titleLarge.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
+                        textAlign: TextAlign.center,
                       ),
-                    )
+                  ],
+                ),
+              ),
+            Flexible(child: content),
+            if (actions.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.lg),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: actions
+                    .map((action) => Padding(
+                          padding: const EdgeInsets.only(left: AppSpacing.sm),
+                          child: action,
+                        ))
                     .toList(),
               ),
-            ]
-          : null,
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

@@ -13,6 +13,7 @@ import '../../../shared/models/notification_history_model.dart';
 import '../../../shared/services/notification_history_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
+import '../../../shared/utils/ui_helpers.dart';
 
 /// Screen that shows notification history
 class NotificationHistoryScreen extends ConsumerStatefulWidget {
@@ -108,11 +109,9 @@ class _NotificationHistoryScreenState
               ref.invalidate(notificationHistoryStreamProvider(userId));
               ref.invalidate(unreadNotificationCountProvider(userId));
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('تم تحديد جميع الإشعارات كمقروءة'),
-                    duration: Duration(seconds: 2),
-                  ),
+                UIHelpers.showSnackBar(
+                  context,
+                  'تم تحديد جميع الإشعارات كمقروءة',
                 );
               }
             },
@@ -137,8 +136,13 @@ class _NotificationHistoryScreenState
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       itemCount: notifications.length,
       itemBuilder: (context, index) {
+
         final notification = notifications[index];
-        return _buildNotificationCard(context, notification, themeColors, index)
+        return Semantics(
+          label: 'إشعار ${notification.typeLabel}',
+          hint: 'اسحب للحذف أو اضغط للتفاصيل',
+          child: _buildNotificationCard(context, notification, themeColors, index),
+        )
             .animate()
             .fadeIn(delay: Duration(milliseconds: index * 50))
             .slideX(begin: 0.1, delay: Duration(milliseconds: index * 50));

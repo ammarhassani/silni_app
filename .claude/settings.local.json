@@ -100,7 +100,9 @@
       "Bash(supabase projects list:*)",
       "Bash(supabase functions logs:*)",
       "Bash(supabase functions list:*)",
-      "Bash(supabase secrets list:*)"
+      "Bash(supabase secrets list:*)",
+      "Bash(xargs:*)",
+      "Bash(brew upgrade:*)"
     ],
     "deny": [],
     "ask": []

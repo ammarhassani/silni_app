@@ -9,6 +9,7 @@ import '../../core/config/supabase_config.dart';
 import '../../core/config/env/env_services.dart';
 import '../../core/errors/app_errors.dart';
 import '../../core/services/app_logger_service.dart';
+import '../../core/services/subscription_service.dart';
 import 'session_persistence_service.dart';
 import 'unified_notification_service.dart';
 
@@ -188,6 +189,23 @@ class AuthService {
           metadata: {'error': e.toString()},
         );
         // Non-critical error - continue with sign up
+      }
+
+      // Sync subscription state with RevenueCat
+      try {
+        await SubscriptionService.instance.setUserId(response.user!.id);
+        logger.debug(
+          'Subscription service synced on signup',
+          category: LogCategory.auth,
+          tag: 'signUpWithEmail',
+        );
+      } catch (e) {
+        logger.warning(
+          'Failed to sync subscription on signup (non-critical)',
+          category: LogCategory.auth,
+          tag: 'signUpWithEmail',
+          metadata: {'error': e.toString()},
+        );
       }
 
       return response;
@@ -401,6 +419,25 @@ class AuthService {
         // Non-critical error - continue with sign in
       }
 
+      // Sync subscription state with RevenueCat
+      if (response.user != null) {
+        try {
+          await SubscriptionService.instance.setUserId(response.user!.id);
+          logger.debug(
+            'Subscription service synced on login',
+            category: LogCategory.auth,
+            tag: 'signInWithEmail',
+          );
+        } catch (e) {
+          logger.warning(
+            'Failed to sync subscription on login (non-critical)',
+            category: LogCategory.auth,
+            tag: 'signInWithEmail',
+            metadata: {'error': e.toString()},
+          );
+        }
+      }
+
       logger.info(
         'Sign in successful',
         category: LogCategory.auth,
@@ -500,6 +537,23 @@ class AuthService {
           metadata: {'error': e.toString()},
         );
         // Non-critical error - continue with sign out
+      }
+
+      // Clear subscription user from RevenueCat
+      try {
+        await SubscriptionService.instance.clearUser();
+        logger.debug(
+          'Subscription user cleared',
+          category: LogCategory.auth,
+          tag: 'signOut',
+        );
+      } catch (e) {
+        logger.warning(
+          'Failed to clear subscription user (non-critical)',
+          category: LogCategory.auth,
+          tag: 'signOut',
+          metadata: {'error': e.toString()},
+        );
       }
 
       await _supabase.auth.signOut();
@@ -706,6 +760,23 @@ class AuthService {
           metadata: {'error': e.toString()},
         );
       }
+
+      // Sync subscription state with RevenueCat
+      try {
+        await SubscriptionService.instance.setUserId(response.user!.id);
+        logger.debug(
+          'Subscription service synced on Google sign in',
+          category: LogCategory.auth,
+          tag: 'signInWithGoogle',
+        );
+      } catch (e) {
+        logger.warning(
+          'Failed to sync subscription on Google sign in (non-critical)',
+          category: LogCategory.auth,
+          tag: 'signInWithGoogle',
+          metadata: {'error': e.toString()},
+        );
+      }
     }
 
     return response;
@@ -805,6 +876,23 @@ class AuthService {
         } catch (e) {
           logger.warning(
             'Failed to register FCM token on Apple sign in',
+            category: LogCategory.auth,
+            tag: 'signInWithApple',
+            metadata: {'error': e.toString()},
+          );
+        }
+
+        // Sync subscription state with RevenueCat
+        try {
+          await SubscriptionService.instance.setUserId(response.user!.id);
+          logger.debug(
+            'Subscription service synced on Apple sign in',
+            category: LogCategory.auth,
+            tag: 'signInWithApple',
+          );
+        } catch (e) {
+          logger.warning(
+            'Failed to sync subscription on Apple sign in (non-critical)',
             category: LogCategory.auth,
             tag: 'signInWithApple',
             metadata: {'error': e.toString()},
@@ -985,6 +1073,23 @@ class AuthService {
         tag: 'deleteAccount',
       );
 
+      // Clear subscription user from RevenueCat
+      try {
+        await SubscriptionService.instance.clearUser();
+        logger.debug(
+          'Subscription user cleared on account deletion',
+          category: LogCategory.auth,
+          tag: 'deleteAccount',
+        );
+      } catch (e) {
+        logger.warning(
+          'Failed to clear subscription user (non-critical)',
+          category: LogCategory.auth,
+          tag: 'deleteAccount',
+          metadata: {'error': e.toString()},
+        );
+      }
+
       // Sign out (Supabase Auth user deletion is handled by RPC or manually via Admin API)
       await _supabase.auth.signOut();
 
@@ -1138,6 +1243,26 @@ class AuthService {
           } catch (e) {
             logger.warning(
               'Failed to register FCM token on session restore (non-critical)',
+              category: LogCategory.auth,
+              tag: 'checkPersistentSession',
+              metadata: {'error': e.toString()},
+            );
+          }
+
+          // Sync subscription state for restored session
+          try {
+            final userId = _supabase.auth.currentUser?.id;
+            if (userId != null) {
+              await SubscriptionService.instance.setUserId(userId);
+              logger.debug(
+                'Subscription service synced on session restore',
+                category: LogCategory.auth,
+                tag: 'checkPersistentSession',
+              );
+            }
+          } catch (e) {
+            logger.warning(
+              'Failed to sync subscription on session restore (non-critical)',
               category: LogCategory.auth,
               tag: 'checkPersistentSession',
               metadata: {'error': e.toString()},

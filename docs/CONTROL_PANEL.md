@@ -138,17 +138,163 @@ configService.clearLocalOverrides();
 - [ ] Set maintenance mode
 
 ### Phase 2: Advanced Features
-- [ ] A/B testing configurations
-- [ ] Segment-based config (by region, language, etc.)
-- [ ] Scheduled config changes
-- [ ] Config version history & rollback
-- [ ] Real-time config preview
+
+#### A/B Testing Configurations
+- Define test variants directly in Firebase Remote Config
+- Segment users automatically by ID hash for consistent assignment
+- Track conversion metrics per variant using Analytics events
+- Automatic winner selection based on statistical significance
+- Implementation:
+  ```dart
+  // Check which variant the user is in
+  final variant = configService.getABTestVariant('pricing_experiment');
+
+  // Show appropriate UI based on variant
+  switch (variant) {
+    case 'control': showOriginalPricing();
+    case 'variant_a': showDiscountedPricing();
+    case 'variant_b': showBundlePricing();
+  }
+  ```
+
+#### Segment-Based Configuration
+- **Geographic targeting**: Different config for Saudi Arabia, UAE, Egypt, etc.
+- **Language-based**: Arabic-specific or English-specific features
+- **Platform-specific**: iOS vs Android configurations
+- **Subscription tier targeting**: Free vs MAX user experiences
+- **User cohort targeting**: New users vs returning users
+- Implementation:
+  ```dart
+  // Get segment-specific config
+  final config = configService.getConfigForSegment(
+    region: user.region,
+    language: user.preferredLanguage,
+    tier: user.subscriptionTier,
+  );
+  ```
+
+#### Scheduled Configuration Changes
+- Time-based configuration activation (e.g., Ramadan special features)
+- Scheduled maintenance windows with automatic activation
+- Feature release scheduling (unlock at specific date/time)
+- Promotional pricing windows (weekend sales, holiday discounts)
+- Implementation:
+  ```dart
+  // Scheduled config structure
+  {
+    "scheduled_changes": [
+      {
+        "id": "ramadan_2025",
+        "starts_at": "2025-02-28T00:00:00Z",
+        "ends_at": "2025-03-29T23:59:59Z",
+        "config_override": {
+          "features.islamicContent.ramadanMode": true,
+          "ui.theme.primaryColor": "#1a5f3f"
+        }
+      }
+    ]
+  }
+  ```
+
+#### Config Version History & Rollback
+- Automatic versioning of all configuration changes
+- Git-like version control for configurations
+- One-click rollback to any previous version
+- Change comparison (diff view) between versions
+- Audit trail with change attribution (who changed what and when)
+- Implementation:
+  ```dart
+  // Admin API endpoints
+  GET  /api/config/versions         // List all versions
+  GET  /api/config/versions/{id}    // Get specific version
+  POST /api/config/rollback/{id}    // Rollback to version
+  GET  /api/config/diff/{v1}/{v2}   // Compare versions
+  ```
+
+#### Real-time Config Preview
+- Preview configuration changes before applying
+- Side-by-side comparison (current vs proposed)
+- Test configuration on specific user accounts
+- Sandbox environment for testing
+- Staged rollout preview (see how 10%, 50%, 100% would look)
 
 ### Phase 3: Analytics Integration
-- [ ] Feature usage analytics
-- [ ] Config change impact tracking
-- [ ] User segment performance
-- [ ] Revenue optimization
+
+#### Feature Usage Analytics
+- Track feature access frequency per user segment
+- Measure user engagement time per feature
+- Analyze feature discovery paths (how users find features)
+- Identify unused features for potential removal
+- Implementation:
+  ```dart
+  // Track feature usage
+  AnalyticsService.trackFeatureUsage(
+    featureId: 'ai_counselor',
+    duration: sessionDuration,
+    interactionCount: messageCount,
+    metadata: {'source': 'home_screen'},
+  );
+  ```
+
+#### Config Change Impact Tracking
+- Correlate configuration changes with key metrics
+- A/B test result analysis and statistical significance
+- Conversion rate tracking by configuration variant
+- Revenue impact analysis per configuration change
+- User retention metrics by feature flag state
+- Implementation:
+  ```dart
+  // Impact analysis query
+  {
+    "config_change_id": "pricing_v2",
+    "metrics": {
+      "conversion_rate": {"before": 2.3%, "after": 3.1%, "lift": +34.8%},
+      "revenue_per_user": {"before": 1.23, "after": 1.67, "lift": +35.8%},
+      "churn_rate": {"before": 5.2%, "after": 4.8%, "lift": -7.7%}
+    },
+    "statistical_significance": 0.95
+  }
+  ```
+
+#### User Segment Performance
+- Segment-specific KPI dashboards
+- Cohort analysis by acquisition source, region, tier
+- Churn prediction models by segment
+- Lifetime Value (LTV) estimation per segment
+- Segment health scores and alerts
+- Metrics tracked:
+  - Daily/Weekly/Monthly Active Users per segment
+  - Feature adoption rates
+  - Subscription conversion rates
+  - Average session duration
+  - Retention curves (D1, D7, D30)
+
+#### Revenue Optimization
+- Dynamic pricing optimization based on user behavior
+- Subscription plan performance comparison
+- Upgrade/downgrade flow optimization
+- Trial conversion funnel analysis
+- Promotional effectiveness measurement
+- Implementation:
+  ```dart
+  // Revenue optimization dashboard
+  {
+    "current_period": {
+      "mrr": 12500.00,
+      "arr": 150000.00,
+      "new_subscriptions": 145,
+      "churned_subscriptions": 23,
+      "net_revenue_retention": 112%
+    },
+    "recommendations": [
+      {
+        "action": "Increase annual discount",
+        "expected_lift": "+15% annual conversions",
+        "confidence": 0.87
+      }
+    ]
+  }
+  ```
 
 ## Control Panel Tech Stack (Planned)
 

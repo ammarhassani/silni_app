@@ -18,6 +18,7 @@ class GradientButton extends ConsumerStatefulWidget {
   final bool dramatic;
   final bool enabled;
   final String? semanticsHint;
+  final bool enableShimmer;
 
   const GradientButton({
     super.key,
@@ -31,6 +32,7 @@ class GradientButton extends ConsumerStatefulWidget {
     this.dramatic = false,
     this.enabled = true,
     this.semanticsHint,
+    this.enableShimmer = false,
   });
 
   @override
@@ -86,7 +88,7 @@ class _GradientButtonState extends ConsumerState<GradientButton>
     final height = widget.height ?? AppSpacing.buttonHeight;
     final textColor = themeColors.onPrimary;
 
-    return Semantics(
+    Widget button = Semantics(
       label: widget.text,
       button: true,
       enabled: _isEnabled,
@@ -177,13 +179,21 @@ class _GradientButtonState extends ConsumerState<GradientButton>
             ),
           ),
         ),
-      ).animate(
-        onPlay: (controller) => controller.repeat(reverse: true),
-      ).shimmer(
-        duration: AppAnimations.loop,
-        color: themeColors.onPrimary.withValues(alpha: 0.3),
       ),
     );
+
+    if (widget.enableShimmer) {
+      return button
+          .animate(
+            onPlay: (controller) => controller.repeat(reverse: true),
+          )
+          .shimmer(
+            duration: AppAnimations.loop,
+            color: themeColors.onPrimary.withValues(alpha: 0.3),
+          );
+    }
+
+    return button;
   }
 }
 
@@ -196,6 +206,7 @@ class OutlinedGradientButton extends ConsumerWidget {
   final double? height;
   final IconData? icon;
   final bool enabled;
+  final bool enableShimmer;
 
   const OutlinedGradientButton({
     super.key,
@@ -206,6 +217,7 @@ class OutlinedGradientButton extends ConsumerWidget {
     this.height,
     this.icon,
     this.enabled = true,
+    this.enableShimmer = false,
   });
 
   @override
@@ -214,7 +226,7 @@ class OutlinedGradientButton extends ConsumerWidget {
     final buttonGradient = gradient ?? themeColors.primaryGradient;
     final textColor = themeColors.onPrimary;
 
-    return Semantics(
+    Widget button = Semantics(
       label: text,
       button: true,
       enabled: enabled,
@@ -296,12 +308,20 @@ class OutlinedGradientButton extends ConsumerWidget {
             ),
           ),
         ),
-      ).animate(
-        onPlay: (controller) => controller.repeat(reverse: true),
-      ).shimmer(
-        duration: AppAnimations.loop,
-        color: themeColors.onPrimary.withValues(alpha: 0.3),
       ),
     );
+
+    if (enableShimmer) {
+      return button
+          .animate(
+            onPlay: (controller) => controller.repeat(reverse: true),
+          )
+          .shimmer(
+            duration: AppAnimations.loop,
+            color: themeColors.onPrimary.withValues(alpha: 0.3),
+          );
+    }
+
+    return button;
   }
 }

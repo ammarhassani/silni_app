@@ -19,6 +19,8 @@ import '../../../shared/providers/interactions_provider.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/providers/realtime_provider.dart';
+import '../../premium_onboarding/providers/onboarding_provider.dart';
+import '../../premium_onboarding/screens/premium_onboarding_screen.dart';
 import '../providers/home_providers.dart';
 import '../widgets/widgets.dart';
 
@@ -52,20 +54,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
 
     _loadDailyHadith();
+    _checkPremiumOnboarding();
+  }
+
+  /// Check if premium onboarding should be shown for returning MAX users
+  void _checkPremiumOnboarding() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Small delay to ensure providers are ready
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+
+      final shouldShow = ref.read(shouldShowOnboardingProvider);
+      if (shouldShow && mounted) {
+        await PremiumOnboardingScreen.show(context);
+      }
+    });
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed && _pendingEvents.isNotEmpty) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          for (final event in _pendingEvents) {
-            _processGamificationEvent(event);
+
+    // Stop animation when app is paused to prevent "disposed controller" errors
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _floatingController.stop();
+    } else if (state == AppLifecycleState.resumed) {
+      // Resume animation when app is back in foreground
+      if (!_floatingController.isAnimating) {
+        _floatingController.repeat(reverse: true);
+      }
+
+      // Process pending gamification events
+      if (_pendingEvents.isNotEmpty) {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            for (final event in _pendingEvents) {
+              _processGamificationEvent(event);
+            }
+            _pendingEvents.clear();
           }
-          _pendingEvents.clear();
-        }
-      });
+        });
+      }
     }
   }
 
@@ -130,11 +159,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         break;
 
       case GamificationEventType.streakWarning:
-        // TODO: Show streak warning banner/notification
+        // Show streak warning notification
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: Colors.white),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      '⚠️ تنبيه: سلسلة التواصل على وشك الانقطاع! تواصل مع أحد أقاربك اليوم',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: AppColors.warning,
+              duration: const Duration(seconds: 5),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
         break;
 
       case GamificationEventType.streakCritical:
-        // TODO: Show critical streak warning
+        // Show critical streak warning with more urgency
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.error_rounded, color: Colors.white),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      '🔥 عاجل: ستفقد سلسلة التواصل خلال ساعات! تواصل الآن',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: AppColors.error,
+              duration: const Duration(seconds: 8),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
         break;
 
       case GamificationEventType.freezeEarned:
@@ -142,7 +213,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         break;
 
       case GamificationEventType.freezeUsed:
-        // TODO: Show freeze used notification
+        // Show freeze used notification
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.ac_unit_rounded, color: Colors.white),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      '❄️ تم استخدام تجميد السلسلة! سلسلتك محمية اليوم',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: AppColors.info,
+              duration: const Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
         break;
     }
   }
@@ -248,18 +340,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       displayName: displayName,
                       userId: userId,
                     ),
-                    const SizedBox(height: AppSpacing.xl),
+                    const SizedBox(height: AppSpacing.lg),
 
                     // Hadith/Islamic reminder
                     IslamicReminderWidget(
                       hadith: _dailyHadith,
                       isLoading: _isLoadingHadith,
                     ),
-                    const SizedBox(height: AppSpacing.xl),
+                    const SizedBox(height: AppSpacing.md),
 
                     // Quick Actions
                     const QuickActionsWidget(),
-                    const SizedBox(height: AppSpacing.xl),
+                    const SizedBox(height: AppSpacing.lg),
 
                     // Family members circle avatars
                     relativesAsync.when(
@@ -270,7 +362,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         onRetry: () => ref.invalidate(relativesStreamProvider(userId)),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.xl),
+                    const SizedBox(height: AppSpacing.md),
 
                     // Frequency carousel for tomorrow/yesterday reminders
                     relativesAsync.when(
@@ -279,13 +371,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           relatives: relatives,
                           schedules: schedules,
                         ),
-                        loading: () => const SizedBox.shrink(),
+                        loading: () => const FrequencyCarouselSkeleton(),
                         error: (_, _) => const SizedBox.shrink(),
                       ),
-                      loading: () => const SizedBox.shrink(),
+                      loading: () => const FrequencyCarouselSkeleton(),
                       error: (_, _) => const SizedBox.shrink(),
                     ),
-                    const SizedBox(height: AppSpacing.xl),
+                    const SizedBox(height: AppSpacing.md),
 
                     // Due Reminders Card
                     relativesAsync.when(
@@ -296,10 +388,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           schedules: schedules,
                           contactedSet: todayContactedAsync.valueOrNull ?? <String>{},
                         ),
-                        loading: () => const SizedBox.shrink(),
+                        loading: () => const DueRemindersCardSkeleton(),
                         error: (_, _) => const SizedBox.shrink(),
                       ),
-                      loading: () => const SizedBox.shrink(),
+                      loading: () => const DueRemindersCardSkeleton(),
                       error: (_, _) => const SizedBox.shrink(),
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -311,17 +403,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           interactions: interactions,
                           relatives: relatives,
                         ),
-                        loading: () => const SizedBox.shrink(),
+                        loading: () => const TodaysActivitySkeleton(),
                         error: (error, _) => InlineErrorWidget(
                           message: 'فشل في تحميل نشاط اليوم',
                           onRetry: () => ref.invalidate(todayInteractionsStreamProvider(userId)),
                           compact: true,
                         ),
                       ),
-                      loading: () => const SizedBox.shrink(),
+                      loading: () => const TodaysActivitySkeleton(),
                       error: (_, _) => const SizedBox.shrink(),
                     ),
-                    const SizedBox(height: AppSpacing.xl),
+                    const SizedBox(height: AppSpacing.md),
 
                     // Setup reminders prompt
                     schedulesAsync.when(
@@ -331,7 +423,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       loading: () => const SizedBox.shrink(),
                       error: (_, _) => const SizedBox.shrink(),
                     ),
-                    const SizedBox(height: AppSpacing.xl),
+                    const SizedBox(height: AppSpacing.lg),
                   ],
                 ),
               ),

@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../constants/app_colors.dart';
-import '../constants/app_spacing.dart';
-import '../constants/app_typography.dart';
 import '../errors/app_errors.dart';
+import '../../shared/utils/ui_helpers.dart';
 
 /// Helper class for showing consistent snackbars throughout the app
 class SnackBarHelper {
@@ -20,54 +19,19 @@ class SnackBarHelper {
   }) {
     HapticFeedback.mediumImpact();
 
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(
-              Icons.error_outline_rounded,
-              color: Colors.white,
-              size: AppSpacing.iconSm,
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                message,
-                style: AppTypography.bodySmall.copyWith(
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            if (onRetry != null)
-              TextButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  onRetry();
-                },
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  retryLabel,
-                  style: AppTypography.labelMedium.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        backgroundColor: AppColors.error,
-        duration: duration,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        ),
-        margin: const EdgeInsets.all(AppSpacing.md),
-      ),
+    UIHelpers.showSnackBar(
+      context,
+      message,
+      isError: true,
+      duration: duration,
+      icon: Icons.error_outline_rounded,
+      action: onRetry != null
+          ? SnackBarAction(
+              label: retryLabel,
+              textColor: Colors.white,
+              onPressed: onRetry,
+            )
+          : null,
     );
   }
 
@@ -77,9 +41,8 @@ class SnackBarHelper {
     dynamic error, {
     VoidCallback? onRetry,
   }) {
-    final appError = error is AppError
-        ? error
-        : UnknownError(originalError: error);
+    final appError =
+        error is AppError ? error : UnknownError(originalError: error);
 
     showError(
       context,
@@ -98,54 +61,19 @@ class SnackBarHelper {
   }) {
     HapticFeedback.lightImpact();
 
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(
-              Icons.check_circle_outline_rounded,
-              color: Colors.white,
-              size: AppSpacing.iconSm,
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                message,
-                style: AppTypography.bodySmall.copyWith(
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            if (onAction != null && actionLabel != null)
-              TextButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  onAction();
-                },
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  actionLabel,
-                  style: AppTypography.labelMedium.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        backgroundColor: AppColors.success,
-        duration: duration,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        ),
-        margin: const EdgeInsets.all(AppSpacing.md),
-      ),
+    UIHelpers.showSnackBar(
+      context,
+      message,
+      duration: duration,
+      icon: Icons.check_circle_outline_rounded,
+      backgroundColor: AppColors.success,
+      action: onAction != null && actionLabel != null
+          ? SnackBarAction(
+              label: actionLabel,
+              textColor: Colors.white,
+              onPressed: onAction,
+            )
+          : null,
     );
   }
 
@@ -157,54 +85,19 @@ class SnackBarHelper {
     VoidCallback? onAction,
     String? actionLabel,
   }) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.white,
-              size: AppSpacing.iconSm,
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                message,
-                style: AppTypography.bodySmall.copyWith(
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            if (onAction != null && actionLabel != null)
-              TextButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  onAction();
-                },
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  actionLabel,
-                  style: AppTypography.labelMedium.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        backgroundColor: AppColors.warning,
-        duration: duration,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        ),
-        margin: const EdgeInsets.all(AppSpacing.md),
-      ),
+    UIHelpers.showSnackBar(
+      context,
+      message,
+      duration: duration,
+      icon: Icons.warning_amber_rounded,
+      backgroundColor: AppColors.warning,
+      action: onAction != null && actionLabel != null
+          ? SnackBarAction(
+              label: actionLabel,
+              textColor: Colors.white,
+              onPressed: onAction,
+            )
+          : null,
     );
   }
 
@@ -215,42 +108,19 @@ class SnackBarHelper {
     Duration duration = const Duration(seconds: 3),
     VoidCallback? onDismiss,
   }) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(
-              Icons.info_outline_rounded,
-              color: Colors.white,
-              size: AppSpacing.iconSm,
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                message,
-                style: AppTypography.bodySmall.copyWith(
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: AppColors.info,
-        duration: duration,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        ),
-        margin: const EdgeInsets.all(AppSpacing.md),
-        action: onDismiss != null
-            ? SnackBarAction(
-                label: 'حسناً',
-                textColor: Colors.white,
-                onPressed: onDismiss,
-              )
-            : null,
-      ),
+    UIHelpers.showSnackBar(
+      context,
+      message,
+      duration: duration,
+      icon: Icons.info_outline_rounded,
+      backgroundColor: AppColors.info,
+      action: onDismiss != null
+          ? SnackBarAction(
+              label: 'حسناً',
+              textColor: Colors.white,
+              onPressed: onDismiss,
+            )
+          : null,
     );
   }
 
@@ -266,30 +136,29 @@ class SnackBarHelper {
   }
 
   /// Show loading snackbar (indefinite duration)
-  static ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showLoading(
+  static void showLoading(
     BuildContext context,
     String message,
   ) {
+    if (!context.mounted) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    return ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
             const SizedBox(
-              width: AppSpacing.iconSm,
-              height: AppSpacing.iconSm,
+              width: 20,
+              height: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
                 valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 message,
-                style: AppTypography.bodySmall.copyWith(
-                  color: Colors.white,
-                ),
+                style: const TextStyle(color: Colors.white),
               ),
             ),
           ],
@@ -297,16 +166,13 @@ class SnackBarHelper {
         backgroundColor: AppColors.islamicGreenPrimary,
         duration: const Duration(days: 1), // Effectively indefinite
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        ),
-        margin: const EdgeInsets.all(AppSpacing.md),
       ),
     );
   }
 
   /// Hide current snackbar
   static void hide(BuildContext context) {
+    if (!context.mounted) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
   }
 }

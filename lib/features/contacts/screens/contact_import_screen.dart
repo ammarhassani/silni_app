@@ -19,6 +19,7 @@ import '../../../shared/widgets/relationship_specification_dialog.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../core/providers/cache_provider.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../shared/utils/ui_helpers.dart';
 
 class ContactImportScreen extends ConsumerStatefulWidget {
   const ContactImportScreen({super.key});
@@ -87,8 +88,10 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
         _isLoading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في تحميل جهات الاتصال: $e')),
+        UIHelpers.showSnackBar(
+          context,
+          'خطأ في تحميل جهات الاتصال: $e',
+          isError: true,
         );
       }
     }
@@ -134,10 +137,10 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
 
   Future<void> _importSelected() async {
     if (_selectedContactIds.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('الرجاء اختيار جهة اتصال واحدة على الأقل'),
-        ),
+      UIHelpers.showSnackBar(
+        context,
+        'الرجاء اختيار جهة اتصال واحدة على الأقل',
+        isError: true,
       );
       return;
     }
@@ -217,11 +220,10 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
         HapticFeedback.heavyImpact();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('تم استيراد $successCount جهة اتصال بنجاح! 🎉'),
-              backgroundColor: AppColors.islamicGreenPrimary,
-            ),
+          UIHelpers.showSnackBar(
+            context,
+            'تم استيراد $successCount جهة اتصال بنجاح! 🎉',
+            backgroundColor: AppColors.islamicGreenPrimary,
           );
         }
 
@@ -233,19 +235,20 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
       }
 
       if (errorCount > 0 && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('فشل استيراد $errorCount جهة اتصال'),
-            backgroundColor: Colors.red,
-          ),
+        UIHelpers.showSnackBar(
+          context,
+          'فشل استيراد $errorCount جهة اتصال',
+          isError: true,
         );
       }
     } catch (e) {
       setState(() => _isImporting = false);
       if (mounted) {
-        ScaffoldMessenger.of(
+        UIHelpers.showSnackBar(
           context,
-        ).showSnackBar(SnackBar(content: Text('خطأ في الاستيراد: $e')));
+          'خطأ في الاستيراد: $e',
+          isError: true,
+        );
       }
     }
   }

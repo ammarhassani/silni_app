@@ -57,9 +57,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       final currentPath = state.matchedLocation;
       final isPublicRoute = AppRoutes.isPublicRoute(currentPath);
 
-      // Case 1: Authenticated user on splash - skip to home
-      if (currentPath == AppRoutes.splash && isAuthenticated) {
-        return AppRoutes.home;
+      // Case 1: User on splash - let splash screen handle session initialization
+      // Don't redirect automatically to avoid race condition with session restoration
+      if (currentPath == AppRoutes.splash) {
+        return null; // Let splash screen complete initialization and navigate
       }
 
       // Case 2: Authenticated user on auth routes (login/signup) - redirect to home

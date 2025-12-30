@@ -173,15 +173,10 @@ class ChatMessageBubble extends StatelessWidget {
               onTap: () {
                 Clipboard.setData(ClipboardData(text: message.content));
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('تم نسخ الرسالة'),
-                    backgroundColor: AppColors.islamicGreenPrimary,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
+                UIHelpers.showSnackBar(
+                  context,
+                  'تم نسخ الرسالة',
+                  backgroundColor: AppColors.islamicGreenPrimary,
                 );
               },
             ),

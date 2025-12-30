@@ -5,14 +5,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_animations.dart';
+import '../../../core/constants/app_colors.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/models/subscription_tier.dart';
+import '../../../core/providers/subscription_provider.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../subscription/screens/paywall_screen.dart';
 import '../providers/ai_chat_provider.dart';
+import '../../../shared/utils/ui_helpers.dart';
 
 /// AI Hub Screen - Main dashboard for all AI features
 /// Replaces the old statistics "Coming Soon" screen
@@ -49,7 +54,7 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen> {
                   crossAxisCount: 2,
                   mainAxisSpacing: AppSpacing.md,
                   crossAxisSpacing: AppSpacing.md,
-                  childAspectRatio: 1.1,
+                  childAspectRatio: 0.95, // More height for badges
                 ),
                 delegate: SliverChildListDelegate([
                   _buildFeatureCard(
@@ -59,48 +64,60 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen> {
                     gradient: LinearGradient(
                       colors: [themeColors.primary, themeColors.primaryLight],
                     ),
-                    onTap: () => _navigateToFeature('counselor', themeColors),
+                    onTap: () => _navigateWithGate('counselor', FeatureIds.aiChat, themeColors),
                     delay: 0,
+                    featureId: FeatureIds.aiChat,
+                    requiredTier: SubscriptionTier.max,
                   ),
                   _buildFeatureCard(
                     icon: Icons.edit_note_rounded,
                     title: 'الرسائل',
                     subtitle: 'كتابة رسائل مميزة',
                     gradient: _createGradient(themeColors.accent, themeColors.primaryLight),
-                    onTap: () => _navigateToFeature('messages', themeColors),
+                    onTap: () => _navigateWithGate('messages', FeatureIds.messageComposer, themeColors),
                     delay: 100,
+                    featureId: FeatureIds.messageComposer,
+                    requiredTier: SubscriptionTier.max,
                   ),
                   _buildFeatureCard(
                     icon: Icons.psychology_rounded,
                     title: 'سيناريوهات',
                     subtitle: 'محادثات صعبة',
                     gradient: _createGradient(Colors.purple.shade400, Colors.purple.shade200),
-                    onTap: () => _navigateToFeature('scripts', themeColors),
+                    onTap: () => _navigateWithGate('scripts', FeatureIds.communicationScripts, themeColors),
                     delay: 200,
+                    featureId: FeatureIds.communicationScripts,
+                    requiredTier: SubscriptionTier.max,
                   ),
                   _buildFeatureCard(
                     icon: Icons.favorite_rounded,
                     title: 'تحليل العلاقات',
                     subtitle: 'نصائح ذكية',
                     gradient: _createGradient(Colors.pink.shade400, Colors.pink.shade200),
-                    onTap: () => _navigateToFeature('analysis', themeColors),
+                    onTap: () => _navigateWithGate('analysis', FeatureIds.relationshipAnalysis, themeColors),
                     delay: 300,
+                    featureId: FeatureIds.relationshipAnalysis,
+                    requiredTier: SubscriptionTier.max,
                   ),
                   _buildFeatureCard(
                     icon: Icons.notifications_active_rounded,
                     title: 'تذكيرات ذكية',
                     subtitle: 'اقتراحات AI',
                     gradient: _createGradient(Colors.orange.shade400, Colors.orange.shade200),
-                    onTap: () => _navigateToFeature('smart_reminders', themeColors),
+                    onTap: () => _navigateWithGate('smart_reminders', FeatureIds.smartRemindersAI, themeColors),
                     delay: 400,
+                    featureId: FeatureIds.smartRemindersAI,
+                    requiredTier: SubscriptionTier.max,
                   ),
                   _buildFeatureCard(
                     icon: Icons.analytics_rounded,
                     title: 'التقرير',
                     subtitle: 'ملخص أسبوعي',
                     gradient: _createGradient(Colors.teal.shade400, Colors.teal.shade200),
-                    onTap: () => _navigateToFeature('report', themeColors),
+                    onTap: () => _navigateWithGate('report', FeatureIds.weeklyReports, themeColors),
                     delay: 500,
+                    featureId: FeatureIds.weeklyReports,
+                    requiredTier: SubscriptionTier.max,
                   ),
                 ]),
               ),
@@ -124,7 +141,7 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen> {
 
             // Bottom spacing for nav bar
             const SliverToBoxAdapter(
-              child: SizedBox(height: 100),
+              child: SizedBox(height: AppSpacing.bottomNavPadding),
             ),
           ],
           ),
@@ -206,63 +223,118 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen> {
     required Gradient gradient,
     required VoidCallback onTap,
     required int delay,
+    String? featureId,
+    SubscriptionTier requiredTier = SubscriptionTier.free,
   }) {
+    // Check if feature is locked
+    final hasAccess = featureId == null || ref.watch(featureAccessProvider(featureId));
+    final isPremiumFeature = requiredTier != SubscriptionTier.free;
+
     return GlassCard(
       onTap: () {
         HapticFeedback.lightImpact();
         onTap();
       },
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white.withValues(alpha: 0.1),
-              Colors.white.withValues(alpha: 0.05),
-            ],
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: gradient,
-                boxShadow: [
-                  BoxShadow(
-                    color: (gradient as LinearGradient).colors.first.withValues(alpha: 0.4),
-                    blurRadius: 12,
-                    spreadRadius: 1,
+      child: Stack(
+        children: [
+          // Main content
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withValues(alpha: hasAccess ? 0.1 : 0.05),
+                  Colors.white.withValues(alpha: hasAccess ? 0.05 : 0.02),
+                ],
+              ),
+            ),
+            child: Opacity(
+              opacity: hasAccess ? 1.0 : 0.6,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: gradient,
+                      boxShadow: [
+                        BoxShadow(
+                          color: (gradient as LinearGradient).colors.first.withValues(alpha: 0.4),
+                          blurRadius: 12,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      icon,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    title,
+                    style: AppTypography.titleMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: AppTypography.bodySmall.copyWith(
+                      color: Colors.white60,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
-              child: Icon(
-                icon,
-                color: Colors.white,
-                size: 28,
+            ),
+          ),
+          // Premium badge
+          if (isPremiumFeature && !hasAccess)
+            Positioned(
+              top: 6,
+              left: 6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.premiumGold, AppColors.premiumGoldDark],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.premiumGold.withValues(alpha: 0.4),
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.lock, size: 10, color: Colors.black87),
+                    const SizedBox(width: 3),
+                    Text(
+                      requiredTier.englishName.toUpperCase(),
+                      style: AppTypography.labelSmall.copyWith(
+                        color: Colors.black87,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 9,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              title,
-              style: AppTypography.titleMedium.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: AppTypography.bodySmall.copyWith(
-                color: Colors.white60,
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     )
         .animate(delay: Duration(milliseconds: delay))
@@ -289,7 +361,7 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.sm),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
           children: [
             Container(
@@ -369,10 +441,11 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen> {
     return GlassCard(
       onTap: () {
         HapticFeedback.lightImpact();
-        _navigateToFeature('health', themeColors);
+        // Use gated navigation for health overview (same as relationship analysis)
+        _navigateWithGate('health', FeatureIds.relationshipAnalysis, themeColors);
       },
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.sm),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -452,6 +525,24 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen> {
     );
   }
 
+  /// Navigate to feature with subscription gate check
+  void _navigateWithGate(String feature, String featureId, ThemeColors themeColors) {
+    final hasAccess = ref.read(featureAccessProvider(featureId));
+
+    if (hasAccess) {
+      _navigateToFeature(feature, themeColors);
+    } else {
+      // Show paywall
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PaywallScreen(
+            featureToUnlock: featureId,
+          ),
+        ),
+      );
+    }
+  }
+
   void _navigateToFeature(String feature, ThemeColors themeColors) {
     switch (feature) {
       case 'counselor':
@@ -479,28 +570,20 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen> {
         return;
       case 'ramadan':
         // Ramadan mode - coming soon
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('وضع رمضان قريباً إن شاء الله 🌙'),
-            backgroundColor: Colors.indigo.shade600,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
+        // Ramadan mode - coming soon
+        UIHelpers.showSnackBar(
+          context,
+          'وضع رمضان قريباً إن شاء الله 🌙',
+          backgroundColor: Colors.indigo.shade600,
         );
         return;
       default:
         // Other features coming soon
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('قريباً: $feature'),
-            backgroundColor: themeColors.primary,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
+        // Other features coming soon
+        UIHelpers.showSnackBar(
+          context,
+          'قريباً: $feature',
+          backgroundColor: themeColors.primary,
         );
     }
   }

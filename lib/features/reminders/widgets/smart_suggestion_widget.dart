@@ -13,6 +13,7 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/services/reminder_schedules_service.dart';
+import '../../../shared/utils/ui_helpers.dart';
 import '../providers/smart_suggestion_provider.dart';
 
 /// Compact smart suggestion section for reminders screen
@@ -735,12 +736,10 @@ class _AddToReminderBottomSheetState
           _isLoading = false;
           _selectedScheduleId = null;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطأ: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
+        UIHelpers.showSnackBar(
+          context,
+          'خطأ: $e',
+          isError: true,
         );
       }
     }

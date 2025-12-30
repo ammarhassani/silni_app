@@ -83,4 +83,15 @@ class AppSpacing {
   // Dramatic UI spacing (for special effects)
   static const double dramaticPadding = xxxl;
   static const double dramaticRadius = 40.0;
+
+  // Section spacing (semantic usage)
+  static const double sectionSpacingSm = md; // 16px - related sections
+  static const double sectionSpacingMd = lg; // 24px - standard section gap
+  static const double sectionSpacingLg = xl; // 32px - major visual breaks only
+
+  // Bottom nav accommodation
+  static const double bottomNavPadding = 100.0;
+
+  // CTA card accommodation
+  static const double ctaCardPadding = 120.0;
 }

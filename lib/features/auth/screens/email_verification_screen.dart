@@ -16,6 +16,7 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/services/auth_service.dart';
 import '../providers/auth_provider.dart';
 import '../../../core/services/app_logger_service.dart';
+import '../../../shared/utils/ui_helpers.dart';
 
 class EmailVerificationScreen extends ConsumerStatefulWidget {
   const EmailVerificationScreen({super.key});
@@ -113,12 +114,10 @@ class _EmailVerificationScreenState
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تم إرسال رابط التحقق إلى بريدك الإلكتروني'),
-            backgroundColor: AppColors.success,
-            duration: Duration(seconds: 3),
-          ),
+        UIHelpers.showSnackBar(
+          context,
+          'تم إرسال رابط التحقق إلى بريدك الإلكتروني',
+          backgroundColor: AppColors.success,
         );
 
         // Start cooldown
@@ -126,22 +125,18 @@ class _EmailVerificationScreenState
       }
     } on AuthException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AuthService.getErrorMessage(e.message)),
-            backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 3),
-          ),
+        UIHelpers.showSnackBar(
+          context,
+          AuthService.getErrorMessage(e.message),
+          isError: true,
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AuthService.getErrorMessage(e.toString())),
-            backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 3),
-          ),
+        UIHelpers.showSnackBar(
+           context,
+          AuthService.getErrorMessage(e.toString()),
+          isError: true,
         );
       }
     } finally {

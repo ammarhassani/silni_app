@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_spacing.dart';
+import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/services/reminder_schedules_service.dart';
 import 'day_selector_widget.dart';
+import '../../../shared/utils/ui_helpers.dart';
+import '../../../shared/widgets/theme_aware_dialog.dart';
 
 /// Dialog for editing an existing reminder schedule
 class EditScheduleDialog extends ConsumerStatefulWidget {
@@ -51,15 +54,19 @@ class _EditScheduleDialogState extends ConsumerState<EditScheduleDialog> {
   void _saveChanges() async {
     if (widget.schedule.frequency == ReminderFrequency.weekly &&
         _selectedDays.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى اختيار يوم للتذكير الأسبوعي')),
+      UIHelpers.showSnackBar(
+        context,
+        'يرجى اختيار يوم للتذكير الأسبوعي',
+        isError: true,
       );
       return;
     }
     if (widget.schedule.frequency == ReminderFrequency.monthly &&
         _selectedDayOfMonth == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى اختيار يوم من الشهر')),
+      UIHelpers.showSnackBar(
+        context,
+        'يرجى اختيار يوم من الشهر',
+        isError: true,
       );
       return;
     }
@@ -79,14 +86,18 @@ class _EditScheduleDialogState extends ConsumerState<EditScheduleDialog> {
       );
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم تحديث التذكير بنجاح')),
+        UIHelpers.showSnackBar(
+          context,
+          'تم تحديث التذكير بنجاح',
+          backgroundColor: AppColors.islamicGreenPrimary,
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e')),
+        UIHelpers.showSnackBar(
+          context,
+          'خطأ: $e',
+          isError: true,
         );
       }
     }
@@ -96,12 +107,9 @@ class _EditScheduleDialogState extends ConsumerState<EditScheduleDialog> {
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
 
-    return AlertDialog(
-      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
-      title: Text(
-        'تعديل التذكير',
-        style: AppTypography.headlineMedium.copyWith(color: Colors.white),
-      ),
+    return ThemeAwareAlertDialog(
+      title: 'تعديل التذكير',
+      titleIcon: const Icon(Icons.edit_calendar_rounded, color: Colors.white),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,

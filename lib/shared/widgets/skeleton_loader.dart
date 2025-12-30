@@ -232,3 +232,127 @@ class HadithSkeletonLoader extends ConsumerWidget {
     );
   }
 }
+
+/// Skeleton loader for FrequencyCarousel (tomorrow/yesterday reminders)
+class FrequencyCarouselSkeleton extends StatelessWidget {
+  const FrequencyCarouselSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'جاري تحميل التذكيرات',
+      child: SizedBox(
+        height: 80,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: 4,
+          itemBuilder: (context, index) {
+            return Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.sm),
+              child: SkeletonLoader(
+                width: 100,
+                height: 70,
+                borderRadius: AppSpacing.radiusMd,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// Skeleton loader for DueRemindersCard
+class DueRemindersCardSkeleton extends ConsumerWidget {
+  const DueRemindersCardSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
+
+    return Semantics(
+      label: 'جاري تحميل التذكيرات المستحقة',
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: themeColors.glassBackground,
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          border: Border.all(color: themeColors.glassBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SkeletonLoader(width: 140, height: 20, borderRadius: 4),
+            const SizedBox(height: AppSpacing.md),
+            ...List.generate(
+              2,
+              (index) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Row(
+                  children: [
+                    const CircleSkeletonLoader(size: 40),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          SkeletonLoader(width: 100, height: 14, borderRadius: 4),
+                          SizedBox(height: 4),
+                          SkeletonLoader(width: 60, height: 12, borderRadius: 4),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Skeleton loader for TodaysActivityWidget
+class TodaysActivitySkeleton extends ConsumerWidget {
+  const TodaysActivitySkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
+
+    return Semantics(
+      label: 'جاري تحميل نشاط اليوم',
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: themeColors.glassBackground,
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          border: Border.all(color: themeColors.glassBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SkeletonLoader(width: 120, height: 20, borderRadius: 4),
+            const SizedBox(height: AppSpacing.md),
+            ...List.generate(
+              3,
+              (index) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Row(
+                  children: [
+                    const CircleSkeletonLoader(size: 36),
+                    const SizedBox(width: AppSpacing.sm),
+                    const SkeletonLoader(width: 80, height: 14, borderRadius: 4),
+                    const Spacer(),
+                    const SkeletonLoader(width: 50, height: 12, borderRadius: 4),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

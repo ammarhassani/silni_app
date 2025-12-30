@@ -5,6 +5,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/models/subscription_tier.dart';
+import '../../../core/providers/subscription_provider.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/utils/badge_prestige.dart';
@@ -92,6 +94,8 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
   }
 
   Widget _buildUsernameSection() {
+    final tier = ref.watch(subscriptionTierProvider);
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -130,7 +134,48 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
             overflow: TextOverflow.ellipsis,
           ),
         ),
+        // Subscription tier badge
+        if (tier != SubscriptionTier.free) ...[
+          const SizedBox(width: 4),
+          _buildTierBadge(tier),
+        ],
       ],
+    );
+  }
+
+  Widget _buildTierBadge(SubscriptionTier tier) {
+    final isMax = tier.isMax;
+    final badgeColor = isMax ? AppColors.premiumGold : AppColors.islamicGreenPrimary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        gradient: isMax
+            ? AppColors.goldenGradient
+            : LinearGradient(
+                colors: [
+                  badgeColor,
+                  badgeColor.withValues(alpha: 0.8),
+                ],
+              ),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: badgeColor.withValues(alpha: 0.4),
+            blurRadius: 4,
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Text(
+        tier.badgeLabel,
+        style: AppTypography.labelSmall.copyWith(
+          color: isMax ? Colors.black : Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 8,
+          letterSpacing: 0.5,
+        ),
+      ),
     );
   }
 
