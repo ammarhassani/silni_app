@@ -92,11 +92,13 @@ class MessageComposerNotifier extends StateNotifier<MessageComposerState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
+      // Get configured message count from admin panel
+      final messageCount = AIConfigService.instance.getParametersFor('message_generation').outputCount ?? 3;
       final messages = await _aiService.generateMessages(
         relative: state.selectedRelative!,
         occasionType: state.selectedOccasion!,
-        tone: state.selectedTone ?? 'warm',
-        count: 3,
+        tone: state.selectedTone ?? AIConfigService.instance.defaultToneKey,
+        count: messageCount,
       );
 
       if (!mounted) return;
@@ -134,7 +136,7 @@ class MessageComposerNotifier extends StateNotifier<MessageComposerState> {
       final messages = await _aiService.generateMessages(
         relative: state.selectedRelative!,
         occasionType: state.selectedOccasion!,
-        tone: state.selectedTone ?? 'warm',
+        tone: state.selectedTone ?? AIConfigService.instance.defaultToneKey,
         count: 1,
       );
 

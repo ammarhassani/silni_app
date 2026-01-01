@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../../core/ai/ai_identity.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -9,14 +10,16 @@ import '../../../core/constants/app_typography.dart';
 /// AI-themed loading indicator with animated dots and message
 /// Used across all AI feature screens for consistent loading UX
 class AILoadingIndicator extends StatelessWidget {
-  final String message;
+  final String? message;
   final bool showIcon;
 
   const AILoadingIndicator({
     super.key,
-    this.message = 'واصل يفكر...',
+    this.message,
     this.showIcon = true,
   });
+
+  String get _displayMessage => message ?? '${AIIdentity.name} يفكر...';
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +70,7 @@ class AILoadingIndicator extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                message,
+                _displayMessage,
                 style: AppTypography.bodyLarge.copyWith(
                   color: Colors.white70,
                 ),
@@ -88,18 +91,20 @@ class AIEngagingLoader extends StatefulWidget {
   final String? emoji;
   final Color? accentColor;
 
-  const AIEngagingLoader({
+  AIEngagingLoader({
     super.key,
-    this.messages = const [
-      'واصل يستكشف الأفكار...',
-      'يبحث عن أفضل الخيارات...',
-      'يحلل البيانات...',
-      'جاري التفكير بعمق...',
-      'لحظات ونكون جاهزين...',
-    ],
+    List<String>? messages,
     this.emoji,
     this.accentColor,
-  });
+  }) : messages = messages ?? _defaultMessages;
+
+  static List<String> get _defaultMessages => [
+    '${AIIdentity.name} يستكشف الأفكار...',
+    'يبحث عن أفضل الخيارات...',
+    'يحلل البيانات...',
+    'جاري التفكير بعمق...',
+    'لحظات ونكون جاهزين...',
+  ];
 
   @override
   State<AIEngagingLoader> createState() => _AIEngagingLoaderState();

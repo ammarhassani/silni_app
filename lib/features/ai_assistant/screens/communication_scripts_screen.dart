@@ -5,9 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/ai/ai_identity.dart';
 import '../../../core/ai/ai_models.dart';
 import '../../../core/ai/deepseek_ai_service.dart';
 import '../../../core/config/supabase_config.dart';
+import '../../../core/services/ai_config_service.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/app_themes.dart';
@@ -16,11 +18,10 @@ import '../../../shared/models/relative_model.dart';
 import '../../../shared/services/relatives_service.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../widgets/ai_error_card.dart';
-import '../widgets/ai_error_card.dart';
 import '../widgets/ai_loading_indicator.dart';
 import '../../../shared/utils/ui_helpers.dart';
 
-/// Predefined communication scenarios
+/// Communication scenario template - now driven by admin config
 class ScenarioTemplate {
   final String id;
   final String title;
@@ -36,50 +37,27 @@ class ScenarioTemplate {
     required this.color,
   });
 
-  static const List<ScenarioTemplate> templates = [
-    ScenarioTemplate(
-      id: 'apology',
-      title: 'طلب مسامحة',
-      description: 'بعد خلاف أو سوء تفاهم',
-      emoji: '🤝',
-      color: Colors.orange,
-    ),
-    ScenarioTemplate(
-      id: 'congratulation',
-      title: 'تهنئة',
-      description: 'بمناسبة سعيدة',
-      emoji: '🎉',
-      color: Colors.green,
-    ),
-    ScenarioTemplate(
-      id: 'condolence',
-      title: 'مواساة',
-      description: 'في مصيبة أو حزن',
-      emoji: '💐',
-      color: Colors.purple,
-    ),
-    ScenarioTemplate(
-      id: 'reconnect',
-      title: 'إعادة تواصل',
-      description: 'بعد انقطاع طويل',
-      emoji: '🔄',
-      color: Colors.blue,
-    ),
-    ScenarioTemplate(
-      id: 'gratitude',
-      title: 'شكر وامتنان',
-      description: 'على معروف أو مساعدة',
-      emoji: '🙏',
-      color: Colors.teal,
-    ),
-    ScenarioTemplate(
-      id: 'sensitive',
-      title: 'موضوع حساس',
-      description: 'مناقشة أمر صعب',
-      emoji: '💬',
-      color: Colors.amber,
-    ),
-  ];
+  /// Get templates from AIConfigService (dynamic from admin panel)
+  static List<ScenarioTemplate> get templates {
+    return AIConfigService.instance.communicationScenarios.map((scenario) {
+      return ScenarioTemplate(
+        id: scenario.scenarioKey,
+        title: scenario.titleAr,
+        description: scenario.descriptionAr,
+        emoji: scenario.emoji,
+        color: _parseColor(scenario.colorHex),
+      );
+    }).toList();
+  }
+
+  /// Parse hex color string to Color
+  static Color _parseColor(String hexColor) {
+    final hex = hexColor.replaceFirst('#', '');
+    if (hex.length == 6) {
+      return Color(int.parse('FF$hex', radix: 16));
+    }
+    return Colors.blue; // fallback
+  }
 }
 
 /// State for communication scripts
@@ -266,8 +244,8 @@ class CommunicationScriptsScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.md),
         child: AIEngagingLoader(
           emoji: '📝',
-          messages: const [
-            'واصل يجهز السيناريو...',
+          messages: [
+            '${AIIdentity.name} يجهز السيناريو...',
             'يحلل الموقف...',
             'يصيغ العبارات المناسبة...',
             'يختار الكلمات بعناية...',
@@ -324,7 +302,7 @@ class _ScenarioSelectionView extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          'واصل يساعدك تصيغ كلامك بشكل مناسب',
+          '${AIIdentity.name} يساعدك تصيغ كلامك بشكل مناسب',
           style: AppTypography.bodySmall.copyWith(
             color: Colors.white60,
           ),

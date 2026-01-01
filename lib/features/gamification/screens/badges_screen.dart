@@ -6,6 +6,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../../core/services/gamification_config_service.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -358,9 +359,76 @@ class BadgeInfo {
   });
 }
 
-/// Badge data provider
+/// Badge data provider - uses dynamic config from admin panel
 class BadgeData {
-  static const List<BadgeInfo> achievementBadges = [
+  /// Convert BadgeConfig to BadgeInfo for UI display
+  static BadgeInfo _configToInfo(BadgeConfig config) {
+    return BadgeInfo(
+      id: config.badgeKey,
+      name: config.displayNameAr,
+      description: config.descriptionAr,
+      emoji: config.emoji,
+      color: _getCategoryColor(config.category),
+    );
+  }
+
+  /// Get color based on badge category
+  static Color _getCategoryColor(String category) {
+    switch (category) {
+      case 'streak':
+        return AppColors.energeticRed;
+      case 'volume':
+        return AppColors.islamicGreenPrimary;
+      case 'special':
+        return AppColors.emotionalPurple;
+      case 'milestone':
+        return AppColors.premiumGold;
+      default:
+        return AppColors.calmBlue;
+    }
+  }
+
+  /// Achievement badges (volume-based) - dynamic from admin config
+  static List<BadgeInfo> get achievementBadges {
+    final config = GamificationConfigService.instance;
+    final volumeBadges = config.volumeBadges;
+
+    // Add first_interaction badge if exists
+    final firstInteraction = config.getBadge('first_interaction');
+    final result = <BadgeInfo>[];
+
+    if (firstInteraction != null) {
+      result.add(_configToInfo(firstInteraction));
+    }
+
+    result.addAll(volumeBadges.map(_configToInfo));
+
+    return result.isNotEmpty ? result : _fallbackAchievementBadges;
+  }
+
+  /// Streak badges - dynamic from admin config
+  static List<BadgeInfo> get streakBadges {
+    final config = GamificationConfigService.instance;
+    final badges = config.streakBadges.map(_configToInfo).toList();
+    return badges.isNotEmpty ? badges : _fallbackStreakBadges;
+  }
+
+  /// Special badges - dynamic from admin config
+  static List<BadgeInfo> get specialBadges {
+    final config = GamificationConfigService.instance;
+    final badges = config.specialBadges.map(_configToInfo).toList();
+    return badges.isNotEmpty ? badges : _fallbackSpecialBadges;
+  }
+
+  static List<BadgeInfo> get allBadges => [
+        ...achievementBadges,
+        ...streakBadges,
+        ...specialBadges,
+      ];
+
+  // ============ Fallback badges (used when config not loaded) ============
+
+  static const List<BadgeInfo> _fallbackAchievementBadges = [
     BadgeInfo(
       id: 'first_interaction',
       name: 'أول تفاعل',
@@ -405,7 +473,7 @@ class BadgeData {
     ),
   ];
 
-  static const List<BadgeInfo> streakBadges = [
+  static const List<BadgeInfo> _fallbackStreakBadges = [
     BadgeInfo(
       id: 'streak_7',
       name: 'أسبوع متواصل',
@@ -436,7 +504,7 @@ class BadgeData {
     ),
   ];
 
-  static const List<BadgeInfo> specialBadges = [
+  static const List<BadgeInfo> _fallbackSpecialBadges = [
     BadgeInfo(
       id: 'all_interaction_types',
       name: 'متنوع',
@@ -450,27 +518,6 @@ class BadgeData {
       description: 'تفاعلت مع 10 أقارب مختلفين',
       emoji: '🦋',
       color: AppColors.calmBlue,
-    ),
-    BadgeInfo(
-      id: 'early_bird',
-      name: 'طائر الصباح',
-      description: 'تفاعلت قبل 9 صباحاً',
-      emoji: '🌅',
-      color: AppColors.joyfulOrange,
-    ),
-    BadgeInfo(
-      id: 'night_owl',
-      name: 'بومة الليل',
-      description: 'تفاعلت بعد 9 مساءً',
-      emoji: '🦉',
-      color: AppColors.calmBlue,
-    ),
-    BadgeInfo(
-      id: 'weekend_warrior',
-      name: 'محارب نهاية الأسبوع',
-      description: '5+ تفاعلات في عطلة نهاية الأسبوع',
-      emoji: '⚔️',
-      color: AppColors.emotionalPurple,
     ),
     BadgeInfo(
       id: 'generous_giver',
@@ -501,10 +548,4 @@ class BadgeData {
       color: AppColors.islamicGreenPrimary,
     ),
   ];
-
-  static List<BadgeInfo> get allBadges => [
-        ...achievementBadges,
-        ...streakBadges,
-        ...specialBadges,
-      ];
 }

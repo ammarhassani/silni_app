@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/ai/ai_identity.dart';
 import '../../../core/ai/ai_models.dart';
 import '../../../core/ai/ai_prompts.dart';
 import '../../../core/constants/app_colors.dart';
@@ -50,7 +51,7 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
       appBar: AppBar(
         backgroundColor: themeColors.background1,
         title: Text(
-          'ذاكرة واصل',
+          'ذاكرة ${AIIdentity.name}',
           style: AppTypography.headlineSmall.copyWith(color: themeColors.textOnGradient),
         ),
         centerTitle: true,
@@ -64,7 +65,7 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
         ),
         actions: [
           Semantics(
-            label: 'معلومات عن ذاكرة واصل',
+            label: 'معلومات عن ذاكرة ${AIIdentity.name}',
             button: true,
             child: IconButton(
               icon: Icon(Icons.info_outline, color: themeColors.textOnGradient.withValues(alpha: 0.7)),
@@ -74,7 +75,7 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
         ],
       ),
       body: Semantics(
-        label: 'قائمة ذكريات واصل',
+        label: 'قائمة ذكريات ${AIIdentity.name}',
         child: memoriesAsync.when(
           data: (memories) {
             // Use local list for immediate Dismissible removal
@@ -114,7 +115,7 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'عندما تتحدث مع واصل، سيتذكر المعلومات المهمة عنك وعن عائلتك',
+              'عندما تتحدث مع ${AIIdentity.name}، سيتذكر المعلومات المهمة عنك وعن عائلتك',
               style: AppTypography.bodyMedium.copyWith(
                 color: themeColors.textOnGradient.withValues(alpha: 0.54),
               ),
@@ -350,7 +351,7 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
             title: 'حذف المعلومة؟',
             titleIcon: const Icon(Icons.delete_forever_rounded, color: Colors.red),
             content: Text(
-              'هل تريد حذف هذه المعلومة من ذاكرة واصل؟',
+              'هل تريد حذف هذه المعلومة من ذاكرة ${AIIdentity.name}؟',
               style: AppTypography.bodyMedium.copyWith(
                 color: themeColors.textOnGradient.withValues(alpha: 0.9),
               ),
@@ -405,10 +406,10 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
     showDialog(
       context: context,
       builder: (context) => ThemeAwareAlertDialog(
-        title: 'عن ذاكرة واصل',
+        title: 'عن ذاكرة ${AIIdentity.name}',
         titleIcon: Icon(Icons.psychology, color: themeColors.primaryLight),
         content: Text(
-          'واصل يتذكر المعلومات المهمة من محادثاتكم لتقديم نصائح شخصية أفضل.\n\n'
+          '${AIIdentity.name} يتذكر المعلومات المهمة من محادثاتكم لتقديم نصائح شخصية أفضل.\n\n'
           'يحفظ:\n'
           '• اسمك وتفضيلاتك\n'
           '• معلومات عن أقاربك\n'

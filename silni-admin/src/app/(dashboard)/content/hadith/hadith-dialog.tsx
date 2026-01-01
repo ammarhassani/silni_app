@@ -94,15 +94,22 @@ export function HadithDialog({ open, onOpenChange, hadith }: HadithDialogProps) 
 
   const onSubmit = async (data: HadithFormData) => {
     try {
+      // Convert undefined to null for database compatibility
+      const dbData = {
+        ...data,
+        narrator: data.narrator ?? null,
+        grade: data.grade ?? null,
+      };
+
       if (hadith) {
         await updateHadith.mutateAsync({
           id: hadith.id,
-          ...data,
+          ...dbData,
           tags: hadith.tags, // Keep existing tags
         });
       } else {
         await createHadith.mutateAsync({
-          ...data,
+          ...dbData,
           tags: [],
         });
       }

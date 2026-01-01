@@ -6,7 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../shared/services/auth_service.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/models/subscription_tier.dart';
@@ -16,8 +18,9 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/services/gyroscope_service.dart';
 import '../../../core/services/subscription_service.dart';
 import '../../../core/theme/theme_provider.dart';
-import '../../../core/theme/app_themes.dart';
+import '../../../core/theme/dynamic_theme.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../shared/widgets/theme_aware_dialog.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../subscription/screens/paywall_screen.dart';
 import '../../../shared/utils/ui_helpers.dart';
@@ -27,7 +30,7 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentTheme = ref.watch(themeProvider);
+    final currentThemeKey = ref.watch(themeKeyProvider);
     final themeColors = ref.watch(themeColorsProvider);
 
     return Scaffold(
@@ -99,23 +102,8 @@ class SettingsScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: AppSpacing.lg),
 
-                        // Theme Grid
-                        GridView.count(
-                          crossAxisCount: 3,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          crossAxisSpacing: AppSpacing.md,
-                          mainAxisSpacing: AppSpacing.md,
-                          childAspectRatio: 0.85,
-                          children: AppThemeType.values.map((theme) {
-                            return _buildThemeCard(
-                              context,
-                              ref,
-                              theme,
-                              currentTheme == theme,
-                            );
-                          }).toList(),
-                        ),
+                        // Theme Grid - Dynamic themes with scrollable support
+                        _buildThemeGrid(context, ref, currentThemeKey),
                       ],
                     ),
                   ),
@@ -170,6 +158,26 @@ class SettingsScreen extends ConsumerWidget {
                       onTap: () {
                         context.push(AppRoutes.notifications);
                       },
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  // Change Password
+                  GlassCard(
+                    child: ListTile(
+                      leading: const Icon(Icons.lock_outline, color: Colors.white),
+                      title: Text(
+                        'تغيير كلمة المرور',
+                        style: AppTypography.titleMedium.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                      trailing: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: Colors.white.withValues(alpha: 0.5),
+                        size: 20,
+                      ),
+                      onTap: () => _showChangePasswordDialog(context, ref),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
@@ -486,18 +494,331 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _showChangePasswordDialog(BuildContext context, WidgetRef ref) async {
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isLoading = false;
+    bool obscureCurrentPassword = true;
+    bool obscureNewPassword = true;
+    bool obscureConfirmPassword = true;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false, // Prevent dismissing by tapping outside
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) {
+          final themeColors = ref.watch(themeColorsProvider);
+
+          return ThemeAwareAlertDialog(
+            title: 'تغيير كلمة المرور',
+            titleIcon: Icon(
+              Icons.lock_outline,
+              color: themeColors.primary,
+              size: 32,
+            ),
+            content: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Current password
+                    _buildThemedPasswordField(
+                      controller: currentPasswordController,
+                      label: 'كلمة المرور الحالية',
+                      obscureText: obscureCurrentPassword,
+                      onToggleVisibility: () => setState(() => obscureCurrentPassword = !obscureCurrentPassword),
+                      themeColors: themeColors,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'الرجاء إدخال كلمة المرور الحالية';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    // New password
+                    _buildThemedPasswordField(
+                      controller: newPasswordController,
+                      label: 'كلمة المرور الجديدة',
+                      obscureText: obscureNewPassword,
+                      onToggleVisibility: () => setState(() => obscureNewPassword = !obscureNewPassword),
+                      themeColors: themeColors,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'الرجاء إدخال كلمة المرور الجديدة';
+                        }
+                        if (value.length < 8) {
+                          return 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
+                        }
+                        if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                          return 'يجب أن تحتوي على حرف كبير واحد على الأقل';
+                        }
+                        if (!RegExp(r'[a-z]').hasMatch(value)) {
+                          return 'يجب أن تحتوي على حرف صغير واحد على الأقل';
+                        }
+                        if (!RegExp(r'[0-9]').hasMatch(value)) {
+                          return 'يجب أن تحتوي على رقم واحد على الأقل';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    // Confirm new password
+                    _buildThemedPasswordField(
+                      controller: confirmPasswordController,
+                      label: 'تأكيد كلمة المرور الجديدة',
+                      obscureText: obscureConfirmPassword,
+                      onToggleVisibility: () => setState(() => obscureConfirmPassword = !obscureConfirmPassword),
+                      themeColors: themeColors,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'الرجاء تأكيد كلمة المرور الجديدة';
+                        }
+                        if (value != newPasswordController.text) {
+                          return 'كلمة المرور غير متطابقة';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isLoading ? null : () => Navigator.of(dialogContext).pop(),
+                child: Text(
+                  'إلغاء',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        if (!formKey.currentState!.validate()) return;
+
+                        setState(() => isLoading = true);
+
+                        try {
+                          final authService = ref.read(authServiceProvider);
+                          final user = authService.currentUser;
+
+                          if (user?.email == null) {
+                            throw Exception('المستخدم غير موجود');
+                          }
+
+                          // Re-authenticate with current password first
+                          await authService.signInWithEmail(
+                            email: user!.email!,
+                            password: currentPasswordController.text,
+                          );
+
+                          // Update to new password
+                          await authService.updatePassword(newPasswordController.text);
+
+                          if (dialogContext.mounted) {
+                            Navigator.of(dialogContext).pop();
+                          }
+
+                          if (context.mounted) {
+                            UIHelpers.showSnackBar(
+                              context,
+                              'تم تغيير كلمة المرور بنجاح',
+                              backgroundColor: AppColors.success,
+                            );
+                          }
+                        } on AuthException catch (e) {
+                          setState(() => isLoading = false);
+                          if (context.mounted) {
+                            UIHelpers.showSnackBar(
+                              context,
+                              AuthService.getErrorMessage(e.message),
+                              isError: true,
+                            );
+                          }
+                        } catch (e) {
+                          setState(() => isLoading = false);
+                          if (context.mounted) {
+                            UIHelpers.showSnackBar(
+                              context,
+                              'حدث خطأ أثناء تغيير كلمة المرور',
+                              isError: true,
+                            );
+                          }
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: themeColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                child: isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text('تغيير'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    // Note: Controllers are local variables and will be garbage collected.
+    // Manual dispose was removed because it caused issues when the dialog
+    // is still animating out after Navigator.pop() is called.
+  }
+
+  /// Build a themed password field with visibility toggle
+  Widget _buildThemedPasswordField({
+    required TextEditingController controller,
+    required String label,
+    required bool obscureText,
+    required VoidCallback onToggleVisibility,
+    required dynamic themeColors,
+    required String? Function(String?) validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      style: const TextStyle(color: Colors.white, fontSize: 16),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(
+          color: Colors.white.withValues(alpha: 0.7),
+          fontSize: 14,
+        ),
+        prefixIcon: Icon(
+          Icons.lock_outline,
+          color: Colors.white.withValues(alpha: 0.7),
+        ),
+        suffixIcon: IconButton(
+          icon: Icon(
+            obscureText ? Icons.visibility : Icons.visibility_off,
+            color: Colors.white.withValues(alpha: 0.7),
+          ),
+          onPressed: onToggleVisibility,
+        ),
+        filled: true,
+        fillColor: themeColors.background2,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          borderSide: BorderSide(
+            color: themeColors.primary.withValues(alpha: 0.3),
+            width: 1.0,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          borderSide: BorderSide(
+            color: themeColors.primary.withValues(alpha: 0.3),
+            width: 1.0,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          borderSide: BorderSide(color: themeColors.primary, width: 2.0),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          borderSide: const BorderSide(color: Colors.red, width: 1.0),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          borderSide: const BorderSide(color: Colors.red, width: 2.0),
+        ),
+        errorStyle: const TextStyle(color: Colors.red, fontSize: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.md,
+        ),
+      ),
+      validator: validator,
+    );
+  }
+
+  /// Build the theme grid with dynamic themes and scrollable support
+  Widget _buildThemeGrid(
+    BuildContext context,
+    WidgetRef ref,
+    String currentThemeKey,
+  ) {
+    final themes = ref.watch(dynamicThemesProvider);
+    final hasMoreThanSix = themes.length > 6;
+
+    return Column(
+      children: [
+        // Fixed height container for ~2 visible rows, scrollable if more themes
+        // ClipRect prevents content from overflowing when scrolled
+        ClipRect(
+          child: SizedBox(
+            height: hasMoreThanSix ? 300 : null,
+            child: GridView.builder(
+              clipBehavior: Clip.none, // Allow selection ring overflow within visible area
+              padding: const EdgeInsets.all(6), // Space for selection ring (4px + 2px buffer)
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                childAspectRatio: 0.85,
+                crossAxisSpacing: AppSpacing.md,
+                mainAxisSpacing: AppSpacing.md,
+              ),
+              shrinkWrap: !hasMoreThanSix,
+              physics: hasMoreThanSix
+                  ? const BouncingScrollPhysics()
+                  : const NeverScrollableScrollPhysics(),
+              itemCount: themes.length,
+              itemBuilder: (context, index) {
+                final theme = themes[index];
+                final isSelected = currentThemeKey == theme.key;
+                return _buildThemeCard(context, ref, theme, isSelected);
+              },
+            ),
+          ),
+        ),
+        // Scroll hint if more than 6 themes
+        if (hasMoreThanSix)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.swipe_vertical,
+                  size: 16,
+                  color: Colors.white.withValues(alpha: 0.5),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'اسحب للمزيد',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: Colors.white.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _buildThemeCard(
     BuildContext context,
     WidgetRef ref,
-    AppThemeType theme,
+    DynamicTheme theme,
     bool isSelected,
   ) {
-    final themeColors = ThemeColors.getTheme(theme);
+    final themeColors = theme.colors;
     final hasThemeAccess = ref.watch(featureAccessProvider(FeatureIds.customThemes));
 
-    // Default theme (defaultGreen) is always free, others require premium
-    final isDefaultTheme = theme == AppThemeType.defaultGreen;
-    final isLocked = !isDefaultTheme && !hasThemeAccess;
+    // Free themes or users with access can use the theme
+    final isLocked = theme.isPremium && !hasThemeAccess;
 
     return GestureDetector(
       onTap: () {
@@ -515,10 +836,10 @@ class SettingsScreen extends ConsumerWidget {
           return;
         }
 
-        ref.read(themeProvider.notifier).setTheme(theme);
+        ref.read(themeStateProvider.notifier).setThemeByKey(theme.key);
         UIHelpers.showSnackBar(
           context,
-          'تم تغيير المظهر إلى ${theme.arabicName}',
+          'تم تغيير المظهر إلى ${theme.displayNameAr}',
           backgroundColor: themeColors.primary,
         );
       },
@@ -562,7 +883,7 @@ class SettingsScreen extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.xs),
                     // Theme name
                     Text(
-                      theme.arabicName,
+                      theme.displayNameAr,
                       style: AppTypography.labelSmall.copyWith(
                         color: Colors.white,
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,

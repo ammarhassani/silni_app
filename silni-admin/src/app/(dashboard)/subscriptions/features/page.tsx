@@ -333,7 +333,7 @@ export default function FeaturesPage() {
               <div className="space-y-2">
                 <Label>الاسم (عربي)</Label>
                 <Input
-                  value={formData.display_name_ar}
+                  value={formData.display_name_ar ?? ""}
                   onChange={(e) =>
                     setFormData((f) => ({ ...f, display_name_ar: e.target.value }))
                   }
@@ -343,7 +343,7 @@ export default function FeaturesPage() {
               <div className="space-y-2">
                 <Label>الاسم (إنجليزي)</Label>
                 <Input
-                  value={formData.display_name_en}
+                  value={formData.display_name_en ?? ""}
                   onChange={(e) =>
                     setFormData((f) => ({ ...f, display_name_en: e.target.value }))
                   }
@@ -357,7 +357,7 @@ export default function FeaturesPage() {
               <div className="space-y-2">
                 <Label>الوصف (عربي)</Label>
                 <Textarea
-                  value={formData.description_ar}
+                  value={formData.description_ar ?? ""}
                   onChange={(e) =>
                     setFormData((f) => ({ ...f, description_ar: e.target.value }))
                   }
@@ -368,7 +368,7 @@ export default function FeaturesPage() {
               <div className="space-y-2">
                 <Label>الوصف (إنجليزي)</Label>
                 <Textarea
-                  value={formData.description_en}
+                  value={formData.description_en ?? ""}
                   onChange={(e) =>
                     setFormData((f) => ({ ...f, description_en: e.target.value }))
                   }
@@ -439,7 +439,7 @@ export default function FeaturesPage() {
               <div className="space-y-2">
                 <Label>رسالة القفل (عربي)</Label>
                 <Textarea
-                  value={formData.locked_message_ar}
+                  value={formData.locked_message_ar ?? ""}
                   onChange={(e) =>
                     setFormData((f) => ({ ...f, locked_message_ar: e.target.value }))
                   }
@@ -450,7 +450,7 @@ export default function FeaturesPage() {
               <div className="space-y-2">
                 <Label>رسالة القفل (إنجليزي)</Label>
                 <Textarea
-                  value={formData.locked_message_en}
+                  value={formData.locked_message_en ?? ""}
                   onChange={(e) =>
                     setFormData((f) => ({ ...f, locked_message_en: e.target.value }))
                   }

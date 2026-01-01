@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/app_logger_service.dart';
+import '../services/design_config_service.dart';
 
 /// Immutable settings for pattern background animations.
 @immutable
@@ -137,23 +138,31 @@ class PatternAnimationNotifier extends StateNotifier<PatternAnimationSettings> {
     _loadSettings();
   }
 
-  /// Load saved settings from shared preferences
+  /// Load saved settings from shared preferences, falling back to admin-configured defaults
   Future<void> _loadSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_prefsKey);
+
+      // Get admin-configured defaults from DesignConfigService
+      final designConfig = DesignConfigService.instance;
+      final adminDefaults = _getAdminDefaults(designConfig);
+
       if (jsonString != null) {
-        // Parse individual values from stored keys
+        // Parse individual values from stored keys, using admin defaults as fallback
         state = PatternAnimationSettings(
-          rotationEnabled: prefs.getBool('${_prefsKey}_rotation') ?? true,
-          pulseEnabled: prefs.getBool('${_prefsKey}_pulse') ?? true,
-          parallaxEnabled: prefs.getBool('${_prefsKey}_parallax') ?? true,
-          shimmerEnabled: prefs.getBool('${_prefsKey}_shimmer') ?? false,
-          touchRippleEnabled: prefs.getBool('${_prefsKey}_touchRipple') ?? true,
-          gyroscopeEnabled: prefs.getBool('${_prefsKey}_gyroscope') ?? false,
-          followTouchEnabled: prefs.getBool('${_prefsKey}_followTouch') ?? true,
-          animationIntensity: prefs.getDouble('${_prefsKey}_intensity') ?? 0.7,
+          rotationEnabled: prefs.getBool('${_prefsKey}_rotation') ?? adminDefaults.rotationEnabled,
+          pulseEnabled: prefs.getBool('${_prefsKey}_pulse') ?? adminDefaults.pulseEnabled,
+          parallaxEnabled: prefs.getBool('${_prefsKey}_parallax') ?? adminDefaults.parallaxEnabled,
+          shimmerEnabled: prefs.getBool('${_prefsKey}_shimmer') ?? adminDefaults.shimmerEnabled,
+          touchRippleEnabled: prefs.getBool('${_prefsKey}_touchRipple') ?? adminDefaults.touchRippleEnabled,
+          gyroscopeEnabled: prefs.getBool('${_prefsKey}_gyroscope') ?? adminDefaults.gyroscopeEnabled,
+          followTouchEnabled: prefs.getBool('${_prefsKey}_followTouch') ?? adminDefaults.followTouchEnabled,
+          animationIntensity: prefs.getDouble('${_prefsKey}_intensity') ?? adminDefaults.animationIntensity,
         );
+      } else {
+        // No saved settings - use admin-configured defaults
+        state = adminDefaults;
       }
     } catch (e) {
       _logger.warning(
@@ -163,6 +172,26 @@ class PatternAnimationNotifier extends StateNotifier<PatternAnimationSettings> {
         metadata: {'error': e.toString()},
       );
     }
+  }
+
+  /// Get admin-configured defaults from DesignConfigService
+  /// Falls back to hardcoded defaults if config isn't loaded yet
+  PatternAnimationSettings _getAdminDefaults(DesignConfigService config) {
+    // If config isn't loaded, use hardcoded defaults
+    if (!config.isLoaded || config.patternAnimations.isEmpty) {
+      return const PatternAnimationSettings();
+    }
+
+    return PatternAnimationSettings(
+      rotationEnabled: config.isPatternEnabledByDefault('rotation'),
+      pulseEnabled: config.isPatternEnabledByDefault('pulse'),
+      parallaxEnabled: config.isPatternEnabledByDefault('parallax'),
+      shimmerEnabled: config.isPatternEnabledByDefault('shimmer'),
+      touchRippleEnabled: config.isPatternEnabledByDefault('touch_ripple'),
+      gyroscopeEnabled: config.isPatternEnabledByDefault('gyroscope'),
+      followTouchEnabled: config.isPatternEnabledByDefault('follow_touch'),
+      animationIntensity: config.getPatternDefaultIntensity('rotation'),
+    );
   }
 
   /// Save current settings to shared preferences

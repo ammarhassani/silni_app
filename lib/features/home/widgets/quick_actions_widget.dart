@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/ai/ai_identity.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -46,7 +47,7 @@ class QuickActionsWidget extends ConsumerWidget {
               Expanded(
                 child: _QuickActionCard(
                   icon: Icons.auto_awesome_rounded,
-                  title: 'واصل',
+                  title: AIIdentity.name,
                   subtitle: 'مساعدك الذكي',
                   gradient: LinearGradient(
                     colors: [

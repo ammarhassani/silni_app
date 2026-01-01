@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/ai/ai_identity.dart';
 import '../../../core/ai/ai_models.dart';
 import '../providers/ai_chat_provider.dart';
 
@@ -429,7 +430,7 @@ class ChatHistoryDrawer extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'ابدأ محادثة جديدة مع واصل',
+            'ابدأ محادثة جديدة مع ${AIIdentity.name}',
             style: AppTypography.labelSmall.copyWith(
               color: Colors.white38,
             ),

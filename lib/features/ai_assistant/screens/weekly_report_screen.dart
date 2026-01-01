@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/ai/ai_identity.dart';
 import '../../../core/ai/ai_models.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -270,7 +271,7 @@ $relativesContext
               ),
               const SizedBox(width: AppSpacing.sm),
               Text(
-                'ملخص واصل',
+                'ملخص ${AIIdentity.name}',
                 style: AppTypography.titleMedium.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,

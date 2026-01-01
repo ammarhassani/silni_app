@@ -30,6 +30,30 @@ export function usePointsConfig() {
   });
 }
 
+export function useCreatePointsConfig() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (config: Omit<AdminPointsConfig, "id" | "created_at" | "updated_at">) => {
+      const { data, error } = await supabase
+        .from("admin_points_config")
+        .insert(config)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as AdminPointsConfig;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "points-config"] });
+      toast.success("تم إضافة إعدادات النقاط");
+    },
+    onError: (error) => {
+      toast.error(`فشل الإضافة: ${error.message}`);
+    },
+  });
+}
+
 export function useUpdatePointsConfig() {
   const queryClient = useQueryClient();
 
@@ -51,6 +75,24 @@ export function useUpdatePointsConfig() {
     },
     onError: (error) => {
       toast.error(`فشل التحديث: ${error.message}`);
+    },
+  });
+}
+
+export function useDeletePointsConfig() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("admin_points_config").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "points-config"] });
+      toast.success("تم حذف إعدادات النقاط");
+    },
+    onError: (error) => {
+      toast.error(`فشل الحذف: ${error.message}`);
     },
   });
 }
@@ -156,6 +198,30 @@ export function useLevels() {
   });
 }
 
+export function useCreateLevel() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (level: Omit<AdminLevel, "id" | "created_at" | "updated_at">) => {
+      const { data, error } = await supabase
+        .from("admin_levels")
+        .insert(level)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as AdminLevel;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "levels"] });
+      toast.success("تم إضافة المستوى");
+    },
+    onError: (error) => {
+      toast.error(`فشل الإضافة: ${error.message}`);
+    },
+  });
+}
+
 export function useUpdateLevel() {
   const queryClient = useQueryClient();
 
@@ -177,6 +243,24 @@ export function useUpdateLevel() {
     },
     onError: (error) => {
       toast.error(`فشل التحديث: ${error.message}`);
+    },
+  });
+}
+
+export function useDeleteLevel() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("admin_levels").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "levels"] });
+      toast.success("تم حذف المستوى");
+    },
+    onError: (error) => {
+      toast.error(`فشل الحذف: ${error.message}`);
     },
   });
 }
@@ -243,6 +327,24 @@ export function useUpdateChallenge() {
     },
     onError: (error) => {
       toast.error(`فشل التحديث: ${error.message}`);
+    },
+  });
+}
+
+export function useDeleteChallenge() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("admin_challenges").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "challenges"] });
+      toast.success("تم حذف التحدي");
+    },
+    onError: (error) => {
+      toast.error(`فشل الحذف: ${error.message}`);
     },
   });
 }

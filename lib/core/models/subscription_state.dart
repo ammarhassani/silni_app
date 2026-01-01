@@ -150,14 +150,11 @@ class SubscriptionState {
   // =====================================================
 
   /// Check if user has access to a specific feature
+  ///
+  /// Uses [SubscriptionTier.hasFeature] which delegates to
+  /// [FeatureConfigService] for admin-configured feature access.
   bool hasFeatureAccess(String featureId) {
-    final requiredTier = FeatureIds.requiredTier(featureId);
-
-    // Free features accessible to all
-    if (requiredTier == SubscriptionTier.free) return true;
-
-    // MAX features need MAX subscription
-    return tier.isMax;
+    return tier.hasFeature(featureId);
   }
 
   @override

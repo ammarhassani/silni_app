@@ -10,9 +10,11 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../../core/services/gamification_config_service.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
+import 'badges_screen.dart';
 
 /// Gaming Center - Main gamification hub with exciting design
 class GamingCenterScreen extends ConsumerStatefulWidget {
@@ -48,6 +50,9 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
     if (user == null) return;
 
     try {
+      // Force refresh gamification config to ensure we have latest levels
+      await GamificationConfigService.instance.refresh();
+
       final response = await SupabaseConfig.client
           .from('users')
           .select(
@@ -55,6 +60,29 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
           )
           .eq('id', user.id)
           .single();
+
+      // Check if level needs to be synced with points
+      final points = response['points'] as int? ?? 0;
+      final dbLevel = response['level'] as int? ?? 1;
+
+      debugPrint('[GamingCenterScreen] User points: $points, DB level: $dbLevel');
+      debugPrint('[GamingCenterScreen] Levels loaded: ${GamificationConfigService.instance.levels.length}');
+      // Show levels in ascending order for clarity
+      final levelsStr = GamificationConfigService.instance.levels
+          .map((l) => 'L${l.level}=${l.xpRequired}')
+          .join(', ');
+      debugPrint('[GamingCenterScreen] Level thresholds (ascending): $levelsStr');
+
+      final calculatedLevel = GamificationConfigService.instance.calculateLevel(points);
+
+      if (calculatedLevel != dbLevel) {
+        // Level is out of sync - update the database
+        debugPrint('[GamingCenterScreen] Level out of sync: DB=$dbLevel, calculated=$calculatedLevel. Syncing...');
+        await SupabaseConfig.client.from('users').update({
+          'level': calculatedLevel,
+        }).eq('id', user.id);
+        response['level'] = calculatedLevel;
+      }
 
       if (mounted) {
         setState(() {
@@ -143,7 +171,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                                     _buildFeatureCard(
                                       title: 'الأوسمة',
                                       subtitle:
-                                          '${(_userStats?['badges'] as List?)?.length ?? 0}/19',
+                                          '${(_userStats?['badges'] as List?)?.length ?? 0}/${BadgeData.allBadges.length}',
                                       icon: Icons.emoji_events_rounded,
                                       gradient: AppColors.goldenGradient,
                                       onTap: () => context.push(AppRoutes.badges),
@@ -174,7 +202,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                                     ),
                                     _buildFeatureCard(
                                       title: 'التحديات',
-                                      subtitle: 'قريباً',
+                                      subtitle: 'تحديات يومية وأسبوعية',
                                       icon: Icons.flag_rounded,
                                       gradient: LinearGradient(
                                         colors: [
@@ -184,16 +212,8 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                                           ),
                                         ],
                                       ),
-                                      onTap: () {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('قريباً!'),
-                                          ),
-                                        );
-                                      },
-                                      comingSoon: true,
+                                      onTap: () =>
+                                          context.push(AppRoutes.challenges),
                                       themeColors: themeColors,
                                     ),
                                   ]),
@@ -233,7 +253,9 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
 
   Widget _buildHeroHeader(dynamic themeColors) {
     final stats = _userStats ?? {};
-    final level = stats['level'] ?? 1;
+    final points = stats['points'] ?? 0;
+    // Recalculate correct level from points (in case DB is out of sync)
+    final level = GamificationConfigService.instance.calculateLevel(points);
 
     return Container(
       padding: const EdgeInsets.only(
@@ -546,9 +568,17 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
   Widget _buildProgressSection(dynamic themeColors) {
     final stats = _userStats ?? {};
     final points = stats['points'] ?? 0;
-    final level = stats['level'] ?? 1;
-    final nextLevelXP = _getNextLevelXP(level);
-    final progress = points / nextLevelXP;
+    // Recalculate correct level from points (in case DB is out of sync)
+    final config = GamificationConfigService.instance;
+    final calculatedLevel = config.calculateLevel(points);
+    final currentLevelXP = config.getXpForLevel(calculatedLevel);
+    final nextLevelXP = _getNextLevelXP(calculatedLevel);
+    // Calculate progress within current level
+    final xpInCurrentLevel = points - currentLevelXP;
+    final xpNeededForNextLevel = nextLevelXP - currentLevelXP;
+    final progress = xpNeededForNextLevel > 0
+        ? xpInCurrentLevel / xpNeededForNextLevel
+        : 1.0;
 
     return GlassCard(
           child: Padding(
@@ -595,7 +625,9 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                       ),
                     ),
                     Text(
-                      'بقي ${nextLevelXP - points}',
+                      nextLevelXP > points
+                          ? 'بقي ${nextLevelXP - points}'
+                          : 'مستوى ${calculatedLevel + 1}! 🎉',
                       style: AppTypography.bodyMedium.copyWith(
                         color: themeColors.textOnGradient.withValues(alpha: 0.7),
                       ),
@@ -662,24 +694,16 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
         .shimmer(duration: AppAnimations.loop, delay: AppAnimations.loop);
   }
 
+  /// Get XP required for next level using dynamic admin config
   int _getNextLevelXP(int level) {
-    const xpPerLevel = [
-      0,
-      100,
-      250,
-      500,
-      1000,
-      2000,
-      3500,
-      5500,
-      8000,
-      11000,
-      15000,
-    ];
-    if (level < xpPerLevel.length) {
-      return xpPerLevel[level];
+    final config = GamificationConfigService.instance;
+    // Get XP required for the NEXT level (level + 1)
+    final nextLevelXp = config.getXpForLevel(level + 1);
+    // If we're at or past max level, return a high value
+    if (nextLevelXp == 0 && level >= config.maxLevel) {
+      return config.getXpForLevel(config.maxLevel) + 5000;
     }
-    return xpPerLevel.last + (level - xpPerLevel.length + 1) * 5000;
+    return nextLevelXp > 0 ? nextLevelXp : 15000; // Fallback
   }
 }
 

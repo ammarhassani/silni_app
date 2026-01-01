@@ -3,6 +3,7 @@ import '../config/supabase_config.dart';
 import '../models/relative_streak_model.dart';
 import '../models/gamification_event.dart';
 import '../providers/gamification_events_provider.dart';
+import 'gamification_config_service.dart';
 
 /// Result of updating a relative streak
 class RelativeStreakResult {
@@ -145,8 +146,8 @@ class RelativeStreakService {
           longestStreak: newLongestStreak,
         ));
 
-        // Check for milestone
-        if (GamificationEvent.isStreakMilestone(newStreak)) {
+        // Check for celebration milestone (dynamic from admin config)
+        if (GamificationConfigService.instance.streakConfig.isCelebrationMilestone(newStreak)) {
           _eventsController?.emit(GamificationEvent.streakMilestone(
             userId: userId,
             streak: newStreak,

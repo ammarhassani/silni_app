@@ -3,6 +3,7 @@
 
 import '../../shared/models/relative_model.dart';
 import '../services/ai_config_service.dart';
+import 'ai_identity.dart';
 import 'ai_models.dart';
 
 /// System prompts for the AI assistant
@@ -10,13 +11,9 @@ class AIPrompts {
   AIPrompts._();
 
   /// Get dynamic personality prompt from admin config (with fallback)
-  static String get dynamicPersonality {
-    final config = AIConfigService.instance;
-    if (config.isLoaded) {
-      return config.fullPersonalityPrompt;
-    }
-    return basePersonality;
-  }
+  ///
+  /// Uses [AIIdentity.personality] as single source of truth.
+  static String get dynamicPersonality => AIIdentity.personality;
 
   /// Get mode instructions from admin config (with fallback)
   static String getDynamicModeInstructions(String modeKey) {

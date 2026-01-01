@@ -45,10 +45,15 @@ const CATEGORIES = [
 ];
 
 const THRESHOLD_TYPES = [
+  { value: "first_interaction", label: "أول تفاعل" },
   { value: "streak_days", label: "أيام السلسلة" },
   { value: "total_interactions", label: "إجمالي التفاعلات" },
+  { value: "unique_interaction_types", label: "أنواع تفاعل مختلفة" },
   { value: "unique_relatives", label: "أقارب مختلفين" },
-  { value: "specific_action", label: "إجراء محدد" },
+  { value: "gift_count", label: "عدد الهدايا" },
+  { value: "event_count", label: "عدد المناسبات" },
+  { value: "call_count", label: "عدد المكالمات" },
+  { value: "visit_count", label: "عدد الزيارات" },
   { value: "custom", label: "مخصص" },
 ];
 

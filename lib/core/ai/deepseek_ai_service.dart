@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../shared/models/relative_model.dart';
+import '../services/ai_config_service.dart';
 import '../services/app_logger_service.dart';
 import 'ai_models.dart';
 import 'ai_prompts.dart';
@@ -82,6 +83,12 @@ class DeepSeekAIService implements AIService {
           'temperature': temperature,
           'max_tokens': maxTokens,
         },
+      ).timeout(
+        const Duration(seconds: 60),
+        onTimeout: () => throw AIServiceException(
+          'انتهت مهلة الاتصال. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.',
+          code: 'TIMEOUT',
+        ),
       );
 
       if (response.status != 200) {
@@ -146,29 +153,9 @@ class DeepSeekAIService implements AIService {
   }
 
   /// Get user-friendly Arabic error message based on HTTP status code
+  /// Uses dynamic config from admin panel with fallback
   String _getErrorMessage(int statusCode) {
-    switch (statusCode) {
-      case 400:
-        return 'طلب غير صالح. يرجى المحاولة مرة أخرى.';
-      case 401:
-        return 'خطأ في المصادقة. يرجى تسجيل الدخول مرة أخرى.';
-      case 402:
-        return 'رصيد خدمة الذكاء الاصطناعي غير كافٍ. يرجى المحاولة لاحقاً.';
-      case 403:
-        return 'ليس لديك صلاحية للوصول إلى هذه الخدمة.';
-      case 404:
-        return 'الخدمة غير موجودة.';
-      case 429:
-        return 'تم تجاوز الحد الأقصى للطلبات. يرجى المحاولة بعد قليل.';
-      case 500:
-        return 'خطأ في الخادم. يرجى المحاولة لاحقاً.';
-      case 502:
-      case 503:
-      case 504:
-        return 'الخدمة غير متاحة حالياً. يرجى المحاولة لاحقاً.';
-      default:
-        return 'حدث خطأ غير متوقع (رمز: $statusCode). يرجى المحاولة مرة أخرى.';
-    }
+    return AIConfigService.instance.getErrorMessage(statusCode);
   }
 
   @override
@@ -178,6 +165,7 @@ class DeepSeekAIService implements AIService {
     String? additionalContext,
   }) async {
     try {
+      final params = AIConfigService.instance.getParametersFor('communication_script');
       final prompt = AIPrompts.communicationScriptPrompt(scenario, relative, additionalContext);
       final response = await getChatCompletion(
         messages: [
@@ -191,7 +179,8 @@ class DeepSeekAIService implements AIService {
           ),
         ],
         systemPrompt: prompt,
-        temperature: 0.7,
+        temperature: params.temperature,
+        maxTokens: params.maxTokens,
       );
 
       // Parse JSON response
@@ -221,6 +210,7 @@ class DeepSeekAIService implements AIService {
     int count = 3,
   }) async {
     try {
+      final params = AIConfigService.instance.getParametersFor('message_generation');
       final prompt = AIPrompts.messageGenerationPrompt(relative, occasionType, tone);
       final response = await getChatCompletion(
         messages: [
@@ -234,7 +224,8 @@ class DeepSeekAIService implements AIService {
           ),
         ],
         systemPrompt: prompt,
-        temperature: 0.9,
+        temperature: params.temperature,
+        maxTokens: params.maxTokens,
       );
 
       // Parse JSON response
@@ -263,6 +254,7 @@ class DeepSeekAIService implements AIService {
     required Relative relative,
   }) async {
     try {
+      final params = AIConfigService.instance.getParametersFor('relationship_analysis');
       final prompt = AIPrompts.relationshipAnalysisPrompt(relative);
       final response = await getChatCompletion(
         messages: [
@@ -276,7 +268,8 @@ class DeepSeekAIService implements AIService {
           ),
         ],
         systemPrompt: prompt,
-        temperature: 0.7,
+        temperature: params.temperature,
+        maxTokens: params.maxTokens,
       );
 
       // Parse JSON response
@@ -318,6 +311,7 @@ class DeepSeekAIService implements AIService {
     if (relatives.isEmpty) return [];
 
     try {
+      final params = AIConfigService.instance.getParametersFor('smart_reminders');
       final prompt = AIPrompts.smartReminderPrompt(relatives);
       final response = await getChatCompletion(
         messages: [
@@ -331,7 +325,8 @@ class DeepSeekAIService implements AIService {
           ),
         ],
         systemPrompt: prompt,
-        temperature: 0.7,
+        temperature: params.temperature,
+        maxTokens: params.maxTokens,
       );
 
       // Parse JSON response
@@ -422,27 +417,15 @@ class DeepSeekAIService implements AIService {
   }
 
   /// Get variable delay for natural typing effect (ultra-fast, ChatGPT-like)
+  /// Uses dynamic config from admin panel with fallback
   int _getStreamingDelay(String token) {
-    // Minimal pauses after punctuation
-    if (token == '.' || token == '؟' || token == '!') {
-      return 10; // Brief pause at sentence end
-    }
-    if (token == '،' || token == '؛' || token == ':') {
-      return 6; // Very brief pause
-    }
-    if (token == '\n') {
-      return 12; // Slight pause for new line
-    }
-    if (token == ' ') {
-      return 2; // Almost instant for spaces
-    }
-    // Regular words - ultra-fast
-    return 3 + (token.length % 2) * 2; // 3-5ms per word
+    return AIConfigService.instance.streamingConfig.getDelayForToken(token);
   }
 
   @override
   Future<List<Map<String, dynamic>>> extractMemories(String conversation) async {
     try {
+      final params = AIConfigService.instance.getParametersFor('memory_extraction');
       final response = await getChatCompletion(
         messages: [
           ChatMessage(
@@ -455,8 +438,8 @@ class DeepSeekAIService implements AIService {
           ),
         ],
         systemPrompt: AIPrompts.memoryExtractionPrompt,
-        temperature: 0.3, // Lower temperature for more consistent JSON
-        maxTokens: 500,
+        temperature: params.temperature,
+        maxTokens: params.maxTokens,
       );
 
       // Parse JSON response

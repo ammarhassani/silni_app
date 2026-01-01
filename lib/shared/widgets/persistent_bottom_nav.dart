@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:ui' as ui;
+import '../../core/ai/ai_identity.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
@@ -140,7 +141,7 @@ class _PersistentBottomNavState extends ConsumerState<PersistentBottomNav>
       ),
       (
         icon: Icons.smart_toy_rounded,
-        label: 'واصل',
+        label: AIIdentity.name,
         route: AppRoutes.statistics,
       ),
       (

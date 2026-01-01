@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_typography.dart';
+import '../../../../core/services/gamification_config_service.dart';
 import '../../../../shared/widgets/glass_card.dart';
 
 /// Widget showing progress towards various milestones
@@ -13,24 +14,16 @@ class MilestonesProgress extends StatelessWidget {
 
   final Map<String, dynamic> userStats;
 
+  /// Get XP required for next level using dynamic admin config
   int _getNextLevelPoints(int currentLevel) {
-    const xpPerLevel = [
-      0,
-      100,
-      250,
-      500,
-      1000,
-      2000,
-      3500,
-      5500,
-      8000,
-      11000,
-      15000,
-    ];
-    if (currentLevel < xpPerLevel.length) {
-      return xpPerLevel[currentLevel];
+    final config = GamificationConfigService.instance;
+    // Get XP required for the NEXT level (currentLevel + 1)
+    final nextLevelXp = config.getXpForLevel(currentLevel + 1);
+    // If we're at or past max level, return a high value
+    if (nextLevelXp == 0 && currentLevel >= config.maxLevel) {
+      return config.getXpForLevel(config.maxLevel) + 5000;
     }
-    return xpPerLevel.last + (currentLevel - xpPerLevel.length + 1) * 5000;
+    return nextLevelXp > 0 ? nextLevelXp : 15000; // Fallback
   }
 
   @override
@@ -38,12 +31,14 @@ class MilestonesProgress extends StatelessWidget {
     final points = userStats['points'] ?? 0;
     final totalInteractions = userStats['total_interactions'] ?? 0;
     final currentStreak = userStats['current_streak'] ?? 0;
+    // Recalculate correct level from points (in case DB is out of sync)
+    final calculatedLevel = GamificationConfigService.instance.calculateLevel(points);
 
     final milestones = [
       _MilestoneData(
         title: 'المستوى التالي',
         current: points,
-        target: _getNextLevelPoints(userStats['level'] ?? 1),
+        target: _getNextLevelPoints(calculatedLevel),
         icon: Icons.workspace_premium_rounded,
         color: AppColors.premiumGold,
       ),

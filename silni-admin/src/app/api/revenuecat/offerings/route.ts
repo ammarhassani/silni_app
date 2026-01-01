@@ -1,4 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+
+// Helper to verify admin authentication
+async function verifyAdminAuth(): Promise<{ authorized: boolean; error?: string }> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { authorized: false, error: "Unauthorized - authentication required" };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role !== "admin") {
+    return { authorized: false, error: "Forbidden - admin access required" };
+  }
+
+  return { authorized: true };
+}
 
 // RevenueCat REST API v2 types - flexible to handle varying response structures
 interface RevenueCatProduct {
@@ -60,6 +83,12 @@ export interface RevenueCatSyncStatus {
 const REVENUECAT_API_URL = "https://api.revenuecat.com/v2";
 
 export async function GET(request: NextRequest) {
+  // Verify admin authentication
+  const authResult = await verifyAdminAuth();
+  if (!authResult.authorized) {
+    return NextResponse.json({ error: authResult.error }, { status: authResult.error?.includes("Forbidden") ? 403 : 401 });
+  }
+
   const projectId = process.env.REVENUECAT_PROJECT_ID;
   const apiKey = process.env.REVENUECAT_API_KEY_V2;
 
@@ -70,7 +99,7 @@ export async function GET(request: NextRequest) {
       lastSyncAt: new Date().toISOString(),
       offerings: [],
       products: [],
-      error: "RevenueCat credentials not configured. Add REVENUECAT_PROJECT_ID and REVENUECAT_API_KEY_V2 to .env.local",
+      error: "RevenueCat credentials not configured",
     });
   }
 
@@ -160,6 +189,12 @@ export async function GET(request: NextRequest) {
 
 // POST endpoint to verify a specific product exists in RevenueCat
 export async function POST(request: NextRequest) {
+  // Verify admin authentication
+  const authResult = await verifyAdminAuth();
+  if (!authResult.authorized) {
+    return NextResponse.json({ error: authResult.error }, { status: authResult.error?.includes("Forbidden") ? 403 : 401 });
+  }
+
   const projectId = process.env.REVENUECAT_PROJECT_ID;
   const apiKey = process.env.REVENUECAT_API_KEY_V2;
 

@@ -102,14 +102,21 @@ export function QuoteDialog({ open, onOpenChange, quote }: QuoteDialogProps) {
 
   const onSubmit = async (data: QuoteFormData) => {
     try {
+      // Convert undefined to null for database compatibility
+      const dbData = {
+        ...data,
+        author: data.author ?? null,
+        source: data.source ?? null,
+      };
+
       if (quote) {
         await updateQuote.mutateAsync({
           id: quote.id,
-          ...data,
+          ...dbData,
         });
       } else {
         await createQuote.mutateAsync({
-          ...data,
+          ...dbData,
           tags: [],
         });
       }

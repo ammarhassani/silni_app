@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLevels, useUpdateLevel } from "@/hooks/use-gamification";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Pencil, TrendingUp, Star, Zap, Target } from "lucide-react";
+import { Pencil, TrendingUp, Star, Zap, Target, Calculator, Info } from "lucide-react";
 import type { AdminLevel } from "@/types/database";
 
 export default function LevelsPage() {
@@ -35,10 +37,43 @@ export default function LevelsPage() {
     title_ar: "",
     title_en: "",
     xp_required: 0,
-    xp_to_next: 0,
     icon: "",
     color_hex: "#3B82F6",
   });
+
+  // Sort levels by level number for calculations
+  const sortedLevels = useMemo(() => {
+    return [...(levels || [])].sort((a, b) => a.level - b.level);
+  }, [levels]);
+
+  // Calculate xp_to_next for a given level based on next level's xp_required
+  const calculateXpToNext = (levelNum: number, currentXpRequired: number) => {
+    const nextLevel = sortedLevels.find(l => l.level === levelNum + 1);
+    if (!nextLevel) return null; // Last level has no xp_to_next
+    return nextLevel.xp_required - currentXpRequired;
+  };
+
+  // Get the calculated xp_to_next when editing (accounts for form changes)
+  const getEditingXpToNext = () => {
+    if (!editingLevel) return null;
+    const nextLevel = sortedLevels.find(l => l.level === editingLevel.level + 1);
+    if (!nextLevel) return null;
+    return nextLevel.xp_required - formData.xp_required;
+  };
+
+  // Get previous level's xp_required for validation
+  const getPreviousLevelXp = () => {
+    if (!editingLevel) return 0;
+    const prevLevel = sortedLevels.find(l => l.level === editingLevel.level - 1);
+    return prevLevel?.xp_required || 0;
+  };
+
+  // Get next level's xp_required for info
+  const getNextLevelXp = () => {
+    if (!editingLevel) return null;
+    const nextLevel = sortedLevels.find(l => l.level === editingLevel.level + 1);
+    return nextLevel?.xp_required || null;
+  };
 
   const handleOpenEdit = (level: AdminLevel) => {
     setEditingLevel(level);
@@ -46,7 +81,6 @@ export default function LevelsPage() {
       title_ar: level.title_ar,
       title_en: level.title_en || "",
       xp_required: level.xp_required,
-      xp_to_next: level.xp_to_next || 0,
       icon: level.icon || "",
       color_hex: level.color_hex || "#3B82F6",
     });
@@ -54,19 +88,43 @@ export default function LevelsPage() {
 
   const handleSave = () => {
     if (!editingLevel) return;
+
+    // Calculate xp_to_next based on next level
+    const xpToNext = getEditingXpToNext();
+
     updateLevel.mutate(
       {
         id: editingLevel.id,
         title_ar: formData.title_ar,
         title_en: formData.title_en || null,
         xp_required: formData.xp_required,
-        xp_to_next: formData.xp_to_next || null,
+        xp_to_next: xpToNext,
         icon: formData.icon || null,
         color_hex: formData.color_hex || null,
       },
-      { onSuccess: () => setEditingLevel(null) }
+      {
+        onSuccess: () => {
+          // Also update the previous level's xp_to_next if there is one
+          const prevLevel = sortedLevels.find(l => l.level === editingLevel.level - 1);
+          if (prevLevel) {
+            const prevXpToNext = formData.xp_required - prevLevel.xp_required;
+            updateLevel.mutate({
+              id: prevLevel.id,
+              xp_to_next: prevXpToNext,
+            });
+          }
+          setEditingLevel(null);
+        }
+      }
     );
   };
+
+  // Validation: xp_required must be greater than previous level (or >= 0 for level 1)
+  const isXpValid = editingLevel?.level === 1
+    ? formData.xp_required >= 0
+    : formData.xp_required > getPreviousLevelXp();
+  const editingXpToNext = getEditingXpToNext();
+  const isXpToNextValid = editingXpToNext === null || editingXpToNext > 0;
 
   if (isLoading) {
     return (
@@ -269,7 +327,7 @@ export default function LevelsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label>XP المطلوب للوصول</Label>
                 <Input
@@ -281,27 +339,44 @@ export default function LevelsPage() {
                       xp_required: parseInt(e.target.value) || 0,
                     }))
                   }
+                  className={!isXpValid ? "border-red-500" : ""}
                 />
                 <p className="text-xs text-muted-foreground">
                   إجمالي XP المطلوب للوصول لهذا المستوى
                 </p>
+                {!isXpValid && editingLevel?.level !== 1 && (
+                  <p className="text-xs text-red-500">
+                    يجب أن يكون أكبر من المستوى السابق ({getPreviousLevelXp().toLocaleString()} XP)
+                  </p>
+                )}
+                {!isXpValid && editingLevel?.level === 1 && (
+                  <p className="text-xs text-red-500">
+                    يجب أن يكون 0 أو أكثر
+                  </p>
+                )}
               </div>
-              <div className="space-y-2">
-                <Label>XP للمستوى التالي</Label>
-                <Input
-                  type="number"
-                  value={formData.xp_to_next}
-                  onChange={(e) =>
-                    setFormData((f) => ({
-                      ...f,
-                      xp_to_next: parseInt(e.target.value) || 0,
-                    }))
-                  }
-                />
-                <p className="text-xs text-muted-foreground">
-                  الفرق بين هذا المستوى والتالي
-                </p>
-              </div>
+
+              {/* Auto-calculated XP info */}
+              <Alert className="bg-muted/50">
+                <Calculator className="h-4 w-4" />
+                <AlertDescription className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">XP للمستوى التالي (محسوب تلقائياً)</span>
+                    <Badge variant={editingXpToNext !== null && editingXpToNext > 0 ? "default" : "secondary"}>
+                      {editingXpToNext !== null ? `+${editingXpToNext.toLocaleString()}` : "آخر مستوى"}
+                    </Badge>
+                  </div>
+                  {editingXpToNext !== null && !isXpToNextValid && (
+                    <p className="text-xs text-red-500">
+                      تحذير: القيمة سالبة! المستوى التالي يتطلب {getNextLevelXp()?.toLocaleString()} XP
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    <Info className="inline h-3 w-3 ml-1" />
+                    يُحسب تلقائياً من الفرق بين هذا المستوى والمستوى التالي
+                  </p>
+                </AlertDescription>
+              </Alert>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -345,7 +420,10 @@ export default function LevelsPage() {
             <Button variant="outline" onClick={() => setEditingLevel(null)}>
               إلغاء
             </Button>
-            <Button onClick={handleSave} disabled={updateLevel.isPending}>
+            <Button
+              onClick={handleSave}
+              disabled={updateLevel.isPending || !isXpValid || !isXpToNextValid}
+            >
               {updateLevel.isPending ? "جاري الحفظ..." : "حفظ التغييرات"}
             </Button>
           </DialogFooter>

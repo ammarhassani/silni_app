@@ -27,6 +27,7 @@ import { Switch } from "@/components/ui/switch";
 import { useCreateMOTD, useUpdateMOTD } from "@/hooks/use-content";
 import type { AdminMOTD } from "@/types/database";
 import { Loader2 } from "lucide-react";
+import { RouteSelector } from "@/components/ui/route-selector";
 
 const motdSchema = z.object({
   title: z.string().min(3, "العنوان مطلوب (3 أحرف على الأقل)"),
@@ -338,11 +339,11 @@ export function MOTDDialog({ open, onOpenChange, motd }: MOTDDialogProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="action_route">مسار الإجراء (اختياري)</Label>
-              <Input
-                id="action_route"
-                {...register("action_route")}
-                placeholder="مثال: /reminders"
+              <Label>مسار الإجراء (اختياري)</Label>
+              <RouteSelector
+                value={watch("action_route")}
+                onChange={(value) => setValue("action_route", value || null)}
+                placeholder="اختر المسار المستهدف"
               />
             </div>
           </div>

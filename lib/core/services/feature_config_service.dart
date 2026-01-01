@@ -57,6 +57,54 @@ class FeatureConfig {
   }
 }
 
+/// Model for trial configuration from admin_trial_config table
+class TrialConfig {
+  final String id;
+  final String configKey;
+  final int trialDurationDays;
+  final String trialTier;
+  final List<String>? featuresDuringTrial;
+  final int? showTrialPromptAfterDays;
+  final List<String>? showTrialPromptOnScreens;
+  final bool isTrialEnabled;
+
+  TrialConfig({
+    required this.id,
+    required this.configKey,
+    required this.trialDurationDays,
+    required this.trialTier,
+    this.featuresDuringTrial,
+    this.showTrialPromptAfterDays,
+    this.showTrialPromptOnScreens,
+    required this.isTrialEnabled,
+  });
+
+  factory TrialConfig.fromJson(Map<String, dynamic> json) {
+    return TrialConfig(
+      id: json['id'] as String,
+      configKey: json['config_key'] as String? ?? 'default',
+      trialDurationDays: json['trial_duration_days'] as int? ?? 7,
+      trialTier: json['trial_tier'] as String? ?? 'max',
+      featuresDuringTrial: (json['features_during_trial'] as List<dynamic>?)?.cast<String>(),
+      showTrialPromptAfterDays: json['show_trial_prompt_after_days'] as int?,
+      showTrialPromptOnScreens: (json['show_trial_prompt_on_screens'] as List<dynamic>?)?.cast<String>(),
+      isTrialEnabled: json['is_trial_enabled'] as bool? ?? true,
+    );
+  }
+
+  /// Fallback trial config when not loaded
+  static TrialConfig get fallback => TrialConfig(
+    id: 'fallback',
+    configKey: 'default',
+    trialDurationDays: 7,
+    trialTier: 'max',
+    featuresDuringTrial: null,
+    showTrialPromptAfterDays: 3,
+    showTrialPromptOnScreens: ['home', 'ai_chat', 'profile'],
+    isTrialEnabled: true,
+  );
+}
+
 /// Model for tier configuration from admin_subscription_tiers table
 class TierConfig {
   final String id;
@@ -117,6 +165,7 @@ class FeatureConfigService {
   // Cached configs
   List<FeatureConfig>? _featuresCache;
   List<TierConfig>? _tiersCache;
+  TrialConfig? _trialConfigCache;
   DateTime? _lastFetchTime;
 
   // Cache duration: 5 minutes
@@ -237,10 +286,53 @@ class FeatureConfigService {
     return features.where((f) => tier.hasFeature(f.featureId) && f.isActive).toList();
   }
 
+  /// Get trial configuration
+  Future<TrialConfig> getTrialConfig({bool forceRefresh = false}) async {
+    if (!forceRefresh && _isCacheValid && _trialConfigCache != null) {
+      return _trialConfigCache!;
+    }
+
+    try {
+      final response = await _supabase
+          .from('admin_trial_config')
+          .select()
+          .eq('config_key', 'default')
+          .single();
+
+      _trialConfigCache = TrialConfig.fromJson(response);
+      debugPrint('[FeatureConfigService] Fetched trial config: ${_trialConfigCache!.trialDurationDays} days, enabled=${_trialConfigCache!.isTrialEnabled}');
+      return _trialConfigCache!;
+    } catch (e) {
+      debugPrint('[FeatureConfigService] Error fetching trial config: $e');
+      if (_trialConfigCache != null) return _trialConfigCache!;
+      return TrialConfig.fallback;
+    }
+  }
+
+  /// Get trial config sync (uses cache)
+  TrialConfig get trialConfig => _trialConfigCache ?? TrialConfig.fallback;
+
+  /// Check if trial is enabled
+  bool get isTrialEnabled => trialConfig.isTrialEnabled;
+
+  /// Get trial duration in days
+  int get trialDurationDays => trialConfig.trialDurationDays;
+
+  /// Get the tier users get during trial
+  String get trialTier => trialConfig.trialTier;
+
+  /// Check if a screen should show trial prompt
+  bool shouldShowTrialPrompt(String screenKey) {
+    final screens = trialConfig.showTrialPromptOnScreens;
+    if (screens == null || screens.isEmpty) return false;
+    return screens.contains(screenKey);
+  }
+
   /// Clear cache and force refresh on next fetch
   void clearCache() {
     _featuresCache = null;
     _tiersCache = null;
+    _trialConfigCache = null;
     _lastFetchTime = null;
     debugPrint('[FeatureConfigService] Cache cleared');
   }
@@ -250,6 +342,7 @@ class FeatureConfigService {
     await Future.wait([
       getFeatures(forceRefresh: true),
       getTiers(forceRefresh: true),
+      getTrialConfig(forceRefresh: true),
     ]);
   }
 

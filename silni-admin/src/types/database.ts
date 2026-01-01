@@ -398,3 +398,71 @@ export interface AdminFeature {
   created_at: string;
   updated_at: string;
 }
+
+export interface AdminTrialConfig {
+  id: string;
+  config_key: string;
+  trial_duration_days: number;
+  trial_tier: string;
+  features_during_trial: string[] | null;
+  show_trial_prompt_after_days: number | null;
+  show_trial_prompt_on_screens: string[] | null;
+  is_trial_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminAIStreamingConfig {
+  id: string;
+  config_key: string;
+  sentence_end_delay_ms: number;
+  comma_delay_ms: number;
+  newline_delay_ms: number;
+  space_delay_ms: number;
+  word_min_delay_ms: number;
+  word_max_delay_ms: number;
+  is_streaming_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminAIErrorMessage {
+  id: string;
+  error_code: number;
+  message_ar: string;
+  message_en: string | null;
+  show_retry_button: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminAppRoute {
+  id: string;
+  path: string;
+  route_key: string;
+  label_ar: string;
+  label_en: string | null;
+  icon: string | null;
+  description_ar: string | null;
+  category_key: string;
+  parent_route_key: string | null;
+  sort_order: number;
+  is_active: boolean;
+  is_public: boolean;
+  requires_auth: boolean;
+  requires_premium: boolean;
+  feature_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminRouteCategory {
+  id: string;
+  category_key: string;
+  label_ar: string;
+  label_en: string | null;
+  icon: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}

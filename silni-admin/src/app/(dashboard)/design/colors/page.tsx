@@ -382,7 +382,7 @@ export default function ColorsPage() {
               <div className="space-y-2">
                 <Label>الاسم (عربي)</Label>
                 <Input
-                  value={formData.display_name_ar}
+                  value={formData.display_name_ar ?? ""}
                   onChange={(e) =>
                     setFormData((f) => ({ ...f, display_name_ar: e.target.value }))
                   }
@@ -392,7 +392,7 @@ export default function ColorsPage() {
               <div className="space-y-2">
                 <Label>الاسم (إنجليزي)</Label>
                 <Input
-                  value={formData.display_name_en}
+                  value={formData.display_name_en ?? ""}
                   onChange={(e) =>
                     setFormData((f) => ({ ...f, display_name_en: e.target.value }))
                   }
@@ -406,7 +406,7 @@ export default function ColorsPage() {
               <div className="space-y-2">
                 <Label>سياق الاستخدام</Label>
                 <Input
-                  value={formData.usage_context}
+                  value={formData.usage_context ?? ""}
                   onChange={(e) =>
                     setFormData((f) => ({ ...f, usage_context: e.target.value }))
                   }

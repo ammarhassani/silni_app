@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import type { AdminColor, AdminTheme, AdminPatternAnimation } from "@/types/database";
+import type { AdminColor, AdminTheme, AdminPatternAnimation, AdminAnimation } from "@/types/database";
 import { toast } from "sonner";
 
 const supabase = createClient();
@@ -242,6 +242,108 @@ export function useCreatePatternAnimation() {
     },
     onError: (error) => {
       toast.error(`فشل الإضافة: ${error.message}`);
+    },
+  });
+}
+
+export function useDeletePatternAnimation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("admin_pattern_animations").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "pattern-animations"] });
+      toast.success("تم حذف التأثير");
+    },
+    onError: (error) => {
+      toast.error(`فشل الحذف: ${error.message}`);
+    },
+  });
+}
+
+// ============ Animations (Duration/Curve Presets) ============
+
+export function useAnimations() {
+  return useQuery({
+    queryKey: ["admin", "animations"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("admin_animations")
+        .select("*")
+        .order("animation_key");
+
+      if (error) throw error;
+      return data as AdminAnimation[];
+    },
+  });
+}
+
+export function useCreateAnimation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (animation: Omit<AdminAnimation, "id" | "created_at" | "updated_at">) => {
+      const { data, error } = await supabase
+        .from("admin_animations")
+        .insert(animation)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as AdminAnimation;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "animations"] });
+      toast.success("تم إضافة التأثير");
+    },
+    onError: (error) => {
+      toast.error(`فشل الإضافة: ${error.message}`);
+    },
+  });
+}
+
+export function useUpdateAnimation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...animation }: Partial<AdminAnimation> & { id: string }) => {
+      const { data, error } = await supabase
+        .from("admin_animations")
+        .update(animation)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as AdminAnimation;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "animations"] });
+      toast.success("تم تحديث التأثير");
+    },
+    onError: (error) => {
+      toast.error(`فشل التحديث: ${error.message}`);
+    },
+  });
+}
+
+export function useDeleteAnimation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("admin_animations").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "animations"] });
+      toast.success("تم حذف التأثير");
+    },
+    onError: (error) => {
+      toast.error(`فشل الحذف: ${error.message}`);
     },
   });
 }

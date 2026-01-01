@@ -17,6 +17,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../../../core/services/error_handler_service.dart';
 import '../widgets/widgets.dart';
 import '../../../shared/utils/ui_helpers.dart';
+import '../../home/widgets/banner_widget.dart';
 
 // Provider for all user interactions (uses cache-first repository pattern)
 final userInteractionsProvider =
@@ -77,6 +78,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     onSourceSelected: _pickImageFromSource,
                   ),
                   onEditNameToggle: _handleNameEditToggle,
+                ),
+              ),
+
+              // Banner (from admin CMS)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  child: BannerWidget(position: 'profile'),
                 ),
               ),
 

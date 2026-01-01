@@ -22,10 +22,10 @@ export default async function DashboardLayout({
     .eq("id", user.id)
     .single();
 
-  // TODO: Re-enable admin check after setup
-  // if (profile?.role !== "admin") {
-  //   redirect("/login");
-  // }
+  // Enforce admin role - redirect non-admins to login
+  if (profile?.role !== "admin") {
+    redirect("/login");
+  }
 
   return (
     <div className="flex h-screen overflow-hidden">

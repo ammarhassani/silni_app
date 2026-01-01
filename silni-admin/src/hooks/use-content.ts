@@ -471,7 +471,7 @@ export function useHadithCategories() {
         .order("category");
 
       if (error) throw error;
-      const categories = [...new Set(data.map((d) => d.category))];
+      const categories = Array.from(new Set(data.map((d) => d.category)));
       return categories;
     },
     staleTime: 60000, // 1 minute
@@ -488,7 +488,7 @@ export function useQuoteCategories() {
         .order("category");
 
       if (error) throw error;
-      const categories = [...new Set(data.map((d) => d.category))];
+      const categories = Array.from(new Set(data.map((d) => d.category)));
       return categories;
     },
     staleTime: 60000, // 1 minute

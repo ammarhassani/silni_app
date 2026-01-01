@@ -12,6 +12,7 @@ import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/signup_screen.dart';
 import '../../features/auth/screens/email_verification_screen.dart';
+import '../../features/auth/screens/reset_password_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/relatives/screens/relatives_screen.dart';
 import '../../features/relatives/screens/relative_detail_screen.dart';
@@ -30,6 +31,7 @@ import '../../features/gamification/screens/gaming_center_screen.dart';
 import '../../features/gamification/screens/badges_screen.dart';
 import '../../features/gamification/screens/detailed_stats_screen.dart';
 import '../../features/gamification/screens/leaderboard_screen.dart';
+import '../../features/gamification/screens/challenges_screen.dart';
 import '../../features/ai_assistant/screens/ai_chat_screen.dart';
 import '../../features/ai_assistant/screens/memory_viewer_screen.dart';
 import '../../features/ai_assistant/screens/message_composer_screen.dart';
@@ -113,6 +115,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'emailVerification',
         pageBuilder: (context, state) =>
             _buildPageWithTransition(context, state, const EmailVerificationScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.resetPassword,
+        name: 'resetPassword',
+        pageBuilder: (context, state) =>
+            _buildPageWithTransition(context, state, const ResetPasswordScreen()),
       ),
 
       // Main App Routes
@@ -280,6 +288,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'leaderboard',
         pageBuilder: (context, state) =>
             _buildPageWithTransition(context, state, const LeaderboardScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.challenges,
+        name: 'challenges',
+        pageBuilder: (context, state) =>
+            _buildPageWithTransition(context, state, const ChallengesScreen()),
       ),
 
       // AI Routes

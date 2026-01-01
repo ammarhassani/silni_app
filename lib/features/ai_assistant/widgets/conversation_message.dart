@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/ai/ai_identity.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -126,7 +127,7 @@ class ConversationMessage extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.xs),
               Text(
-                'واصل',
+                AIIdentity.name,
                 style: AppTypography.labelMedium.copyWith(
                   color: Colors.white70,
                   fontWeight: FontWeight.w600,
@@ -209,7 +210,7 @@ class StreamingMessage extends StatelessWidget {
                 ),
                 const SizedBox(width: AppSpacing.xs),
                 Text(
-                  'واصل',
+                  AIIdentity.name,
                   style: AppTypography.labelMedium.copyWith(
                     color: Colors.white70,
                     fontWeight: FontWeight.w600,
@@ -325,7 +326,7 @@ class EmptyConversationState extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(
-            'مرحباً، أنا واصل',
+            'مرحباً، أنا ${AIIdentity.name}',
             style: AppTypography.headlineSmall.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.bold,

@@ -340,7 +340,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       displayName: displayName,
                       userId: userId,
                     ),
-                    const SizedBox(height: AppSpacing.lg),
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Top banner (promotional/announcements)
+                    const BannerWidget(position: 'home_top'),
+                    const SizedBox(height: AppSpacing.sm),
+
+                    // Message of the Day
+                    const MOTDWidget(),
+                    const SizedBox(height: AppSpacing.md),
 
                     // Hadith/Islamic reminder
                     IslamicReminderWidget(
@@ -423,6 +431,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       loading: () => const SizedBox.shrink(),
                       error: (_, _) => const SizedBox.shrink(),
                     ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Bottom banner (tips/promotions)
+                    const BannerWidget(position: 'home_bottom'),
                     const SizedBox(height: AppSpacing.lg),
                   ],
                 ),

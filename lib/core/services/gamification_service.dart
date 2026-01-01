@@ -1,16 +1,20 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../../shared/models/interaction_model.dart';
 import '../models/gamification_event.dart';
 import '../providers/gamification_events_provider.dart';
 import 'analytics_service.dart';
+import 'gamification_config_service.dart';
 
 /// Service for managing gamification features
 /// Handles points, streaks, badges, and levels
+/// Uses dynamic configuration from admin panel via GamificationConfigService
 class GamificationService {
   final SupabaseClient _supabase = SupabaseConfig.client;
   final AnalyticsService? _analytics;
   final GamificationEventsController? _eventsController;
+  final GamificationConfigService _config = GamificationConfigService.instance;
 
   GamificationService({
     AnalyticsService? analytics,
@@ -19,42 +23,30 @@ class GamificationService {
         _eventsController = eventsController;
 
   // =====================================================
-  // POINTS SYSTEM
+  // POINTS SYSTEM (Dynamic from admin panel)
   // =====================================================
 
-  /// Point values for different interaction types
-  static const Map<InteractionType, int> _pointsPerInteraction = {
-    InteractionType.call: 10,
-    InteractionType.visit: 20,
-    InteractionType.message: 5,
-    InteractionType.gift: 15,
-    InteractionType.event: 25,
-    InteractionType.other: 5,
-  };
-
-  /// Bonus points for adding notes/photos/ratings
-  static const int _pointsForNotes = 5;
-  static const int _pointsForPhoto = 5;
-  static const int _pointsForRating = 3;
-
-  /// Daily point cap to prevent gaming the system
-  static const int _dailyPointCap = 200;
-
   /// Calculate points for an interaction
+  /// Uses dynamic config from admin panel
   int calculateInteractionPoints(Interaction interaction) {
-    int points = _pointsPerInteraction[interaction.type] ?? 5;
+    // Get base points from admin config
+    final pointsConfig = _config.getPointsConfig(interaction.type);
+    int points = pointsConfig.basePoints;
 
-    // Bonus for adding details
+    debugPrint('[GamificationService] calculateInteractionPoints: type=${interaction.type.name}, basePoints=$points');
+
+    // Bonus for adding details (from admin config)
     if (interaction.notes != null && interaction.notes!.isNotEmpty) {
-      points += _pointsForNotes;
+      points += _config.notesBonus;
     }
     if (interaction.photoUrls.isNotEmpty) {
-      points += _pointsForPhoto;
+      points += _config.photoBonus;
     }
     if (interaction.rating != null) {
-      points += _pointsForRating;
+      points += _config.ratingBonus;
     }
 
+    debugPrint('[GamificationService] calculateInteractionPoints: total=$points');
     return points;
   }
 
@@ -64,6 +56,9 @@ class GamificationService {
     required int points,
   }) async {
     try {
+      debugPrint('[GamificationService] awardPoints called: userId=$userId, points=$points');
+      debugPrint('[GamificationService] Config loaded: ${_config.isLoaded}');
+
       // Get today's points to check against daily cap
       final today = DateTime.now();
       final startOfDay = DateTime(today.year, today.month, today.day);
@@ -75,6 +70,8 @@ class GamificationService {
           .gte('date', startOfDay.toIso8601String())
           .lt('date', startOfDay.add(const Duration(days: 1)).toIso8601String());
 
+      debugPrint('[GamificationService] Today interactions count: ${todayInteractions.length}');
+
       // Calculate points earned today
       int pointsEarnedToday = 0;
       for (final interactionData in todayInteractions) {
@@ -82,16 +79,25 @@ class GamificationService {
         pointsEarnedToday += calculateInteractionPoints(interaction);
       }
 
-      // Apply daily cap
-      if (pointsEarnedToday >= _dailyPointCap) {
+      // Apply daily cap (from admin config)
+      final dailyPointCap = _config.dailyPointCap;
+      debugPrint('[GamificationService] Points earned today: $pointsEarnedToday, daily cap: $dailyPointCap');
+
+      if (pointsEarnedToday >= dailyPointCap) {
+        debugPrint('[GamificationService] Daily cap reached, skipping points award');
         return;
       }
 
-      final pointsToAward = (pointsEarnedToday + points > _dailyPointCap)
-          ? _dailyPointCap - pointsEarnedToday
+      final pointsToAward = (pointsEarnedToday + points > dailyPointCap)
+          ? dailyPointCap - pointsEarnedToday
           : points;
 
-      if (pointsToAward <= 0) return;
+      debugPrint('[GamificationService] Points to award after cap: $pointsToAward');
+
+      if (pointsToAward <= 0) {
+        debugPrint('[GamificationService] No points to award (<=0), returning');
+        return;
+      }
 
       // Update user points and total interactions
       await _supabase.rpc('award_points', params: {
@@ -136,8 +142,8 @@ class GamificationService {
 
       // Use UTC for consistent timezone handling
       final now = DateTime.now().toUtc();
-      // 26-hour window instead of 24 - gives 2 hours of grace period for daily interactions
-      final newDeadline = now.add(const Duration(hours: 26));
+      // Deadline window from admin config (default 26 hours - gives grace period for daily interactions)
+      final newDeadline = now.add(Duration(hours: _config.streakConfig.deadlineHours));
 
       int newStreak;
       DateTime newDayStart;
@@ -198,16 +204,17 @@ class GamificationService {
           longestStreak: newLongestStreak,
         ));
 
-        // Check for milestone
-        if (GamificationEvent.isStreakMilestone(newStreak)) {
+        // Check for celebration milestone (dynamic from admin config)
+        if (_config.streakConfig.isCelebrationMilestone(newStreak)) {
           _eventsController?.emit(GamificationEvent.streakMilestone(
             userId: userId,
             streak: newStreak,
           ));
           _analytics?.logStreakMilestone(newStreak);
+          debugPrint('[GamificationService] Streak milestone reached: $newStreak');
 
-          // Award freeze at freeze milestones (7, 30, 100 days)
-          if (GamificationEvent.isFreezeAwardMilestone(newStreak)) {
+          // Award freeze at freeze milestones (from admin config: default 7, 30, 100 days)
+          if (_config.streakConfig.isFreezeAwardMilestone(newStreak)) {
             await _awardStreakFreeze(userId, newStreak);
           }
         }
@@ -273,6 +280,7 @@ class GamificationService {
   // =====================================================
 
   /// Check and award new badges to user
+  /// Uses dynamic badge configuration from admin panel
   Future<List<String>> checkAndAwardBadges(String userId) async {
     try {
       // Get current badges
@@ -286,49 +294,13 @@ class GamificationService {
       final int totalInteractions = userData['total_interactions'] ?? 0;
       final int currentStreak = userData['current_streak'] ?? 0;
 
-      final List<String> newBadges = [];
-
-      // Get all user interactions for analysis
+      // Get all user interactions for analysis (needed for special badges)
       final interactions = await _supabase
           .from('interactions')
-          .select('*')
+          .select('type, relative_id')
           .eq('user_id', userId);
 
-      // Check consistency badges
-      if (totalInteractions >= 1 && !currentBadges.contains('first_interaction')) {
-        newBadges.add('first_interaction');
-      }
-      if (currentStreak >= 7 && !currentBadges.contains('streak_7')) {
-        newBadges.add('streak_7');
-      }
-      if (currentStreak >= 30 && !currentBadges.contains('streak_30')) {
-        newBadges.add('streak_30');
-      }
-      if (currentStreak >= 100 && !currentBadges.contains('streak_100')) {
-        newBadges.add('streak_100');
-      }
-      if (currentStreak >= 365 && !currentBadges.contains('streak_365')) {
-        newBadges.add('streak_365');
-      }
-
-      // Check volume badges
-      if (totalInteractions >= 10 && !currentBadges.contains('interactions_10')) {
-        newBadges.add('interactions_10');
-      }
-      if (totalInteractions >= 50 && !currentBadges.contains('interactions_50')) {
-        newBadges.add('interactions_50');
-      }
-      if (totalInteractions >= 100 && !currentBadges.contains('interactions_100')) {
-        newBadges.add('interactions_100');
-      }
-      if (totalInteractions >= 500 && !currentBadges.contains('interactions_500')) {
-        newBadges.add('interactions_500');
-      }
-      if (totalInteractions >= 1000 && !currentBadges.contains('interactions_1000')) {
-        newBadges.add('interactions_1000');
-      }
-
-      // Check variety badges
+      // Calculate stats from interactions
       final uniqueTypes = <String>{};
       final uniqueRelatives = <String>{};
       int giftCount = 0;
@@ -348,26 +320,20 @@ class GamificationService {
         if (type == 'visit') visitCount++;
       }
 
-      if (uniqueTypes.length >= 6 && !currentBadges.contains('all_interaction_types')) {
-        newBadges.add('all_interaction_types');
-      }
-      if (uniqueRelatives.length >= 10 && !currentBadges.contains('social_butterfly')) {
-        newBadges.add('social_butterfly');
-      }
+      // Use dynamic config to check badge eligibility
+      final newBadges = _config.checkBadgeEligibility(
+        currentBadges: currentBadges,
+        totalInteractions: totalInteractions,
+        currentStreak: currentStreak,
+        uniqueTypesCount: uniqueTypes.length,
+        uniqueRelativesCount: uniqueRelatives.length,
+        giftCount: giftCount,
+        eventCount: eventCount,
+        callCount: callCount,
+        visitCount: visitCount,
+      );
 
-      // Check special badges
-      if (giftCount >= 10 && !currentBadges.contains('generous_giver')) {
-        newBadges.add('generous_giver');
-      }
-      if (eventCount >= 10 && !currentBadges.contains('family_gatherer')) {
-        newBadges.add('family_gatherer');
-      }
-      if (callCount >= 50 && !currentBadges.contains('frequent_caller')) {
-        newBadges.add('frequent_caller');
-      }
-      if (visitCount >= 25 && !currentBadges.contains('devoted_visitor')) {
-        newBadges.add('devoted_visitor');
-      }
+      debugPrint('[GamificationService] Badge check: currentBadges=${currentBadges.length}, eligible=${newBadges.length}');
 
       // Award new badges
       if (newBadges.isNotEmpty) {
@@ -385,6 +351,7 @@ class GamificationService {
             badgeDescription: _getBadgeDescription(badge),
           ));
           _analytics?.logBadgeUnlocked(badge);
+          debugPrint('[GamificationService] Badge awarded: $badge');
         }
       }
 
@@ -395,18 +362,15 @@ class GamificationService {
   }
 
   /// Get display name for a badge (in Arabic)
+  /// Uses dynamic config from admin panel with fallback
   String _getBadgeDisplayName(String badgeId) {
-    const Map<String, String> badgeNames = {
+    final badge = _config.getBadge(badgeId);
+    if (badge != null) {
+      return badge.displayNameAr;
+    }
+    // Fallback for badges not in admin config
+    const Map<String, String> fallbackNames = {
       'first_interaction': 'أول تفاعل',
-      'streak_7': 'أسبوع متواصل',
-      'streak_30': 'شهر متواصل',
-      'streak_100': '100 يوم',
-      'streak_365': 'سنة متواصلة',
-      'interactions_10': '10 تفاعلات',
-      'interactions_50': '50 تفاعل',
-      'interactions_100': '100 تفاعل',
-      'interactions_500': '500 تفاعل',
-      'interactions_1000': '1000 تفاعل',
       'all_interaction_types': 'متنوع',
       'social_butterfly': 'اجتماعي',
       'early_bird': 'طائر الصباح',
@@ -417,22 +381,19 @@ class GamificationService {
       'frequent_caller': 'كثير الاتصال',
       'devoted_visitor': 'زائر مخلص',
     };
-    return badgeNames[badgeId] ?? badgeId;
+    return fallbackNames[badgeId] ?? badgeId;
   }
 
   /// Get description for a badge (in Arabic)
+  /// Uses dynamic config from admin panel with fallback
   String _getBadgeDescription(String badgeId) {
-    const Map<String, String> badgeDescriptions = {
+    final badge = _config.getBadge(badgeId);
+    if (badge != null) {
+      return badge.descriptionAr;
+    }
+    // Fallback for badges not in admin config
+    const Map<String, String> fallbackDescriptions = {
       'first_interaction': 'سجلت أول تفاعل لك',
-      'streak_7': 'تفاعلت لمدة 7 أيام متتالية',
-      'streak_30': 'تفاعلت لمدة 30 يوم متتالي',
-      'streak_100': 'تفاعلت لمدة 100 يوم متتالي',
-      'streak_365': 'تفاعلت لمدة سنة كاملة',
-      'interactions_10': 'أكملت 10 تفاعلات',
-      'interactions_50': 'أكملت 50 تفاعل',
-      'interactions_100': 'أكملت 100 تفاعل',
-      'interactions_500': 'أكملت 500 تفاعل',
-      'interactions_1000': 'أكملت 1000 تفاعل',
       'all_interaction_types': 'استخدمت جميع أنواع التفاعل',
       'social_butterfly': 'تفاعلت مع 10 أقارب مختلفين',
       'early_bird': 'تفاعلت قبل 9 صباحاً',
@@ -443,35 +404,17 @@ class GamificationService {
       'frequent_caller': 'أجريت 50+ مكالمة',
       'devoted_visitor': 'قمت بـ 25+ زيارة',
     };
-    return badgeDescriptions[badgeId] ?? 'وسام خاص';
+    return fallbackDescriptions[badgeId] ?? 'وسام خاص';
   }
 
   // =====================================================
-  // LEVEL SYSTEM
+  // LEVEL SYSTEM (Dynamic from admin panel)
   // =====================================================
 
-  /// XP required for each level (exponential growth)
-  static const List<int> _xpPerLevel = [
-    0, // Level 1
-    100, // Level 2
-    250, // Level 3
-    500, // Level 4
-    1000, // Level 5
-    2000, // Level 6
-    3500, // Level 7
-    5500, // Level 8
-    8000, // Level 9
-    12000, // Level 10
-  ];
-
   /// Calculate level from total points
+  /// Uses dynamic config from admin panel
   int calculateLevel(int points) {
-    for (int i = _xpPerLevel.length - 1; i >= 0; i--) {
-      if (points >= _xpPerLevel[i]) {
-        return i + 1;
-      }
-    }
-    return 1;
+    return _config.calculateLevel(points);
   }
 
   /// Check if user leveled up and update
@@ -487,7 +430,11 @@ class GamificationService {
       final int currentLevel = userData['level'] ?? 1;
       final int points = userData['points'] ?? 0;
 
+      debugPrint('[GamificationService] checkAndUpdateLevel: userId=$userId, currentLevel=$currentLevel, points=$points');
+
       final int newLevel = calculateLevel(points);
+
+      debugPrint('[GamificationService] checkAndUpdateLevel: calculatedLevel=$newLevel, shouldLevelUp=${newLevel > currentLevel}');
 
       if (newLevel > currentLevel) {
         // User leveled up!
@@ -495,9 +442,9 @@ class GamificationService {
           'level': newLevel,
         }).eq('id', userId);
 
-        // Calculate XP to next level
-        final int xpToNextLevel = newLevel < _xpPerLevel.length
-            ? _xpPerLevel[newLevel] - points
+        // Calculate XP to next level (from admin config)
+        final int xpToNextLevel = newLevel < _config.maxLevel
+            ? _config.getXpForLevel(newLevel + 1) - points
             : 0;
 
         // Emit level up event
@@ -529,6 +476,7 @@ class GamificationService {
   }
 
   /// Get progress to next level (0.0 - 1.0)
+  /// Uses dynamic config from admin panel
   Future<double> getLevelProgress(String userId) async {
     try {
       final userData = await _supabase
@@ -540,12 +488,14 @@ class GamificationService {
       final int level = userData['level'] ?? 1;
       final int points = userData['points'] ?? 0;
 
-      if (level >= _xpPerLevel.length) {
+      if (level >= _config.maxLevel) {
         return 1.0; // Max level
       }
 
-      final int currentLevelXP = _xpPerLevel[level - 1];
-      final int nextLevelXP = _xpPerLevel[level];
+      final int currentLevelXP = _config.getXpForLevel(level);
+      final int nextLevelXP = _config.getXpForLevel(level + 1);
+
+      if (nextLevelXP <= currentLevelXP) return 1.0;
 
       final progress = (points - currentLevelXP) / (nextLevelXP - currentLevelXP);
       return progress.clamp(0.0, 1.0);

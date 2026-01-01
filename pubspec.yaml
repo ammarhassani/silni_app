@@ -110,6 +110,7 @@ dependencies:
   screenshot_callback: ^3.0.1
   flutter_markdown: ^0.7.4+2
   purchases_ui_flutter: ^9.10.2
+  app_links: ^6.4.1
 
 dev_dependencies:
   flutter_test:

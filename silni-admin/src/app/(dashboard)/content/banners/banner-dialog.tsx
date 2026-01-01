@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCreateBanner, useUpdateBanner } from "@/hooks/use-content";
 import type { AdminBanner } from "@/types/database";
 import { Loader2, Image, Palette } from "lucide-react";
+import { RouteSelector } from "@/components/ui/route-selector";
 
 const bannerSchema = z.object({
   title: z.string().min(3, "العنوان مطلوب (3 أحرف على الأقل)"),
@@ -161,13 +162,13 @@ export function BannerDialog({ open, onOpenChange, banner }: BannerDialogProps) 
       const payload = {
         title: data.title,
         description: data.description || null,
-        image_url: data.background_type === "image" ? data.image_url : null,
+        image_url: data.background_type === "image" && data.image_url ? data.image_url : null,
         background_gradient:
           data.background_type === "gradient"
             ? { start: data.background_start, end: data.background_end }
             : null,
         action_type: data.action_type,
-        action_value: data.action_type !== "none" ? data.action_value : null,
+        action_value: data.action_type !== "none" && data.action_value ? data.action_value : null,
         position: data.position,
         target_audience: data.target_audience,
         start_date: data.start_date || null,
@@ -195,8 +196,6 @@ export function BannerDialog({ open, onOpenChange, banner }: BannerDialogProps) 
   const position = watch("position");
   const targetAudience = watch("target_audience");
   const isActiveValue = watch("is_active");
-
-  const selectedActionType = actionTypes.find((a) => a.value === actionType);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -373,9 +372,13 @@ export function BannerDialog({ open, onOpenChange, banner }: BannerDialogProps) 
               <Label>نوع الإجراء</Label>
               <Select
                 value={actionType}
-                onValueChange={(value) =>
-                  setValue("action_type", value as BannerFormData["action_type"])
-                }
+                onValueChange={(value) => {
+                  setValue("action_type", value as BannerFormData["action_type"]);
+                  // Clear action_value when changing type
+                  if (value === "none") {
+                    setValue("action_value", "");
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="اختر نوع الإجراء" />
@@ -390,13 +393,35 @@ export function BannerDialog({ open, onOpenChange, banner }: BannerDialogProps) 
               </Select>
             </div>
 
-            {actionType !== "none" && (
+            {actionType === "route" && (
               <div className="space-y-2">
-                <Label htmlFor="action_value">قيمة الإجراء</Label>
+                <Label>المسار المستهدف</Label>
+                <RouteSelector
+                  value={watch("action_value")}
+                  onChange={(value) => setValue("action_value", value || "")}
+                  placeholder="اختر المسار"
+                />
+              </div>
+            )}
+
+            {actionType === "url" && (
+              <div className="space-y-2">
+                <Label htmlFor="action_value">الرابط الخارجي</Label>
                 <Input
                   id="action_value"
                   {...register("action_value")}
-                  placeholder={selectedActionType?.placeholder || ""}
+                  placeholder="https://example.com"
+                />
+              </div>
+            )}
+
+            {actionType === "action" && (
+              <div className="space-y-2">
+                <Label htmlFor="action_value">اسم الإجراء</Label>
+                <Input
+                  id="action_value"
+                  {...register("action_value")}
+                  placeholder="show_upgrade_dialog"
                 />
               </div>
             )}

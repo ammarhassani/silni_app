@@ -33,6 +33,13 @@ import {
   Crown,
   Package,
   Lock,
+  Zap,
+  AlertCircle,
+  Grid,
+  Route,
+  Gift,
+  Key,
+  Send,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -75,6 +82,8 @@ const navigation: NavItem[] = [
       { title: "المعاملات", href: "/ai/parameters", icon: Sliders },
       { title: "المناسبات والنبرات", href: "/ai/occasions", icon: Star },
       { title: "الذاكرة", href: "/ai/memory", icon: Brain },
+      { title: "البث المباشر", href: "/ai/streaming", icon: Zap },
+      { title: "رسائل الأخطاء", href: "/ai/errors", icon: AlertCircle },
     ],
   },
   {
@@ -98,6 +107,7 @@ const navigation: NavItem[] = [
       { title: "الباقات", href: "/subscriptions/tiers", icon: Crown },
       { title: "المنتجات", href: "/subscriptions/products", icon: Package },
       { title: "الميزات", href: "/subscriptions/features", icon: Lock },
+      { title: "الفترة التجريبية", href: "/subscriptions/trial", icon: Gift },
     ],
   },
   {
@@ -105,6 +115,7 @@ const navigation: NavItem[] = [
     href: "/notifications",
     icon: Bell,
     children: [
+      { title: "الإشعارات الفورية", href: "/notifications/announcements", icon: Send },
       { title: "القوالب", href: "/notifications/templates", icon: FileText },
       { title: "الفترات الزمنية", href: "/notifications/time-slots", icon: Clock },
     ],
@@ -117,12 +128,17 @@ const navigation: NavItem[] = [
       { title: "الألوان", href: "/design/colors", icon: Paintbrush },
       { title: "الثيمات", href: "/design/themes", icon: Layers },
       { title: "تأثيرات الأنماط", href: "/design/animations", icon: Sparkles },
+      { title: "تأثيرات التحريك", href: "/design/patterns", icon: Grid },
     ],
   },
   {
     title: "الإعدادات",
     href: "/settings",
     icon: Settings,
+    children: [
+      { title: "مسارات التطبيق", href: "/settings/routes", icon: Route },
+      { title: "سجل المفاتيح", href: "/settings/keys", icon: Key },
+    ],
   },
 ];
 

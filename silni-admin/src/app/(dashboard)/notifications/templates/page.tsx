@@ -374,7 +374,7 @@ export default function NotificationTemplatesPage() {
               <div className="space-y-2">
                 <Label>العنوان (عربي)</Label>
                 <Input
-                  value={formData.title_ar}
+                  value={formData.title_ar ?? ""}
                   onChange={(e) =>
                     setFormData((f) => ({ ...f, title_ar: e.target.value }))
                   }
@@ -384,7 +384,7 @@ export default function NotificationTemplatesPage() {
               <div className="space-y-2">
                 <Label>العنوان (إنجليزي)</Label>
                 <Input
-                  value={formData.title_en}
+                  value={formData.title_en ?? ""}
                   onChange={(e) =>
                     setFormData((f) => ({ ...f, title_en: e.target.value }))
                   }
@@ -398,7 +398,7 @@ export default function NotificationTemplatesPage() {
               <div className="space-y-2">
                 <Label>النص (عربي)</Label>
                 <Textarea
-                  value={formData.body_ar}
+                  value={formData.body_ar ?? ""}
                   onChange={(e) =>
                     setFormData((f) => ({ ...f, body_ar: e.target.value }))
                   }
@@ -412,7 +412,7 @@ export default function NotificationTemplatesPage() {
               <div className="space-y-2">
                 <Label>النص (إنجليزي)</Label>
                 <Textarea
-                  value={formData.body_en}
+                  value={formData.body_en ?? ""}
                   onChange={(e) =>
                     setFormData((f) => ({ ...f, body_en: e.target.value }))
                   }
@@ -460,7 +460,7 @@ export default function NotificationTemplatesPage() {
               <div className="space-y-2">
                 <Label>الصوت</Label>
                 <Input
-                  value={formData.sound}
+                  value={formData.sound ?? ""}
                   onChange={(e) =>
                     setFormData((f) => ({ ...f, sound: e.target.value }))
                   }
@@ -471,7 +471,7 @@ export default function NotificationTemplatesPage() {
               <div className="space-y-2">
                 <Label>معرّف القناة</Label>
                 <Input
-                  value={formData.channel_id}
+                  value={formData.channel_id ?? ""}
                   onChange={(e) =>
                     setFormData((f) => ({ ...f, channel_id: e.target.value }))
                   }

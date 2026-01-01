@@ -6,6 +6,7 @@ import '../../core/config/supabase_config.dart';
 import '../../core/errors/app_errors.dart';
 import '../../core/router/navigation_service.dart';
 import '../../core/router/app_routes.dart';
+import '../../core/services/notification_config_service.dart';
 import 'dart:async';
 
 /// Service for handling notifications using Supabase Realtime instead of Firebase
@@ -345,6 +346,101 @@ class SupabaseNotificationService {
     } catch (e) {
       // Silently fail - notification display is not critical
     }
+  }
+
+  /// Show notification using admin-configured template
+  /// This uses the NotificationConfigService to get dynamic templates.
+  ///
+  /// Example usage:
+  /// ```dart
+  /// await showTemplatedNotification(
+  ///   templateKey: 'reminder_due',
+  ///   variables: {'relative_name': 'أحمد'},
+  /// );
+  /// ```
+  Future<void> showTemplatedNotification({
+    required String templateKey,
+    Map<String, String> variables = const {},
+    String? payload,
+  }) async {
+    try {
+      // Get notification content from template
+      final content = NotificationConfigService.instance.buildNotification(
+        templateKey,
+        variables,
+      );
+
+      if (content == null) {
+        // Template not found - use fallback
+        await showImmediateNotification(
+          title: 'تنبيه',
+          body: 'لديك إشعار جديد',
+        );
+        return;
+      }
+
+      // Determine notification details based on priority
+      final androidDetails = AndroidNotificationDetails(
+        'silni_channel',
+        'Silni Notifications',
+        channelDescription: 'Notifications for Silni app',
+        importance: content.priority == 'high' ? Importance.high : Importance.defaultImportance,
+        priority: content.priority == 'high' ? Priority.high : Priority.defaultPriority,
+        icon: '@mipmap/ic_launcher',
+        playSound: true,
+        sound: content.sound == 'celebration'
+            ? const RawResourceAndroidNotificationSound('silni_celebration')
+            : const RawResourceAndroidNotificationSound('silni_default'),
+      );
+
+      final iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        sound: content.sound == 'celebration' ? 'silni_celebration.wav' : 'silni_default.wav',
+      );
+
+      final details = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      await _localNotifications.show(
+        DateTime.now().hashCode,
+        content.title,
+        content.body,
+        details,
+        payload: payload ?? 'template:$templateKey',
+      );
+    } catch (e) {
+      // Silently fail - notification display is not critical
+    }
+  }
+
+  /// Schedule a reminder notification using admin-configured template
+  Future<void> scheduleTemplatedReminder({
+    required int id,
+    required String templateKey,
+    required DateTime scheduledTime,
+    Map<String, String> variables = const {},
+    String? payload,
+  }) async {
+    // Get notification content from template
+    final content = NotificationConfigService.instance.buildNotification(
+      templateKey,
+      variables,
+    );
+
+    final title = content?.title ?? 'تذكير';
+    final body = content?.body ?? 'لديك تذكير';
+
+    await scheduleReminderNotification(
+      id: id,
+      title: title,
+      body: body,
+      scheduledTime: scheduledTime,
+      payload: payload,
+    );
   }
 
   /// Get device ID (for Supabase subscription)

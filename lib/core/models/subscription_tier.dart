@@ -1,3 +1,5 @@
+import '../services/feature_config_service.dart';
+
 /// Subscription tiers for Silni app monetization
 ///
 /// Tier hierarchy:
@@ -47,41 +49,20 @@ extension SubscriptionTierExtension on SubscriptionTier {
   // FEATURE ACCESS CHECKS
   // =====================================================
 
-  /// AI Chat (Counselor) - MAX only
-  bool get hasAIChat => this == SubscriptionTier.max;
-
-  /// Message Composer - MAX only
-  bool get hasMessageComposer => this == SubscriptionTier.max;
-
-  /// Communication Scripts - MAX only
-  bool get hasCommunicationScripts => this == SubscriptionTier.max;
-
-  /// Relationship Analysis - MAX only
-  bool get hasRelationshipAnalysis => this == SubscriptionTier.max;
-
-  /// Smart Reminders AI - MAX only
-  bool get hasSmartRemindersAI => this == SubscriptionTier.max;
-
-  /// Weekly Reports - MAX only
-  bool get hasWeeklyReports => this == SubscriptionTier.max;
-
-  /// Advanced Analytics - MAX only
-  bool get hasAdvancedAnalytics => this == SubscriptionTier.max;
-
-  /// Leaderboard access - MAX only
-  bool get hasLeaderboard => this == SubscriptionTier.max;
-
-  /// Data export - MAX only
-  bool get hasDataExport => this == SubscriptionTier.max;
-
-  /// Unlimited reminders - MAX only
-  bool get hasUnlimitedReminders => this == SubscriptionTier.max;
-
-  /// Custom themes - FREE for all
-  bool get hasCustomThemes => true;
-
-  /// Family tree view - FREE for all
-  bool get hasFamilyTree => true;
+  /// Check if this tier has access to a specific feature.
+  ///
+  /// This is the single source of truth for feature access, using
+  /// [FeatureConfigService] to check admin-configured feature permissions.
+  ///
+  /// Example usage:
+  /// ```dart
+  /// if (tier.hasFeature(FeatureIds.aiChat)) {
+  ///   // Show AI chat
+  /// }
+  /// ```
+  bool hasFeature(String featureId) {
+    return FeatureConfigService.instance.hasFeatureAccessSync(featureId, id);
+  }
 
   /// Check if tier is MAX (paid)
   bool get isMax => this == SubscriptionTier.max;
@@ -157,7 +138,12 @@ class FeatureIds {
   static const String familyTree = 'family_tree';
 
   /// Get required tier for a feature
+  ///
+  /// @deprecated Use [SubscriptionTier.hasFeature] or [FeatureConfigService]
+  /// instead. Feature requirements are now configured in the admin panel.
+  @Deprecated('Use tier.hasFeature(featureId) instead. Feature access is now dynamic from admin config.')
   static SubscriptionTier requiredTier(String featureId) {
+    // Fallback for backward compatibility - returns MAX for premium features
     return switch (featureId) {
       // MAX tier features - All AI features
       aiChat => SubscriptionTier.max,

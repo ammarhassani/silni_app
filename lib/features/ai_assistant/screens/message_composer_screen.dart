@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/ai/ai_identity.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/app_themes.dart';
@@ -186,8 +187,8 @@ class MessageComposerScreen extends ConsumerWidget {
     if (state.isLoading) {
       return AIEngagingLoader(
         emoji: '✍️',
-        messages: const [
-          'واصل يكتب رسائل مميزة...',
+        messages: [
+          '${AIIdentity.name} يكتب رسائل مميزة...',
           'يختار الكلمات المناسبة...',
           'يراعي النبرة المطلوبة...',
           'يضيف لمسات شخصية...',

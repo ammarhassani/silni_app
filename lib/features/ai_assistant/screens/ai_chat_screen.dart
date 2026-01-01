@@ -9,6 +9,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../../core/ai/ai_identity.dart';
 import '../../../core/ai/ai_models.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../providers/ai_chat_provider.dart';
@@ -138,7 +139,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           onSelectConversation: _loadConversation,
         ),
         body: Semantics(
-          label: 'محادثة واصل المساعد الذكي',
+          label: 'محادثة ${AIIdentity.name} المساعد الذكي',
           child: Column(
             children: [
               // Chat messages
@@ -212,7 +213,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'واصل',
+                AIIdentity.name,
                 style: AppTypography.titleMedium.copyWith(
                   color: themeColors.textOnGradient,
                   fontWeight: FontWeight.bold,
@@ -230,12 +231,12 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
       ),
       actions: [
         Semantics(
-          label: 'ذاكرة واصل',
+          label: 'ذاكرة ${AIIdentity.name}',
           button: true,
           child: IconButton(
             icon: Icon(Icons.psychology_outlined, color: themeColors.textOnGradient.withValues(alpha: 0.7)),
             onPressed: () => context.push(AppRoutes.aiMemories),
-            tooltip: 'ذاكرة واصل',
+            tooltip: 'ذاكرة ${AIIdentity.name}',
           ),
         ),
         Semantics(
@@ -302,7 +303,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           const SizedBox(height: AppSpacing.lg),
 
           Text(
-            'مرحباً، أنا واصل',
+            'مرحباً، أنا ${AIIdentity.name}',
             style: AppTypography.headlineSmall.copyWith(
               color: themeColors.textOnGradient,
               fontWeight: FontWeight.bold,

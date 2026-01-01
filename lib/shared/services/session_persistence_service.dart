@@ -133,8 +133,8 @@ class SessionPersistenceService {
       final now = DateTime.now();
       final difference = now.difference(sessionTime);
 
-      // Consider session valid if less than 30 days old
-      return difference.inDays < 30;
+      // Consider session valid if less than 7 days old (security best practice)
+      return difference.inDays < 7;
     } catch (e) {
       return false;
     }

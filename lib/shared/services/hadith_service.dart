@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
 import '../../core/services/app_logger_service.dart';
+import '../../core/services/content_config_service.dart';
 import '../models/hadith_model.dart';
 
 class HadithService {
@@ -10,6 +11,9 @@ class HadithService {
   final AppLoggerService _logger = AppLoggerService();
   static const String _table = 'hadith';
   static const String _lastIndexKey = 'last_hadith_index';
+
+  /// Reference to ContentConfigService for admin-configured hadith
+  ContentConfigService get _contentConfig => ContentConfigService.instance;
 
   /// Default authentic hadith about family ties (صلة الرحم)
   /// These are used as fallback if database is unavailable
@@ -104,60 +108,60 @@ class HadithService {
     },
   ];
 
-  /// Get daily hadith (rotates on each call)
+  /// Get daily Islamic content (hadith or scholar quote)
+  /// Priority: 1) admin tables via ContentConfigService (alternates hadith/quotes)
+  ///           2) hardcoded fallback
   Future<Hadith?> getDailyHadith() async {
-    try {
-      // Query hadith from Supabase (already seeded during setup)
-      final response = await _supabase
-          .from(_table)
-          .select()
-          .eq('topic', 'silat_rahim')
-          .eq('is_authentic', true)
-          .order('display_order')
-          .timeout(
-            const Duration(seconds: 20),  // Increased from 10s for iOS
-            onTimeout: () {
-              throw TimeoutException('Supabase query timed out');
-            },
-          );
+    // Try admin-configured content first (from ContentConfigService)
+    // This alternates between hadith and quotes for variety
+    final content = _contentConfig.getDailyIslamicContent();
 
-      final hadithData = response as List;
-
-      if (hadithData.isEmpty) {
-        return _getDefaultHadithFallback();
+    if (content != null) {
+      // Check if it's a hadith or a quote
+      if (content is AdminHadith) {
+        _logger.info(
+          'Using admin-configured hadith',
+          category: LogCategory.database,
+          tag: 'HadithService',
+        );
+        return Hadith.fromMap({
+          'id': content.id,
+          'arabicText': content.hadithText,
+          'source': content.source,
+          'narrator': content.narrator,
+          'topic': content.category,
+          'type': 'hadith',
+          'isAuthentic': content.grade == 'صحيح',
+          'displayOrder': content.displayPriority,
+          'createdAt': DateTime.now(),
+        });
+      } else if (content is AdminQuote) {
+        _logger.info(
+          'Using admin-configured quote',
+          category: LogCategory.database,
+          tag: 'HadithService',
+        );
+        return Hadith.fromMap({
+          'id': content.id,
+          'arabicText': content.quoteText,
+          'source': content.source ?? '',
+          'scholar': content.author,
+          'topic': content.category,
+          'type': 'quote',
+          'isAuthentic': true,
+          'displayOrder': content.displayPriority,
+          'createdAt': DateTime.now(),
+        });
       }
-
-      final hadithList = hadithData
-          .map((json) => Hadith.fromJson(json))
-          .toList();
-
-      // Get the last shown index from SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      final lastIndex = prefs.getInt(_lastIndexKey) ?? -1;
-
-      // Calculate next index (rotate through list)
-      final nextIndex = (lastIndex + 1) % hadithList.length;
-
-      // Save the new index
-      await prefs.setInt(_lastIndexKey, nextIndex);
-
-      return hadithList[nextIndex];
-    } on TimeoutException {
-      _logger.warning(
-        'Hadith query timed out, using fallback',
-        category: LogCategory.database,
-        tag: 'HadithService',
-      );
-      return _getDefaultHadithFallback();
-    } catch (e) {
-      _logger.warning(
-        'Failed to get daily hadith, using fallback',
-        category: LogCategory.database,
-        tag: 'HadithService',
-        metadata: {'error': e.toString()},
-      );
-      return _getDefaultHadithFallback();
     }
+
+    // Fallback to hardcoded content
+    _logger.warning(
+      'Admin content not available, using hardcoded fallback',
+      category: LogCategory.database,
+      tag: 'HadithService',
+    );
+    return _getDefaultHadithFallback();
   }
 
   /// Get a fallback hadith from local default data (no database needed)

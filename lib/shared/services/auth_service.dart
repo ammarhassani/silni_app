@@ -578,7 +578,7 @@ class AuthService {
     }
   }
 
-  // Reset password
+  // Reset password - sends reset email with deep link
   Future<void> resetPassword(String email) async {
     final logger = AppLoggerService();
 
@@ -589,7 +589,10 @@ class AuthService {
         tag: 'resetPassword',
         metadata: {'email': email},
       );
-      await _supabase.auth.resetPasswordForEmail(email);
+      await _supabase.auth.resetPasswordForEmail(
+        email,
+        redirectTo: kIsWeb ? null : 'com.silni.app://reset-password',
+      );
       logger.info(
         'Password reset email sent',
         category: LogCategory.auth,
@@ -611,6 +614,45 @@ class AuthService {
         category: LogCategory.auth,
         tag: 'resetPassword',
         metadata: {'error': e.toString(), 'email': email},
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  // Update password - used after password reset flow
+  Future<void> updatePassword(String newPassword) async {
+    final logger = AppLoggerService();
+
+    try {
+      logger.info(
+        'Password update starting',
+        category: LogCategory.auth,
+        tag: 'updatePassword',
+      );
+      await _supabase.auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+      logger.info(
+        'Password updated successfully',
+        category: LogCategory.auth,
+        tag: 'updatePassword',
+      );
+    } on AuthException catch (e, stackTrace) {
+      logger.error(
+        'Password update error',
+        category: LogCategory.auth,
+        tag: 'updatePassword',
+        metadata: {'message': e.message},
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    } catch (e, stackTrace) {
+      logger.error(
+        'Unexpected password update error',
+        category: LogCategory.auth,
+        tag: 'updatePassword',
+        metadata: {'error': e.toString()},
         stackTrace: stackTrace,
       );
       rethrow;

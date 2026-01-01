@@ -6,6 +6,7 @@ import type {
   AdminSubscriptionTier,
   AdminSubscriptionProduct,
   AdminFeature,
+  AdminTrialConfig,
 } from "@/types/database";
 import { toast } from "sonner";
 
@@ -73,6 +74,28 @@ export function useCreateSubscriptionTier() {
     },
     onError: (error) => {
       toast.error(`فشل الإضافة: ${error.message}`);
+    },
+  });
+}
+
+export function useDeleteSubscriptionTier() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("admin_subscription_tiers")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "subscription-tiers"] });
+      toast.success("تم حذف الباقة");
+    },
+    onError: (error) => {
+      toast.error(`فشل الحذف: ${error.message}`);
     },
   });
 }
@@ -249,6 +272,50 @@ export function useDeleteFeature() {
     },
     onError: (error) => {
       toast.error(`فشل الحذف: ${error.message}`);
+    },
+  });
+}
+
+// ============ Trial Configuration ============
+
+export function useTrialConfig() {
+  return useQuery({
+    queryKey: ["admin", "trial-config"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("admin_trial_config")
+        .select("*")
+        .eq("config_key", "default")
+        .single();
+
+      if (error) throw error;
+      return data as AdminTrialConfig;
+    },
+  });
+}
+
+export function useUpdateTrialConfig() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (config: Partial<AdminTrialConfig> & { id: string }) => {
+      const { id, ...updateData } = config;
+      const { data, error } = await supabase
+        .from("admin_trial_config")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as AdminTrialConfig;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "trial-config"] });
+      toast.success("تم تحديث إعدادات الفترة التجريبية");
+    },
+    onError: (error) => {
+      toast.error(`فشل التحديث: ${error.message}`);
     },
   });
 }

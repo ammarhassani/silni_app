@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/ai/ai_identity.dart';
 import '../../../core/ai/ai_models.dart';
 import '../../../core/ai/deepseek_ai_service.dart';
 import '../../../core/constants/app_spacing.dart';
@@ -203,8 +204,8 @@ class RelationshipAnalysisScreen extends ConsumerWidget {
     if (state.isLoading) {
       return AIEngagingLoader(
         emoji: '🔍',
-        messages: const [
-          'واصل يحلل العلاقة...',
+        messages: [
+          '${AIIdentity.name} يحلل العلاقة...',
           'يفحص نمط التواصل...',
           'يستخرج ملاحظات ذكية...',
           'يجهز نصائح مخصصة...',
@@ -318,7 +319,7 @@ class RelationshipAnalysisScreen extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'سيقدم لك واصل نصائح مخصصة لتقوية علاقتك',
+            'سيقدم لك ${AIIdentity.name} نصائح مخصصة لتقوية علاقتك',
             style: AppTypography.bodySmall.copyWith(
               color: Colors.white38,
             ),

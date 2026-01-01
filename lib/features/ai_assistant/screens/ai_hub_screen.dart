@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/ai/ai_identity.dart';
 import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/router/app_routes.dart';
@@ -37,7 +38,7 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen> {
       backgroundColor: Colors.transparent,
       extendBody: true,
       body: Semantics(
-        label: 'مركز واصل الذكي',
+        label: 'مركز ${AIIdentity.name} الذكي',
         child: SafeArea(
           child: CustomScrollView(
             slivers: [
@@ -191,7 +192,7 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'واصل',
+                      AIIdentity.name,
                       style: AppTypography.headlineMedium.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,

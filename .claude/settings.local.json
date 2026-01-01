@@ -105,7 +105,18 @@
       "Bash(brew upgrade:*)",
       "Bash(supabase link:*)",
       "Bash(npx tsc:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(npm run sync-routes:*)",
+      "Bash(comm:*)",
+      "Bash(git -C /Users/engammar/Apps/silni_app status --porcelain)",
+      "Bash(stat:*)",
+      "Bash(head:*)",
+      "Bash(git -C /Users/engammar/Apps/silni_app log --oneline --all -- \"silni-admin/src/app/\\(dashboard\\)/settings\")",
+      "Bash(vercel --version:*)",
+      "Bash(npm i:*)",
+      "Bash(vercel whoami:*)",
+      "Bash(vercel --prod:*)",
+      "Bash(git -C /Users/engammar/Apps/silni_app log --all --full-history --oneline -- android/key.properties silni-admin/.env*)"
     ],
     "deny": [],
     "ask": []

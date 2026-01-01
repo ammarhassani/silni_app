@@ -7,6 +7,7 @@ class AppRoutes {
   static const String login = '/login';
   static const String signup = '/signup';
   static const String emailVerification = '/email-verification';
+  static const String resetPassword = '/reset-password';
 
   /// Routes that don't require authentication
   static const Set<String> publicRoutes = {
@@ -15,6 +16,7 @@ class AppRoutes {
     login,
     signup,
     emailVerification,
+    resetPassword,
   };
 
   /// Check if a route is public (doesn't require auth)
@@ -45,6 +47,7 @@ class AppRoutes {
   static const String badges = '/badges';
   static const String detailedStats = '/detailed-stats';
   static const String leaderboard = '/leaderboard';
+  static const String challenges = '/challenges';
 
   // AI routes
   static const String aiHub = '/ai-hub';

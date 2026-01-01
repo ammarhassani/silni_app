@@ -17,6 +17,7 @@ import '../../../core/providers/realtime_provider.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/theme_aware_dialog.dart';
 import '../widgets/widgets.dart';
+import '../../home/widgets/banner_widget.dart';
 
 class RemindersScreen extends ConsumerStatefulWidget {
   const RemindersScreen({super.key});
@@ -50,6 +51,14 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               child: Column(
                 children: [
                   _buildHeader(context, themeColors),
+                  // Banner (from admin CMS)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
+                    child: BannerWidget(position: 'reminders'),
+                  ),
                   Expanded(
                     child: relativesAsync.when(
                       data: (relatives) => schedulesAsync.when(

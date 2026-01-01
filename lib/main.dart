@@ -7,6 +7,8 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:app_links/app_links.dart';
 import 'firebase_options.dart';
 import 'core/config/supabase_config.dart';
 import 'core/cache/hive_initializer.dart';
@@ -16,6 +18,8 @@ import 'core/config/env/env_validator.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
+import 'core/router/app_routes.dart';
+import 'core/router/navigation_service.dart';
 import 'core/providers/gamification_events_provider.dart';
 import 'core/services/sync_service.dart';
 import 'core/services/connectivity_service.dart';
@@ -31,6 +35,11 @@ import 'core/services/app_health_service.dart';
 import 'core/services/subscription_service.dart';
 import 'core/services/feature_config_service.dart';
 import 'core/services/ai_config_service.dart';
+import 'core/services/gamification_config_service.dart';
+import 'core/services/content_config_service.dart';
+import 'core/services/notification_config_service.dart';
+import 'core/services/design_config_service.dart';
+import 'core/services/app_routes_config_service.dart';
 import 'shared/widgets/error_boundary.dart';
 import 'shared/widgets/premium_loading_indicator.dart';
 
@@ -394,6 +403,121 @@ void main() async {
     // Don't rethrow - app falls back to hardcoded AI config
   }
 
+  // Load gamification configuration from admin panel
+  logger.info(
+    'Loading gamification configuration from admin panel...',
+    category: LogCategory.service,
+    tag: 'GamificationConfig',
+  );
+  try {
+    await GamificationConfigService.instance.initialize();
+    logger.info(
+      'Gamification configuration loaded successfully',
+      category: LogCategory.service,
+      tag: 'GamificationConfig',
+    );
+  } catch (e) {
+    logger.warning(
+      'Gamification configuration loading failed - using hardcoded defaults',
+      category: LogCategory.service,
+      tag: 'GamificationConfig',
+      metadata: {'error': e.toString()},
+    );
+    // Don't rethrow - app falls back to hardcoded gamification config
+  }
+
+  // Load content configuration from admin panel (banners, hadith, quotes, MOTD)
+  logger.info(
+    'Loading content configuration from admin panel...',
+    category: LogCategory.service,
+    tag: 'ContentConfig',
+  );
+  try {
+    await ContentConfigService.instance.refresh();
+    logger.info(
+      'Content configuration loaded successfully',
+      category: LogCategory.service,
+      tag: 'ContentConfig',
+    );
+  } catch (e) {
+    logger.warning(
+      'Content configuration loading failed - using hardcoded defaults',
+      category: LogCategory.service,
+      tag: 'ContentConfig',
+      metadata: {'error': e.toString()},
+    );
+    // Don't rethrow - app falls back to hardcoded content
+  }
+
+  // Load notification configuration from admin panel (templates, time slots)
+  logger.info(
+    'Loading notification configuration from admin panel...',
+    category: LogCategory.service,
+    tag: 'NotificationConfig',
+  );
+  try {
+    await NotificationConfigService.instance.refresh();
+    logger.info(
+      'Notification configuration loaded successfully',
+      category: LogCategory.service,
+      tag: 'NotificationConfig',
+    );
+  } catch (e) {
+    logger.warning(
+      'Notification configuration loading failed - using hardcoded defaults',
+      category: LogCategory.service,
+      tag: 'NotificationConfig',
+      metadata: {'error': e.toString()},
+    );
+    // Don't rethrow - app falls back to hardcoded notification config
+  }
+
+  // Load design configuration from admin panel (colors, themes, animations)
+  logger.info(
+    'Loading design configuration from admin panel...',
+    category: LogCategory.service,
+    tag: 'DesignConfig',
+  );
+  try {
+    await DesignConfigService.instance.initialize();
+    logger.info(
+      'Design configuration loaded successfully',
+      category: LogCategory.service,
+      tag: 'DesignConfig',
+    );
+  } catch (e) {
+    logger.warning(
+      'Design configuration loading failed - using hardcoded defaults',
+      category: LogCategory.service,
+      tag: 'DesignConfig',
+      metadata: {'error': e.toString()},
+    );
+    // Don't rethrow - app falls back to hardcoded design config
+  }
+
+  // Load app routes configuration from admin panel (for banners/MOTD action routes)
+  logger.info(
+    'Loading app routes configuration from admin panel...',
+    category: LogCategory.service,
+    tag: 'AppRoutesConfig',
+  );
+  try {
+    await AppRoutesConfigService.instance.initialize();
+    logger.info(
+      'App routes configuration loaded successfully',
+      category: LogCategory.service,
+      tag: 'AppRoutesConfig',
+    );
+  } catch (e) {
+    logger.warning(
+      'App routes configuration loading failed - using hardcoded defaults',
+      category: LogCategory.service,
+      tag: 'AppRoutesConfig',
+      metadata: {'error': e.toString()},
+    );
+    // Don't rethrow - app falls back to hardcoded routes
+  }
+
   // Configure global error handlers with device context
   logger.info(
     'Configuring error handlers...',
@@ -444,8 +568,9 @@ void main() async {
   await SentryFlutter.init(
     (options) {
       options.dsn = AppEnvironment.sentryDsn;
-      options.tracesSampleRate =
-          1.0; // Capture 100% of transactions in debug/staging
+      // Production: 10% sampling for cost control
+      // Staging/TestFlight: 50% for better visibility during testing
+      options.tracesSampleRate = AppEnvironment.isProduction ? 0.1 : 0.5;
       options.enableAutoPerformanceTracing = true;
       options.attachThreads = true;
       options.attachStacktrace = true;
@@ -531,15 +656,142 @@ class SilniApp extends ConsumerStatefulWidget {
 }
 
 class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver {
+  late final AppLinks _appLinks;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _appLinks = AppLinks();
+    _setupDeepLinkHandling();
+    _setupPasswordRecoveryListener();
+  }
+
+  /// Handle incoming deep links for auth callbacks
+  void _setupDeepLinkHandling() {
+    final logger = AppLoggerService();
+
+    // Handle deep link when app is opened from terminated state
+    _appLinks.getInitialLink().then((uri) {
+      if (uri != null) {
+        logger.info(
+          'Initial deep link received',
+          category: LogCategory.auth,
+          tag: 'main',
+          metadata: {'uri': uri.toString()},
+        );
+        _handleDeepLink(uri);
+      }
+    });
+
+    // Handle deep link when app is already running (from background)
+    _appLinks.uriLinkStream.listen((uri) {
+      logger.info(
+        'Deep link received while app running',
+        category: LogCategory.auth,
+        tag: 'main',
+        metadata: {'uri': uri.toString()},
+      );
+      _handleDeepLink(uri);
+    });
+  }
+
+  /// Process the deep link URL for Supabase auth
+  void _handleDeepLink(Uri uri) {
+    final logger = AppLoggerService();
+
+    // Check if this is a Supabase auth callback (has access_token in fragment)
+    final fragment = uri.fragment;
+    if (fragment.isNotEmpty && fragment.contains('access_token')) {
+      logger.info(
+        'Supabase auth callback detected',
+        category: LogCategory.auth,
+        tag: 'main',
+        metadata: {'path': uri.path},
+      );
+
+      // Let Supabase handle the auth callback
+      // The onAuthStateChange listener will fire with the appropriate event
+      if (SupabaseConfig.isInitialized) {
+        // Supabase should automatically handle the URL fragment,
+        // but we can also manually trigger it by reconstructing the full URL
+        final fullUri = uri.toString();
+        SupabaseConfig.client.auth.getSessionFromUrl(Uri.parse(fullUri)).then((response) {
+          logger.info(
+            'Session from URL processed',
+            category: LogCategory.auth,
+            tag: 'main',
+            metadata: {
+              'hasSession': true,
+              'userId': response.session.user.id,
+            },
+          );
+        }).catchError((e) {
+          logger.error(
+            'Error processing session from URL',
+            category: LogCategory.auth,
+            tag: 'main',
+            metadata: {'error': e.toString()},
+          );
+        });
+      }
+    }
+  }
+
+  /// Listen for password recovery events from Supabase deep links
+  void _setupPasswordRecoveryListener() {
+    if (!SupabaseConfig.isInitialized) return;
+
+    SupabaseConfig.client.auth.onAuthStateChange.listen((data) {
+      final event = data.event;
+      final session = data.session;
+      final logger = AppLoggerService();
+
+      logger.debug(
+        'Auth state change detected',
+        category: LogCategory.auth,
+        tag: 'main',
+        metadata: {
+          'event': event.toString(),
+          'hasSession': session != null,
+          'userId': session?.user.id,
+        },
+      );
+
+      if (event == AuthChangeEvent.passwordRecovery) {
+        logger.info(
+          'Password recovery event detected - navigating to reset screen',
+          category: LogCategory.auth,
+          tag: 'main',
+        );
+
+        // Delay navigation slightly to ensure router is ready
+        Future.delayed(const Duration(milliseconds: 100), () {
+          final context = NavigationService.currentContext;
+          if (context != null) {
+            NavigationService.navigateTo(AppRoutes.resetPassword);
+          } else {
+            logger.warning(
+              'Navigation context not ready, retrying...',
+              category: LogCategory.auth,
+              tag: 'main',
+            );
+            // Retry after a longer delay
+            Future.delayed(const Duration(milliseconds: 500), () {
+              NavigationService.navigateTo(AppRoutes.resetPassword);
+            });
+          }
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    // Dispose singleton services to prevent memory leaks
+    connectivityService.dispose();
+    FCMNotificationService().dispose();
     super.dispose();
   }
 
@@ -550,6 +802,11 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
       debugPrint('[SilniApp] App resumed - refreshing configs');
       FeatureConfigService.instance.refresh();
       AIConfigService.instance.refresh();
+      GamificationConfigService.instance.refresh();
+      ContentConfigService.instance.refresh();
+      NotificationConfigService.instance.refresh();
+      DesignConfigService.instance.refresh();
+      AppRoutesConfigService.instance.refresh();
     }
   }
 
