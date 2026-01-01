@@ -102,7 +102,10 @@
       "Bash(supabase functions list:*)",
       "Bash(supabase secrets list:*)",
       "Bash(xargs:*)",
-      "Bash(brew upgrade:*)"
+      "Bash(brew upgrade:*)",
+      "Bash(supabase link:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

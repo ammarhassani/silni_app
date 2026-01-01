@@ -5,6 +5,7 @@ import 'package:purchases_flutter/purchases_flutter.dart' as rc;
 import '../models/subscription_tier.dart';
 import '../models/subscription_state.dart';
 import '../services/subscription_service.dart';
+import '../services/feature_config_service.dart';
 
 /// Provider for subscription service singleton
 final subscriptionServiceProvider = Provider<SubscriptionService>((ref) {
@@ -107,40 +108,16 @@ final subscriptionErrorProvider = Provider<String?>((ref) {
 });
 
 /// Family provider for feature access
+/// Uses dynamic configuration from admin panel (admin_features table)
+/// Falls back to hardcoded logic if config not loaded
 /// Usage: ref.watch(featureAccessProvider('ai_chat'))
 final featureAccessProvider = Provider.family<bool, String>((ref, featureId) {
   final tier = ref.watch(subscriptionTierProvider);
+  final configService = FeatureConfigService.instance;
 
-  switch (featureId) {
-    // MAX-only features (AI)
-    case FeatureIds.aiChat:
-    case FeatureIds.messageComposer:
-      return tier.hasAIChat;
-    case FeatureIds.communicationScripts:
-      return tier.hasCommunicationScripts;
-    case FeatureIds.relationshipAnalysis:
-      return tier.hasRelationshipAnalysis;
-    case FeatureIds.smartRemindersAI:
-      return tier.hasSmartRemindersAI;
-    case FeatureIds.weeklyReports:
-      return tier.hasWeeklyReports;
-    case FeatureIds.advancedAnalytics:
-      return tier.hasAdvancedAnalytics;
-    case FeatureIds.leaderboard:
-      return tier.hasLeaderboard;
-    case FeatureIds.dataExport:
-      return tier.hasDataExport;
-    case FeatureIds.unlimitedReminders:
-      return tier.hasUnlimitedReminders;
-
-    // Free features (customThemes, familyTree, and default)
-    case FeatureIds.customThemes:
-      return tier.hasCustomThemes; // Always true
-    case FeatureIds.familyTree:
-      return tier.hasFamilyTree; // Always true
-    default:
-      return true;
-  }
+  // Use sync method that checks cached config
+  // Falls back to hardcoded logic if config not yet loaded
+  return configService.hasFeatureAccessSync(featureId, tier.id);
 });
 
 /// Provider for reminder limit

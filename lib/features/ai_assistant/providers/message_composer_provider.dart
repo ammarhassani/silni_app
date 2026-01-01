@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ai/deepseek_ai_service.dart';
+import '../../../core/services/ai_config_service.dart';
 import '../../../shared/models/relative_model.dart';
 
 /// State for message composer
@@ -176,8 +177,8 @@ final messageComposerProvider =
   return MessageComposerNotifier(aiService);
 });
 
-/// Message occasion options
-const List<Map<String, String>> messageOccasions = [
+/// Message occasion options - FALLBACK (used when admin config not loaded)
+const List<Map<String, String>> _fallbackMessageOccasions = [
   {'id': 'eid', 'label': 'تهنئة عيد', 'emoji': '🎉'},
   {'id': 'ramadan', 'label': 'تهنئة رمضان', 'emoji': '🌙'},
   {'id': 'birthday', 'label': 'عيد ميلاد', 'emoji': '🎂'},
@@ -192,10 +193,40 @@ const List<Map<String, String>> messageOccasions = [
   {'id': 'thanks', 'label': 'شكر', 'emoji': '🙌'},
 ];
 
-/// Tone options
-const List<Map<String, String>> toneOptions = [
+/// Tone options - FALLBACK (used when admin config not loaded)
+const List<Map<String, String>> _fallbackToneOptions = [
   {'id': 'formal', 'label': 'رسمي', 'emoji': '👔'},
   {'id': 'warm', 'label': 'دافئ', 'emoji': '❤️'},
   {'id': 'humorous', 'label': 'مرح', 'emoji': '😊'},
   {'id': 'religious', 'label': 'ديني', 'emoji': '🕌'},
 ];
+
+/// Dynamic message occasions from admin config (with fallback)
+List<Map<String, String>> get messageOccasions {
+  final config = AIConfigService.instance;
+  if (config.isLoaded && config.messageOccasions.isNotEmpty) {
+    return config.messageOccasions
+        .map((o) => {
+              'id': o.occasionKey,
+              'label': o.displayNameAr,
+              'emoji': o.emoji,
+            })
+        .toList();
+  }
+  return _fallbackMessageOccasions;
+}
+
+/// Dynamic tone options from admin config (with fallback)
+List<Map<String, String>> get toneOptions {
+  final config = AIConfigService.instance;
+  if (config.isLoaded && config.messageTones.isNotEmpty) {
+    return config.messageTones
+        .map((t) => {
+              'id': t.toneKey,
+              'label': t.displayNameAr,
+              'emoji': t.emoji,
+            })
+        .toList();
+  }
+  return _fallbackToneOptions;
+}

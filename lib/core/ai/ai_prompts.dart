@@ -2,13 +2,37 @@
 // Contains all system prompts for different AI features
 
 import '../../shared/models/relative_model.dart';
+import '../services/ai_config_service.dart';
 import 'ai_models.dart';
 
 /// System prompts for the AI assistant
 class AIPrompts {
   AIPrompts._();
 
-  /// Base personality prompt for واصل (the family assistant)
+  /// Get dynamic personality prompt from admin config (with fallback)
+  static String get dynamicPersonality {
+    final config = AIConfigService.instance;
+    if (config.isLoaded) {
+      return config.fullPersonalityPrompt;
+    }
+    return basePersonality;
+  }
+
+  /// Get mode instructions from admin config (with fallback)
+  static String getDynamicModeInstructions(String modeKey) {
+    final config = AIConfigService.instance;
+    final mode = config.getModeByKey(modeKey);
+    if (mode != null) {
+      return '''
+## وضع ${mode.displayNameAr}:
+${mode.modeInstructions}
+''';
+    }
+    // Fallback to hardcoded
+    return getModeInstructions(CounselingMode.fromString(modeKey));
+  }
+
+  /// Base personality prompt for واصل (the family assistant) - FALLBACK
   static const String basePersonality = '''
 أنت "واصل"، مساعد ذكي متخصص في صلة الرحم والعلاقات الأسرية.
 
@@ -206,15 +230,18 @@ class AIPrompts {
   }
 
   /// Build full system prompt for chat with full context
+  /// Uses dynamic config from admin panel with fallback to hardcoded values
   static String buildChatSystemPrompt({
     required CounselingMode mode,
     Relative? relative,
     List<Relative>? allRelatives,
     List<AIMemory>? memories,
   }) {
-    final buffer = StringBuffer(basePersonality);
+    // Use dynamic personality from admin config (falls back to hardcoded if not loaded)
+    final buffer = StringBuffer(dynamicPersonality);
     buffer.writeln();
-    buffer.writeln(getModeInstructions(mode));
+    // Use dynamic mode instructions from admin config
+    buffer.writeln(getDynamicModeInstructions(mode.name));
 
     // Add all relatives context if available
     if (allRelatives != null && allRelatives.isNotEmpty) {
@@ -356,8 +383,16 @@ class AIPrompts {
   }
 
   /// Build context from AI memories with better categorization
+  /// Uses dynamic category config from admin panel
   static String buildMemoriesContext(List<AIMemory> memories, {String? relativeId}) {
     if (memories.isEmpty) return '';
+
+    // Get active categories
+    final activeKeys = activeMemoryCategoryKeys;
+
+    // Filter to only active categories
+    final activeMemories = memories.where((m) => activeKeys.contains(m.category.value)).toList();
+    if (activeMemories.isEmpty) return '';
 
     final buffer = StringBuffer();
     buffer.writeln('''
@@ -367,7 +402,7 @@ class AIPrompts {
 ''');
 
     // Sort by importance
-    final sortedMemories = [...memories]
+    final sortedMemories = [...activeMemories]
       ..sort((a, b) => b.importance.compareTo(a.importance));
 
     // If we have a specific relative context, prioritize their memories
@@ -386,61 +421,72 @@ class AIPrompts {
       relevantMemories = sortedMemories.take(30).toList();
     }
 
-    // Group by category for better organization
-    final userPrefs = relevantMemories.where((m) => m.category == AIMemoryCategory.userPreference);
-    final relativeFacts = relevantMemories.where((m) => m.category == AIMemoryCategory.relativeFact);
-    final familyDynamics = relevantMemories.where((m) => m.category == AIMemoryCategory.familyDynamic);
-    final importantDates = relevantMemories.where((m) => m.category == AIMemoryCategory.importantDate);
-    final insights = relevantMemories.where((m) => m.category == AIMemoryCategory.conversationInsight);
-
-    if (userPrefs.isNotEmpty) {
-      buffer.writeln('### عن المستخدم:');
-      for (final memory in userPrefs) {
-        buffer.writeln('- ${memory.content}');
-      }
+    // Get category display names from admin config
+    final config = AIConfigService.instance;
+    String getCategoryName(String key, String fallback) {
+      if (!config.isLoaded) return fallback;
+      final cat = config.memoryCategories.cast<AIMemoryCategoryConfig?>().firstWhere(
+        (c) => c?.categoryKey == key,
+        orElse: () => null,
+      );
+      return cat?.displayNameAr ?? fallback;
     }
 
-    if (relativeFacts.isNotEmpty) {
-      buffer.writeln('\n### عن الأقارب:');
-      for (final memory in relativeFacts) {
-        buffer.writeln('- ${memory.content}');
-      }
+    // Group by category and output only active ones
+    final grouped = <String, List<AIMemory>>{};
+    for (final memory in relevantMemories) {
+      final key = memory.category.value;
+      grouped.putIfAbsent(key, () => []).add(memory);
     }
 
-    if (familyDynamics.isNotEmpty) {
-      buffer.writeln('\n### ديناميكيات عائلية:');
-      for (final memory in familyDynamics) {
-        buffer.writeln('- ${memory.content}');
-      }
-    }
+    // Define category order and fallback names
+    final categoryOrder = [
+      ('user_preference', 'عن المستخدم'),
+      ('relative_fact', 'عن الأقارب'),
+      ('family_dynamic', 'ديناميكيات عائلية'),
+      ('important_date', 'تواريخ مهمة'),
+      ('conversation_insight', 'ملاحظات من محادثات سابقة'),
+    ];
 
-    if (importantDates.isNotEmpty) {
-      buffer.writeln('\n### تواريخ مهمة:');
-      for (final memory in importantDates) {
-        buffer.writeln('- ${memory.content}');
-      }
-    }
+    for (final (key, fallbackName) in categoryOrder) {
+      if (!activeKeys.contains(key)) continue;
+      final categoryMemories = grouped[key];
+      if (categoryMemories == null || categoryMemories.isEmpty) continue;
 
-    if (insights.isNotEmpty) {
-      buffer.writeln('\n### ملاحظات من محادثات سابقة:');
-      for (final memory in insights.take(5)) {
+      final displayName = getCategoryName(key, fallbackName);
+      buffer.writeln('### $displayName:');
+
+      // Limit insights to 5
+      final limit = key == 'conversation_insight' ? 5 : categoryMemories.length;
+      for (final memory in categoryMemories.take(limit)) {
         buffer.writeln('- ${memory.content}');
       }
+      buffer.writeln();
     }
 
     buffer.writeln('''
-
 **استخدم هذه المعلومات لتقديم نصائح شخصية ومخصصة. لا تسأل عن معلومات تعرفها مسبقاً.**
 ''');
 
     return buffer.toString();
   }
 
-  /// System prompt for extracting memories from conversation
-  static const String memoryExtractionPrompt = '''
-حلل هذه المحادثة واستخرج أي معلومات مهمة يجب تذكرها عن المستخدم أو عائلته.
+  /// System prompt for extracting memories from conversation - FALLBACK
+  /// IMPORTANT: This prompt explicitly tells AI NOT to extract data already in relatives table
+  static const String _fallbackMemoryExtractionPrompt = '''
+حلل هذه المحادثة واستخرج معلومات جديدة ومفيدة فقط.
 
-أعد JSON فقط بهذا الشكل (بدون أي نص إضافي):
+⚠️ هام جداً - لا تستخرج هذه المعلومات (موجودة بالفعل في قاعدة البيانات):
+- أسماء الأقارب (الأب، الأم، الإخوة، إلخ)
+- نوع صلة القرابة
+- معلومات أساسية عن الأقارب موجودة في ملفاتهم
+
+✅ استخرج فقط:
+- user_preference: تفضيلات شخصية للمستخدم (أسلوب تواصله، اهتماماته، شخصيته)
+- important_date: تواريخ مهمة جديدة (مناسبات، ذكريات، أحداث قادمة)
+- conversation_insight: مشاعر أو مخاوف أو أهداف عبّر عنها المستخدم
+
+أعد JSON فقط بهذا الشكل:
 {
   "memories": [
     {
@@ -451,25 +497,110 @@ class AIPrompts {
   ]
 }
 
-## الفئات المتاحة:
-- user_preference: تفضيلات المستخدم (اسمه، أسلوبه، ما يحبه)
-- relative_fact: معلومة عن قريب محدد
-- family_dynamic: نمط أو عادة عائلية
-- important_date: تاريخ مهم (عيد ميلاد، ذكرى)
-- conversation_insight: ملاحظة من المحادثة
+## أمثلة على ما يجب تجاهله:
+❌ "اسم والد المستخدم محمد" - موجود في بيانات الأقارب
+❌ "أم المستخدم اسمها فاطمة" - موجود في بيانات الأقارب
+❌ "لديه أخ اسمه أحمد" - موجود في بيانات الأقارب
 
-## قواعد الاستخراج:
-- استخرج اسم المستخدم إذا ذكره (أهمية: 9)
-- استخرج معلومات عن أقاربه وعلاقاته
-- استخرج التفضيلات والعادات
-- استخرج التواريخ المهمة
-- لا تستخرج معلومات عامة أو واضحة
+## أمثلة على ما يجب استخراجه:
+✅ "يفضل التواصل صباحاً" - تفضيل شخصي جديد
+✅ "يشعر بالذنب لعدم زيارة جدته" - مشاعر مهمة
+✅ "ذكرى زواج والديه في شهر رجب" - تاريخ جديد غير موجود
+✅ "يجد صعوبة في التحدث عن مشاعره" - سمة شخصية
+
+## قواعد صارمة:
 - لا تستخرج ما قاله الذكاء الاصطناعي، فقط ما قاله المستخدم
+- لا تكرر معلومات واضحة أو عامة
 - الأهمية من 1 (منخفضة) إلى 10 (عالية جداً)
-- إذا لم تجد شيئاً مهماً، أعد: {"memories": []}
+- إذا لم تجد شيئاً جديداً ومفيداً، أعد: {"memories": []}
 
-أعد JSON فقط، بدون شرح أو تعليق.
+أعد JSON فقط، بدون شرح.
 ''';
+
+  /// Dynamic memory extraction prompt using active categories from admin
+  /// IMPORTANT: This prompt explicitly tells AI NOT to extract data already in relatives table
+  static String get memoryExtractionPrompt {
+    final config = AIConfigService.instance;
+    if (!config.isLoaded || config.memoryCategories.isEmpty) {
+      return _fallbackMemoryExtractionPrompt;
+    }
+
+    // Get only active categories that allow auto-extraction
+    // IMPORTANT: Exclude 'relative_fact' category - this data is already in relatives table
+    final activeCategories = config.memoryCategories
+        .where((c) => c.autoExtract && c.categoryKey != 'relative_fact')
+        .toList();
+
+    if (activeCategories.isEmpty) {
+      return _fallbackMemoryExtractionPrompt;
+    }
+
+    // Get dynamic extraction rules from admin config
+    final memoryConfig = config.memoryConfig;
+
+    final categoriesText = activeCategories
+        .map((c) => '- ${c.categoryKey}: ${c.displayNameAr}')
+        .join('\n');
+
+    // Build ignore examples from admin config
+    final ignoreExamples = memoryConfig.extractionExamplesIgnore
+        .map((e) => '❌ "$e"')
+        .join('\n');
+
+    // Build extract examples from admin config
+    final extractExamples = memoryConfig.extractionExamplesExtract
+        .map((e) => '✅ "$e"')
+        .join('\n');
+
+    return '''
+حلل هذه المحادثة واستخرج معلومات جديدة ومفيدة فقط.
+
+${memoryConfig.extractionInstructionsAr}
+
+✅ استخرج فقط في الفئات المتاحة:
+$categoriesText
+
+أعد JSON فقط بهذا الشكل:
+{
+  "memories": [
+    {
+      "category": "category_key",
+      "content": "المعلومة بالعربية",
+      "importance": 7
+    }
+  ]
+}
+
+## أمثلة على ما يجب تجاهله:
+$ignoreExamples
+
+## أمثلة على ما يجب استخراجه:
+$extractExamples
+
+## قواعد صارمة:
+- لا تستخرج ما قاله الذكاء الاصطناعي، فقط ما قاله المستخدم
+- لا تكرر معلومات واضحة أو عامة
+- الأهمية من 1 (منخفضة) إلى 10 (عالية جداً)
+- إذا لم تجد شيئاً جديداً ومفيداً، أعد: {"memories": []}
+
+أعد JSON فقط، بدون شرح.
+''';
+  }
+
+  /// Get list of active category keys for validation
+  /// NOTE: 'relative_fact' is excluded because this data is already in the relatives table
+  static Set<String> get activeMemoryCategoryKeys {
+    final config = AIConfigService.instance;
+    if (!config.isLoaded || config.memoryCategories.isEmpty) {
+      // Fallback active categories - NO relative_fact (data exists in relatives table)
+      return {'user_preference', 'important_date', 'conversation_insight'};
+    }
+    // Exclude relative_fact - this data is already in the relatives table
+    return config.memoryCategories
+        .where((c) => c.autoExtract && c.categoryKey != 'relative_fact')
+        .map((c) => c.categoryKey)
+        .toSet();
+  }
 
   /// System prompt for gift recommendations
   /// AI generates real product recommendations from Saudi retailers

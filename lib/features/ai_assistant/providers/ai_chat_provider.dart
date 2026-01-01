@@ -6,6 +6,7 @@ import '../../../core/ai/ai_service.dart';
 import '../../../core/ai/ai_prompts.dart';
 import '../../../core/ai/deepseek_ai_service.dart';
 import '../../../core/config/supabase_config.dart';
+import '../../../core/services/ai_config_service.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/services/chat_history_service.dart';
 import '../../../shared/services/relatives_service.dart';
@@ -69,6 +70,16 @@ final aiChatProvider =
 /// Current selected counseling mode
 final counselingModeProvider = StateProvider<CounselingMode>((ref) {
   return CounselingMode.general;
+});
+
+/// Dynamic counseling modes from admin config (with fallback)
+/// Returns a list of mode configs for UI display
+final dynamicCounselingModesProvider = Provider<List<AICounselingModeConfig>>((ref) {
+  final config = AIConfigService.instance;
+  if (config.isLoaded) {
+    return config.counselingModes;
+  }
+  return AICounselingModeConfig.fallbackModes();
 });
 
 /// Optional relative context for the chat
@@ -279,12 +290,15 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
         memories: _memories,
       );
 
+      // Get AI parameters from admin config
+      final aiParams = AIConfigService.instance.getParametersFor('chat');
+
       // Get AI response
       final response = await _aiService.getChatCompletion(
         messages: state.messages,
         systemPrompt: systemPrompt,
-        temperature: 0.7,
-        maxTokens: 2048,
+        temperature: aiParams.temperature,
+        maxTokens: aiParams.maxTokens,
       );
 
       if (!mounted) return;
@@ -378,12 +392,15 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
         memories: _memories,
       );
 
+      // Get AI parameters from admin config
+      final aiParams = AIConfigService.instance.getParametersFor('chat');
+
       // Stream AI response
       final stream = _aiService.streamChatCompletion(
         messages: state.messages,
         systemPrompt: systemPrompt,
-        temperature: 0.7,
-        maxTokens: 2048,
+        temperature: aiParams.temperature,
+        maxTokens: aiParams.maxTokens,
       );
 
       String fullContent = '';
@@ -478,6 +495,9 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
 
       if (!mounted || memories.isEmpty) return;
 
+      // Get active category keys from admin config
+      final activeCategories = AIPrompts.activeMemoryCategoryKeys;
+
       // Save each extracted memory and count successes
       int savedCount = 0;
       for (final memory in memories) {
@@ -489,29 +509,18 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
 
         if (content.isEmpty) continue;
 
+        // Skip categories that are not active in admin config
+        if (!activeCategories.contains(categoryStr)) {
+          continue;
+        }
+
         // Check for duplicate - skip if similar memory already exists
         if (_isDuplicateMemory(content, existingMemories)) {
           continue;
         }
 
         // Map string category to enum
-        AIMemoryCategory category;
-        switch (categoryStr) {
-          case 'user_preference':
-            category = AIMemoryCategory.userPreference;
-            break;
-          case 'relative_fact':
-            category = AIMemoryCategory.relativeFact;
-            break;
-          case 'family_dynamic':
-            category = AIMemoryCategory.familyDynamic;
-            break;
-          case 'important_date':
-            category = AIMemoryCategory.importantDate;
-            break;
-          default:
-            category = AIMemoryCategory.conversationInsight;
-        }
+        final category = AIMemoryCategory.fromString(categoryStr);
 
         final saved = await _chatHistoryService.saveMemory(
           category: category,
@@ -545,15 +554,97 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
     }
   }
 
-  /// Check if a memory is a duplicate of an existing one
-  /// Uses key term matching to detect semantically similar memories
-  bool _isDuplicateMemory(String newContent, List<AIMemory> existingMemories) {
-    // Extract key terms from new content (names, relationships, etc.)
-    final newKeyTerms = _extractKeyTerms(newContent);
-    if (newKeyTerms.isEmpty) return false;
+  /// Check if a memory is about relative facts (names/relationships)
+  /// These should NOT be stored - data exists in relatives table
+  /// Uses dynamic keywords from admin config
+  bool _isRelativeFact(String content) {
+    // Get skip keywords from admin config (falls back to defaults if not loaded)
+    final memoryConfig = AIConfigService.instance.memoryConfig;
 
+    // If skipRelativeFacts is disabled in admin, don't skip anything
+    if (!memoryConfig.skipRelativeFacts) {
+      return false;
+    }
+
+    // Use dynamic keywords from admin config
+    final relationshipKeywords = memoryConfig.skipKeywords;
+
+    final lowerContent = content.toLowerCase();
+
+    // If content contains relationship keyword + looks like a name statement
+    for (final keyword in relationshipKeywords) {
+      if (lowerContent.contains(keyword)) {
+        // Check if it's a simple "name is X" pattern
+        if (lowerContent.contains('اسم') ||
+            lowerContent.contains(':') ||
+            lowerContent.contains('هو ') ||
+            lowerContent.contains('هي ')) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /// Check if content already exists in relatives data
+  bool _isInRelativesData(String content, List<Relative> relatives) {
+    final lowerContent = content.toLowerCase();
+
+    for (final relative in relatives) {
+      // Check if content mentions this relative's name
+      if (relative.fullName.isNotEmpty &&
+          lowerContent.contains(relative.fullName.toLowerCase())) {
+        // If it's just about their name/relationship, skip it
+        if (_isRelativeFact(content)) {
+          return true;
+        }
+      }
+
+      // Also check first name only (common pattern: "أبوي سعيد" or "أمي حمدة")
+      final firstName = relative.fullName.split(' ').first;
+      if (firstName.length >= 2 && lowerContent.contains(firstName.toLowerCase())) {
+        // If content is about this person's basic info, skip it
+        if (_isRelativeFact(content)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /// Check if a memory is a duplicate of an existing one
+  /// Uses key term matching and normalized comparison to detect semantically similar memories
+  bool _isDuplicateMemory(String newContent, List<AIMemory> existingMemories) {
+    // First check: Is this a relative fact? (names, basic relationships)
+    // These should NEVER be stored - they exist in relatives table
+    if (_isRelativeFact(newContent)) {
+      return true; // Treat as duplicate to skip it
+    }
+
+    // Check against relatives data
+    if (_isInRelativesData(newContent, _allRelatives)) {
+      return true;
+    }
+
+    // Normalize content for comparison
+    final normalizedNew = _normalizeForComparison(newContent);
+
+    // Check against existing memories
     for (final existing in existingMemories) {
+      final normalizedExisting = _normalizeForComparison(existing.content);
+
+      // Direct match after normalization
+      if (normalizedNew == normalizedExisting) {
+        return true;
+      }
+
+      // Extract key terms for semantic matching
+      final newKeyTerms = _extractKeyTerms(newContent);
       final existingKeyTerms = _extractKeyTerms(existing.content);
+
+      if (newKeyTerms.isEmpty) continue;
 
       // Count matching key terms
       int matchCount = 0;
@@ -564,13 +655,13 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
       }
 
       // If 2+ key terms match, consider it a duplicate
-      // (e.g., "والد" + "سعيد" = same info about father named Saeed)
+      // (e.g., "يفضل" + "التواصل" + "صباحاً" = same preference)
       if (matchCount >= 2) {
         return true;
       }
 
-      // Also check for high overlap (60%+)
-      if (newKeyTerms.isNotEmpty && matchCount / newKeyTerms.length >= 0.6) {
+      // Also check for high overlap (50%+ is now stricter)
+      if (newKeyTerms.isNotEmpty && matchCount / newKeyTerms.length >= 0.5) {
         return true;
       }
     }
@@ -578,15 +669,23 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
     return false;
   }
 
+  /// Normalize content for comparison (remove punctuation, extra spaces, etc.)
+  String _normalizeForComparison(String content) {
+    return content
+        .replaceAll(RegExp(r'[:\-،,\.؟?!]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim()
+        .toLowerCase();
+  }
+
   /// Extract key terms (names, relationships) from memory content
+  /// Uses dynamic skip keywords from admin config for relationship detection
   Set<String> _extractKeyTerms(String content) {
     final terms = <String>{};
 
-    // Arabic relationship terms
-    final relationshipTerms = [
-      'والد', 'والدة', 'أب', 'أم', 'جد', 'جدة', 'أخ', 'أخت', 'عم', 'عمة',
-      'خال', 'خالة', 'ابن', 'ابنة', 'زوج', 'زوجة', 'إخوة', 'أخوات',
-    ];
+    // Get relationship terms from admin config (uses same skip keywords)
+    final memoryConfig = AIConfigService.instance.memoryConfig;
+    final relationshipTerms = memoryConfig.skipKeywords;
 
     // Split content into words
     final words = content.split(RegExp(r'[\s:،,]+'));
@@ -831,38 +930,48 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
   }
 }
 
-/// Suggested prompts for each mode
+/// Suggested prompts for each mode - FALLBACK (used when admin config not loaded)
+const Map<String, List<String>> _fallbackSuggestedPrompts = {
+  'general': [
+    'كيف أقوي علاقتي بعائلتي؟',
+    'ما أهمية صلة الرحم؟',
+    'كيف أتواصل مع أقاربي البعيدين؟',
+    'اقترح لي أفكار لقضاء وقت مع عائلتي',
+  ],
+  'relationship': [
+    'كيف أحسن علاقتي بوالديّ؟',
+    'كيف أتعامل مع أخي/أختي المختلف عني؟',
+    'كيف أحافظ على علاقتي بأبناء عمي؟',
+    'نصائح للتقرب من الأقارب كبار السن',
+  ],
+  'conflict': [
+    'كيف أصلح بين أفراد عائلتي؟',
+    'كيف أتعامل مع قريب مسيء؟',
+    'كيف أعتذر لقريب أخطأت بحقه؟',
+    'كيف أتجاوز خلاف قديم مع قريب؟',
+  ],
+  'communication': [
+    'كيف أبدأ حديثاً مع قريب لم أره منذ فترة؟',
+    'كيف أطلب حاجة من قريب بطريقة لبقة؟',
+    'كيف أتحدث مع قريب عن موضوع حساس؟',
+    'كيف أعبر عن مشاعري لعائلتي؟',
+  ],
+};
+
+/// Suggested prompts provider - uses dynamic config from admin panel (with fallback)
 final suggestedPromptsProvider = Provider<List<String>>((ref) {
   final mode = ref.watch(counselingModeProvider);
+  final modeKey = mode.name;
 
-  switch (mode) {
-    case CounselingMode.general:
-      return [
-        'كيف أقوي علاقتي بعائلتي؟',
-        'ما أهمية صلة الرحم؟',
-        'كيف أتواصل مع أقاربي البعيدين؟',
-        'اقترح لي أفكار لقضاء وقت مع عائلتي',
-      ];
-    case CounselingMode.relationship:
-      return [
-        'كيف أحسن علاقتي بوالديّ؟',
-        'كيف أتعامل مع أخي/أختي المختلف عني؟',
-        'كيف أحافظ على علاقتي بأبناء عمي؟',
-        'نصائح للتقرب من الأقارب كبار السن',
-      ];
-    case CounselingMode.conflict:
-      return [
-        'كيف أصلح بين أفراد عائلتي؟',
-        'كيف أتعامل مع قريب مسيء؟',
-        'كيف أعتذر لقريب أخطأت بحقه؟',
-        'كيف أتجاوز خلاف قديم مع قريب؟',
-      ];
-    case CounselingMode.communication:
-      return [
-        'كيف أبدأ حديثاً مع قريب لم أره منذ فترة؟',
-        'كيف أطلب حاجة من قريب بطريقة لبقة؟',
-        'كيف أتحدث مع قريب عن موضوع حساس؟',
-        'كيف أعبر عن مشاعري لعائلتي؟',
-      ];
+  // Try to get prompts from admin config
+  final config = AIConfigService.instance;
+  if (config.isLoaded) {
+    final dynamicPrompts = config.getSuggestedPromptsForMode(modeKey);
+    if (dynamicPrompts.isNotEmpty) {
+      return dynamicPrompts.map((p) => p.promptAr).toList();
+    }
   }
+
+  // Fallback to hardcoded prompts
+  return _fallbackSuggestedPrompts[modeKey] ?? _fallbackSuggestedPrompts['general']!;
 });

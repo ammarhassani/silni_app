@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ai/ai_models.dart';
+import '../../../core/ai/ai_prompts.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/services/ai_config_service.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/services/chat_history_service.dart';
 import '../providers/ai_chat_provider.dart';
@@ -150,20 +152,41 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
   }
 
   Widget _buildMemoriesList(List<AIMemory> memories, dynamic themeColors) {
+    // Get active category keys from admin config
+    final activeKeys = AIPrompts.activeMemoryCategoryKeys;
+
+    // Filter memories to only include active categories
+    final activeMemories = memories.where((m) => activeKeys.contains(m.category.value)).toList();
+
     // Group memories by category
     final grouped = <AIMemoryCategory, List<AIMemory>>{};
-    for (final memory in memories) {
+    for (final memory in activeMemories) {
       grouped.putIfAbsent(memory.category, () => []).add(memory);
     }
 
-    // Sort categories by importance
-    final sortedCategories = [
-      AIMemoryCategory.userPreference,
-      AIMemoryCategory.relativeFact,
-      AIMemoryCategory.familyDynamic,
-      AIMemoryCategory.importantDate,
-      AIMemoryCategory.conversationInsight,
-    ].where((cat) => grouped.containsKey(cat)).toList();
+    // Get dynamic category order from admin config
+    final config = AIConfigService.instance;
+    List<AIMemoryCategory> sortedCategories;
+
+    if (config.isLoaded && config.memoryCategories.isNotEmpty) {
+      // Use order from admin config
+      sortedCategories = config.memoryCategories
+          .where((c) => grouped.containsKey(AIMemoryCategory.fromString(c.categoryKey)))
+          .map((c) => AIMemoryCategory.fromString(c.categoryKey))
+          .toList();
+    } else {
+      // Fallback order
+      sortedCategories = [
+        AIMemoryCategory.userPreference,
+        AIMemoryCategory.relativeFact,
+        AIMemoryCategory.importantDate,
+        AIMemoryCategory.conversationInsight,
+      ].where((cat) => grouped.containsKey(cat)).toList();
+    }
+
+    if (sortedCategories.isEmpty) {
+      return _buildEmptyState(themeColors);
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.all(AppSpacing.md),

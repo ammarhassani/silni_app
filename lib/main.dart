@@ -29,6 +29,8 @@ import 'core/services/analytics_service.dart';
 import 'core/services/performance_monitoring_service.dart';
 import 'core/services/app_health_service.dart';
 import 'core/services/subscription_service.dart';
+import 'core/services/feature_config_service.dart';
+import 'core/services/ai_config_service.dart';
 import 'shared/widgets/error_boundary.dart';
 import 'shared/widgets/premium_loading_indicator.dart';
 
@@ -344,6 +346,54 @@ void main() async {
     // Don't rethrow - app can work without subscriptions (defaults to free tier)
   }
 
+  // Initialize feature config service (dynamic feature gating from admin panel)
+  logger.info(
+    'Loading feature configuration from admin panel...',
+    category: LogCategory.service,
+    tag: 'FeatureConfig',
+  );
+  try {
+    await FeatureConfigService.instance.refresh();
+    logger.info(
+      'Feature configuration loaded successfully',
+      category: LogCategory.service,
+      tag: 'FeatureConfig',
+    );
+  } catch (e) {
+    logger.warning(
+      'Feature configuration loading failed - using hardcoded defaults',
+      category: LogCategory.service,
+      tag: 'FeatureConfig',
+      metadata: {'error': e.toString()},
+    );
+    // Don't rethrow - app falls back to hardcoded feature config
+  }
+
+  // ========================================
+  // AI CONFIGURATION - Load from admin panel
+  // ========================================
+  logger.info(
+    'Loading AI configuration from admin panel...',
+    category: LogCategory.service,
+    tag: 'AIConfig',
+  );
+  try {
+    await AIConfigService.instance.initialize();
+    logger.info(
+      'AI configuration loaded successfully',
+      category: LogCategory.service,
+      tag: 'AIConfig',
+    );
+  } catch (e) {
+    logger.warning(
+      'AI configuration loading failed - using hardcoded defaults',
+      category: LogCategory.service,
+      tag: 'AIConfig',
+      metadata: {'error': e.toString()},
+    );
+    // Don't rethrow - app falls back to hardcoded AI config
+  }
+
   // Configure global error handlers with device context
   logger.info(
     'Configuring error handlers...',
@@ -473,11 +523,38 @@ void main() async {
   );
 }
 
-class SilniApp extends ConsumerWidget {
+class SilniApp extends ConsumerStatefulWidget {
   const SilniApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SilniApp> createState() => _SilniAppState();
+}
+
+class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Refresh configs when app comes back to foreground
+      debugPrint('[SilniApp] App resumed - refreshing configs');
+      FeatureConfigService.instance.refresh();
+      AIConfigService.instance.refresh();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Initialize SyncService with gamification events controller for UI feedback
     final eventsController = ref.read(gamificationEventsControllerProvider);
     SyncService.instance.setEventsController(eventsController);
