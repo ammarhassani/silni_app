@@ -9,8 +9,7 @@ interface DashboardStats {
   content: {
     hadithCount: number;
     quotesCount: number;
-    activeMOTD: number;
-    activeBanners: number;
+    messagesCount: number;
   };
   gamification: {
     badgesCount: number;
@@ -51,8 +50,7 @@ export function useDashboardStats() {
         // Content
         hadithRes,
         quotesRes,
-        motdRes,
-        bannersRes,
+        messagesRes,
         // Gamification
         badgesRes,
         levelsRes,
@@ -80,8 +78,7 @@ export function useDashboardStats() {
         // Content
         supabase.from("admin_hadith").select("*", { count: "exact", head: true }),
         supabase.from("admin_quotes").select("*", { count: "exact", head: true }),
-        supabase.from("admin_motd").select("*", { count: "exact", head: true }).eq("is_active", true),
-        supabase.from("admin_banners").select("*", { count: "exact", head: true }).eq("is_active", true),
+        supabase.from("admin_in_app_messages").select("*", { count: "exact", head: true }).eq("is_active", true),
         // Gamification
         supabase.from("admin_badges").select("*", { count: "exact", head: true }),
         supabase.from("admin_levels").select("*", { count: "exact", head: true }),
@@ -111,8 +108,7 @@ export function useDashboardStats() {
         content: {
           hadithCount: hadithRes.count || 0,
           quotesCount: quotesRes.count || 0,
-          activeMOTD: motdRes.count || 0,
-          activeBanners: bannersRes.count || 0,
+          messagesCount: messagesRes.count || 0,
         },
         gamification: {
           badgesCount: badgesRes.count || 0,

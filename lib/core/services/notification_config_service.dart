@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
+import 'cache_config_service.dart';
 
 /// Singleton service that fetches and caches notification configuration from admin tables.
 /// Provides dynamic notification templates and reminder time slots.
@@ -16,7 +17,8 @@ class NotificationConfigService {
   List<ReminderTimeSlot>? _timeSlotsCache;
 
   DateTime? _lastRefresh;
-  static const Duration _cacheDuration = Duration(minutes: 10);
+  final CacheConfigService _cacheConfig = CacheConfigService();
+  static const String _serviceKey = 'notification_config';
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -43,8 +45,7 @@ class NotificationConfigService {
 
   /// Check if cache is stale and needs refresh
   Future<void> ensureFresh() async {
-    if (_lastRefresh == null ||
-        DateTime.now().difference(_lastRefresh!) > _cacheDuration) {
+    if (_cacheConfig.isCacheExpired(_serviceKey, _lastRefresh)) {
       await refresh();
     }
   }

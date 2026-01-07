@@ -33,6 +33,7 @@ import 'core/services/analytics_service.dart';
 import 'core/services/performance_monitoring_service.dart';
 import 'core/services/app_health_service.dart';
 import 'core/services/subscription_service.dart';
+import 'core/services/cache_config_service.dart';
 import 'core/services/feature_config_service.dart';
 import 'core/services/ai_config_service.dart';
 import 'core/services/gamification_config_service.dart';
@@ -40,6 +41,9 @@ import 'core/services/content_config_service.dart';
 import 'core/services/notification_config_service.dart';
 import 'core/services/design_config_service.dart';
 import 'core/services/app_routes_config_service.dart';
+import 'core/services/message_service.dart';
+import 'core/services/ui_strings_service.dart';
+import 'core/services/onboarding_config_service.dart';
 import 'shared/widgets/error_boundary.dart';
 import 'shared/widgets/premium_loading_indicator.dart';
 
@@ -379,6 +383,30 @@ void main() async {
   }
 
   // ========================================
+  // CACHE CONFIGURATION - Load cache durations first
+  // ========================================
+  logger.info(
+    'Loading cache configuration...',
+    category: LogCategory.service,
+    tag: 'CacheConfig',
+  );
+  try {
+    await CacheConfigService().initialize();
+    logger.info(
+      'Cache configuration loaded successfully',
+      category: LogCategory.service,
+      tag: 'CacheConfig',
+    );
+  } catch (e) {
+    logger.warning(
+      'Cache configuration loading failed - using defaults',
+      category: LogCategory.service,
+      tag: 'CacheConfig',
+      metadata: {'error': e.toString()},
+    );
+  }
+
+  // ========================================
   // AI CONFIGURATION - Load from admin panel
   // ========================================
   logger.info(
@@ -516,6 +544,75 @@ void main() async {
       metadata: {'error': e.toString()},
     );
     // Don't rethrow - app falls back to hardcoded routes
+  }
+
+  // Initialize unified message service (replaces MOTD, Banners, In-App Messages)
+  logger.info(
+    'Initializing unified message service...',
+    category: LogCategory.service,
+    tag: 'Messages',
+  );
+  try {
+    await MessageService.instance.initialize();
+    logger.info(
+      'Unified message service initialized',
+      category: LogCategory.service,
+      tag: 'Messages',
+    );
+  } catch (e) {
+    logger.warning(
+      'Unified message service initialization failed',
+      category: LogCategory.service,
+      tag: 'Messages',
+      metadata: {'error': e.toString()},
+    );
+    // Don't rethrow - app works without messages
+  }
+
+  // Initialize UI strings service (remote-controlled strings from admin panel)
+  logger.info(
+    'Initializing UI strings service...',
+    category: LogCategory.service,
+    tag: 'UIStrings',
+  );
+  try {
+    await UIStringsService.instance.initialize();
+    logger.info(
+      'UI strings service initialized',
+      category: LogCategory.service,
+      tag: 'UIStrings',
+    );
+  } catch (e) {
+    logger.warning(
+      'UI strings service initialization failed - using hardcoded strings',
+      category: LogCategory.service,
+      tag: 'UIStrings',
+      metadata: {'error': e.toString()},
+    );
+    // Don't rethrow - app falls back to hardcoded strings
+  }
+
+  // Initialize onboarding config service (remote-controlled onboarding from admin panel)
+  logger.info(
+    'Initializing onboarding config service...',
+    category: LogCategory.service,
+    tag: 'OnboardingConfig',
+  );
+  try {
+    await OnboardingConfigService.instance.initialize();
+    logger.info(
+      'Onboarding config service initialized',
+      category: LogCategory.service,
+      tag: 'OnboardingConfig',
+    );
+  } catch (e) {
+    logger.warning(
+      'Onboarding config service initialization failed - using hardcoded onboarding',
+      category: LogCategory.service,
+      tag: 'OnboardingConfig',
+      metadata: {'error': e.toString()},
+    );
+    // Don't rethrow - app falls back to hardcoded onboarding
   }
 
   // Configure global error handlers with device context
@@ -799,7 +896,6 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       // Refresh configs when app comes back to foreground
-      debugPrint('[SilniApp] App resumed - refreshing configs');
       FeatureConfigService.instance.refresh();
       AIConfigService.instance.refresh();
       GamificationConfigService.instance.refresh();
@@ -807,6 +903,8 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
       NotificationConfigService.instance.refresh();
       DesignConfigService.instance.refresh();
       AppRoutesConfigService.instance.refresh();
+      UIStringsService.instance.refresh();
+      OnboardingConfigService.instance.refresh();
     }
   }
 

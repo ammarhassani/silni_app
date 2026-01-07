@@ -27,43 +27,6 @@ export interface AdminQuote {
   updated_at: string;
 }
 
-export interface AdminMOTD {
-  id: string;
-  title: string;
-  message: string;
-  type: 'tip' | 'motivation' | 'reminder' | 'announcement' | 'celebration';
-  icon: string;
-  background_gradient: { start: string; end: string };
-  action_text: string | null;
-  action_route: string | null;
-  start_date: string | null;
-  end_date: string | null;
-  is_active: boolean;
-  display_priority: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface AdminBanner {
-  id: string;
-  title: string;
-  description: string | null;
-  image_url: string | null;
-  background_gradient: { start: string; end: string } | null;
-  action_type: 'route' | 'url' | 'action' | 'none';
-  action_value: string | null;
-  position: 'home_top' | 'home_bottom' | 'profile' | 'reminders';
-  target_audience: 'all' | 'free' | 'max' | 'new_users';
-  start_date: string | null;
-  end_date: string | null;
-  is_active: boolean;
-  display_priority: number;
-  impressions: number;
-  clicks: number;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface AdminPointsConfig {
   id: string;
   interaction_type: string;

@@ -4,11 +4,14 @@ import '../../shared/models/reminder_schedule_model.dart';
 import '../../shared/models/sync_metadata.dart';
 import '../cache/hive_initializer.dart';
 import '../cache/cache_config.dart';
+import 'app_logger_service.dart';
 
 /// Service for managing local cache operations.
 class CacheService {
   CacheService._();
   static final CacheService instance = CacheService._();
+
+  final AppLoggerService _logger = AppLoggerService();
 
   // ============================================================
   // RELATIVES CACHE
@@ -39,7 +42,12 @@ class CacheService {
     try {
       await HiveInitializer.relativesBox.put(relative.id, relative);
     } catch (e) {
-      // Silently fail - cache is not critical
+      _logger.warning(
+        'Cache write failed for relative',
+        category: LogCategory.database,
+        tag: 'Cache',
+        metadata: {'relativeId': relative.id, 'error': e.toString()},
+      );
     }
   }
 
@@ -51,7 +59,12 @@ class CacheService {
       };
       await HiveInitializer.relativesBox.putAll(entries);
     } catch (e) {
-      // Silently fail - cache is not critical
+      _logger.warning(
+        'Cache batch write failed for relatives',
+        category: LogCategory.database,
+        tag: 'Cache',
+        metadata: {'count': relatives.length, 'error': e.toString()},
+      );
     }
   }
 
@@ -60,7 +73,12 @@ class CacheService {
     try {
       await HiveInitializer.relativesBox.delete(relativeId);
     } catch (e) {
-      // Silently fail - cache is not critical
+      _logger.warning(
+        'Cache delete failed for relative',
+        category: LogCategory.database,
+        tag: 'Cache',
+        metadata: {'relativeId': relativeId, 'error': e.toString()},
+      );
     }
   }
 
@@ -69,7 +87,12 @@ class CacheService {
     try {
       await HiveInitializer.relativesBox.clear();
     } catch (e) {
-      // Silently fail - cache is not critical
+      _logger.warning(
+        'Cache clear failed for relatives',
+        category: LogCategory.database,
+        tag: 'Cache',
+        metadata: {'error': e.toString()},
+      );
     }
   }
 

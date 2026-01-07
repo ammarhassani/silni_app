@@ -11,6 +11,7 @@ import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/services/supabase_notification_service.dart';
 import '../../../shared/utils/ui_helpers.dart';
+import '../../../shared/widgets/message_widget.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -70,6 +71,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 child: ListView(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   children: [
+                    // In-App Messages
+                    const MessageWidget(screenPath: '/notifications'),
+                    const SizedBox(height: AppSpacing.md),
+
                     // Notification Preferences
                     Text(
                       '🔔 تفضيلات الإشعارات',

@@ -1,10 +1,9 @@
-export 'banner_widget.dart';
 export 'due_reminders_card.dart';
 export 'family_circles_widget.dart';
 export 'frequency_carousel.dart';
 export 'home_header_widget.dart';
 export 'islamic_reminder_widget.dart';
-export 'motd_widget.dart';
 export 'quick_actions_widget.dart';
 export 'setup_reminders_prompt.dart';
+export 'streak_badge_bar.dart';
 export 'todays_activity_widget.dart';

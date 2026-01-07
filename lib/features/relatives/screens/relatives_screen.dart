@@ -18,6 +18,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../../home/providers/home_providers.dart';
 import '../../../core/providers/realtime_provider.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
+import '../../../shared/widgets/message_widget.dart';
 
 class RelativesScreen extends ConsumerStatefulWidget {
   const RelativesScreen({super.key});
@@ -87,6 +88,15 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
                   children: [
                     // Header
                     _buildHeader(context, themeColors),
+
+                    // In-App Messages
+                    const Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.sm,
+                      ),
+                      child: MessageWidget(screenPath: '/relatives'),
+                    ),
 
                     // Search bar
                     _buildSearchBar(themeColors),

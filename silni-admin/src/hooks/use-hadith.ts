@@ -142,3 +142,49 @@ export function useToggleHadithActive() {
     },
   });
 }
+
+// Bulk delete hadith
+export function useBulkDeleteHadith() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from("admin_hadith")
+        .delete()
+        .in("id", ids);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, ids) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "hadith"] });
+      toast.success(`تم حذف ${ids.length} حديث بنجاح`);
+    },
+    onError: (error) => {
+      toast.error(`فشل في الحذف: ${error.message}`);
+    },
+  });
+}
+
+// Bulk toggle active status
+export function useBulkToggleHadithActive() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ ids, is_active }: { ids: string[]; is_active: boolean }) => {
+      const { error } = await supabase
+        .from("admin_hadith")
+        .update({ is_active })
+        .in("id", ids);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, { ids, is_active }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "hadith"] });
+      toast.success(`تم ${is_active ? "تفعيل" : "تعطيل"} ${ids.length} حديث بنجاح`);
+    },
+    onError: (error) => {
+      toast.error(`فشل في تحديث الحالة: ${error.message}`);
+    },
+  });
+}

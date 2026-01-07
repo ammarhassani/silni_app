@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/ai/ai_identity.dart';
 import '../../../core/ai/ai_models.dart';
+import '../../../core/ai/ai_prompts.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/app_themes.dart';
@@ -59,12 +60,17 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
         return '${r.fullName} (${r.relationshipType.arabicName}): آخر تواصل قبل $daysSince يوم';
       }).join('\n');
 
+      // Use dynamic personality from admin config
+      final personality = AIPrompts.dynamicPersonality;
+
       final prompt = '''
 أنت مساعد ذكي لصلة الرحم. بناءً على معلومات الأقارب التالية، اكتب تقرير أسبوعي قصير (3-4 جمل) عن حالة صلة الرحم.
 
+$personality
+
 $relativesContext
 
-اكتب بالعامية السعودية البيضاء، بشكل ودي ومشجع. ركز على:
+ركز على:
 - من يحتاج تواصل عاجل
 - إنجازات الأسبوع إن وجدت
 - تشجيع بسيط
@@ -72,11 +78,16 @@ $relativesContext
 
       final tipPrompt = '''
 اكتب نصيحة واحدة قصيرة (جملة أو جملتين) عن صلة الرحم.
-اكتب بالعامية السعودية البيضاء.
+
+$personality
+
 النصيحة تكون عملية وسهلة التطبيق.
 ''';
 
       final uuid = const Uuid();
+      // Use dynamic personality for system prompts
+      final systemPrompt = 'أنت مساعد ذكي لصلة الرحم.\n\n$personality';
+
       final insight = await aiService.getChatCompletion(
         messages: [
           ChatMessage(
@@ -88,7 +99,7 @@ $relativesContext
             createdAt: DateTime.now(),
           ),
         ],
-        systemPrompt: 'أنت مساعد ذكي لصلة الرحم. اكتب بالعامية السعودية البيضاء.',
+        systemPrompt: systemPrompt,
         maxTokens: 500,
       );
       final tip = await aiService.getChatCompletion(
@@ -102,7 +113,7 @@ $relativesContext
             createdAt: DateTime.now(),
           ),
         ],
-        systemPrompt: 'أنت مساعد ذكي لصلة الرحم. اكتب بالعامية السعودية البيضاء.',
+        systemPrompt: systemPrompt,
         maxTokens: 200,
       );
 

@@ -17,7 +17,6 @@ import {
   ChevronLeft,
   Quote,
   MessageSquare,
-  Image,
   Star,
   Award,
   TrendingUp,
@@ -40,6 +39,14 @@ import {
   Gift,
   Key,
   Send,
+  History,
+  Users,
+  BarChart3,
+  CalendarDays,
+  Database,
+  Flag,
+  PartyPopper,
+  Type,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -59,14 +66,24 @@ const navigation: NavItem[] = [
     icon: LayoutDashboard,
   },
   {
+    title: "المستخدمون",
+    href: "/users",
+    icon: Users,
+  },
+  {
+    title: "التحليلات",
+    href: "/analytics",
+    icon: BarChart3,
+  },
+  {
     title: "إدارة المحتوى",
     href: "/content",
     icon: BookOpen,
     children: [
+      { title: "التقويم", href: "/content/calendar", icon: CalendarDays },
       { title: "الأحاديث", href: "/content/hadith", icon: BookOpen },
       { title: "الاقتباسات", href: "/content/quotes", icon: Quote },
-      { title: "رسالة اليوم", href: "/content/motd", icon: MessageSquare },
-      { title: "البانرات", href: "/content/banners", icon: Image },
+      { title: "الرسائل", href: "/engagement/messages", icon: MessageSquare },
     ],
   },
   {
@@ -75,6 +92,7 @@ const navigation: NavItem[] = [
     icon: Brain,
     badge: "واصل",
     children: [
+      { title: "المحادثات", href: "/ai/conversations", icon: BarChart3 },
       { title: "الهوية", href: "/ai/identity", icon: Sparkles },
       { title: "الشخصية", href: "/ai/personality", icon: MessageCircle },
       { title: "أوضاع الاستشارة", href: "/ai/modes", icon: MessageSquare },
@@ -83,6 +101,7 @@ const navigation: NavItem[] = [
       { title: "المناسبات والنبرات", href: "/ai/occasions", icon: Star },
       { title: "الذاكرة", href: "/ai/memory", icon: Brain },
       { title: "البث المباشر", href: "/ai/streaming", icon: Zap },
+      { title: "سيناريوهات التواصل", href: "/ai/scenarios", icon: MessageSquare },
       { title: "رسائل الأخطاء", href: "/ai/errors", icon: AlertCircle },
     ],
   },
@@ -92,6 +111,7 @@ const navigation: NavItem[] = [
     icon: Trophy,
     children: [
       { title: "النقاط", href: "/gamification/points", icon: Star },
+      { title: "أحداث النقاط", href: "/gamification/events", icon: PartyPopper },
       { title: "الأوسمة", href: "/gamification/badges", icon: Award },
       { title: "المستويات", href: "/gamification/levels", icon: TrendingUp },
       { title: "التحديات", href: "/gamification/challenges", icon: Target },
@@ -117,6 +137,7 @@ const navigation: NavItem[] = [
     children: [
       { title: "الإشعارات الفورية", href: "/notifications/announcements", icon: Send },
       { title: "القوالب", href: "/notifications/templates", icon: FileText },
+      { title: "قوالب التذكيرات", href: "/notifications/reminder-templates", icon: Clock },
       { title: "الفترات الزمنية", href: "/notifications/time-slots", icon: Clock },
     ],
   },
@@ -137,7 +158,13 @@ const navigation: NavItem[] = [
     icon: Settings,
     children: [
       { title: "مسارات التطبيق", href: "/settings/routes", icon: Route },
+      { title: "أعلام الميزات", href: "/settings/flags", icon: Flag },
+      { title: "التخزين المؤقت", href: "/settings/cache", icon: Database },
+      { title: "نصوص الواجهة", href: "/settings/strings", icon: Type },
+      { title: "شاشات التأهيل", href: "/settings/onboarding", icon: Sparkles },
       { title: "سجل المفاتيح", href: "/settings/keys", icon: Key },
+      { title: "سجل العمليات", href: "/settings/audit", icon: History },
+      { title: "الصلاحيات", href: "/settings/roles", icon: Shield },
     ],
   },
 ];

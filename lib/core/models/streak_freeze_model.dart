@@ -145,7 +145,12 @@ class FreezeUsage {
 
 /// Milestones that award freezes
 class FreezeMilestones {
-  static const List<int> awardMilestones = [7, 30, 100];
+  /// Fallback milestones if config not loaded
+  static const List<int> _fallbackMilestones = [7, 30, 100];
+
+  /// Get milestones - uses fallback for now, will be connected to admin config
+  /// The actual milestones are configurable via admin_streak_config table
+  static List<int> get awardMilestones => _fallbackMilestones;
 
   /// Check if streak qualifies for a freeze award
   static bool isFreezeAwardMilestone(int streak) {

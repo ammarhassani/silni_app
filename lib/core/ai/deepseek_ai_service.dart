@@ -69,12 +69,16 @@ class DeepSeekAIService implements AIService {
     required String systemPrompt,
     double temperature = 0.7,
     int maxTokens = 2048,
+    int? timeoutSeconds,
   }) async {
     try {
       final formattedMessages = [
         {'role': 'system', 'content': systemPrompt},
         ...messages.map((m) => m.toApiFormat()),
       ];
+
+      // Use provided timeout or default from config (fallback to 60)
+      final timeout = timeoutSeconds ?? 60;
 
       final response = await _supabase.functions.invoke(
         _edgeFunctionName,
@@ -84,7 +88,7 @@ class DeepSeekAIService implements AIService {
           'max_tokens': maxTokens,
         },
       ).timeout(
-        const Duration(seconds: 60),
+        Duration(seconds: timeout),
         onTimeout: () => throw AIServiceException(
           'انتهت مهلة الاتصال. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.',
           code: 'TIMEOUT',
@@ -181,6 +185,7 @@ class DeepSeekAIService implements AIService {
         systemPrompt: prompt,
         temperature: params.temperature,
         maxTokens: params.maxTokens,
+        timeoutSeconds: params.timeoutSeconds,
       );
 
       // Parse JSON response
@@ -210,8 +215,26 @@ class DeepSeekAIService implements AIService {
     int count = 3,
   }) async {
     try {
-      final params = AIConfigService.instance.getParametersFor('message_generation');
-      final prompt = AIPrompts.messageGenerationPrompt(relative, occasionType, tone);
+      final config = AIConfigService.instance;
+      final params = config.getParametersFor('message_generation');
+
+      // Get occasion config for promptAddition
+      final occasionConfig = config.messageOccasions
+          .cast<AIMessageOccasion?>()
+          .firstWhere((o) => o?.occasionKey == occasionType, orElse: () => null);
+
+      // Get tone config for promptModifier
+      final toneConfig = config.messageTones
+          .cast<AIMessageTone?>()
+          .firstWhere((t) => t?.toneKey == tone, orElse: () => null);
+
+      final prompt = AIPrompts.messageGenerationPrompt(
+        relative,
+        occasionType,
+        tone,
+        occasionPromptAddition: occasionConfig?.promptAddition,
+        tonePromptModifier: toneConfig?.promptModifier,
+      );
       final response = await getChatCompletion(
         messages: [
           ChatMessage(
@@ -226,6 +249,7 @@ class DeepSeekAIService implements AIService {
         systemPrompt: prompt,
         temperature: params.temperature,
         maxTokens: params.maxTokens,
+        timeoutSeconds: params.timeoutSeconds,
       );
 
       // Parse JSON response
@@ -270,6 +294,7 @@ class DeepSeekAIService implements AIService {
         systemPrompt: prompt,
         temperature: params.temperature,
         maxTokens: params.maxTokens,
+        timeoutSeconds: params.timeoutSeconds,
       );
 
       // Parse JSON response
@@ -327,6 +352,7 @@ class DeepSeekAIService implements AIService {
         systemPrompt: prompt,
         temperature: params.temperature,
         maxTokens: params.maxTokens,
+        timeoutSeconds: params.timeoutSeconds,
       );
 
       // Parse JSON response
@@ -440,6 +466,7 @@ class DeepSeekAIService implements AIService {
         systemPrompt: AIPrompts.memoryExtractionPrompt,
         temperature: params.temperature,
         maxTokens: params.maxTokens,
+        timeoutSeconds: params.timeoutSeconds,
       );
 
       // Parse JSON response
@@ -514,6 +541,7 @@ class MockAIService implements AIService {
     required String systemPrompt,
     double temperature = 0.7,
     int maxTokens = 2048,
+    int? timeoutSeconds,
   }) async {
     await Future.delayed(const Duration(milliseconds: 500));
     return '''

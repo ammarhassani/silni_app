@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../../../../core/constants/app_colors.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_typography.dart';
+import '../../../../core/theme/app_themes.dart';
+import '../../../../core/theme/theme_provider.dart';
 import '../../../../shared/models/interaction_model.dart';
 import '../../../../shared/widgets/glass_card.dart';
 
 /// Pie chart showing interaction breakdown by type
-class InteractionTypeChart extends StatelessWidget {
+class InteractionTypeChart extends ConsumerWidget {
   const InteractionTypeChart({
     super.key,
     required this.interactionCounts,
@@ -15,25 +17,28 @@ class InteractionTypeChart extends StatelessWidget {
 
   final Map<InteractionType, int> interactionCounts;
 
-  Color _getColorForInteractionType(InteractionType type) {
+  /// Get distinct colors for each interaction type using theme colors
+  Color _getColorForInteractionType(InteractionType type, ThemeColors themeColors) {
     switch (type) {
       case InteractionType.call:
-        return AppColors.calmBlue;
+        return themeColors.accent;
       case InteractionType.visit:
-        return AppColors.islamicGreenPrimary;
+        return themeColors.primaryLight;
       case InteractionType.message:
-        return AppColors.emotionalPurple;
+        return themeColors.primary;
       case InteractionType.gift:
-        return AppColors.joyfulOrange;
+        return themeColors.secondary;
       case InteractionType.event:
-        return AppColors.energeticRed;
+        return themeColors.primaryDark;
       case InteractionType.other:
-        return Colors.grey;
+        return themeColors.textOnGradient.withValues(alpha: 0.5);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
+
     if (interactionCounts.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -52,7 +57,7 @@ class InteractionTypeChart extends StatelessWidget {
             Text(
               'التفاعلات حسب النوع',
               style: AppTypography.titleLarge.copyWith(
-                color: Colors.white,
+                color: themeColors.textOnGradient,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -62,21 +67,25 @@ class InteractionTypeChart extends StatelessWidget {
               child: PieChart(
                 PieChartData(
                   sections: interactionCounts.entries.map((entry) {
-                    final percentage = (entry.value / total * 100)
-                        .toStringAsFixed(1);
+                    final percentage = entry.value / total * 100;
+                    final percentageStr = percentage.toStringAsFixed(1);
+                    // Only show title for sections > 15% to avoid overlap
+                    final showTitle = percentage > 15;
                     return PieChartSectionData(
                       value: entry.value.toDouble(),
-                      title: '${entry.key.arabicName}\n$percentage%',
-                      color: _getColorForInteractionType(entry.key),
-                      radius: 80,
+                      title: showTitle ? '${entry.key.arabicName}\n$percentageStr%' : '',
+                      color: _getColorForInteractionType(entry.key, themeColors),
+                      radius: 70,
                       titleStyle: AppTypography.bodySmall.copyWith(
-                        color: Colors.white,
+                        color: themeColors.textOnGradient,
                         fontWeight: FontWeight.bold,
+                        fontSize: 11,
                       ),
+                      titlePositionPercentageOffset: 0.55,
                     );
                   }).toList(),
-                  sectionsSpace: 2,
-                  centerSpaceRadius: 0,
+                  sectionsSpace: 3,
+                  centerSpaceRadius: 30,
                 ),
               ),
             ),
@@ -90,7 +99,7 @@ class InteractionTypeChart extends StatelessWidget {
                       width: 16,
                       height: 16,
                       decoration: BoxDecoration(
-                        color: _getColorForInteractionType(entry.key),
+                        color: _getColorForInteractionType(entry.key, themeColors),
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
@@ -98,14 +107,14 @@ class InteractionTypeChart extends StatelessWidget {
                     Text(
                       '${entry.key.emoji} ${entry.key.arabicName}',
                       style: AppTypography.bodyMedium.copyWith(
-                        color: Colors.white,
+                        color: themeColors.textOnGradient,
                       ),
                     ),
                     const Spacer(),
                     Text(
                       '${entry.value}',
                       style: AppTypography.bodyMedium.copyWith(
-                        color: Colors.white,
+                        color: themeColors.textOnGradient,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

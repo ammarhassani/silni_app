@@ -45,8 +45,9 @@ class RelativeStreakService {
           .maybeSingle();
 
       final now = DateTime.now().toUtc();
-      // 26-hour window - same as global streak
-      final newDeadline = now.add(const Duration(hours: 26));
+      // Get deadline hours from config (default 26)
+      final deadlineHours = GamificationConfigService.instance.streakConfig.deadlineHours;
+      final newDeadline = now.add(Duration(hours: deadlineHours));
 
       int newStreak;
       DateTime newDayStart;

@@ -89,7 +89,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                         // Feature comparison (moved after pricing)
                         _buildFeatureComparison(themeColors),
 
-                        const SizedBox(height: AppSpacing.sm),
+                        const SizedBox(height: AppSpacing.md),
 
                         // Restore purchases
                         _buildRestoreButton(themeColors),

@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'cache_config_service.dart';
+
 /// Service for fetching AI configuration from admin panel (Supabase)
 /// Provides dynamic configuration for AI identity, personality, modes, etc.
 class AIConfigService {
@@ -24,12 +26,13 @@ class AIConfigService {
   List<AICommunicationScenario>? _scenariosCache;
   DateTime? _lastFetchTime;
 
-  // Cache duration: 5 minutes
-  static const _cacheDuration = Duration(minutes: 5);
+  // Cache duration from remote config
+  final CacheConfigService _cacheConfig = CacheConfigService();
+  static const String _serviceKey = 'ai_config';
 
   bool get _isCacheValid {
     if (_lastFetchTime == null) return false;
-    return DateTime.now().difference(_lastFetchTime!) < _cacheDuration;
+    return !_cacheConfig.isCacheExpired(_serviceKey, _lastFetchTime);
   }
 
   /// Check if config is loaded

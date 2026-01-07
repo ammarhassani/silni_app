@@ -19,6 +19,7 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../subscription/screens/paywall_screen.dart';
 import '../providers/ai_chat_provider.dart';
 import '../../../shared/utils/ui_helpers.dart';
+import '../../../shared/widgets/message_widget.dart';
 
 /// AI Hub Screen - Main dashboard for all AI features
 /// Replaces the old statistics "Coming Soon" screen
@@ -45,6 +46,14 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen> {
               // Header
               SliverToBoxAdapter(
                 child: _buildHeader(themeColors),
+              ),
+
+              // In-App Messages
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: MessageWidget(screenPath: '/ai-hub'),
+                ),
               ),
 
             // AI Features Grid

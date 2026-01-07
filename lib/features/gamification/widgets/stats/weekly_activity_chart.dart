@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../../../../core/constants/app_colors.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_typography.dart';
+import '../../../../core/theme/theme_provider.dart';
 import '../../../../shared/widgets/glass_card.dart';
 
 /// Bar chart showing weekly activity
-class WeeklyActivityChart extends StatelessWidget {
+class WeeklyActivityChart extends ConsumerWidget {
   const WeeklyActivityChart({
     super.key,
     required this.recentActivity,
@@ -15,23 +16,27 @@ class WeeklyActivityChart extends StatelessWidget {
   final List<Map<String, dynamic>> recentActivity;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
+
     if (recentActivity.isEmpty) {
       return GlassCard(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             children: [
-              const Icon(
+              Icon(
                 Icons.calendar_today_rounded,
-                color: Colors.white54,
+                color: themeColors.textOnGradient.withValues(alpha: 0.54),
                 size: 48,
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
                 'لا توجد تفاعلات في الأيام السبعة الماضية',
                 textAlign: TextAlign.center,
-                style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+                style: AppTypography.bodyMedium.copyWith(
+                  color: themeColors.textOnGradient.withValues(alpha: 0.7),
+                ),
               ),
             ],
           ),
@@ -56,7 +61,7 @@ class WeeklyActivityChart extends StatelessWidget {
             Text(
               'النشاط الأسبوعي',
               style: AppTypography.titleLarge.copyWith(
-                color: Colors.white,
+                color: themeColors.textOnGradient,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -95,7 +100,7 @@ class WeeklyActivityChart extends StatelessWidget {
                             child: Text(
                               days[dayIndex],
                               style: AppTypography.bodySmall.copyWith(
-                                color: Colors.white70,
+                                color: themeColors.textOnGradient.withValues(alpha: 0.7),
                                 fontSize: 10,
                               ),
                             ),
@@ -126,7 +131,7 @@ class WeeklyActivityChart extends StatelessWidget {
                       barRods: [
                         BarChartRodData(
                           toY: count.toDouble(),
-                          color: AppColors.islamicGreenPrimary,
+                          color: themeColors.secondary,
                           width: 16,
                           borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(4),

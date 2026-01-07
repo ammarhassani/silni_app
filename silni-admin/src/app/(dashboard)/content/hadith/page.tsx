@@ -1,10 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { useHadith, useDeleteHadith, useToggleHadithActive } from "@/hooks/use-hadith";
+import {
+  useHadith,
+  useDeleteHadith,
+  useToggleHadithActive,
+  useBulkDeleteHadith,
+  useBulkToggleHadithActive,
+} from "@/hooks/use-hadith";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -21,7 +28,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Eye, EyeOff } from "lucide-react";
+import {
+  Plus,
+  Search,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Eye,
+  EyeOff,
+  X,
+  CheckCheck,
+} from "lucide-react";
 import { HadithDialog } from "./hadith-dialog";
 import type { AdminHadith } from "@/types/database";
 import { truncate } from "@/lib/utils";
@@ -30,10 +47,13 @@ export default function HadithPage() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedHadith, setSelectedHadith] = useState<AdminHadith | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { data: hadithList, isLoading } = useHadith();
   const deleteHadith = useDeleteHadith();
   const toggleActive = useToggleHadithActive();
+  const bulkDelete = useBulkDeleteHadith();
+  const bulkToggle = useBulkToggleHadithActive();
 
   const filteredHadith = hadithList?.filter(
     (h) =>
@@ -58,12 +78,54 @@ export default function HadithPage() {
     }
   };
 
+  // Selection handlers
+  const toggleSelection = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+  };
+
+  const toggleAllSelection = () => {
+    if (!filteredHadith) return;
+    if (selectedIds.size === filteredHadith.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredHadith.map((h) => h.id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkDelete = () => {
+    if (confirm(`هل أنت متأكد من حذف ${selectedIds.size} حديث؟`)) {
+      bulkDelete.mutate(Array.from(selectedIds), {
+        onSuccess: () => clearSelection(),
+      });
+    }
+  };
+
+  const handleBulkActivate = (is_active: boolean) => {
+    bulkToggle.mutate(
+      { ids: Array.from(selectedIds), is_active },
+      { onSuccess: () => clearSelection() }
+    );
+  };
+
   const gradeColors: Record<string, string> = {
     صحيح: "bg-green-500/10 text-green-600",
     حسن: "bg-blue-500/10 text-blue-600",
     ضعيف: "bg-yellow-500/10 text-yellow-600",
     موضوع: "bg-red-500/10 text-red-600",
   };
+
+  const isAllSelected = filteredHadith && filteredHadith.length > 0 && selectedIds.size === filteredHadith.length;
+  const isSomeSelected = selectedIds.size > 0;
 
   return (
     <div className="space-y-6">
@@ -79,6 +141,55 @@ export default function HadithPage() {
           إضافة حديث
         </Button>
       </div>
+
+      {/* Bulk Actions Bar */}
+      {isSomeSelected && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Badge variant="secondary" className="text-sm">
+                  <CheckCheck className="h-4 w-4 ml-1" />
+                  {selectedIds.size} محدد
+                </Badge>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleBulkActivate(true)}
+                    disabled={bulkToggle.isPending}
+                  >
+                    <Eye className="h-4 w-4 ml-1" />
+                    تفعيل الكل
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleBulkActivate(false)}
+                    disabled={bulkToggle.isPending}
+                  >
+                    <EyeOff className="h-4 w-4 ml-1" />
+                    تعطيل الكل
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={handleBulkDelete}
+                    disabled={bulkDelete.isPending}
+                  >
+                    <Trash2 className="h-4 w-4 ml-1" />
+                    حذف المحدد
+                  </Button>
+                </div>
+              </div>
+              <Button size="sm" variant="ghost" onClick={clearSelection}>
+                <X className="h-4 w-4 ml-1" />
+                إلغاء التحديد
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -107,6 +218,12 @@ export default function HadithPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={isAllSelected}
+                      onCheckedChange={toggleAllSelection}
+                    />
+                  </TableHead>
                   <TableHead className="w-[400px]">نص الحديث</TableHead>
                   <TableHead>المصدر</TableHead>
                   <TableHead>الراوي</TableHead>
@@ -117,7 +234,16 @@ export default function HadithPage() {
               </TableHeader>
               <TableBody>
                 {filteredHadith?.map((hadith) => (
-                  <TableRow key={hadith.id}>
+                  <TableRow
+                    key={hadith.id}
+                    className={selectedIds.has(hadith.id) ? "bg-primary/5" : ""}
+                  >
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(hadith.id)}
+                        onCheckedChange={() => toggleSelection(hadith.id)}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       {truncate(hadith.hadith_text, 100)}
                     </TableCell>

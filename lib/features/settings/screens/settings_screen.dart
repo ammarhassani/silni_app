@@ -12,10 +12,8 @@ import '../../../shared/services/auth_service.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/models/subscription_tier.dart';
-import '../../../core/providers/pattern_animation_provider.dart';
 import '../../../core/providers/subscription_provider.dart';
 import '../../../core/router/app_routes.dart';
-import '../../../core/services/gyroscope_service.dart';
 import '../../../core/services/subscription_service.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/theme/dynamic_theme.dart';
@@ -24,6 +22,7 @@ import '../../../shared/widgets/theme_aware_dialog.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../subscription/screens/paywall_screen.dart';
 import '../../../shared/utils/ui_helpers.dart';
+import '../../../shared/widgets/message_widget.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -67,6 +66,9 @@ class SettingsScreen extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
+                  // In-App Messages
+                  const MessageWidget(screenPath: '/settings'),
+                  const SizedBox(height: AppSpacing.md),
                   // Subscription Card
                   _buildSubscriptionCard(context, ref, themeColors),
                   const SizedBox(height: AppSpacing.md),
@@ -107,11 +109,6 @@ class SettingsScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: AppSpacing.md),
-
-                  // Pattern Animation Settings
-                  _buildPatternAnimationSettings(context, ref),
 
                   const SizedBox(height: AppSpacing.sm),
 
@@ -971,284 +968,4 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildPatternAnimationSettings(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(patternAnimationProvider);
-    final notifier = ref.read(patternAnimationProvider.notifier);
-    final gyroscopeAvailable = GyroscopeService.instance.isAvailable;
-
-    return GlassCard(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            children: [
-              const Icon(
-                Icons.auto_awesome,
-                color: AppColors.premiumGold,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'تأثيرات الخلفية',
-                style: AppTypography.titleLarge.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Spacer(),
-              // Master toggle
-              Switch(
-                value: settings.isAnimationEnabled,
-                onChanged: (enabled) {
-                  HapticFeedback.lightImpact();
-                  if (enabled) {
-                    notifier.updateSettings(const PatternAnimationSettings());
-                  } else {
-                    notifier.disableAll();
-                  }
-                },
-                activeTrackColor: AppColors.premiumGold,
-                thumbColor: WidgetStateProperty.resolveWith((states) =>
-                    states.contains(WidgetState.selected)
-                        ? AppColors.premiumGold
-                        : Colors.white70),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'تحريك الأنماط الإسلامية في الخلفية',
-            style: AppTypography.bodySmall.copyWith(
-              color: Colors.white70,
-            ),
-          ),
-
-          // Only show options if animations are enabled
-          if (settings.isAnimationEnabled) ...[
-            const SizedBox(height: AppSpacing.lg),
-            const Divider(color: Colors.white24),
-            const SizedBox(height: AppSpacing.sm),
-
-            // Animation Effects Section
-            Text(
-              'تأثيرات الحركة',
-              style: AppTypography.titleSmall.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-
-            // Vertical flow toggle
-            _buildAnimationToggle(
-              icon: Icons.arrow_upward,
-              title: 'التدفق العمودي',
-              subtitle: 'حركة صعود لطيفة للأنماط',
-              value: settings.rotationEnabled,
-              onChanged: (_) {
-                HapticFeedback.lightImpact();
-                notifier.toggleRotation();
-              },
-            ),
-
-            // Pulse toggle
-            _buildAnimationToggle(
-              icon: Icons.favorite_border,
-              title: 'التنفس',
-              subtitle: 'تغير لطيف في الشفافية',
-              value: settings.pulseEnabled,
-              onChanged: (_) {
-                HapticFeedback.lightImpact();
-                notifier.togglePulse();
-              },
-            ),
-
-            // Parallax toggle
-            _buildAnimationToggle(
-              icon: Icons.layers,
-              title: 'التأثير ثلاثي الأبعاد',
-              subtitle: 'حركة الأنماط مع التمرير',
-              value: settings.parallaxEnabled,
-              onChanged: (_) {
-                HapticFeedback.lightImpact();
-                notifier.toggleParallax();
-              },
-            ),
-
-            // Shimmer toggle
-            _buildAnimationToggle(
-              icon: Icons.auto_awesome,
-              title: 'التلألؤ',
-              subtitle: 'موجة ضوئية عبر الأنماط',
-              value: settings.shimmerEnabled,
-              onChanged: (_) {
-                HapticFeedback.lightImpact();
-                notifier.toggleShimmer();
-              },
-            ),
-
-            const SizedBox(height: AppSpacing.md),
-            const Divider(color: Colors.white24),
-            const SizedBox(height: AppSpacing.sm),
-
-            // Touch Effects Section
-            Text(
-              'تأثيرات اللمس',
-              style: AppTypography.titleSmall.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-
-            // Touch ripple toggle
-            _buildAnimationToggle(
-              icon: Icons.touch_app,
-              title: 'موجات اللمس',
-              subtitle: 'دوائر متوسعة عند النقر',
-              value: settings.touchRippleEnabled,
-              onChanged: (_) {
-                HapticFeedback.lightImpact();
-                notifier.toggleTouchRipple();
-              },
-            ),
-
-            // Follow touch toggle
-            _buildAnimationToggle(
-              icon: Icons.highlight,
-              title: 'توهج المتابعة',
-              subtitle: 'إضاءة تتبع حركة إصبعك',
-              value: settings.followTouchEnabled,
-              onChanged: (_) {
-                HapticFeedback.lightImpact();
-                notifier.toggleFollowTouch();
-              },
-            ),
-
-            // Gyroscope toggle (only if available)
-            if (gyroscopeAvailable)
-              _buildAnimationToggle(
-                icon: Icons.screen_rotation,
-                title: 'حركة الجهاز',
-                subtitle: 'الأنماط تتحرك مع إمالة الجهاز',
-                value: settings.gyroscopeEnabled,
-                onChanged: (_) {
-                  HapticFeedback.lightImpact();
-                  notifier.toggleGyroscope();
-                },
-              ),
-
-            const SizedBox(height: AppSpacing.md),
-            const Divider(color: Colors.white24),
-            const SizedBox(height: AppSpacing.sm),
-
-            // Intensity slider
-            Row(
-              children: [
-                const Icon(
-                  Icons.speed,
-                  color: Colors.white70,
-                  size: 20,
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Text(
-                  'شدة التأثيرات',
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTrackColor: AppColors.premiumGold,
-                inactiveTrackColor: Colors.white24,
-                thumbColor: AppColors.premiumGold,
-                overlayColor: AppColors.premiumGold.withValues(alpha: 0.2),
-              ),
-              child: Slider(
-                value: settings.animationIntensity,
-                min: 0.1,
-                max: 1.0,
-                divisions: 9,
-                label: '${(settings.animationIntensity * 100).round()}%',
-                onChanged: (value) {
-                  notifier.setIntensity(value);
-                },
-              ),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'خفيف',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: Colors.white54,
-                  ),
-                ),
-                Text(
-                  'قوي',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: Colors.white54,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAnimationToggle({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            color: value ? AppColors.premiumGold : Colors.white54,
-            size: 20,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: Colors.white,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: AppTypography.labelSmall.copyWith(
-                    color: Colors.white54,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeTrackColor: AppColors.premiumGold,
-                thumbColor: WidgetStateProperty.resolveWith((states) =>
-                    states.contains(WidgetState.selected)
-                        ? AppColors.premiumGold
-                        : Colors.white70),
-          ),
-        ],
-      ),
-    );
-  }
 }

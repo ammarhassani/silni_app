@@ -26,6 +26,7 @@ class ScenarioTemplate {
   final String id;
   final String title;
   final String description;
+  final String? promptContext;
   final String emoji;
   final Color color;
 
@@ -33,6 +34,7 @@ class ScenarioTemplate {
     required this.id,
     required this.title,
     required this.description,
+    this.promptContext,
     required this.emoji,
     required this.color,
   });
@@ -44,6 +46,7 @@ class ScenarioTemplate {
         id: scenario.scenarioKey,
         title: scenario.titleAr,
         description: scenario.descriptionAr,
+        promptContext: scenario.promptContext,
         emoji: scenario.emoji,
         color: _parseColor(scenario.colorHex),
       );
@@ -149,10 +152,13 @@ class CommunicationScriptsNotifier extends StateNotifier<CommunicationScriptsSta
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
+      // Use promptContext from admin config if available, otherwise fall back to description
+      final additionalContext = state.selectedScenario!.promptContext ?? state.selectedScenario!.description;
+
       final script = await _aiService.getCommunicationScript(
         scenario: state.selectedScenario!.title,
         relative: state.selectedRelative,
-        additionalContext: state.selectedScenario!.description,
+        additionalContext: additionalContext,
       );
 
       if (!mounted) return;

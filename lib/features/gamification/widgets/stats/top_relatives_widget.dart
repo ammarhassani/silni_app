@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_typography.dart';
+import '../../../../core/theme/theme_provider.dart';
 import '../../../../shared/widgets/glass_card.dart';
 
 /// Widget displaying top relatives by interaction count
-class TopRelativesWidget extends StatelessWidget {
+class TopRelativesWidget extends ConsumerWidget {
   const TopRelativesWidget({
     super.key,
     required this.topRelatives,
@@ -14,19 +15,27 @@ class TopRelativesWidget extends StatelessWidget {
   final List<Map<String, dynamic>> topRelatives;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
+
     if (topRelatives.isEmpty) {
       return GlassCard(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             children: [
-              const Icon(Icons.people_rounded, color: Colors.white54, size: 48),
+              Icon(
+                Icons.people_rounded,
+                color: themeColors.textOnGradient.withValues(alpha: 0.54),
+                size: 48,
+              ),
               const SizedBox(height: AppSpacing.md),
               Text(
                 'لا توجد بيانات عن الأقارب',
                 textAlign: TextAlign.center,
-                style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+                style: AppTypography.bodyMedium.copyWith(
+                  color: themeColors.textOnGradient.withValues(alpha: 0.7),
+                ),
               ),
             ],
           ),
@@ -43,7 +52,7 @@ class TopRelativesWidget extends StatelessWidget {
             Text(
               'الأقارب الأكثر تواصلاً',
               style: AppTypography.titleLarge.copyWith(
-                color: Colors.white,
+                color: themeColors.textOnGradient,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -61,8 +70,8 @@ class TopRelativesWidget extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            AppColors.islamicGreenPrimary,
-                            AppColors.calmBlue,
+                            themeColors.primary,
+                            themeColors.primaryLight,
                           ],
                         ),
                         borderRadius: BorderRadius.circular(20),
@@ -71,7 +80,7 @@ class TopRelativesWidget extends StatelessWidget {
                         child: Text(
                           '${index + 1}',
                           style: AppTypography.titleMedium.copyWith(
-                            color: Colors.white,
+                            color: themeColors.textOnGradient,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -85,7 +94,7 @@ class TopRelativesWidget extends StatelessWidget {
                           Text(
                             relative['name'] as String,
                             style: AppTypography.bodyMedium.copyWith(
-                              color: Colors.white,
+                              color: themeColors.textOnGradient,
                               fontWeight: FontWeight.w600,
                             ),
                             maxLines: 1,
@@ -94,7 +103,7 @@ class TopRelativesWidget extends StatelessWidget {
                           Text(
                             '${relative['count']} تفاعل',
                             style: AppTypography.bodySmall.copyWith(
-                              color: Colors.white70,
+                              color: themeColors.textOnGradient.withValues(alpha: 0.7),
                             ),
                           ),
                         ],

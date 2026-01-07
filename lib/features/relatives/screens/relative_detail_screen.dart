@@ -16,7 +16,6 @@ import '../../../shared/services/auth_service.dart';
 import '../../../core/services/error_handler_service.dart';
 import '../widgets/detail/widgets.dart';
 import '../../../shared/utils/ui_helpers.dart';
-import '../../../shared/widgets/theme_aware_dialog.dart';
 
 /// Provider for watching a single relative (cache-first)
 final relativeDetailProvider =
@@ -47,88 +46,100 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
     final relativeAsync = ref.watch(relativeDetailProvider(widget.relativeId));
 
     return Scaffold(
-      body: Semantics(
-        label: 'تفاصيل القريب',
-        child: GradientBackground(
-          animated: true,
-          child: SafeArea(
-            child: relativeAsync.when(
-              loading: () => Center(
-                child: CircularProgressIndicator(color: themeColors.primary),
-              ),
-              error: (_, _) => _buildErrorState(context, themeColors),
-              data: (relative) {
-                if (relative == null) {
-                  return _buildErrorState(context, themeColors);
-                }
-
-                return CustomScrollView(
-                  slivers: [
-                    // Header with avatar and name
-                    SliverToBoxAdapter(
-                      child: RelativeHeaderWidget(
-                        relative: relative,
-                        themeColors: themeColors,
-                        onDelete: () => _showDeleteConfirmation(relative),
-                      ),
-                    ),
-
-                    // Contact actions
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        child: RelativeContactActions(
-                          relative: relative,
-                          onCall: () => _handleCall(relative.phoneNumber!),
-                          onWhatsApp: () => _handleWhatsApp(relative.phoneNumber!),
-                          onSms: () => _handleSms(relative.phoneNumber!),
-                          onDetails: _scrollToDetails,
-                        ),
-                      ),
-                    ),
-
-                    // Stats card
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                        child: RelativeStatsCard(relative: relative),
-                      ),
-                    ),
-
-                    // Details card
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        child: RelativeDetailsCard(relative: relative),
-                      ),
-                    ),
-
-                    // Recent interactions header
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                        child: Text(
-                          'التفاعلات الأخيرة',
-                          style: AppTypography.headlineSmall.copyWith(
-                            color: themeColors.textOnGradient,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Recent interactions list
-                    SliverToBoxAdapter(
-                      child: RelativeInteractionsList(relativeId: relative.id),
-                    ),
-
-                    // Bottom spacing
-                    const SliverToBoxAdapter(
-                      child: SizedBox(height: AppSpacing.xxl),
-                    ),
-                  ],
-                );
-              },
+      body: GradientBackground(
+        animated: true,
+        child: SafeArea(
+          child: relativeAsync.when(
+            loading: () => Center(
+              child: CircularProgressIndicator(color: themeColors.primary),
             ),
+            error: (_, _) => _buildErrorState(context, themeColors),
+            data: (relative) {
+              if (relative == null) {
+                return _buildErrorState(context, themeColors);
+              }
+
+              return CustomScrollView(
+                slivers: [
+                  // Header with avatar and name
+                  SliverToBoxAdapter(
+                    child: RelativeHeaderWidget(
+                      relative: relative,
+                      themeColors: themeColors,
+                      onDelete: () => _showDeleteConfirmation(relative),
+                    ),
+                  ),
+
+                  // Contact actions
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: RelativeContactActions(
+                        relative: relative,
+                        onCall: () => _handleCall(relative.phoneNumber!),
+                        onWhatsApp: () => _handleWhatsApp(relative.phoneNumber!),
+                        onSms: () => _handleSms(relative.phoneNumber!),
+                        onDetails: _scrollToDetails,
+                        onVisit: () => _showInteractionDialog(
+                          InteractionType.visit,
+                          'تسجيل زيارة',
+                          'أضف ملاحظات عن الزيارة (اختياري)',
+                        ),
+                        onGift: () => _showInteractionDialog(
+                          InteractionType.gift,
+                          'تسجيل هدية',
+                          'ما هي الهدية؟ (اختياري)',
+                        ),
+                        onEvent: () => _showInteractionDialog(
+                          InteractionType.event,
+                          'تسجيل مناسبة',
+                          'ما هي المناسبة؟ (اختياري)',
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Stats card
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      child: RelativeStatsCard(relative: relative),
+                    ),
+                  ),
+
+                  // Details card
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: RelativeDetailsCard(relative: relative),
+                    ),
+                  ),
+
+                  // Recent interactions header
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      child: Text(
+                        'التفاعلات الأخيرة',
+                        style: AppTypography.headlineSmall.copyWith(
+                          color: themeColors.textOnGradient,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Recent interactions list
+                  SliverToBoxAdapter(
+                    child: RelativeInteractionsList(relativeId: relative.id),
+                  ),
+
+                  // Bottom spacing
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: AppSpacing.xxl),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -168,6 +179,103 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
 
   void _scrollToDetails() {
     HapticFeedback.lightImpact();
+  }
+
+  /// Show dialog to log a visit, gift, or event interaction
+  Future<void> _showInteractionDialog(
+    InteractionType type,
+    String title,
+    String hintText,
+  ) async {
+    final themeColors = ref.read(themeColorsProvider);
+    final notesController = TextEditingController();
+
+    final buttonColor = type == InteractionType.visit
+        ? Colors.teal
+        : type == InteractionType.gift
+            ? Colors.pink
+            : Colors.orange;
+
+    final iconData = type == InteractionType.visit
+        ? Icons.home_rounded
+        : type == InteractionType.gift
+            ? Icons.card_giftcard_rounded
+            : Icons.celebration_rounded;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      useRootNavigator: true,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: themeColors.background1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        icon: Icon(iconData, color: buttonColor, size: 32),
+        title: Text(
+          title,
+          style: AppTypography.titleLarge.copyWith(
+            color: themeColors.textOnGradient,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        content: SingleChildScrollView(
+          child: TextField(
+            controller: notesController,
+            decoration: InputDecoration(
+              hintText: hintText,
+              hintStyle: TextStyle(
+                color: themeColors.textOnGradient.withValues(alpha: 0.5),
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: themeColors.surface.withValues(alpha: 0.3),
+            ),
+            style: TextStyle(color: themeColors.textOnGradient),
+            maxLines: 3,
+            textDirection: TextDirection.rtl,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(
+              'إلغاء',
+              style: AppTypography.labelLarge.copyWith(
+                color: themeColors.textOnGradient.withValues(alpha: 0.7),
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: buttonColor,
+            ),
+            child: Text(
+              'تسجيل',
+              style: AppTypography.labelLarge.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // Let dialog fully dismiss before logging
+      await Future.microtask(() {});
+      final notes = notesController.text.trim();
+      await _logInteraction(
+        type,
+        notes.isNotEmpty ? notes : type.arabicName,
+      );
+    }
+
+    notesController.dispose();
   }
 
   Future<void> _handleCall(String phoneNumber) async {
@@ -240,72 +348,85 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => ThemeAwareAlertDialog(
-        title: 'تأكيد الحذف',
-        titleIcon: const Icon(Icons.warning_rounded, color: Colors.red),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'هل أنت متأكد من حذف هذا القريب؟',
-              style: AppTypography.bodyLarge.copyWith(color: themeColors.textOnGradient),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'اسم: ${relative.fullName}',
-              style: AppTypography.bodyMedium.copyWith(
-                color: themeColors.textOnGradient.withValues(alpha: 0.7),
-                fontWeight: FontWeight.bold,
+      useRootNavigator: true,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: themeColors.background1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        icon: const Icon(Icons.warning_rounded, color: Colors.red, size: 32),
+        title: Text(
+          'تأكيد الحذف',
+          style: AppTypography.titleLarge.copyWith(
+            color: themeColors.textOnGradient,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'هل أنت متأكد من حذف هذا القريب؟',
+                style: AppTypography.bodyLarge.copyWith(color: themeColors.textOnGradient),
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'صلة القرابة: ${relative.relationshipType.arabicName}',
-              style: AppTypography.bodyMedium.copyWith(
-                color: themeColors.textOnGradient.withValues(alpha: 0.7),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-              ),
-              child: Text(
-                'هذا الإجراء لا يمكن التراجع عنه',
-                style: AppTypography.bodySmall.copyWith(
-                  color: Colors.red,
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'اسم: ${relative.fullName}',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: themeColors.textOnGradient.withValues(alpha: 0.7),
                   fontWeight: FontWeight.bold,
                 ),
-                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'صلة القرابة: ${relative.relationshipType.arabicName}',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: themeColors.textOnGradient.withValues(alpha: 0.7),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  'هذا الإجراء لا يمكن التراجع عنه',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
             child: Text(
               'إلغاء',
               style: AppTypography.labelLarge.copyWith(color: themeColors.textOnGradient.withValues(alpha: 0.7)),
             ),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              foregroundColor: themeColors.textOnGradient,
             ),
             child: Text(
               'حذف',
               style: AppTypography.labelLarge.copyWith(
-                color: themeColors.textOnGradient,
+                color: Colors.white,
                 fontWeight: FontWeight.bold,
               ),
             ),

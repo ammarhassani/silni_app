@@ -651,14 +651,21 @@ ${budget != null ? '## الميزانية: $budget' : ''}
   }
 
   /// System prompt for message generation
-  static String messageGenerationPrompt(Relative relative, String occasionType, String tone) {
+  /// Uses dynamic personality from admin config
+  static String messageGenerationPrompt(
+    Relative relative,
+    String occasionType,
+    String tone, {
+    String? occasionPromptAddition,
+    String? tonePromptModifier,
+  }) {
+    // Use dynamic personality from admin config (includes dialect/style)
+    final personality = dynamicPersonality;
+
     return '''
 أنت كاتب رسائل محترف متخصص في الرسائل العائلية الدافئة والمؤثرة.
 
-## اللهجة المطلوبة:
-- اكتب بالعامية السعودية البيضاء الطبيعية
-- لا تستخدم الفصحى الأدبية أو اللغة الرسمية المتكلفة
-- الرسائل يجب أن تكون كأنها من شخص حقيقي، مو من كتاب أدبي
+$personality
 
 ## معلومات المستلم:
 - الاسم: ${relative.fullName}
@@ -669,7 +676,10 @@ ${relative.interests != null && relative.interests!.isNotEmpty ? '- الاهتم
 ${relative.relationshipStrengths != null ? '- نقاط قوة العلاقة: ${relative.relationshipStrengths}' : ''}
 
 ## نوع المناسبة: $occasionType
+${occasionPromptAddition != null ? '## تعليمات خاصة بالمناسبة: $occasionPromptAddition' : ''}
+
 ## النبرة المطلوبة: $tone
+${tonePromptModifier != null ? '## تعليمات خاصة بالنبرة: $tonePromptModifier' : ''}
 
 ## تعليمات الكتابة:
 اكتب 3 رسائل مختلفة ومميزة. كل رسالة يجب أن تكون:
@@ -693,14 +703,15 @@ ${relative.relationshipStrengths != null ? '- نقاط قوة العلاقة: ${
   }
 
   /// System prompt for communication scripts
+  /// Uses dynamic personality from admin config
   static String communicationScriptPrompt(String scenario, Relative? relative, String? context) {
+    // Use dynamic personality from admin config (includes dialect/style)
+    final personality = dynamicPersonality;
+
     return '''
 أنت مستشار تواصل عائلي خبير متخصص في المحادثات الصعبة والحساسة.
 
-## اللهجة المطلوبة:
-- اكتب كل العبارات بالعامية السعودية البيضاء الطبيعية
-- لا تستخدم الفصحى أو اللغة الرسمية
-- العبارات لازم تكون طبيعية كأنها من شخص سعودي عادي
+$personality
 
 ## السيناريو: $scenario
 ${relative != null ? '''
@@ -756,18 +767,19 @@ ${context != null ? '## سياق إضافي: $context' : ''}
 ''';
 
   /// System prompt for relationship health analysis
+  /// Uses dynamic personality from admin config
   static String relationshipAnalysisPrompt(Relative relative) {
     final days = relative.daysSinceLastContact ?? 0;
     final healthScore = relative.healthScore ?? 50;
     final healthStatus = relative.healthStatus2;
 
+    // Use dynamic personality from admin config (includes dialect/style)
+    final personality = dynamicPersonality;
+
     return '''
 أنت محلل علاقات عائلية خبير ومستشار في صلة الرحم.
 
-## اللهجة المطلوبة:
-- اكتب بالعامية السعودية البيضاء الطبيعية
-- لا تستخدم الفصحى الأدبية المتكلفة
-- النصائح والاقتراحات لازم تكون بأسلوب عادي ومفهوم
+$personality
 
 ## معلومات القريب المطلوب تحليل علاقته:
 - الاسم: ${relative.fullName}
@@ -817,16 +829,16 @@ ${relative.sensitiveTopics != null && relative.sensitiveTopics!.isNotEmpty ? '- 
   }
 
   /// System prompt for smart reminder suggestions
+  /// Uses dynamic personality from admin config
   static String smartReminderPrompt(List<Relative> relatives) {
+    // Use dynamic personality from admin config (includes dialect/style)
+    final personality = dynamicPersonality;
+
     final buffer = StringBuffer();
     buffer.writeln('''
 أنت مستشار صلة رحم ذكي. بناءً على قائمة الأقارب التالية، اقترح أولويات التواصل.
 
-## اللهجة المطلوبة:
-- اكتب الأسباب والرسائل بالعامية السعودية البيضاء الطبيعية
-- لا تستخدم الفصحى أو اللغة الرسمية
-- مثال صحيح: "تأخرت عليه، حاول تكلمه اليوم"
-- مثال خاطئ: "لقد مضى وقت طويل، أنصحك بالتواصل معه"
+$personality
 
 ## الأقارب:
 ''');

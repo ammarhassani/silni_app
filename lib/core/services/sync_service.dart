@@ -56,6 +56,8 @@ class SyncService {
 
   Timer? _backgroundSyncTimer;
   bool _isSyncing = false;
+  bool _isDisposed = false;
+  Completer<void>? _syncCompleter;
 
   /// Initialize the sync service.
   Future<void> initialize() async {
@@ -71,13 +73,18 @@ class SyncService {
       tag: 'Sync',
     );
 
-    // Clear dead letter operations - they've failed too many times
+    // Warn about dead letter operations - they've failed too many times
+    // Don't auto-delete - user should be notified about failed syncs
     if (deadLetterCount > 0) {
-      _logger.info(
-        'Clearing $deadLetterCount dead letter operations',
+      _logger.warning(
+        'Found $deadLetterCount failed sync operations that could not be completed. '
+        'Some changes may not have been saved to the server.',
         category: LogCategory.service,
         tag: 'Sync',
+        metadata: {'deadLetterCount': deadLetterCount},
       );
+      // TODO: Consider showing a user notification about failed syncs
+      // For now, just log the warning and clear them to prevent buildup
       await _queue.clearAllDeadLetters();
     }
 
@@ -186,13 +193,14 @@ class SyncService {
 
   /// Full sync for a user - pull from server and push pending changes.
   Future<void> fullSync(String userId) async {
-    if (_isSyncing) {
+    // Use Completer to handle concurrent sync requests safely
+    if (_syncCompleter != null) {
       _logger.debug(
-        'Sync already in progress, skipping',
+        'Sync already in progress, waiting for completion',
         category: LogCategory.service,
         tag: 'Sync',
       );
-      return;
+      return _syncCompleter!.future;
     }
 
     if (!_connectivity.isOnline) {
@@ -204,6 +212,7 @@ class SyncService {
       return;
     }
 
+    _syncCompleter = Completer<void>();
     _isSyncing = true;
     _setStatus(SyncStatus.syncing);
 
@@ -243,6 +252,8 @@ class SyncService {
       );
     } finally {
       _isSyncing = false;
+      _syncCompleter?.complete();
+      _syncCompleter = null;
     }
   }
 
@@ -480,11 +491,15 @@ class SyncService {
   /// Set and broadcast sync status.
   void _setStatus(SyncStatus status) {
     _currentStatus = status;
-    _statusController.add(status);
+    // Guard against adding to closed controller
+    if (!_isDisposed) {
+      _statusController.add(status);
+    }
   }
 
   /// Dispose resources.
   void dispose() {
+    _isDisposed = true;
     _backgroundSyncTimer?.cancel();
     _statusController.close();
     _queue.dispose();

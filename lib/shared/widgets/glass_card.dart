@@ -113,46 +113,55 @@ class _GlassCardState extends ConsumerState<GlassCard>
             sigmaX: widget.blurStrength,
             sigmaY: widget.blurStrength,
           ),
-          child: AnimatedContainer(
-            duration: AppAnimations.fast,
-            curve: AppAnimations.toggleCurve,
-            width: widget.width,
-            height: widget.height,
-            padding: widget.padding ?? const EdgeInsets.all(AppSpacing.sm),
-            margin: widget.margin,
-            decoration: BoxDecoration(
-              color: widget.gradient == null
-                  ? (widget.color ?? themeColors.glassBackground)
-                  : null,
-              borderRadius: BorderRadius.circular(widget.borderRadius),
-              border: widget.border ??
-                  Border.all(
-                    color: _isPressed
-                        ? themeColors.glassHighlight
-                        : themeColors.glassBorder,
-                    width: 1.5,
-                  ),
-              gradient: widget.gradient ??
-                  LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      themeColors.glassHighlight,
-                      themeColors.glassBackground,
-                    ],
-                  ),
-              boxShadow: [
-                BoxShadow(
-                  color: UIHelpers.withOpacity(
-                    themeColors.primaryDark,
-                    _isPressed ? 0.2 : 0.15,
-                  ),
-                  blurRadius: _isPressed ? 15 : 20,
-                  offset: Offset(0, _isPressed ? 4 : 8),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Use explicit width if provided, otherwise use parent constraints
+              // This prevents infinite width issues with BackdropFilter
+              final effectiveWidth = widget.width ??
+                  (constraints.maxWidth.isFinite ? constraints.maxWidth : null);
+
+              return AnimatedContainer(
+                duration: AppAnimations.fast,
+                curve: AppAnimations.toggleCurve,
+                width: effectiveWidth,
+                height: widget.height,
+                padding: widget.padding ?? const EdgeInsets.all(AppSpacing.sm),
+                margin: widget.margin,
+                decoration: BoxDecoration(
+                  color: widget.gradient == null
+                      ? (widget.color ?? themeColors.glassBackground)
+                      : null,
+                  borderRadius: BorderRadius.circular(widget.borderRadius),
+                  border: widget.border ??
+                      Border.all(
+                        color: _isPressed
+                            ? themeColors.glassHighlight
+                            : themeColors.glassBorder,
+                        width: 1.5,
+                      ),
+                  gradient: widget.gradient ??
+                      LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          themeColors.glassHighlight,
+                          themeColors.glassBackground,
+                        ],
+                      ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: UIHelpers.withOpacity(
+                        themeColors.primaryDark,
+                        _isPressed ? 0.2 : 0.15,
+                      ),
+                      blurRadius: _isPressed ? 15 : 20,
+                      offset: Offset(0, _isPressed ? 4 : 8),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: widget.child,
+                child: widget.child,
+              );
+            },
           ),
         ),
       ),
@@ -277,49 +286,58 @@ class _DramaticGlassCardState extends ConsumerState<DramaticGlassCard>
         borderRadius: BorderRadius.circular(AppSpacing.dramaticRadius),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-          child: AnimatedContainer(
-            duration: AppAnimations.fast,
-            curve: AppAnimations.toggleCurve,
-            width: widget.width,
-            height: widget.height,
-            padding: widget.padding ?? const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              gradient: widget.gradient ??
-                  LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      UIHelpers.withOpacity(themeColors.glassHighlight, 0.4),
-                      themeColors.glassBackground,
-                    ],
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Use explicit width if provided, otherwise use parent constraints
+              // This prevents infinite width issues with BackdropFilter
+              final effectiveWidth = widget.width ??
+                  (constraints.maxWidth.isFinite ? constraints.maxWidth : null);
+
+              return AnimatedContainer(
+                duration: AppAnimations.fast,
+                curve: AppAnimations.toggleCurve,
+                width: effectiveWidth,
+                height: widget.height,
+                padding: widget.padding ?? const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  gradient: widget.gradient ??
+                      LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          UIHelpers.withOpacity(themeColors.glassHighlight, 0.4),
+                          themeColors.glassBackground,
+                        ],
+                      ),
+                  borderRadius: BorderRadius.circular(AppSpacing.dramaticRadius),
+                  border: Border.all(
+                    color: _isPressed
+                        ? themeColors.glassHighlight
+                        : themeColors.glassBorder,
+                    width: 2,
                   ),
-              borderRadius: BorderRadius.circular(AppSpacing.dramaticRadius),
-              border: Border.all(
-                color: _isPressed
-                    ? themeColors.glassHighlight
-                    : themeColors.glassBorder,
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: UIHelpers.withOpacity(
-                    themeColors.primaryDark,
-                    _isPressed ? 0.25 : 0.2,
-                  ),
-                  blurRadius: _isPressed ? 30 : 40,
-                  offset: Offset(0, _isPressed ? 15 : 20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: UIHelpers.withOpacity(
+                        themeColors.primaryDark,
+                        _isPressed ? 0.25 : 0.2,
+                      ),
+                      blurRadius: _isPressed ? 30 : 40,
+                      offset: Offset(0, _isPressed ? 15 : 20),
+                    ),
+                    BoxShadow(
+                      color: UIHelpers.withOpacity(
+                        themeColors.primary,
+                        _isPressed ? 0.15 : 0.1,
+                      ),
+                      blurRadius: _isPressed ? 50 : 60,
+                      offset: Offset(0, _isPressed ? 25 : 30),
+                    ),
+                  ],
                 ),
-                BoxShadow(
-                  color: UIHelpers.withOpacity(
-                    themeColors.primary,
-                    _isPressed ? 0.15 : 0.1,
-                  ),
-                  blurRadius: _isPressed ? 50 : 60,
-                  offset: Offset(0, _isPressed ? 25 : 30),
-                ),
-              ],
-            ),
-            child: widget.child,
+                child: widget.child,
+              );
+            },
           ),
         ),
       ),

@@ -3,28 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/config/supabase_config.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/gamification_stats_card.dart';
-import '../../../shared/models/interaction_model.dart';
 import '../../../shared/services/supabase_storage_service.dart';
-import '../../../core/providers/cache_provider.dart';
-import '../../home/providers/home_providers.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/services/error_handler_service.dart';
 import '../widgets/widgets.dart';
 import '../../../shared/utils/ui_helpers.dart';
-import '../../home/widgets/banner_widget.dart';
-
-// Provider for all user interactions (uses cache-first repository pattern)
-final userInteractionsProvider =
-    StreamProvider.family<List<Interaction>, String>((ref, userId) {
-      final repository = ref.watch(interactionsRepositoryProvider);
-      return repository.watchUserInteractions(userId);
-    });
+import '../../../shared/widgets/message_widget.dart';
 
 final supabaseStorageServiceProvider = Provider((ref) => SupabaseStorageService());
 
@@ -52,9 +41,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final userId = user?.id ?? '';
     final themeColors = ref.watch(themeColorsProvider);
 
-    final relativesAsync = ref.watch(relativesStreamProvider(userId));
-    final interactionsAsync = ref.watch(userInteractionsProvider(userId));
-
     return Scaffold(
       body: Semantics(
         label: 'الملف الشخصي',
@@ -81,14 +67,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
               ),
 
-              // Banner (from admin CMS)
+              // Messages (unified: banners + in-app messages)
               const SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: AppSpacing.md,
                     vertical: AppSpacing.sm,
                   ),
-                  child: BannerWidget(position: 'profile'),
+                  child: MessageWidget(screenPath: '/profile'),
                 ),
               ),
 
@@ -121,43 +107,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                   child: GamificationStatsCard(userId: userId, compact: false),
-                ),
-              ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
-
-              // Statistics
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                  child: Text(
-                    '📊 إحصائياتي',
-                    style: AppTypography.headlineMedium.copyWith(
-                      color: themeColors.textOnGradient,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
-
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                  child: relativesAsync.when(
-                    data: (relatives) => interactionsAsync.when(
-                      data: (interactions) => ProfileStatsWidget(
-                        relatives: relatives,
-                        interactions: interactions,
-                        themeColors: themeColors,
-                      ),
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (_, _) => const SizedBox.shrink(),
-                    ),
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (_, _) => const SizedBox.shrink(),
-                  ),
                 ),
               ),
 
@@ -344,4 +293,5 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
     }
   }
+
 }

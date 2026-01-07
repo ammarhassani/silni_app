@@ -11,6 +11,7 @@ import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
+import '../../../shared/widgets/message_widget.dart';
 
 /// Screen displaying all badges and their unlock criteria
 class BadgesScreen extends ConsumerStatefulWidget {
@@ -99,6 +100,15 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
                       ),
                     ],
                   ),
+                ),
+
+                // In-App Messages
+                const Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  child: MessageWidget(screenPath: '/badges'),
                 ),
 
                 // Stats summary

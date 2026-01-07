@@ -15,6 +15,7 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
 import 'badges_screen.dart';
+import '../../../shared/widgets/message_widget.dart';
 
 /// Gaming Center - Main gamification hub with exciting design
 class GamingCenterScreen extends ConsumerStatefulWidget {
@@ -145,6 +146,14 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                             slivers: [
                               // Hero Header
                               SliverToBoxAdapter(child: _buildHeroHeader(themeColors)),
+
+                              // In-App Messages
+                              const SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                                  child: MessageWidget(screenPath: '/gaming-center'),
+                                ),
+                              ),
 
                               // Main Stats Display
                               SliverToBoxAdapter(

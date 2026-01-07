@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_typography.dart';
+import '../../../../core/theme/theme_provider.dart';
 import '../../../../shared/widgets/glass_card.dart';
 
 /// Widget displaying overall user statistics in a grid
-class OverallStatsWidget extends StatelessWidget {
+class OverallStatsWidget extends ConsumerWidget {
   const OverallStatsWidget({
     super.key,
     required this.userStats,
@@ -14,7 +15,9 @@ class OverallStatsWidget extends StatelessWidget {
   final Map<String, dynamic> userStats;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
+
     final points = userStats['points'] ?? 0;
     final level = userStats['level'] ?? 1;
     final currentStreak = userStats['current_streak'] ?? 0;
@@ -31,7 +34,7 @@ class OverallStatsWidget extends StatelessWidget {
             Text(
               'نظرة عامة',
               style: AppTypography.titleLarge.copyWith(
-                color: Colors.white,
+                color: themeColors.textOnGradient,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -48,37 +51,43 @@ class OverallStatsWidget extends StatelessWidget {
                   icon: Icons.star_rounded,
                   value: points.toString(),
                   label: 'النقاط',
-                  color: AppColors.premiumGold,
+                  color: themeColors.secondary,
+                  textColor: themeColors.textOnGradient,
                 ),
                 _StatTile(
                   icon: Icons.workspace_premium_rounded,
                   value: level.toString(),
                   label: 'المستوى',
-                  color: AppColors.islamicGreenPrimary,
+                  color: themeColors.primaryLight,
+                  textColor: themeColors.textOnGradient,
                 ),
                 _StatTile(
                   icon: Icons.local_fire_department_rounded,
                   value: currentStreak.toString(),
                   label: 'السلسلة الحالية',
-                  color: AppColors.energeticRed,
+                  color: themeColors.accent,
+                  textColor: themeColors.textOnGradient,
                 ),
                 _StatTile(
                   icon: Icons.emoji_events_rounded,
                   value: badgesCount.toString(),
                   label: 'الأوسمة',
-                  color: AppColors.joyfulOrange,
+                  color: themeColors.secondary,
+                  textColor: themeColors.textOnGradient,
                 ),
                 _StatTile(
                   icon: Icons.trending_up_rounded,
                   value: longestStreak.toString(),
                   label: 'أطول سلسلة',
-                  color: AppColors.calmBlue,
+                  color: themeColors.primaryLight,
+                  textColor: themeColors.textOnGradient,
                 ),
                 _StatTile(
                   icon: Icons.touch_app_rounded,
                   value: totalInteractions.toString(),
                   label: 'مجموع التفاعلات',
-                  color: AppColors.emotionalPurple,
+                  color: themeColors.accent,
+                  textColor: themeColors.textOnGradient,
                 ),
               ],
             ),
@@ -95,12 +104,14 @@ class _StatTile extends StatelessWidget {
     required this.value,
     required this.label,
     required this.color,
+    required this.textColor,
   });
 
   final IconData icon;
   final String value;
   final String label;
   final Color color;
+  final Color textColor;
 
   @override
   Widget build(BuildContext context) {
@@ -121,7 +132,7 @@ class _StatTile extends StatelessWidget {
             child: Text(
               value,
               style: AppTypography.headlineSmall.copyWith(
-                color: Colors.white,
+                color: textColor,
                 fontWeight: FontWeight.bold,
               ),
               maxLines: 1,
@@ -132,7 +143,9 @@ class _StatTile extends StatelessWidget {
             child: Text(
               label,
               textAlign: TextAlign.center,
-              style: AppTypography.bodySmall.copyWith(color: Colors.white70),
+              style: AppTypography.bodySmall.copyWith(
+                color: textColor.withValues(alpha: 0.7),
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../constants/app_colors.dart';
+import 'cache_config_service.dart';
 
 /// Service for fetching and caching design configuration from admin tables.
 ///
@@ -20,12 +21,13 @@ class DesignConfigService {
   List<AdminPatternAnimation>? _patternAnimationsCache;
   DateTime? _lastFetchTime;
 
-  // Cache duration: 10 minutes (design changes less frequently)
-  static const _cacheDuration = Duration(minutes: 10);
+  // Cache duration from remote config
+  final CacheConfigService _cacheConfig = CacheConfigService();
+  static const String _serviceKey = 'design_config';
 
   bool get _isCacheValid {
     if (_lastFetchTime == null) return false;
-    return DateTime.now().difference(_lastFetchTime!) < _cacheDuration;
+    return !_cacheConfig.isCacheExpired(_serviceKey, _lastFetchTime);
   }
 
   /// Check if config is loaded

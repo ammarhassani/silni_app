@@ -23,6 +23,7 @@ import '../../premium_onboarding/providers/onboarding_provider.dart';
 import '../../premium_onboarding/screens/premium_onboarding_screen.dart';
 import '../providers/home_providers.dart';
 import '../widgets/widgets.dart';
+import '../../../shared/widgets/message_widget.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -343,11 +344,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     const SizedBox(height: AppSpacing.md),
 
                     // Top banner (promotional/announcements)
-                    const BannerWidget(position: 'home_top'),
+                    const MessageWidget(position: 'home_top'),
                     const SizedBox(height: AppSpacing.sm),
 
-                    // Message of the Day
-                    const MOTDWidget(),
+                    // Screen-based messages (MOTD, modals, announcements)
+                    const MessageWidget(screenPath: '/home'),
                     const SizedBox(height: AppSpacing.md),
 
                     // Hadith/Islamic reminder
@@ -434,7 +435,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     const SizedBox(height: AppSpacing.md),
 
                     // Bottom banner (tips/promotions)
-                    const BannerWidget(position: 'home_bottom'),
+                    const MessageWidget(position: 'home_bottom'),
                     const SizedBox(height: AppSpacing.lg),
                   ],
                 ),

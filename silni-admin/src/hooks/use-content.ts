@@ -2,7 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import type { AdminHadith, AdminQuote, AdminMOTD, AdminBanner } from "@/types/database";
+import type { AdminHadith, AdminQuote } from "@/types/database";
+// Note: MOTD and Banners are now managed via unified messaging system (use-in-app-messages.ts)
 import { toast } from "sonner";
 
 const supabase = createClient();
@@ -249,210 +250,60 @@ export function useDeleteQuote() {
   });
 }
 
-// ============ MOTD (Message of the Day) ============
-
-export function useMOTDList(filters?: { type?: string; active?: boolean }) {
-  return useQuery({
-    queryKey: ["admin", "motd", filters],
-    queryFn: async () => {
-      let query = supabase
-        .from("admin_motd")
-        .select("*")
-        .order("display_priority", { ascending: false })
-        .order("created_at", { ascending: false });
-
-      if (filters?.type) {
-        query = query.eq("type", filters.type);
-      }
-      if (filters?.active !== undefined) {
-        query = query.eq("is_active", filters.active);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as AdminMOTD[];
-    },
-  });
-}
-
-export function useCreateMOTD() {
+export function useBulkDeleteQuotes() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (motd: Omit<AdminMOTD, "id" | "created_at" | "updated_at">) => {
-      const { data, error } = await supabase
-        .from("admin_motd")
-        .insert(motd)
-        .select()
-        .single();
-
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from("admin_quotes").delete().in("id", ids);
       if (error) throw error;
-      return data as AdminMOTD;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "motd"] });
-      toast.success("تم إضافة الرسالة بنجاح");
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "quotes"] });
+      toast.success(`تم حذف ${variables.length} اقتباس بنجاح`);
     },
     onError: (error) => {
-      toast.error(`فشل في إضافة الرسالة: ${error.message}`);
+      toast.error(`فشل في الحذف: ${error.message}`);
     },
   });
 }
 
-export function useUpdateMOTD() {
+export function useBulkToggleQuotesActive() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...motd }: Partial<AdminMOTD> & { id: string }) => {
-      const { data, error } = await supabase
-        .from("admin_motd")
-        .update({ ...motd, updated_at: new Date().toISOString() })
-        .eq("id", id)
-        .select()
-        .single();
-
+    mutationFn: async ({ ids, is_active }: { ids: string[]; is_active: boolean }) => {
+      const { error } = await supabase
+        .from("admin_quotes")
+        .update({ is_active })
+        .in("id", ids);
       if (error) throw error;
-      return data as AdminMOTD;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "motd"] });
-      toast.success("تم تحديث الرسالة بنجاح");
+    onSuccess: (_, { ids, is_active }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "quotes"] });
+      toast.success(`تم ${is_active ? "تفعيل" : "تعطيل"} ${ids.length} اقتباس بنجاح`);
     },
     onError: (error) => {
-      toast.error(`فشل في تحديث الرسالة: ${error.message}`);
-    },
-  });
-}
-
-export function useDeleteMOTD() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("admin_motd").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "motd"] });
-      toast.success("تم حذف الرسالة بنجاح");
-    },
-    onError: (error) => {
-      toast.error(`فشل في حذف الرسالة: ${error.message}`);
-    },
-  });
-}
-
-// ============ Banners ============
-
-export function useBannersList(filters?: { position?: string; active?: boolean }) {
-  return useQuery({
-    queryKey: ["admin", "banners", filters],
-    queryFn: async () => {
-      let query = supabase
-        .from("admin_banners")
-        .select("*")
-        .order("display_priority", { ascending: false })
-        .order("created_at", { ascending: false });
-
-      if (filters?.position) {
-        query = query.eq("position", filters.position);
-      }
-      if (filters?.active !== undefined) {
-        query = query.eq("is_active", filters.active);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as AdminBanner[];
-    },
-  });
-}
-
-export function useCreateBanner() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (banner: Omit<AdminBanner, "id" | "created_at" | "updated_at" | "impressions" | "clicks">) => {
-      const { data, error } = await supabase
-        .from("admin_banners")
-        .insert({ ...banner, impressions: 0, clicks: 0 })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as AdminBanner;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "banners"] });
-      toast.success("تم إضافة البانر بنجاح");
-    },
-    onError: (error) => {
-      toast.error(`فشل في إضافة البانر: ${error.message}`);
-    },
-  });
-}
-
-export function useUpdateBanner() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ id, ...banner }: Partial<AdminBanner> & { id: string }) => {
-      const { data, error } = await supabase
-        .from("admin_banners")
-        .update({ ...banner, updated_at: new Date().toISOString() })
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as AdminBanner;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "banners"] });
-      toast.success("تم تحديث البانر بنجاح");
-    },
-    onError: (error) => {
-      toast.error(`فشل في تحديث البانر: ${error.message}`);
-    },
-  });
-}
-
-export function useDeleteBanner() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("admin_banners").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "banners"] });
-      toast.success("تم حذف البانر بنجاح");
-    },
-    onError: (error) => {
-      toast.error(`فشل في حذف البانر: ${error.message}`);
+      toast.error(`فشل في تحديث الحالة: ${error.message}`);
     },
   });
 }
 
 // ============ Content Stats ============
+// Note: MOTD and Banners are now part of unified messaging system
 
 export function useContentStats() {
   return useQuery({
     queryKey: ["admin", "content-stats"],
     queryFn: async () => {
-      const [hadithRes, quotesRes, motdRes, bannersRes] = await Promise.all([
+      const [hadithRes, quotesRes] = await Promise.all([
         supabase.from("admin_hadith").select("*", { count: "exact", head: true }),
         supabase.from("admin_quotes").select("*", { count: "exact", head: true }),
-        supabase.from("admin_motd").select("*", { count: "exact", head: true }).eq("is_active", true),
-        supabase.from("admin_banners").select("*", { count: "exact", head: true }).eq("is_active", true),
       ]);
 
       return {
         hadithCount: hadithRes.count || 0,
         quotesCount: quotesRes.count || 0,
-        activeMOTD: motdRes.count || 0,
-        activeBanners: bannersRes.count || 0,
       };
     },
     staleTime: 30000, // 30 seconds

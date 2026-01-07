@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'cache_config_service.dart';
+
 /// Model for route category from admin_route_categories table
 class RouteCategory {
   final String id;
@@ -92,7 +94,7 @@ class AppRouteConfig {
 }
 
 /// Service for fetching and caching app routes from Supabase
-/// Used by BannerWidget and MOTDWidget for action_route navigation
+/// Used by MessageWidget for CTA route navigation
 class AppRoutesConfigService {
   AppRoutesConfigService._();
   static final AppRoutesConfigService instance = AppRoutesConfigService._();
@@ -104,8 +106,9 @@ class AppRoutesConfigService {
   List<RouteCategory>? _categoriesCache;
   DateTime? _lastFetchTime;
 
-  // Cache duration: 10 minutes (routes don't change often)
-  static const _cacheDuration = Duration(minutes: 10);
+  // Cache duration from remote config
+  final CacheConfigService _cacheConfig = CacheConfigService();
+  static const String _serviceKey = 'app_routes_config';
 
   /// Initialize the service by loading routes
   Future<void> initialize() async {
@@ -232,7 +235,7 @@ class AppRoutesConfigService {
 
   bool get _isCacheValid {
     if (_lastFetchTime == null) return false;
-    return DateTime.now().difference(_lastFetchTime!) < _cacheDuration;
+    return !_cacheConfig.isCacheExpired(_serviceKey, _lastFetchTime);
   }
 
   bool get isLoaded => _routesCache != null;

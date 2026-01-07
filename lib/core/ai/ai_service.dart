@@ -21,6 +21,7 @@ abstract class AIService {
     required String systemPrompt,
     double temperature = 0.7,
     int maxTokens = 2048,
+    int? timeoutSeconds,
   });
 
   /// Generate communication script for a scenario

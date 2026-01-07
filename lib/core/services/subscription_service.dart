@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:purchases_flutter/purchases_flutter.dart' as rc;
 
 import '../config/env/app_environment.dart';
+import '../config/supabase_config.dart';
 import '../models/subscription_tier.dart';
 import '../models/subscription_state.dart';
 import 'app_logger_service.dart';
@@ -153,6 +154,9 @@ class SubscriptionService {
 
       // Initial fetch
       await refreshSubscriptionStatus();
+
+      // Sync to Supabase on init (ensures DB is up to date)
+      await _syncSubscriptionToSupabase(_currentState);
 
       _isInitialized = true;
 
@@ -466,6 +470,8 @@ class SubscriptionService {
   // =====================================================
 
   void _updateState(SubscriptionState state) {
+    final tierChanged = state.tier != _currentState.tier;
+
     _logger.info(
       'Updating subscription state',
       category: LogCategory.service,
@@ -480,6 +486,55 @@ class SubscriptionService {
     );
     _currentState = state;
     _stateController.add(state);
+
+    // Sync to Supabase when tier changes (and not loading)
+    if (tierChanged && !state.isLoading) {
+      _syncSubscriptionToSupabase(state);
+    }
+  }
+
+  /// Force sync current subscription to Supabase (public method)
+  Future<void> syncToSupabase() async {
+    await _syncSubscriptionToSupabase(_currentState);
+  }
+
+  /// Sync subscription status to Supabase
+  Future<void> _syncSubscriptionToSupabase(SubscriptionState state) async {
+    try {
+      final supabase = SupabaseConfig.client;
+      final userId = supabase.auth.currentUser?.id;
+
+      if (userId == null) {
+        _logger.warning(
+          'Cannot sync subscription - no user logged in',
+          category: LogCategory.service,
+          tag: 'SubscriptionService',
+        );
+        return;
+      }
+
+      final status = state.tier == SubscriptionTier.max ? 'premium' : 'free';
+
+      await supabase.from('users').update({
+        'subscription_status': status,
+        'trial_started_at': state.isTrialActive ? DateTime.now().toIso8601String() : null,
+        'trial_used': state.isTrialActive ? false : null,
+      }).eq('id', userId);
+
+      _logger.info(
+        'Subscription synced to Supabase',
+        category: LogCategory.service,
+        tag: 'SubscriptionService',
+        metadata: {'userId': userId, 'status': status},
+      );
+    } catch (e) {
+      _logger.error(
+        'Failed to sync subscription to Supabase',
+        category: LogCategory.service,
+        tag: 'SubscriptionService',
+        metadata: {'error': e.toString()},
+      );
+    }
   }
 
   /// Clear any error state

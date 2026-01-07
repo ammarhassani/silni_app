@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'cache_config_service.dart';
 
 /// Model for feature configuration from admin_features table
 class FeatureConfig {
@@ -168,8 +169,9 @@ class FeatureConfigService {
   TrialConfig? _trialConfigCache;
   DateTime? _lastFetchTime;
 
-  // Cache duration: 5 minutes
-  static const _cacheDuration = Duration(minutes: 5);
+  // Cache duration from remote config
+  final CacheConfigService _cacheConfig = CacheConfigService();
+  static const String _serviceKey = 'feature_config';
 
   /// Get all feature configurations
   Future<List<FeatureConfig>> getFeatures({bool forceRefresh = false}) async {
@@ -348,7 +350,7 @@ class FeatureConfigService {
 
   bool get _isCacheValid {
     if (_lastFetchTime == null) return false;
-    return DateTime.now().difference(_lastFetchTime!) < _cacheDuration;
+    return !_cacheConfig.isCacheExpired(_serviceKey, _lastFetchTime);
   }
 
   /// Sync method to check feature access (uses cache, for use in providers)

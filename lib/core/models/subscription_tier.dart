@@ -72,6 +72,17 @@ extension SubscriptionTierExtension on SubscriptionTier {
   // =====================================================
 
   /// Reminder limit per tier (-1 = unlimited)
+  ///
+  /// **IMPORTANT**: This is a hardcoded fallback value. For the actual
+  /// reminder limit that respects admin configuration, use:
+  /// ```dart
+  /// final limit = ref.watch(dynamicReminderLimitProvider);
+  /// ```
+  /// The [dynamicReminderLimitProvider] in `feature_config_provider.dart`
+  /// checks `admin_subscription_tiers.reminder_limit` first, falling back
+  /// to this value only when admin config is unavailable.
+  ///
+  /// Do NOT use this getter directly for limit enforcement.
   int get reminderLimit => switch (this) {
     SubscriptionTier.free => 3,
     SubscriptionTier.max => -1, // Unlimited

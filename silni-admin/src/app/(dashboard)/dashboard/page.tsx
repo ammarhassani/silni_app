@@ -11,8 +11,6 @@ import {
   Brain,
   CreditCard,
   Quote,
-  MessageSquare,
-  Image,
   Award,
   TrendingUp,
   Target,
@@ -32,10 +30,20 @@ import {
   XCircle,
   AlertCircle,
   Activity,
+  Users,
+  UserPlus,
+  Zap,
+  CalendarDays,
+  History,
+  ArrowUpRight,
+  MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
 import { useDashboardStats, useSystemHealth, useRecentActivity } from "@/hooks/use-dashboard";
-import { formatDistanceToNow } from "date-fns";
+import { useDashboardOverview, useSubscriptionDistribution } from "@/hooks/use-analytics";
+import { useAuditLogs, actionLabels, actionColors, resourceLabels, AuditLogEntry } from "@/hooks/use-audit-log";
+import { useCalendarEvents, eventTypeLabels, eventTypeColors, CalendarEvent } from "@/hooks/use-calendar";
+import { formatDistanceToNow, format } from "date-fns";
 import { ar } from "date-fns/locale";
 
 interface ModuleCard {
@@ -52,10 +60,23 @@ export default function DashboardPage() {
   const { data: health, isLoading: healthLoading } = useSystemHealth();
   const { data: activity, isLoading: activityLoading } = useRecentActivity();
 
+  // New analytics hooks
+  const { data: overview, isLoading: overviewLoading } = useDashboardOverview();
+  const { data: subscriptionDist, isLoading: subscriptionLoading } = useSubscriptionDistribution();
+  const { data: auditLogs, isLoading: auditLoading } = useAuditLogs({ limit: 5 });
+
+  // Calendar for upcoming content
+  const today = new Date();
+  const endDate = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate());
+  const { data: upcomingContent, isLoading: calendarLoading } = useCalendarEvents(
+    today.toISOString(),
+    endDate.toISOString()
+  );
+
   const modules: ModuleCard[] = [
     {
       title: "إدارة المحتوى",
-      description: "إدارة الأحاديث والاقتباسات ورسالة اليوم والبانرات",
+      description: "إدارة الأحاديث والاقتباسات والرسائل",
       icon: BookOpen,
       href: "/content/hadith",
       color: "bg-blue-500/10 text-blue-500",
@@ -63,8 +84,7 @@ export default function DashboardPage() {
         ? [
             { label: "أحاديث", value: stats.content.hadithCount },
             { label: "اقتباسات", value: stats.content.quotesCount },
-            { label: "MOTD نشط", value: stats.content.activeMOTD },
-            { label: "بانرات", value: stats.content.activeBanners },
+            { label: "رسائل", value: stats.content.messagesCount },
           ]
         : undefined,
     },
@@ -170,7 +190,123 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Summary Stats */}
+      {/* Live User Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <Card className="bg-gradient-to-br from-silni-teal/10 to-silni-teal/5 border-silni-teal/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">إجمالي المستخدمين</p>
+                {overviewLoading ? (
+                  <Skeleton className="h-8 w-16 mt-1" />
+                ) : (
+                  <p className="text-2xl font-bold text-silni-teal">
+                    {overview?.total_users?.toLocaleString() || 0}
+                  </p>
+                )}
+              </div>
+              <Users className="h-8 w-8 text-silni-teal" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">مستخدمون جدد اليوم</p>
+                {overviewLoading ? (
+                  <Skeleton className="h-8 w-16 mt-1" />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <p className="text-2xl font-bold text-green-600">
+                      +{overview?.new_users_today || 0}
+                    </p>
+                    {(overview?.new_users_today || 0) > 0 && (
+                      <ArrowUpRight className="h-4 w-4 text-green-500" />
+                    )}
+                  </div>
+                )}
+              </div>
+              <UserPlus className="h-8 w-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">نشطون اليوم</p>
+                {overviewLoading ? (
+                  <Skeleton className="h-8 w-16 mt-1" />
+                ) : (
+                  <p className="text-2xl font-bold text-blue-600">
+                    {overview?.active_users_today || 0}
+                  </p>
+                )}
+              </div>
+              <Zap className="h-8 w-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-silni-gold/10 to-silni-gold/5 border-silni-gold/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">مشتركون مدفوع</p>
+                {subscriptionLoading ? (
+                  <Skeleton className="h-8 w-16 mt-1" />
+                ) : (
+                  <p className="text-2xl font-bold text-silni-gold">
+                    {subscriptionDist?.premium || 0}
+                  </p>
+                )}
+              </div>
+              <Crown className="h-8 w-8 text-silni-gold" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">تجربة مجانية</p>
+                {subscriptionLoading ? (
+                  <Skeleton className="h-8 w-16 mt-1" />
+                ) : (
+                  <p className="text-2xl font-bold">
+                    {subscriptionDist?.trial || 0}
+                  </p>
+                )}
+              </div>
+              <Package className="h-8 w-8 text-purple-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">إجمالي التفاعلات</p>
+                {overviewLoading ? (
+                  <Skeleton className="h-8 w-16 mt-1" />
+                ) : (
+                  <p className="text-2xl font-bold">
+                    {overview?.total_interactions?.toLocaleString() || 0}
+                  </p>
+                )}
+              </div>
+              <Activity className="h-8 w-8 text-orange-500" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Admin Config Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6">
@@ -181,7 +317,7 @@ export default function DashboardPage() {
                   <Skeleton className="h-8 w-16 mt-1" />
                 ) : (
                   <p className="text-2xl font-bold">
-                    {(stats?.content.hadithCount || 0) + (stats?.content.quotesCount || 0)}
+                    {(stats?.content.hadithCount || 0) + (stats?.content.quotesCount || 0) + (stats?.content.messagesCount || 0)}
                   </p>
                 )}
               </div>
@@ -288,6 +424,138 @@ export default function DashboardPage() {
             </Link>
           ))}
         </div>
+      </div>
+
+      {/* Upcoming Content & Audit Logs Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Upcoming Scheduled Content */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CalendarDays className="h-5 w-5" />
+              المحتوى القادم
+            </CardTitle>
+            <Link href="/content/calendar">
+              <Badge variant="outline" className="cursor-pointer hover:bg-accent">
+                عرض التقويم
+              </Badge>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {calendarLoading ? (
+                [...Array(4)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Skeleton className="w-2 h-10" />
+                    <div className="flex-1">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2 mt-1" />
+                    </div>
+                  </div>
+                ))
+              ) : upcomingContent && upcomingContent.length > 0 ? (
+                upcomingContent
+                  .filter((e: CalendarEvent) => new Date(e.start_date) >= new Date())
+                  .sort((a: CalendarEvent, b: CalendarEvent) =>
+                    new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+                  )
+                  .slice(0, 5)
+                  .map((event: CalendarEvent) => (
+                    <div
+                      key={event.id}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50"
+                    >
+                      <div className={`w-1 h-10 rounded-full ${eventTypeColors[event.type]}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{event.title}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <Badge variant="secondary" className="text-[10px]">
+                            {eventTypeLabels[event.type]}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(event.start_date), "d MMM", { locale: ar })}
+                          </span>
+                        </div>
+                      </div>
+                      {!event.is_active && (
+                        <Badge variant="outline" className="text-xs">معطل</Badge>
+                      )}
+                    </div>
+                  ))
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  <CalendarDays className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>لا يوجد محتوى مجدول</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Audit Logs */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <History className="h-5 w-5" />
+              سجل العمليات
+            </CardTitle>
+            <Link href="/settings/audit">
+              <Badge variant="outline" className="cursor-pointer hover:bg-accent">
+                عرض السجل
+              </Badge>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {auditLoading ? (
+                [...Array(4)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Skeleton className="w-8 h-8 rounded" />
+                    <div className="flex-1">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-3 w-20 mt-1" />
+                    </div>
+                  </div>
+                ))
+              ) : auditLogs && auditLogs.length > 0 ? (
+                auditLogs.map((log: AuditLogEntry) => (
+                  <div
+                    key={log.id}
+                    className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50"
+                  >
+                    <Badge
+                      variant="outline"
+                      className={`text-xs shrink-0 ${actionColors[log.action]}`}
+                    >
+                      {actionLabels[log.action]}
+                    </Badge>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm truncate">
+                        {log.resource_name || resourceLabels[log.resource_type]}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-muted-foreground truncate">
+                          {log.admin_email?.split("@")[0] || "نظام"}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(log.created_at), {
+                            addSuffix: true,
+                            locale: ar,
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  <History className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>لا توجد عمليات مسجلة</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -444,8 +712,7 @@ export default function DashboardPage() {
             {[
               { icon: BookOpen, label: "أحاديث", href: "/content/hadith" },
               { icon: Quote, label: "اقتباسات", href: "/content/quotes" },
-              { icon: MessageSquare, label: "رسالة اليوم", href: "/content/motd" },
-              { icon: Image, label: "بانرات", href: "/content/banners" },
+              { icon: MessageSquare, label: "رسائل", href: "/engagement/messages" },
               { icon: Award, label: "أوسمة", href: "/gamification/badges" },
               { icon: TrendingUp, label: "مستويات", href: "/gamification/levels" },
               { icon: Target, label: "تحديات", href: "/gamification/challenges" },

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_typography.dart';
 import '../../../../core/services/gamification_config_service.dart';
+import '../../../../core/theme/app_themes.dart';
+import '../../../../core/theme/theme_provider.dart';
 import '../../../../shared/widgets/glass_card.dart';
 
 /// Widget showing progress towards various milestones
-class MilestonesProgress extends StatelessWidget {
+class MilestonesProgress extends ConsumerWidget {
   const MilestonesProgress({
     super.key,
     required this.userStats,
@@ -26,37 +28,43 @@ class MilestonesProgress extends StatelessWidget {
     return nextLevelXp > 0 ? nextLevelXp : 15000; // Fallback
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final points = userStats['points'] ?? 0;
-    final totalInteractions = userStats['total_interactions'] ?? 0;
-    final currentStreak = userStats['current_streak'] ?? 0;
-    // Recalculate correct level from points (in case DB is out of sync)
-    final calculatedLevel = GamificationConfigService.instance.calculateLevel(points);
-
-    final milestones = [
+  List<_MilestoneData> _buildMilestones(ThemeColors themeColors, int points, int currentStreak, int totalInteractions, int calculatedLevel) {
+    return [
       _MilestoneData(
         title: 'المستوى التالي',
         current: points,
         target: _getNextLevelPoints(calculatedLevel),
         icon: Icons.workspace_premium_rounded,
-        color: AppColors.premiumGold,
+        color: themeColors.secondary,
       ),
       _MilestoneData(
         title: 'سلسلة 7 أيام',
         current: currentStreak,
         target: 7,
         icon: Icons.local_fire_department_rounded,
-        color: AppColors.energeticRed,
+        color: themeColors.accent,
       ),
       _MilestoneData(
         title: '100 تفاعل',
         current: totalInteractions,
         target: 100,
         icon: Icons.touch_app_rounded,
-        color: AppColors.islamicGreenPrimary,
+        color: themeColors.primaryLight,
       ),
     ];
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
+
+    final points = userStats['points'] ?? 0;
+    final totalInteractions = userStats['total_interactions'] ?? 0;
+    final currentStreak = userStats['current_streak'] ?? 0;
+    // Recalculate correct level from points (in case DB is out of sync)
+    final calculatedLevel = GamificationConfigService.instance.calculateLevel(points);
+
+    final milestones = _buildMilestones(themeColors, points, currentStreak, totalInteractions, calculatedLevel);
 
     return GlassCard(
       child: Padding(
@@ -67,13 +75,16 @@ class MilestonesProgress extends StatelessWidget {
             Text(
               'تقدم الإنجازات',
               style: AppTypography.titleLarge.copyWith(
-                color: Colors.white,
+                color: themeColors.textOnGradient,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: AppSpacing.md),
             ...milestones.map(
-              (milestone) => _MilestoneProgressItem(milestone: milestone),
+              (milestone) => _MilestoneProgressItem(
+                milestone: milestone,
+                textColor: themeColors.textOnGradient,
+              ),
             ),
           ],
         ),
@@ -101,9 +112,11 @@ class _MilestoneData {
 class _MilestoneProgressItem extends StatelessWidget {
   const _MilestoneProgressItem({
     required this.milestone,
+    required this.textColor,
   });
 
   final _MilestoneData milestone;
+  final Color textColor;
 
   @override
   Widget build(BuildContext context) {
@@ -122,14 +135,16 @@ class _MilestoneProgressItem extends StatelessWidget {
               Text(
                 milestone.title,
                 style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white,
+                  color: textColor,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const Spacer(),
               Text(
                 '${milestone.current}/${milestone.target}',
-                style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+                style: AppTypography.bodyMedium.copyWith(
+                  color: textColor.withValues(alpha: 0.7),
+                ),
               ),
             ],
           ),
@@ -138,7 +153,7 @@ class _MilestoneProgressItem extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
               value: clampedProgress,
-              backgroundColor: Colors.white.withValues(alpha: 0.2),
+              backgroundColor: textColor.withValues(alpha: 0.2),
               valueColor: AlwaysStoppedAnimation<Color>(milestone.color),
               minHeight: 8,
             ),
