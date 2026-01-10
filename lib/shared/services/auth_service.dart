@@ -211,7 +211,7 @@ class AuthService {
       return response;
     } on AuthException catch (e, stackTrace) {
       logger.error(
-        'AuthException during sign up',
+        'AuthException during sign up: ${e.message} (code: ${e.statusCode})',
         category: LogCategory.auth,
         tag: 'signUpWithEmail',
         metadata: {'message': e.message, 'statusCode': e.statusCode},
@@ -438,6 +438,15 @@ class AuthService {
         }
       }
 
+      // Save credentials for biometric re-login (Face ID)
+      if (response.session?.refreshToken != null && response.user != null) {
+        await _sessionPersistence.saveBiometricCredentials(
+          refreshToken: response.session!.refreshToken!,
+          userEmail: response.user!.email ?? email,
+          userId: response.user!.id,
+        );
+      }
+
       logger.info(
         'Sign in successful',
         category: LogCategory.auth,
@@ -562,7 +571,7 @@ class AuthService {
       await _sessionPersistence.markUserLoggedOut();
 
       logger.info(
-        'Sign out successful',
+        'Sign out successful (biometric re-login still available)',
         category: LogCategory.auth,
         tag: 'signOut',
       );
@@ -571,6 +580,150 @@ class AuthService {
         'Sign out error',
         category: LogCategory.auth,
         tag: 'signOut',
+        metadata: {'error': e.toString()},
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  /// Sign out completely - clears all saved credentials including biometric
+  /// Use this for "Remove saved login" or "Sign out from all devices" option
+  Future<void> signOutCompletely() async {
+    final logger = AppLoggerService();
+
+    try {
+      logger.info(
+        'Complete sign out starting (clearing all saved credentials)',
+        category: LogCategory.auth,
+        tag: 'signOutCompletely',
+      );
+
+      // First do regular sign out
+      await signOut();
+
+      // Then clear all biometric data
+      await _sessionPersistence.clearAllBiometricData();
+
+      logger.info(
+        'Complete sign out successful - all saved credentials cleared',
+        category: LogCategory.auth,
+        tag: 'signOutCompletely',
+      );
+    } catch (e, stackTrace) {
+      logger.error(
+        'Complete sign out error',
+        category: LogCategory.auth,
+        tag: 'signOutCompletely',
+        metadata: {'error': e.toString()},
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  /// Re-authenticate using saved refresh token (for biometric login after logout)
+  /// Returns null if no saved credentials, throws AuthException if token is invalid/expired
+  Future<AuthResponse?> authenticateWithSavedCredentials() async {
+    final logger = AppLoggerService();
+
+    logger.info(
+      'Biometric re-authentication starting',
+      category: LogCategory.auth,
+      tag: 'authenticateWithSavedCredentials',
+    );
+
+    final credentials = await _sessionPersistence.getBiometricCredentials();
+    if (credentials == null || credentials['refreshToken'] == null) {
+      logger.warning(
+        'No saved biometric credentials found',
+        category: LogCategory.auth,
+        tag: 'authenticateWithSavedCredentials',
+      );
+      return null;
+    }
+
+    try {
+      logger.debug(
+        'Attempting to restore session with saved refresh token',
+        category: LogCategory.auth,
+        tag: 'authenticateWithSavedCredentials',
+        metadata: {'savedEmail': credentials['email']},
+      );
+
+      // Use setSession to restore from refresh token
+      final response = await _supabase.auth.setSession(credentials['refreshToken']!);
+
+      if (response.session != null && response.user != null) {
+        // Update stored refresh token (it might have changed)
+        await _sessionPersistence.saveBiometricCredentials(
+          refreshToken: response.session!.refreshToken!,
+          userEmail: response.user?.email ?? credentials['email'] ?? '',
+          userId: response.user?.id ?? credentials['userId'] ?? '',
+        );
+        await _sessionPersistence.markUserLoggedIn(response.user!.id);
+
+        // Register FCM token
+        try {
+          final unifiedNotifications = UnifiedNotificationService();
+          await unifiedNotifications.onLogin();
+        } catch (e) {
+          logger.warning(
+            'Failed to register FCM token on biometric re-login',
+            category: LogCategory.auth,
+            tag: 'authenticateWithSavedCredentials',
+            metadata: {'error': e.toString()},
+          );
+        }
+
+        // Sync subscription state with RevenueCat
+        try {
+          await SubscriptionService.instance.setUserId(response.user!.id);
+        } catch (e) {
+          logger.warning(
+            'Failed to sync subscription on biometric re-login',
+            category: LogCategory.auth,
+            tag: 'authenticateWithSavedCredentials',
+            metadata: {'error': e.toString()},
+          );
+        }
+
+        logger.info(
+          'Biometric re-authentication successful',
+          category: LogCategory.auth,
+          tag: 'authenticateWithSavedCredentials',
+          metadata: {'userId': response.user?.id},
+        );
+      }
+
+      return response;
+    } on AuthException catch (e, stackTrace) {
+      logger.error(
+        'Biometric re-authentication failed: ${e.message}',
+        category: LogCategory.auth,
+        tag: 'authenticateWithSavedCredentials',
+        metadata: {'message': e.message, 'statusCode': e.statusCode},
+        stackTrace: stackTrace,
+      );
+
+      // Refresh token expired or invalid - clear saved credentials
+      final lowerMessage = e.message.toLowerCase();
+      if (lowerMessage.contains('invalid') ||
+          lowerMessage.contains('expired') ||
+          lowerMessage.contains('not found')) {
+        await _sessionPersistence.clearAllBiometricData();
+        logger.info(
+          'Cleared invalid biometric credentials',
+          category: LogCategory.auth,
+          tag: 'authenticateWithSavedCredentials',
+        );
+      }
+      rethrow;
+    } catch (e, stackTrace) {
+      logger.error(
+        'Unexpected error during biometric re-authentication',
+        category: LogCategory.auth,
+        tag: 'authenticateWithSavedCredentials',
         metadata: {'error': e.toString()},
         stackTrace: stackTrace,
       );
@@ -819,6 +972,15 @@ class AuthService {
           metadata: {'error': e.toString()},
         );
       }
+
+      // Save credentials for biometric re-login (Face ID)
+      if (response.session?.refreshToken != null) {
+        await _sessionPersistence.saveBiometricCredentials(
+          refreshToken: response.session!.refreshToken!,
+          userEmail: response.user!.email ?? '',
+          userId: response.user!.id,
+        );
+      }
     }
 
     return response;
@@ -938,6 +1100,15 @@ class AuthService {
             category: LogCategory.auth,
             tag: 'signInWithApple',
             metadata: {'error': e.toString()},
+          );
+        }
+
+        // Save credentials for biometric re-login (Face ID)
+        if (response.session?.refreshToken != null) {
+          await _sessionPersistence.saveBiometricCredentials(
+            refreshToken: response.session!.refreshToken!,
+            userEmail: response.user!.email ?? '',
+            userId: response.user!.id,
           );
         }
       }
@@ -1216,6 +1387,17 @@ class AuthService {
     } else if (lowerMessage.contains('network') ||
         lowerMessage.contains('connection')) {
       return 'خطأ في الاتصال بالإنترنت';
+    } else if (lowerMessage.contains('signup_disabled') ||
+        lowerMessage.contains('signup is disabled') ||
+        lowerMessage.contains('signups not allowed')) {
+      return 'التسجيل معطل حالياً';
+    } else if (lowerMessage.contains('database error') ||
+        lowerMessage.contains('unexpected_failure') ||
+        lowerMessage.contains('internal server error')) {
+      return 'خطأ في الخادم. يرجى المحاولة لاحقاً';
+    } else if (lowerMessage.contains('captcha') ||
+        lowerMessage.contains('verification')) {
+      return 'فشل التحقق. يرجى المحاولة مرة أخرى';
     } else {
       return 'حدث خطأ ما. يرجى المحاولة مرة أخرى';
     }

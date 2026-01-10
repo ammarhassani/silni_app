@@ -14,6 +14,7 @@ import '../../../shared/models/interaction_model.dart';
 import '../../../shared/services/relatives_service.dart';
 import '../../../shared/services/auth_service.dart';
 import '../../../core/services/error_handler_service.dart';
+import '../../../core/providers/subscription_provider.dart';
 import '../widgets/detail/widgets.dart';
 import '../../../shared/utils/ui_helpers.dart';
 
@@ -94,6 +95,12 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                           InteractionType.event,
                           'تسجيل مناسبة',
                           'ما هي المناسبة؟ (اختياري)',
+                        ),
+                        isMaxUser: ref.watch(isMaxProvider),
+                        onConversationStarters: () => AIConversationStartersSheet.show(
+                          context,
+                          ref,
+                          relative,
                         ),
                       ),
                     ),
@@ -191,10 +198,10 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
     final notesController = TextEditingController();
 
     final buttonColor = type == InteractionType.visit
-        ? Colors.teal
+        ? themeColors.statusInfo
         : type == InteractionType.gift
-            ? Colors.pink
-            : Colors.orange;
+            ? themeColors.secondary
+            : themeColors.statusWarning;
 
     final iconData = type == InteractionType.visit
         ? Icons.home_rounded
@@ -256,7 +263,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
             child: Text(
               'تسجيل',
               style: AppTypography.labelLarge.copyWith(
-                color: Colors.white,
+                color: themeColors.onPrimary,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -354,7 +361,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        icon: const Icon(Icons.warning_rounded, color: Colors.red, size: 32),
+        icon: Icon(Icons.warning_rounded, color: themeColors.statusError, size: 32),
         title: Text(
           'تأكيد الحذف',
           style: AppTypography.titleLarge.copyWith(
@@ -394,14 +401,14 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.1),
+                  color: themeColors.statusError.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                  border: Border.all(color: themeColors.statusError.withValues(alpha: 0.3)),
                 ),
                 child: Text(
                   'هذا الإجراء لا يمكن التراجع عنه',
                   style: AppTypography.bodySmall.copyWith(
-                    color: Colors.red,
+                    color: themeColors.statusError,
                     fontWeight: FontWeight.bold,
                   ),
                   textAlign: TextAlign.center,
@@ -421,12 +428,12 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
           ElevatedButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: themeColors.statusError,
             ),
             child: Text(
               'حذف',
               style: AppTypography.labelLarge.copyWith(
-                color: Colors.white,
+                color: themeColors.onPrimary,
                 fontWeight: FontWeight.bold,
               ),
             ),

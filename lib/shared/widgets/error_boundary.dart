@@ -2,11 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
-import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/services/app_logger_service.dart';
 import 'gradient_button.dart';
+
+// Fallback error color for widgets that don't have theme context
+const _kErrorColor = Color(0xFFE53935);
 
 /// Error boundary widget that catches errors in child widgets
 /// and displays a user-friendly error UI instead of crashing
@@ -82,7 +84,7 @@ class ErrorBoundaryFallback extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   decoration: BoxDecoration(
-                    color: AppColors.error.withValues(alpha: 0.2),
+                    color: _kErrorColor.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -209,12 +211,12 @@ class _DebugErrorWidget extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.error.withValues(alpha: 0.2),
+                        color: _kErrorColor.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
                         Icons.bug_report_rounded,
-                        color: AppColors.error,
+                        color: _kErrorColor,
                         size: 24,
                       ),
                     ),
@@ -237,7 +239,7 @@ class _DebugErrorWidget extends StatelessWidget {
                 _buildSection(
                   'Exception',
                   details.exception.runtimeType.toString(),
-                  AppColors.error,
+                  _kErrorColor,
                 ),
 
                 // Error message

@@ -89,7 +89,7 @@ class SettingsScreen extends ConsumerWidget {
                             Text(
                               'المظهر',
                               style: AppTypography.titleLarge.copyWith(
-                                color: Colors.white,
+                                color: themeColors.textOnGradient,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -99,7 +99,7 @@ class SettingsScreen extends ConsumerWidget {
                         Text(
                           'اختر المظهر المفضل لديك',
                           style: AppTypography.bodyMedium.copyWith(
-                            color: Colors.white70,
+                            color: themeColors.textOnGradient.withValues(alpha: 0.7),
                           ),
                         ),
                         const SizedBox(height: AppSpacing.lg),
@@ -115,16 +115,16 @@ class SettingsScreen extends ConsumerWidget {
                   // Profile
                   GlassCard(
                     child: ListTile(
-                      leading: const Icon(Icons.person, color: Colors.white),
+                      leading: Icon(Icons.person, color: themeColors.textOnGradient),
                       title: Text(
                         'الملف الشخصي',
                         style: AppTypography.titleMedium.copyWith(
-                          color: Colors.white,
+                          color: themeColors.textOnGradient,
                         ),
                       ),
                       trailing: Icon(
                         Icons.arrow_forward_ios_rounded,
-                        color: Colors.white.withValues(alpha: 0.5),
+                        color: themeColors.textOnGradient.withValues(alpha: 0.5),
                         size: 20,
                       ),
                       onTap: () {
@@ -137,19 +137,19 @@ class SettingsScreen extends ConsumerWidget {
                   // Notifications
                   GlassCard(
                     child: ListTile(
-                      leading: const Icon(
+                      leading: Icon(
                         Icons.notifications,
-                        color: Colors.white,
+                        color: themeColors.textOnGradient,
                       ),
                       title: Text(
                         'الإشعارات',
                         style: AppTypography.titleMedium.copyWith(
-                          color: Colors.white,
+                          color: themeColors.textOnGradient,
                         ),
                       ),
                       trailing: Icon(
                         Icons.arrow_forward_ios_rounded,
-                        color: Colors.white.withValues(alpha: 0.5),
+                        color: themeColors.textOnGradient.withValues(alpha: 0.5),
                         size: 20,
                       ),
                       onTap: () {
@@ -162,16 +162,16 @@ class SettingsScreen extends ConsumerWidget {
                   // Change Password
                   GlassCard(
                     child: ListTile(
-                      leading: const Icon(Icons.lock_outline, color: Colors.white),
+                      leading: Icon(Icons.lock_outline, color: themeColors.textOnGradient),
                       title: Text(
                         'تغيير كلمة المرور',
                         style: AppTypography.titleMedium.copyWith(
-                          color: Colors.white,
+                          color: themeColors.textOnGradient,
                         ),
                       ),
                       trailing: Icon(
                         Icons.arrow_forward_ios_rounded,
-                        color: Colors.white.withValues(alpha: 0.5),
+                        color: themeColors.textOnGradient.withValues(alpha: 0.5),
                         size: 20,
                       ),
                       onTap: () => _showChangePasswordDialog(context, ref),
@@ -182,11 +182,11 @@ class SettingsScreen extends ConsumerWidget {
                   // Logout
                   GlassCard(
                     child: ListTile(
-                      leading: const Icon(Icons.logout, color: Colors.white),
+                      leading: Icon(Icons.logout, color: themeColors.textOnGradient),
                       title: Text(
                         'تسجيل الخروج',
                         style: AppTypography.titleMedium.copyWith(
-                          color: Colors.white,
+                          color: themeColors.textOnGradient,
                         ),
                       ),
                       onTap: () async {
@@ -265,7 +265,7 @@ class SettingsScreen extends ConsumerWidget {
                         Text(
                           'الاشتراك',
                           style: AppTypography.titleLarge.copyWith(
-                            color: Colors.white,
+                            color: themeColors.textOnGradient,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -297,7 +297,7 @@ class SettingsScreen extends ConsumerWidget {
                               ? 'ترقية للحصول على ميزات أكثر'
                               : currentTier.arabicDescription,
                       style: AppTypography.bodySmall.copyWith(
-                        color: Colors.white70,
+                        color: themeColors.textOnGradient.withValues(alpha: 0.7),
                       ),
                     ),
                     // Show expiration date for paid users
@@ -306,7 +306,7 @@ class SettingsScreen extends ConsumerWidget {
                       Text(
                         'ينتهي في: ${_formatDate(expirationDate)}',
                         style: AppTypography.labelSmall.copyWith(
-                          color: Colors.white54,
+                          color: themeColors.textOnGradient.withValues(alpha: 0.54),
                         ),
                       ),
                     ],
@@ -353,12 +353,12 @@ class SettingsScreen extends ConsumerWidget {
                 // Manage subscription button
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _openSubscriptionManagement(context),
+                    onPressed: () => _openSubscriptionManagement(context, ref),
                     icon: const Icon(Icons.settings_outlined, size: 18),
                     label: const Text('إدارة'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                      foregroundColor: themeColors.textOnGradient,
+                      side: BorderSide(color: themeColors.textOnGradient.withValues(alpha: 0.3)),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -395,7 +395,7 @@ class SettingsScreen extends ConsumerWidget {
                 child: Text(
                   'استعادة المشتريات',
                   style: AppTypography.bodySmall.copyWith(
-                    color: Colors.white54,
+                    color: themeColors.textOnGradient.withValues(alpha: 0.54),
                     decoration: TextDecoration.underline,
                   ),
                 ),
@@ -423,8 +423,9 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _openSubscriptionManagement(BuildContext context) async {
+  Future<void> _openSubscriptionManagement(BuildContext context, WidgetRef ref) async {
     HapticFeedback.lightImpact();
+    final themeColors = ref.read(themeColorsProvider);
 
     // iOS App Store subscription management URL
     if (Platform.isIOS || Platform.isMacOS) {
@@ -436,7 +437,7 @@ class SettingsScreen extends ConsumerWidget {
           UIHelpers.showSnackBar(
             context,
             'افتح الإعدادات > Apple ID > الاشتراكات',
-            backgroundColor: AppColors.info,
+            backgroundColor: themeColors.statusInfo,
           );
         }
       }
@@ -450,7 +451,7 @@ class SettingsScreen extends ConsumerWidget {
           UIHelpers.showSnackBar(
             context,
             'افتح متجر Google Play > الاشتراكات',
-            backgroundColor: AppColors.info,
+            backgroundColor: themeColors.statusInfo,
           );
         }
       }
@@ -459,11 +460,12 @@ class SettingsScreen extends ConsumerWidget {
 
   Future<void> _restorePurchases(BuildContext context, WidgetRef ref) async {
     HapticFeedback.lightImpact();
+    final themeColors = ref.read(themeColorsProvider);
 
     UIHelpers.showSnackBar(
       context,
       'جاري استعادة المشتريات...',
-      backgroundColor: AppColors.info,
+      backgroundColor: themeColors.statusInfo,
     );
 
     try {
@@ -477,7 +479,7 @@ class SettingsScreen extends ConsumerWidget {
               ? 'تم استعادة الاشتراك بنجاح!'
               : 'لم يتم العثور على مشتريات سابقة',
           isError: !restored,
-          backgroundColor: restored ? AppColors.success : AppColors.warning,
+          backgroundColor: restored ? themeColors.statusSuccess : themeColors.statusWarning,
         );
       }
     } catch (e) {
@@ -625,7 +627,7 @@ class SettingsScreen extends ConsumerWidget {
                             UIHelpers.showSnackBar(
                               context,
                               'تم تغيير كلمة المرور بنجاح',
-                              backgroundColor: AppColors.success,
+                              backgroundColor: themeColors.statusSuccess,
                             );
                           }
                         } on AuthException catch (e) {

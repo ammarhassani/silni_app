@@ -162,6 +162,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       case GamificationEventType.streakWarning:
         // Show streak warning notification
         if (mounted) {
+          final warningColor = ref.read(themeColorsProvider).statusWarning;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
@@ -176,7 +177,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                 ],
               ),
-              backgroundColor: AppColors.warning,
+              backgroundColor: warningColor,
               duration: const Duration(seconds: 5),
               behavior: SnackBarBehavior.floating,
             ),
@@ -187,6 +188,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       case GamificationEventType.streakCritical:
         // Show critical streak warning with more urgency
         if (mounted) {
+          final criticalColor = ref.read(themeColorsProvider).statusError;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
@@ -201,7 +203,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                 ],
               ),
-              backgroundColor: AppColors.error,
+              backgroundColor: criticalColor,
               duration: const Duration(seconds: 8),
               behavior: SnackBarBehavior.floating,
             ),
@@ -216,6 +218,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       case GamificationEventType.freezeUsed:
         // Show freeze used notification
         if (mounted) {
+          final infoColor = ref.read(themeColorsProvider).statusInfo;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
@@ -230,7 +233,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                 ],
               ),
-              backgroundColor: AppColors.info,
+              backgroundColor: infoColor,
               duration: const Duration(seconds: 4),
               behavior: SnackBarBehavior.floating,
             ),
@@ -373,6 +376,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ),
                     const SizedBox(height: AppSpacing.md),
 
+                    // AI Priority Contacts (MAX only)
+                    AIPriorityContactsWidget(userId: userId),
+                    const SizedBox(height: AppSpacing.md),
+
                     // Frequency carousel for tomorrow/yesterday reminders
                     relativesAsync.when(
                       data: (relatives) => schedulesAsync.when(
@@ -422,6 +429,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       loading: () => const TodaysActivitySkeleton(),
                       error: (_, _) => const SizedBox.shrink(),
                     ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    // AI Daily Insight (MAX only)
+                    const AIInsightCard(),
                     const SizedBox(height: AppSpacing.md),
 
                     // Setup reminders prompt

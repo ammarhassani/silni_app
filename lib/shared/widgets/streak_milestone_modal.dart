@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:confetti/confetti.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_animations.dart';
-import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/models/gamification_event.dart';
+import '../../core/theme/app_themes.dart';
+import '../../core/theme/theme_provider.dart';
 
 /// Milestone tier for visual customization
 enum MilestoneTier {
@@ -18,7 +20,7 @@ enum MilestoneTier {
 
 /// Dramatic streak milestone celebration modal
 /// Shows when user reaches a streak milestone (3, 7, 10, 14, 21, 30, 50, 100, 200, 365, 500 days)
-class StreakMilestoneModal extends StatefulWidget {
+class StreakMilestoneModal extends ConsumerStatefulWidget {
   final int streak;
   final VoidCallback? onDismiss;
   final bool freezeAwarded; // Whether a freeze was awarded at this milestone
@@ -31,7 +33,8 @@ class StreakMilestoneModal extends StatefulWidget {
   });
 
   @override
-  State<StreakMilestoneModal> createState() => _StreakMilestoneModalState();
+  ConsumerState<StreakMilestoneModal> createState() =>
+      _StreakMilestoneModalState();
 
   /// Show the streak milestone modal
   static Future<void> show(
@@ -40,12 +43,13 @@ class StreakMilestoneModal extends StatefulWidget {
     bool freezeAwarded = false,
   }) {
     // Check if freeze should be awarded
-    final shouldAwardFreeze = freezeAwarded || GamificationEvent.isFreezeAwardMilestone(streak);
+    final shouldAwardFreeze =
+        freezeAwarded || GamificationEvent.isFreezeAwardMilestone(streak);
 
     return showDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: AppColors.islamicGreenDark.withValues(alpha: 0.9),
+      barrierColor: Colors.black.withValues(alpha: 0.85),
       builder: (context) => StreakMilestoneModal(
         streak: streak,
         freezeAwarded: shouldAwardFreeze,
@@ -55,7 +59,7 @@ class StreakMilestoneModal extends StatefulWidget {
   }
 }
 
-class _StreakMilestoneModalState extends State<StreakMilestoneModal>
+class _StreakMilestoneModalState extends ConsumerState<StreakMilestoneModal>
     with TickerProviderStateMixin {
   late ConfettiController _confettiController;
   late AnimationController _flameController;
@@ -107,81 +111,26 @@ class _StreakMilestoneModalState extends State<StreakMilestoneModal>
     return MilestoneTier.starter;
   }
 
-  /// Get gradient colors for tier
-  List<Color> _getTierGradient() {
+  /// Get gradient for tier from theme
+  LinearGradient _getTierGradient(ThemeColors colors) {
     switch (_getMilestoneTier()) {
       case MilestoneTier.legendary:
-        return [
-          const Color(0xFFFFD700), // Gold
-          const Color(0xFFFF8C00), // Dark orange
-          const Color(0xFFFF4500), // Red orange
-        ];
+        return colors.tierLegendaryGradient;
       case MilestoneTier.epic:
-        return [
-          const Color(0xFF9B59B6), // Purple
-          const Color(0xFF8E44AD), // Darker purple
-          const Color(0xFFE91E63), // Pink
-        ];
+        return colors.tierEpicGradient;
       case MilestoneTier.rare:
-        return [
-          const Color(0xFF3498DB), // Blue
-          const Color(0xFF2980B9), // Darker blue
-          const Color(0xFF1ABC9C), // Teal
-        ];
+        return colors.tierRareGradient;
       case MilestoneTier.common:
-        return [
-          const Color(0xFFFF6B35),
-          const Color(0xFFFF9E00),
-          const Color(0xFFFFD60A),
-        ];
+        return colors.streakFire;
       case MilestoneTier.starter:
-        return [
-          const Color(0xFF4CAF50),
-          const Color(0xFF81C784),
-          const Color(0xFFA5D6A7),
-        ];
+        return colors.tierStarterGradient;
     }
   }
 
-  /// Get confetti colors for tier
-  List<Color> _getConfettiColors() {
-    switch (_getMilestoneTier()) {
-      case MilestoneTier.legendary:
-        return [
-          const Color(0xFFFFD700),
-          const Color(0xFFFFC107),
-          const Color(0xFFFF9800),
-          Colors.white,
-        ];
-      case MilestoneTier.epic:
-        return [
-          const Color(0xFF9B59B6),
-          const Color(0xFFE91E63),
-          const Color(0xFFFF69B4),
-          Colors.white,
-        ];
-      case MilestoneTier.rare:
-        return [
-          const Color(0xFF3498DB),
-          const Color(0xFF1ABC9C),
-          const Color(0xFF00BCD4),
-          Colors.white,
-        ];
-      case MilestoneTier.common:
-        return [
-          const Color(0xFFFF6B35),
-          const Color(0xFFFF9E00),
-          const Color(0xFFFFD60A),
-          const Color(0xFFFFE55C),
-        ];
-      case MilestoneTier.starter:
-        return [
-          const Color(0xFF4CAF50),
-          const Color(0xFF8BC34A),
-          const Color(0xFFCDDC39),
-          Colors.white,
-        ];
-    }
+  /// Get confetti colors from tier gradient
+  List<Color> _getConfettiColors(ThemeColors colors) {
+    final gradient = _getTierGradient(colors);
+    return [...gradient.colors, colors.onPrimary];
   }
 
   /// Get particle count for tier
@@ -255,10 +204,14 @@ class _StreakMilestoneModalState extends State<StreakMilestoneModal>
 
   @override
   Widget build(BuildContext context) {
-    final gradientColors = _getTierGradient();
-    final confettiColors = _getConfettiColors();
+    final colors = ref.watch(themeColorsProvider);
+    final tierGradient = _getTierGradient(colors);
+    final confettiColors = _getConfettiColors(colors);
     final particleCount = _getParticleCount();
     final nextMilestone = _getNextMilestone();
+    final primaryGradientColor = tierGradient.colors.isNotEmpty
+        ? tierGradient.colors.first
+        : colors.primary;
 
     return Semantics(
       label: 'تهانينا! ${widget.streak} يوم متتالي من التواصل',
@@ -267,39 +220,35 @@ class _StreakMilestoneModalState extends State<StreakMilestoneModal>
         backgroundColor: Colors.transparent,
         elevation: 0,
         child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Confetti with tier-specific colors
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConfettiWidget(
-              confettiController: _confettiController,
-              blastDirection: 3.14 / 2, // Down
-              emissionFrequency: 0.03,
-              numberOfParticles: particleCount,
-              gravity: 0.2,
-              colors: confettiColors,
-            ),
-          ),
-
-          // Modal content with tier-specific gradient
-          Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: gradientColors,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          alignment: Alignment.center,
+          children: [
+            // Confetti with tier-specific colors
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirection: 3.14 / 2, // Down
+                emissionFrequency: 0.03,
+                numberOfParticles: particleCount,
+                gravity: 0.2,
+                colors: confettiColors,
               ),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: gradientColors[1].withValues(alpha: 0.6),
-                  blurRadius: 40,
-                  spreadRadius: 10,
-                ),
-              ],
             ),
+
+            // Modal content with tier-specific gradient
+            Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                gradient: tierGradient,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryGradientColor.withValues(alpha: 0.6),
+                    blurRadius: 40,
+                    spreadRadius: 10,
+                  ),
+                ],
+              ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -559,8 +508,8 @@ class _StreakMilestoneModalState extends State<StreakMilestoneModal>
                     widget.onDismiss?.call();
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: gradientColors[0],
+                    backgroundColor: colors.onPrimary,
+                    foregroundColor: primaryGradientColor,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 48,
                       vertical: 16,
@@ -573,7 +522,7 @@ class _StreakMilestoneModalState extends State<StreakMilestoneModal>
                   child: Text(
                     'رائع!',
                     style: AppTypography.buttonLarge.copyWith(
-                      color: gradientColors[0],
+                      color: primaryGradientColor,
                     ),
                   ),
                 )

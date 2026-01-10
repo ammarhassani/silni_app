@@ -127,24 +127,26 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
                             icon: Icons.emoji_events_rounded,
                             value: _unlockedBadges.length.toString(),
                             label: 'مفتوحة',
-                            color: AppColors.premiumGold,
+                            color: themeColors.levelMax,
+                            themeColors: themeColors,
                           ),
                           Container(
                             width: 1,
                             height: 40,
-                            color: Colors.white.withValues(alpha: 0.2),
+                            color: themeColors.textOnGradient.withValues(alpha: 0.2),
                           ),
                           _buildStatItem(
                             icon: Icons.lock_outline_rounded,
                             value: (BadgeData.allBadges.length - _unlockedBadges.length)
                                 .toString(),
                             label: 'مقفلة',
-                            color: Colors.white70,
+                            color: themeColors.textOnGradient.withValues(alpha: 0.7),
+                            themeColors: themeColors,
                           ),
                           Container(
                             width: 1,
                             height: 40,
-                            color: Colors.white.withValues(alpha: 0.2),
+                            color: themeColors.textOnGradient.withValues(alpha: 0.2),
                           ),
                           _buildStatItem(
                             icon: Icons.percent_rounded,
@@ -152,7 +154,8 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
                                 ? '0%'
                                 : '${(_unlockedBadges.length / BadgeData.allBadges.length * 100).toStringAsFixed(0)}%',
                             label: 'الإكمال',
-                            color: AppColors.islamicGreenLight,
+                            color: themeColors.primaryLight,
+                            themeColors: themeColors,
                           ),
                         ],
                       ),
@@ -205,6 +208,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
     required String value,
     required String label,
     required Color color,
+    required dynamic themeColors,
   }) {
     return Column(
       children: [
@@ -213,7 +217,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
         Text(
           value,
           style: AppTypography.titleLarge.copyWith(
-            color: Colors.white,
+            color: themeColors.textOnGradient,
             fontWeight: FontWeight.bold,
           ),
           maxLines: 1,
@@ -222,7 +226,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
         Text(
           label,
           style: AppTypography.bodySmall.copyWith(
-            color: Colors.white70,
+            color: themeColors.textOnGradient.withValues(alpha: 0.7),
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -244,7 +248,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
           child: Text(
             title,
             style: AppTypography.titleLarge.copyWith(
-              color: Colors.white,
+              color: themeColors.textOnGradient,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -262,14 +266,14 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
           itemBuilder: (context, index) {
             final badge = badges[index];
             final isUnlocked = _unlockedBadges.contains(badge.id);
-            return _buildBadgeCard(badge, isUnlocked);
+            return _buildBadgeCard(badge, isUnlocked, themeColors);
           },
         ),
       ],
     );
   }
 
-  Widget _buildBadgeCard(BadgeInfo badge, bool isUnlocked) {
+  Widget _buildBadgeCard(BadgeInfo badge, bool isUnlocked, dynamic themeColors) {
     return GlassCard(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.sm),
@@ -285,9 +289,9 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
                 shape: BoxShape.circle,
                 color: isUnlocked
                     ? badge.color.withValues(alpha: 0.2)
-                    : Colors.white.withValues(alpha: 0.1),
+                    : themeColors.textOnGradient.withValues(alpha: 0.1),
                 border: Border.all(
-                  color: isUnlocked ? badge.color : Colors.white30,
+                  color: isUnlocked ? badge.color : themeColors.textOnGradient.withValues(alpha: 0.3),
                   width: 3,
                 ),
               ),
@@ -296,7 +300,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
                   badge.emoji,
                   style: TextStyle(
                     fontSize: 35,
-                    color: isUnlocked ? null : Colors.white30,
+                    color: isUnlocked ? null : themeColors.textOnGradient.withValues(alpha: 0.3),
                   ),
                 ),
               ),
@@ -316,7 +320,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
               badge.name,
               textAlign: TextAlign.center,
               style: AppTypography.titleSmall.copyWith(
-                color: isUnlocked ? Colors.white : Colors.white60,
+                color: isUnlocked ? themeColors.textOnGradient : themeColors.textOnGradient.withValues(alpha: 0.6),
                 fontWeight: FontWeight.bold,
               ),
               maxLines: 2,
@@ -332,7 +336,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.bodySmall.copyWith(
-                color: isUnlocked ? Colors.white70 : Colors.white.withValues(alpha: 0.4),
+                color: isUnlocked ? themeColors.textOnGradient.withValues(alpha: 0.7) : themeColors.textOnGradient.withValues(alpha: 0.4),
                 height: 1.2,
               ),
             ),
@@ -342,7 +346,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
             // Lock icon or checkmark
             Icon(
               isUnlocked ? Icons.check_circle : Icons.lock_outline,
-              color: isUnlocked ? AppColors.premiumGold : Colors.white30,
+              color: isUnlocked ? themeColors.levelMax : themeColors.textOnGradient.withValues(alpha: 0.3),
               size: 18,
             ),
           ],

@@ -65,9 +65,13 @@ class AppColors {
   );
 
   // Semantic Colors
+  @Deprecated('Use ThemeColors.statusSuccess instead for theme-aware colors')
   static const success = Color(0xFF4CAF50);
+  @Deprecated('Use ThemeColors.statusError instead for theme-aware colors')
   static const error = Color(0xFFE53935);
+  @Deprecated('Use ThemeColors.statusWarning instead for theme-aware colors')
   static const warning = Color(0xFFFFA726);
+  @Deprecated('Use ThemeColors.statusInfo instead for theme-aware colors')
   static const info = Color(0xFF29B6F6);
 
   // Text Colors
@@ -103,23 +107,37 @@ class AppColors {
   );
 
   // Level Colors
+  @Deprecated('Use ThemeColors.level1 instead for theme-aware colors')
   static const level1 = Color(0xFF81C784);
+  @Deprecated('Use ThemeColors.level2 instead for theme-aware colors')
   static const level2 = Color(0xFF4CAF50);
+  @Deprecated('Use ThemeColors.level3 instead for theme-aware colors')
   static const level3 = Color(0xFF388E3C);
+  @Deprecated('Use ThemeColors.level4 instead for theme-aware colors')
   static const level4 = Color(0xFF2E7D32);
+  @Deprecated('Use ThemeColors.level5 instead for theme-aware colors')
   static const level5 = Color(0xFF1B5E20);
+  @Deprecated('Use ThemeColors.levelMax instead for theme-aware colors')
   static const levelMax = Color(0xFFFFD700);
 
   // Priority Colors
+  @Deprecated('Use ThemeColors.priorityHigh instead for theme-aware colors')
   static const priorityHigh = Color(0xFFE53935);
+  @Deprecated('Use ThemeColors.priorityMedium instead for theme-aware colors')
   static const priorityMedium = Color(0xFFFFA726);
+  @Deprecated('Use ThemeColors.priorityLow instead for theme-aware colors')
   static const priorityLow = Color(0xFF66BB6A);
 
   // Mood Colors
+  @Deprecated('Use ThemeColors.moodHappy instead for theme-aware colors')
   static const moodHappy = Color(0xFFFFEB3B);
+  @Deprecated('Use ThemeColors.moodNeutral instead for theme-aware colors')
   static const moodNeutral = Color(0xFF9E9E9E);
+  @Deprecated('Use ThemeColors.moodSad instead for theme-aware colors')
   static const moodSad = Color(0xFF5C6BC0);
+  @Deprecated('Use ThemeColors.moodExcited instead for theme-aware colors')
   static const moodExcited = Color(0xFFFF5722);
+  @Deprecated('Use ThemeColors.moodCalm instead for theme-aware colors')
   static const moodCalm = Color(0xFF26C6DA);
 
   // Overlay Colors

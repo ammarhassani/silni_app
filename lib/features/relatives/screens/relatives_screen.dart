@@ -426,7 +426,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
           Icon(
             Icons.error_outline,
             size: 80,
-            color: AppColors.error.withValues(alpha: 0.7),
+            color: themeColors.statusError.withValues(alpha: 0.7),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(

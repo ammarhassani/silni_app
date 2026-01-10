@@ -1,3 +1,5 @@
+export 'ai_insight_card.dart';
+export 'ai_priority_contacts_widget.dart';
 export 'due_reminders_card.dart';
 export 'family_circles_widget.dart';
 export 'frequency_carousel.dart';

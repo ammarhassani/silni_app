@@ -5,6 +5,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/providers/logger_provider.dart';
 
+// Debug-only color constant
+const _kDebugErrorColor = Color(0xFFE53935);
+
 /// Floating Action Button to toggle logger visibility
 class LoggerFAB extends ConsumerWidget {
   const LoggerFAB({super.key});
@@ -23,7 +26,7 @@ class LoggerFAB extends ConsumerWidget {
           FloatingActionButton.small(
                 heroTag: 'loggerFAB',
                 backgroundColor: isVisible
-                    ? AppColors.error
+                    ? _kDebugErrorColor
                     : AppColors.islamicGreenPrimary,
                 onPressed: () {
                   ref.read(loggerVisibilityProvider.notifier).state =

@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/theme/app_themes.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/relative_model.dart';
 
-/// Health status badge showing relationship health
-/// Displays colored indicator: 🟢 healthy, 🟡 needs attention, 🔴 at risk
-class HealthBadge extends StatelessWidget {
+/// Health status badge showing relationship health using theme gradients
+/// Displays gradient indicator: healthy, needs attention, at risk
+class HealthBadge extends ConsumerWidget {
   final Relative relative;
   final double size;
   final bool showLabel;
@@ -22,12 +25,14 @@ class HealthBadge extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
     final status = relative.healthStatus2;
     final score = relative.healthScore ?? 50;
 
-    final color = _getColor(status);
+    final gradient = _getGradient(status, themeColors);
     final label = _getLabel(status);
+    final icon = _getIcon(status);
 
     if (showLabel || showScore) {
       return Container(
@@ -36,43 +41,33 @@ class HealthBadge extends StatelessWidget {
           vertical: AppSpacing.xs,
         ),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: color,
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.5),
-                    blurRadius: 4,
-                    spreadRadius: 1,
-                  ),
-                ],
-              ),
+            Icon(
+              icon,
+              color: themeColors.onPrimary,
+              size: 14,
             ),
             if (showLabel) ...[
-              const SizedBox(width: AppSpacing.xs),
+              const SizedBox(width: 4),
               Text(
                 label,
                 style: AppTypography.labelSmall.copyWith(
-                  color: color,
+                  color: themeColors.onPrimary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ],
             if (showScore) ...[
-              const SizedBox(width: AppSpacing.xs),
+              const SizedBox(width: 4),
               Text(
                 '${score.toInt()}%',
                 style: AppTypography.labelSmall.copyWith(
-                  color: color,
+                  color: themeColors.onPrimary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -82,38 +77,52 @@ class HealthBadge extends StatelessWidget {
       );
     }
 
-    // Simple dot badge
+    // Simple dot badge with gradient
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: color,
+        gradient: gradient,
         border: Border.all(
-          color: AppColors.islamicGreenDark,
-          width: 2,
+          color: themeColors.glassBorder,
+          width: 1.5,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.5),
-            blurRadius: 4,
-            spreadRadius: 1,
-          ),
-        ],
       ),
     );
   }
 
-  Color _getColor(RelationshipHealthStatus status) {
+  LinearGradient _getGradient(RelationshipHealthStatus status, ThemeColors themeColors) {
     switch (status) {
       case RelationshipHealthStatus.healthy:
-        return const Color(0xFF4CAF50); // Green
+        return themeColors.healthyGradient;
       case RelationshipHealthStatus.needsAttention:
-        return const Color(0xFFFFC107); // Amber
+        return themeColors.warningGradient;
       case RelationshipHealthStatus.atRisk:
-        return const Color(0xFFE53935); // Red
+        return themeColors.dangerGradient;
       case RelationshipHealthStatus.unknown:
-        return const Color(0xFF9E9E9E); // Grey
+        // Use glass background style for unknown
+        return LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            themeColors.glassBackground,
+            themeColors.glassBackground,
+          ],
+        );
+    }
+  }
+
+  IconData _getIcon(RelationshipHealthStatus status) {
+    switch (status) {
+      case RelationshipHealthStatus.healthy:
+        return LucideIcons.heart;
+      case RelationshipHealthStatus.needsAttention:
+        return LucideIcons.alertCircle;
+      case RelationshipHealthStatus.atRisk:
+        return LucideIcons.alertTriangle;
+      case RelationshipHealthStatus.unknown:
+        return LucideIcons.helpCircle;
     }
   }
 
@@ -132,7 +141,7 @@ class HealthBadge extends StatelessWidget {
 }
 
 /// Health detail card showing breakdown of health metrics
-class HealthDetailCard extends StatelessWidget {
+class HealthDetailCard extends ConsumerWidget {
   final Relative relative;
   final VoidCallback? onImprove;
 
@@ -143,18 +152,19 @@ class HealthDetailCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
     final score = relative.healthScore ?? 50;
     final status = relative.healthStatus2;
-    final color = _getStatusColor(status);
+    final gradient = _getGradient(status, themeColors);
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: themeColors.glassBackground,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: themeColors.glassBorder,
         ),
       ),
       child: Column(
@@ -165,14 +175,14 @@ class HealthDetailCard extends StatelessWidget {
             children: [
               Icon(
                 Icons.favorite_rounded,
-                color: color,
+                color: themeColors.textPrimary,
                 size: 24,
               ),
               const SizedBox(width: AppSpacing.sm),
               Text(
                 'صحة العلاقة',
                 style: AppTypography.titleMedium.copyWith(
-                  color: Colors.white,
+                  color: themeColors.textPrimary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -183,13 +193,13 @@ class HealthDetailCard extends StatelessWidget {
                   vertical: AppSpacing.xs,
                 ),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.2),
+                  gradient: gradient,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                 ),
                 child: Text(
                   '${score.toInt()}%',
                   style: AppTypography.titleMedium.copyWith(
-                    color: color,
+                    color: themeColors.onPrimary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -202,11 +212,22 @@ class HealthDetailCard extends StatelessWidget {
           // Progress bar
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: score / 100,
-              backgroundColor: Colors.white.withValues(alpha: 0.1),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-              minHeight: 8,
+            child: Container(
+              height: 8,
+              decoration: BoxDecoration(
+                color: themeColors.glassBackground,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: FractionallySizedBox(
+                alignment: Alignment.centerRight,
+                widthFactor: score / 100,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: gradient,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
             ),
           ),
 
@@ -217,38 +238,49 @@ class HealthDetailCard extends StatelessWidget {
             'التواصل',
             Icons.phone_rounded,
             _getContactScore(),
+            themeColors,
           ),
           const SizedBox(height: AppSpacing.sm),
           _buildMetricRow(
             'القرب العاطفي',
             Icons.favorite_border_rounded,
             (relative.emotionalCloseness ?? 3) / 5 * 100,
+            themeColors,
           ),
           const SizedBox(height: AppSpacing.sm),
           _buildMetricRow(
             'جودة التواصل',
             Icons.chat_bubble_outline_rounded,
             (relative.communicationQuality ?? 3) / 5 * 100,
+            themeColors,
           ),
           const SizedBox(height: AppSpacing.sm),
           _buildMetricRow(
             'الدعم',
             Icons.handshake_rounded,
             (relative.supportLevel ?? 3) / 5 * 100,
+            themeColors,
           ),
 
           if (onImprove != null && status != RelationshipHealthStatus.healthy) ...[
             const SizedBox(height: AppSpacing.md),
             SizedBox(
               width: double.infinity,
-              child: TextButton.icon(
-                onPressed: onImprove,
-                icon: const Icon(Icons.auto_fix_high_rounded, size: 18),
-                label: const Text('نصائح لتحسين العلاقة'),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.islamicGreenLight,
-                  backgroundColor: AppColors.islamicGreenPrimary.withValues(alpha: 0.1),
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: themeColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+                child: TextButton.icon(
+                  onPressed: onImprove,
+                  icon: Icon(Icons.auto_fix_high_rounded, size: 18, color: themeColors.onPrimary),
+                  label: Text(
+                    'نصائح لتحسين العلاقة',
+                    style: TextStyle(color: themeColors.onPrimary),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                  ),
                 ),
               ),
             ),
@@ -258,28 +290,39 @@ class HealthDetailCard extends StatelessWidget {
     );
   }
 
-  Widget _buildMetricRow(String label, IconData icon, double percentage) {
+  Widget _buildMetricRow(String label, IconData icon, double percentage, ThemeColors themeColors) {
+    final gradient = _getPercentageGradient(percentage, themeColors);
+
     return Row(
       children: [
-        Icon(icon, color: Colors.white54, size: 16),
+        Icon(icon, color: themeColors.textSecondary, size: 16),
         const SizedBox(width: AppSpacing.xs),
         Expanded(
           child: Text(
             label,
-            style: AppTypography.bodySmall.copyWith(color: Colors.white70),
+            style: AppTypography.bodySmall.copyWith(color: themeColors.textSecondary),
           ),
         ),
         SizedBox(
           width: 80,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(2),
-            child: LinearProgressIndicator(
-              value: percentage / 100,
-              backgroundColor: Colors.white.withValues(alpha: 0.1),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                _getPercentageColor(percentage),
+            child: Container(
+              height: 4,
+              decoration: BoxDecoration(
+                color: themeColors.glassBackground,
+                borderRadius: BorderRadius.circular(2),
               ),
-              minHeight: 4,
+              child: FractionallySizedBox(
+                alignment: Alignment.centerRight,
+                widthFactor: percentage / 100,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: gradient,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -289,7 +332,7 @@ class HealthDetailCard extends StatelessWidget {
           child: Text(
             '${percentage.toInt()}%',
             style: AppTypography.labelSmall.copyWith(
-              color: Colors.white54,
+              color: themeColors.textSecondary,
             ),
             textAlign: TextAlign.end,
           ),
@@ -315,22 +358,24 @@ class HealthDetailCard extends StatelessWidget {
     return 20;
   }
 
-  Color _getPercentageColor(double percentage) {
-    if (percentage >= 70) return const Color(0xFF4CAF50);
-    if (percentage >= 40) return const Color(0xFFFFC107);
-    return const Color(0xFFE53935);
+  LinearGradient _getPercentageGradient(double percentage, ThemeColors themeColors) {
+    if (percentage >= 70) return themeColors.healthyGradient;
+    if (percentage >= 40) return themeColors.warningGradient;
+    return themeColors.dangerGradient;
   }
 
-  Color _getStatusColor(RelationshipHealthStatus status) {
+  LinearGradient _getGradient(RelationshipHealthStatus status, ThemeColors themeColors) {
     switch (status) {
       case RelationshipHealthStatus.healthy:
-        return const Color(0xFF4CAF50);
+        return themeColors.healthyGradient;
       case RelationshipHealthStatus.needsAttention:
-        return const Color(0xFFFFC107);
+        return themeColors.warningGradient;
       case RelationshipHealthStatus.atRisk:
-        return const Color(0xFFE53935);
+        return themeColors.dangerGradient;
       case RelationshipHealthStatus.unknown:
-        return const Color(0xFF9E9E9E);
+        return LinearGradient(
+          colors: [themeColors.glassBackground, themeColors.glassBackground],
+        );
     }
   }
 }

@@ -9,6 +9,11 @@ import '../../core/constants/app_typography.dart';
 import '../../core/services/app_logger_service.dart';
 import '../../core/providers/logger_provider.dart';
 
+// Debug-only color constants
+const _kDebugWarningColor = Color(0xFFFFA726);
+const _kDebugSuccessColor = Color(0xFF4CAF50);
+const _kDebugErrorColor = Color(0xFFE53935);
+
 /// Full-screen logger overlay
 class LoggerOverlay extends ConsumerStatefulWidget {
   const LoggerOverlay({super.key});
@@ -414,7 +419,7 @@ class _LoggerOverlayState extends ConsumerState<LoggerOverlay> {
           ElevatedButton.icon(
             icon: const Icon(Icons.delete),
             label: const Text('Clear'),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.warning),
+            style: ElevatedButton.styleFrom(backgroundColor: _kDebugWarningColor),
             onPressed: () {
               loggerService.clear();
             },
@@ -435,7 +440,7 @@ class _LoggerOverlayState extends ConsumerState<LoggerOverlay> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('${logs.length} logs copied to clipboard'),
-                    backgroundColor: AppColors.success,
+                    backgroundColor: _kDebugSuccessColor,
                   ),
                 );
               }
@@ -453,9 +458,9 @@ class _LoggerOverlayState extends ConsumerState<LoggerOverlay> {
       case LogLevel.info:
         return AppColors.calmBlue;
       case LogLevel.warning:
-        return AppColors.warning;
+        return _kDebugWarningColor;
       case LogLevel.error:
-        return AppColors.error;
+        return _kDebugErrorColor;
       case LogLevel.critical:
         return AppColors.energeticRed;
     }

@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_animations.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
@@ -404,117 +403,122 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
-        child: Container(
-          margin: const EdgeInsets.all(AppSpacing.md),
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: BoxDecoration(
-            color: AppColors.islamicGreenDark,
-            borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.2),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.edit_rounded, color: Colors.white70, size: 20),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    'تعديل الرسالة',
-                    style: AppTypography.titleMedium.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextField(
-                controller: editController,
-                maxLines: 5,
-                minLines: 2,
-                autofocus: true,
-                textDirection: TextDirection.rtl,
-                textAlign: TextAlign.right,
-                cursorColor: Colors.white,
-                style: AppTypography.bodyMedium.copyWith(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'اكتب رسالتك المعدلة...',
-                  hintStyle: AppTypography.bodyMedium.copyWith(
-                    color: Colors.white54,
-                  ),
-                  filled: true,
-                  fillColor: Colors.black.withValues(alpha: 0.3),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                    borderSide: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                    borderSide: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                    borderSide: BorderSide(
-                      color: AppColors.islamicGreenPrimary,
-                    ),
-                  ),
+        child: Builder(
+          builder: (dialogContext) {
+            final dialogTheme = ref.watch(themeColorsProvider);
+            return Container(
+              margin: const EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: dialogTheme.background2,
+                borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                border: Border.all(
+                  color: dialogTheme.textOnGradient.withValues(alpha: 0.2),
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
-              Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(
-                        'إلغاء',
-                        style: AppTypography.buttonMedium.copyWith(
-                          color: Colors.white70,
+                  Row(
+                    children: [
+                      Icon(Icons.edit_rounded, color: dialogTheme.textOnGradient.withValues(alpha: 0.7), size: 20),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        'تعديل الرسالة',
+                        style: AppTypography.titleMedium.copyWith(
+                          color: dialogTheme.textOnGradient,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  TextField(
+                    controller: editController,
+                    maxLines: 5,
+                    minLines: 2,
+                    autofocus: true,
+                    textDirection: TextDirection.rtl,
+                    textAlign: TextAlign.right,
+                    cursorColor: dialogTheme.textOnGradient,
+                    style: AppTypography.bodyMedium.copyWith(color: dialogTheme.textOnGradient),
+                    decoration: InputDecoration(
+                      hintText: 'اكتب رسالتك المعدلة...',
+                      hintStyle: AppTypography.bodyMedium.copyWith(
+                        color: dialogTheme.textOnGradient.withValues(alpha: 0.54),
+                      ),
+                      filled: true,
+                      fillColor: Colors.black.withValues(alpha: 0.3),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                        borderSide: BorderSide(
+                          color: dialogTheme.textOnGradient.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                        borderSide: BorderSide(
+                          color: dialogTheme.textOnGradient.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                        borderSide: BorderSide(
+                          color: dialogTheme.primary,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        final newContent = editController.text.trim();
-                        if (newContent.isNotEmpty && newContent != message.content) {
-                          Navigator.pop(context);
-                          HapticFeedback.mediumImpact();
-                          final mode = ref.read(counselingModeProvider);
-                          final relativeContext = ref.read(chatRelativeContextProvider);
-                          ref.read(aiChatProvider.notifier).editAndResend(
-                            message.id,
-                            newContent,
-                            mode: mode,
-                            relativeContext: relativeContext,
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.send_rounded, size: 18),
-                      label: Text('إرسال', style: AppTypography.buttonMedium),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.islamicGreenPrimary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
+                  const SizedBox(height: AppSpacing.lg),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          child: Text(
+                            'إلغاء',
+                            style: AppTypography.buttonMedium.copyWith(
+                              color: dialogTheme.textOnGradient.withValues(alpha: 0.7),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            final newContent = editController.text.trim();
+                            if (newContent.isNotEmpty && newContent != message.content) {
+                              Navigator.pop(dialogContext);
+                              HapticFeedback.mediumImpact();
+                              final mode = ref.read(counselingModeProvider);
+                              final relativeContext = ref.read(chatRelativeContextProvider);
+                              ref.read(aiChatProvider.notifier).editAndResend(
+                                message.id,
+                                newContent,
+                                mode: mode,
+                                relativeContext: relativeContext,
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.send_rounded, size: 18),
+                          label: Text('إرسال', style: AppTypography.buttonMedium),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: dialogTheme.primary,
+                            foregroundColor: dialogTheme.onPrimary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
@@ -566,15 +570,15 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
-        color: AppColors.error.withValues(alpha: 0.2),
+        color: themeColors.statusError.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         border: Border.all(
-          color: AppColors.error.withValues(alpha: 0.5),
+          color: themeColors.statusError.withValues(alpha: 0.5),
         ),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline_rounded, color: AppColors.error),
+          Icon(Icons.error_outline_rounded, color: themeColors.statusError),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(

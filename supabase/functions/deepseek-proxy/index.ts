@@ -101,17 +101,49 @@ serve(async (req: Request) => {
       );
     }
 
-    // TODO: Check rate limiting
-    // const { data: rateData } = await supabaseClient
-    //   .from('ai_rate_limits')
-    //   .select('request_count')
-    //   .eq('user_id', user.id)
-    //   .eq('date', new Date().toISOString().split('T')[0])
-    //   .single();
+    // Create service role client for rate limit operations
+    const serviceClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
 
-    // TODO: Check subscription status for rate limit tier
-    // const isPremium = await checkPremiumStatus(user.id);
-    // const rateLimit = isPremium ? RATE_LIMIT_PREMIUM : RATE_LIMIT_FREE;
+    // Check subscription status for rate limit tier
+    const { data: profile } = await serviceClient
+      .from("profiles")
+      .select("subscription_tier")
+      .eq("id", user.id)
+      .single();
+
+    const isPremium = profile?.subscription_tier === "max";
+    const rateLimit = isPremium ? RATE_LIMIT_PREMIUM : RATE_LIMIT_FREE;
+
+    // Check rate limiting
+    const today = new Date().toISOString().split("T")[0];
+    const { data: rateData } = await serviceClient
+      .from("ai_rate_limits")
+      .select("request_count")
+      .eq("user_id", user.id)
+      .eq("date", today)
+      .single();
+
+    const currentCount = rateData?.request_count || 0;
+
+    if (currentCount >= rateLimit) {
+      return new Response(
+        JSON.stringify({
+          error: "Daily rate limit exceeded",
+          code: "RATE_LIMIT_EXCEEDED",
+          limit: rateLimit,
+          used: currentCount,
+          resets_at: `${today}T23:59:59Z`,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429,
+        }
+      );
+    }
 
     // Make request to DeepSeek API
     const response = await fetch(DEEPSEEK_URL, {
@@ -150,8 +182,16 @@ serve(async (req: Request) => {
     // Extract content from response
     const content = data.choices?.[0]?.message?.content ?? "";
 
-    // TODO: Update rate limit counter
-    // await supabaseClient.rpc('increment_ai_usage', { user_id: user.id });
+    // Update rate limit counter (upsert to handle first request of the day)
+    await serviceClient.from("ai_rate_limits").upsert(
+      {
+        user_id: user.id,
+        date: today,
+        request_count: currentCount + 1,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,date" }
+    );
 
     return new Response(
       JSON.stringify({

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
+import '../../core/theme/app_themes.dart';
 
 /// Utility helpers for UI components
 class UIHelpers {
@@ -92,9 +92,13 @@ class UIHelpers {
     );
   }
   /// Show a consistent themed snackbar
+  ///
+  /// [colors] is optional - if provided, uses theme-aware colors.
+  /// Without [colors], falls back to Material defaults.
   static void showSnackBar(
     BuildContext context,
     String message, {
+    ThemeColors? colors,
     bool isError = false,
     Duration duration = const Duration(seconds: 3),
     Color? backgroundColor,
@@ -102,27 +106,39 @@ class UIHelpers {
     IconData? icon,
   }) {
     if (!context.mounted) return;
+
+    // Fallback colors for when theme is not provided
+    const fallbackSuccess = Color(0xFF4CAF50);
+    const fallbackError = Color(0xFFE53935);
+    const fallbackOnPrimary = Colors.white;
+
+    final effectiveOnPrimary = colors?.onPrimary ?? fallbackOnPrimary;
+    final effectiveBackground = backgroundColor ??
+        (isError
+            ? (colors?.statusError ?? fallbackError)
+            : (colors?.statusSuccess ?? fallbackSuccess));
+
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
             if (icon != null) ...[
-              Icon(icon, color: Colors.white, size: 20),
+              Icon(icon, color: effectiveOnPrimary, size: 20),
               const SizedBox(width: AppSpacing.sm),
             ],
             Expanded(
               child: Text(
                 message,
                 style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white,
+                  color: effectiveOnPrimary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
           ],
         ),
-        backgroundColor: backgroundColor ?? (isError ? AppColors.error : AppColors.success),
+        backgroundColor: effectiveBackground,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),

@@ -97,6 +97,10 @@ class SubscriptionService {
         return;
       }
 
+      // Debug: Log API key status (first 10 chars only for security)
+      final keyPreview = apiKey.length > 10 ? '${apiKey.substring(0, 10)}...' : apiKey;
+      debugPrint('🔑 RevenueCat API Key: $keyPreview (${apiKey.length} chars)');
+
       // Check if API key is configured
       if (apiKey.isEmpty) {
         _logger.warning(
@@ -104,6 +108,7 @@ class SubscriptionService {
           category: LogCategory.service,
           tag: 'SubscriptionService',
         );
+        debugPrint('❌ RevenueCat API key is EMPTY! Check .env and run build_runner');
         _isInitialized = true;
         _updateState(_currentState.copyWith(isLoading: false));
         return;
@@ -194,14 +199,47 @@ class SubscriptionService {
       final customerInfo = await rc.Purchases.getCustomerInfo();
       final offerings = await rc.Purchases.getOfferings();
 
+      // Debug: Log offerings details
+      debugPrint('📦 Offerings fetch result:');
+      debugPrint('  - current offering: ${offerings.current?.identifier ?? "NULL"}');
+      debugPrint('  - all offerings count: ${offerings.all.length}');
+      for (final entry in offerings.all.entries) {
+        debugPrint('  - Offering "${entry.key}": ${entry.value.availablePackages.length} packages');
+        for (final pkg in entry.value.availablePackages) {
+          debugPrint('    - Package: ${pkg.identifier} -> ${pkg.storeProduct.identifier}');
+        }
+      }
+      if (offerings.current != null) {
+        debugPrint('  - Current offering packages:');
+        for (final pkg in offerings.current!.availablePackages) {
+          debugPrint('    - ${pkg.identifier}: ${pkg.storeProduct.identifier} (${pkg.storeProduct.priceString})');
+        }
+      } else {
+        debugPrint('  ⚠️ NO CURRENT OFFERING SET! Check RevenueCat dashboard.');
+      }
+
+      _logger.info(
+        'Offerings fetched',
+        category: LogCategory.service,
+        tag: 'SubscriptionService',
+        metadata: {
+          'hasCurrent': offerings.current != null,
+          'currentId': offerings.current?.identifier,
+          'allOfferingsCount': offerings.all.length,
+          'packagesInCurrent': offerings.current?.availablePackages.length ?? 0,
+        },
+      );
+
       _processCustomerInfo(customerInfo, offerings);
-    } catch (e) {
+    } catch (e, stackTrace) {
       _logger.error(
         'Failed to refresh subscription status',
         category: LogCategory.service,
         tag: 'SubscriptionService',
         metadata: {'error': e.toString()},
+        stackTrace: stackTrace,
       );
+      debugPrint('❌ Failed to refresh subscription: $e');
       _updateState(_currentState.copyWith(
         isLoading: false,
         error: 'فشل تحميل حالة الاشتراك',

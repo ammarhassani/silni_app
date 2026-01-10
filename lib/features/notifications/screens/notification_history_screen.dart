@@ -53,7 +53,7 @@ class _NotificationHistoryScreenState
                         message: 'جاري تحميل الإشعارات...',
                       ),
                     ),
-                    error: (_,_) => _buildError(),
+                    error: (_,_) => _buildError(themeColors),
                   ),
                 ),
               ],
@@ -115,7 +115,7 @@ class _NotificationHistoryScreenState
                 );
               }
             },
-            icon: const Icon(Icons.done_all_rounded, color: Colors.white),
+            icon: Icon(Icons.done_all_rounded, color: themeColors.textOnGradient),
             tooltip: 'تحديد الكل كمقروء',
           ),
         ],
@@ -129,7 +129,7 @@ class _NotificationHistoryScreenState
     ThemeColors themeColors,
   ) {
     if (notifications.isEmpty) {
-      return _buildEmptyState();
+      return _buildEmptyState(themeColors);
     }
 
     return ListView.builder(
@@ -166,10 +166,10 @@ class _NotificationHistoryScreenState
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: AppSpacing.lg),
         decoration: BoxDecoration(
-          color: Colors.red.withValues(alpha: 0.8),
+          color: themeColors.statusError.withValues(alpha: 0.8),
           borderRadius: BorderRadius.circular(16),
         ),
-        child: const Icon(Icons.delete_outline, color: Colors.white),
+        child: Icon(Icons.delete_outline, color: themeColors.onPrimary),
       ),
       onDismissed: (_) async {
         await service.deleteNotification(notification.id);
@@ -201,7 +201,7 @@ class _NotificationHistoryScreenState
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: _getTypeColor(notification.notificationType)
+                    color: _getTypeColor(notification.notificationType, themeColors)
                         .withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -226,7 +226,7 @@ class _NotificationHistoryScreenState
                               style: AppTypography.titleMedium.copyWith(
                                 fontWeight:
                                     isUnread ? FontWeight.bold : FontWeight.normal,
-                                color: Colors.white,
+                                color: themeColors.textOnGradient,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -247,7 +247,7 @@ class _NotificationHistoryScreenState
                       Text(
                         notification.body,
                         style: AppTypography.bodySmall.copyWith(
-                          color: Colors.white.withValues(alpha: isUnread ? 0.9 : 0.6),
+                          color: themeColors.textOnGradient.withValues(alpha: isUnread ? 0.9 : 0.6),
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -261,7 +261,7 @@ class _NotificationHistoryScreenState
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: _getTypeColor(notification.notificationType)
+                              color: _getTypeColor(notification.notificationType, themeColors)
                                   .withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -269,7 +269,7 @@ class _NotificationHistoryScreenState
                               notification.typeLabel,
                               style: AppTypography.labelSmall.copyWith(
                                 color:
-                                    _getTypeColor(notification.notificationType),
+                                    _getTypeColor(notification.notificationType, themeColors),
                               ),
                             ),
                           ),
@@ -277,7 +277,7 @@ class _NotificationHistoryScreenState
                           Text(
                             _formatTime(notification.sentAt),
                             style: AppTypography.labelSmall.copyWith(
-                              color: Colors.white.withValues(alpha: 0.5),
+                              color: themeColors.textOnGradient.withValues(alpha: 0.5),
                             ),
                           ),
                         ],
@@ -293,18 +293,18 @@ class _NotificationHistoryScreenState
     );
   }
 
-  Color _getTypeColor(String type) {
+  Color _getTypeColor(String type, ThemeColors colors) {
     switch (type) {
       case 'reminder':
-        return Colors.blue;
+        return colors.statusInfo;
       case 'achievement':
-        return Colors.amber;
+        return colors.levelMax;
       case 'announcement':
-        return Colors.purple;
+        return colors.secondary;
       case 'streak':
-        return Colors.orange;
+        return colors.statusWarning;
       default:
-        return Colors.teal;
+        return colors.primary;
     }
   }
 
@@ -367,7 +367,7 @@ class _NotificationHistoryScreenState
     }
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(ThemeColors themeColors) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -375,20 +375,20 @@ class _NotificationHistoryScreenState
           Icon(
             Icons.notifications_off_outlined,
             size: 80,
-            color: Colors.white.withValues(alpha: 0.3),
+            color: themeColors.textOnGradient.withValues(alpha: 0.3),
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(
             'لا توجد إشعارات',
             style: AppTypography.headlineSmall.copyWith(
-              color: Colors.white.withValues(alpha: 0.7),
+              color: themeColors.textOnGradient.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             'ستظهر إشعاراتك هنا',
             style: AppTypography.bodyMedium.copyWith(
-              color: Colors.white.withValues(alpha: 0.5),
+              color: themeColors.textOnGradient.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -396,7 +396,7 @@ class _NotificationHistoryScreenState
     );
   }
 
-  Widget _buildError() {
+  Widget _buildError(ThemeColors themeColors) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -404,13 +404,13 @@ class _NotificationHistoryScreenState
           Icon(
             Icons.error_outline,
             size: 60,
-            color: Colors.white.withValues(alpha: 0.5),
+            color: themeColors.textOnGradient.withValues(alpha: 0.5),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
             'حدث خطأ في تحميل الإشعارات',
             style: AppTypography.bodyLarge.copyWith(
-              color: Colors.white.withValues(alpha: 0.7),
+              color: themeColors.textOnGradient.withValues(alpha: 0.7),
             ),
           ),
         ],

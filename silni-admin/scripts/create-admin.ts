@@ -9,19 +9,32 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bapwklwxmwhpucutyras.supabase.co';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@silni.app';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin123!@#';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 async function createAdminUser() {
+  if (!SUPABASE_URL) {
+    console.error('❌ Error: NEXT_PUBLIC_SUPABASE_URL is required');
+    console.log('\nSet it in your .env.local file or as an environment variable');
+    process.exit(1);
+  }
+
   if (!SUPABASE_SERVICE_KEY) {
     console.error('❌ Error: SUPABASE_SERVICE_ROLE_KEY is required');
     console.log('\nTo get it:');
-    console.log('1. Go to: https://supabase.com/dashboard/project/bapwklwxmwhpucutyras/settings/api');
+    console.log('1. Go to your Supabase project dashboard > Settings > API');
     console.log('2. Copy the "service_role" key (NOT the anon key)');
     console.log('3. Run: SUPABASE_SERVICE_ROLE_KEY=your_key npx ts-node scripts/create-admin.ts');
+    process.exit(1);
+  }
+
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+    console.error('❌ Error: ADMIN_EMAIL and ADMIN_PASSWORD are required');
+    console.log('\nRun with:');
+    console.log('  ADMIN_EMAIL=your@email.com ADMIN_PASSWORD=YourSecurePassword npx ts-node scripts/create-admin.ts');
     process.exit(1);
   }
 

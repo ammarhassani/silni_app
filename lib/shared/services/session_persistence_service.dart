@@ -18,7 +18,10 @@ class SessionPersistenceService {
   static const String _sessionTimestampKey = 'session_timestamp';
   static const String _userIdKey = 'user_id';
   static const String _biometricEnabledKey = 'biometric_enabled';
-  // Note: We no longer store passwords - biometric unlocks the existing Supabase session
+  // Biometric re-authentication keys (stored separately for quick re-login after logout)
+  static const String _savedRefreshTokenKey = 'saved_refresh_token';
+  static const String _savedUserEmailKey = 'saved_user_email';
+  static const String _savedUserIdForBiometricKey = 'saved_user_id_biometric';
 
   /// Initialize session persistence service
   Future<void> initialize() async {
@@ -209,5 +212,110 @@ class SessionPersistenceService {
   /// Clear biometric settings (alias for disableBiometricLogin for backwards compatibility)
   Future<void> clearBiometricCredentials() async {
     await disableBiometricLogin();
+  }
+
+  /// Save credentials for biometric re-login (stores refresh token for quick re-authentication)
+  /// This allows Face ID to work even after logout
+  Future<void> saveBiometricCredentials({
+    required String refreshToken,
+    required String userEmail,
+    required String userId,
+  }) async {
+    try {
+      if (kIsWeb) {
+        // Don't enable biometric on web
+        return;
+      }
+      final storage = FlutterSecureStorage();
+      await storage.write(key: _savedRefreshTokenKey, value: refreshToken);
+      await storage.write(key: _savedUserEmailKey, value: userEmail);
+      await storage.write(key: _savedUserIdForBiometricKey, value: userId);
+      await storage.write(key: _biometricEnabledKey, value: 'true');
+      _logger.info(
+        'Biometric credentials saved for quick re-login',
+        category: LogCategory.auth,
+        tag: 'SessionPersistenceService',
+        metadata: {'userId': userId, 'email': userEmail},
+      );
+    } catch (e) {
+      _logger.warning(
+        'Failed to save biometric credentials',
+        category: LogCategory.auth,
+        tag: 'SessionPersistenceService',
+        metadata: {'error': e.toString()},
+      );
+    }
+  }
+
+  /// Get saved biometric credentials for re-authentication
+  Future<Map<String, String?>?> getBiometricCredentials() async {
+    try {
+      if (kIsWeb) return null;
+
+      final storage = FlutterSecureStorage();
+      final refreshToken = await storage.read(key: _savedRefreshTokenKey);
+      final email = await storage.read(key: _savedUserEmailKey);
+      final userId = await storage.read(key: _savedUserIdForBiometricKey);
+
+      if (refreshToken == null) {
+        _logger.debug(
+          'No saved biometric credentials found',
+          category: LogCategory.auth,
+          tag: 'SessionPersistenceService',
+        );
+        return null;
+      }
+
+      return {
+        'refreshToken': refreshToken,
+        'email': email,
+        'userId': userId,
+      };
+    } catch (e) {
+      _logger.warning(
+        'Failed to get biometric credentials',
+        category: LogCategory.auth,
+        tag: 'SessionPersistenceService',
+        metadata: {'error': e.toString()},
+      );
+      return null;
+    }
+  }
+
+  /// Clear all biometric credentials (for full logout)
+  Future<void> clearAllBiometricData() async {
+    try {
+      if (kIsWeb) return;
+
+      final storage = FlutterSecureStorage();
+      await storage.delete(key: _savedRefreshTokenKey);
+      await storage.delete(key: _savedUserEmailKey);
+      await storage.delete(key: _savedUserIdForBiometricKey);
+      await storage.delete(key: _biometricEnabledKey);
+      _logger.info(
+        'All biometric data cleared (full logout)',
+        category: LogCategory.auth,
+        tag: 'SessionPersistenceService',
+      );
+    } catch (e) {
+      _logger.warning(
+        'Failed to clear all biometric data',
+        category: LogCategory.auth,
+        tag: 'SessionPersistenceService',
+        metadata: {'error': e.toString()},
+      );
+    }
+  }
+
+  /// Get saved user email for display on login screen
+  Future<String?> getSavedUserEmail() async {
+    try {
+      if (kIsWeb) return null;
+
+      final storage = FlutterSecureStorage();
+      return await storage.read(key: _savedUserEmailKey);
+    } catch (e) {
+      return null;
+    }
   }
 }

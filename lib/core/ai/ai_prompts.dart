@@ -3,6 +3,7 @@
 
 import '../../shared/models/relative_model.dart';
 import '../services/ai_config_service.dart';
+import 'ai_context_engine.dart';
 import 'ai_identity.dart';
 import 'ai_models.dart';
 
@@ -254,6 +255,72 @@ ${mode.modeInstructions}
     // Add memories context (prioritize memories about the specific relative if any)
     if (memories != null && memories.isNotEmpty) {
       buffer.writeln(buildMemoriesContext(memories, relativeId: relative?.id));
+    }
+
+    return buffer.toString();
+  }
+
+  /// Build enhanced system prompt using AIContext from AIContextEngine
+  ///
+  /// This provides richer context including:
+  /// - Gamification data (level, points, streaks)
+  /// - Upcoming occasions
+  /// - Health summary across all relatives
+  /// - Recent interactions
+  static String buildEnhancedChatSystemPrompt({
+    required CounselingMode mode,
+    required AIContext context,
+  }) {
+    final buffer = StringBuffer(dynamicPersonality);
+    buffer.writeln();
+    buffer.writeln(getDynamicModeInstructions(mode.name));
+
+    // Add gamification context
+    buffer.writeln('''
+
+## معلومات المستخدم:
+- المستوى: ${context.gamification.level}
+- إجمالي النقاط: ${context.gamification.totalPoints}
+- إجمالي التفاعلات: ${context.gamification.totalInteractions}
+- الشعلات النشطة: ${context.totalActiveStreaks}
+''');
+
+    // Add health summary
+    buffer.writeln('''
+## ملخص صحة العلاقات:
+- علاقات صحية 🟢: ${context.healthSummary.healthyCount}
+- تحتاج اهتمام 🟡: ${context.healthSummary.needsAttentionCount}
+- معرضة للخطر 🔴: ${context.healthSummary.atRiskCount}
+''');
+
+    // Add upcoming occasions
+    if (context.upcomingOccasions.isNotEmpty) {
+      buffer.writeln('\n## مناسبات قادمة:');
+      for (final occasion in context.upcomingOccasions.take(5)) {
+        buffer.writeln('- ${occasion.relativeName}: ${occasion.occasionType} بعد ${occasion.daysUntil} يوم');
+      }
+    }
+
+    // Add relatives context
+    if (context.relatives.isNotEmpty) {
+      buffer.writeln(buildAllRelativesContext(context.relatives));
+    }
+
+    // Add focus relative context if present
+    if (context.focusRelative != null) {
+      buffer.writeln('\n## القريب المحدد في هذه المحادثة:');
+      buffer.writeln(buildRelativeContext(context.focusRelative!));
+
+      // Add streak info for focus relative
+      final streak = context.getStreakFor(context.focusRelative!.id);
+      if (streak != null && streak.currentStreak > 0) {
+        buffer.writeln('- شعلة التواصل: ${streak.currentStreak} يوم 🔥');
+      }
+    }
+
+    // Add memories context
+    if (context.memories.isNotEmpty) {
+      buffer.writeln(buildMemoriesContext(context.memories, relativeId: context.focusRelative?.id));
     }
 
     return buffer.toString();

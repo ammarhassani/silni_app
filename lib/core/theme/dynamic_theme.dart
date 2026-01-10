@@ -196,6 +196,21 @@ class DynamicTheme {
         [primaryDark, primary, accent],
         fallback.streakFire,
       ),
+      healthyGradient: parseGradient(
+        'healthy',
+        [],
+        fallback.healthyGradient,
+      ),
+      warningGradient: parseGradient(
+        'warning',
+        [],
+        fallback.warningGradient,
+      ),
+      dangerGradient: parseGradient(
+        'danger',
+        [],
+        fallback.dangerGradient,
+      ),
       onPrimary: parseColor('on_primary', fallback.onPrimary),
       onSecondary: parseColor('on_secondary', fallback.onSecondary),
       surface: parseColor('surface', fallback.surface),
@@ -215,6 +230,58 @@ class DynamicTheme {
       cardBorder: parseColor('card_border', fallback.cardBorder),
       divider: parseColor('divider', fallback.divider),
       disabled: parseColor('disabled', fallback.disabled),
+      // Semantic status colors
+      statusSuccess: parseColor('status_success', fallback.statusSuccess),
+      statusError: parseColor('status_error', fallback.statusError),
+      statusWarning: parseColor('status_warning', fallback.statusWarning),
+      statusInfo: parseColor('status_info', fallback.statusInfo),
+      // Communication status colors (contact frequency)
+      contactExcellent: parseColor('contact_excellent', fallback.contactExcellent),
+      contactGood: parseColor('contact_good', fallback.contactGood),
+      contactNormal: parseColor('contact_normal', fallback.contactNormal),
+      contactNeedsCare: parseColor('contact_needs_care', fallback.contactNeedsCare),
+      contactCritical: parseColor('contact_critical', fallback.contactCritical),
+      contactElderly: parseColor('contact_elderly', fallback.contactElderly),
+      contactDisabled: parseColor('contact_disabled', fallback.contactDisabled),
+      // Mood colors
+      moodHappy: parseColor('mood_happy', fallback.moodHappy),
+      moodNeutral: parseColor('mood_neutral', fallback.moodNeutral),
+      moodSad: parseColor('mood_sad', fallback.moodSad),
+      moodExcited: parseColor('mood_excited', fallback.moodExcited),
+      moodCalm: parseColor('mood_calm', fallback.moodCalm),
+      moodWorried: parseColor('mood_worried', fallback.moodWorried),
+      // Priority colors
+      priorityHigh: parseColor('priority_high', fallback.priorityHigh),
+      priorityMedium: parseColor('priority_medium', fallback.priorityMedium),
+      priorityLow: parseColor('priority_low', fallback.priorityLow),
+      // Level colors
+      level1: parseColor('level_1', fallback.level1),
+      level2: parseColor('level_2', fallback.level2),
+      level3: parseColor('level_3', fallback.level3),
+      level4: parseColor('level_4', fallback.level4),
+      level5: parseColor('level_5', fallback.level5),
+      levelMax: parseColor('level_max', fallback.levelMax),
+      // Tier gradients
+      tierLegendaryGradient: parseGradient(
+        'tier_legendary',
+        [],
+        fallback.tierLegendaryGradient,
+      ),
+      tierEpicGradient: parseGradient(
+        'tier_epic',
+        [],
+        fallback.tierEpicGradient,
+      ),
+      tierRareGradient: parseGradient(
+        'tier_rare',
+        [],
+        fallback.tierRareGradient,
+      ),
+      tierStarterGradient: parseGradient(
+        'tier_starter',
+        [],
+        fallback.tierStarterGradient,
+      ),
     );
   }
 

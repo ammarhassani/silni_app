@@ -323,8 +323,8 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
     // Choose emoji based on state
     final emoji = isEndangered ? '⏳' : '🔥';
     final glowColor = isCritical
-        ? AppColors.error
-        : (isEndangered ? AppColors.warning : AppColors.joyfulOrange);
+        ? _themeColors.statusError
+        : (isEndangered ? _themeColors.statusWarning : AppColors.joyfulOrange);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -412,7 +412,7 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
           Text(
             _formatTimeRemaining(timeRemaining),
             style: AppTypography.labelSmall.copyWith(
-              color: isCritical ? AppColors.error : AppColors.warning,
+              color: isCritical ? _themeColors.statusError : _themeColors.statusWarning,
               fontWeight: FontWeight.w600,
             ),
           ),

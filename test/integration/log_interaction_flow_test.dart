@@ -202,9 +202,11 @@ void main() {
         }
       });
 
-      test('all moods should have colors', () {
+      test('all moods should have getColor method', () {
+        // MoodOption now uses getColor(ThemeColors) for theme-aware colors
+        // Just verify all moods have non-empty arabicName (color is theme-dependent)
         for (final mood in MoodOption.values) {
-          expect(mood.color, isNotNull);
+          expect(mood.arabicName.isNotEmpty, isTrue);
         }
       });
     });

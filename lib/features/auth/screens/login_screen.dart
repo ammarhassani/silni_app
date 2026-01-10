@@ -86,83 +86,93 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       tag: 'LoginScreen',
     );
 
-    // First verify biometrics
+    // First verify biometrics (Face ID / Touch ID)
     final result = await biometricService.authenticate();
 
     if (result.success) {
       setState(() => _isLoading = true);
 
       try {
-        // Biometric verified - now use existing Supabase session
-        // Supabase automatically persists and refreshes sessions
-        // Try to refresh the existing session
-        await SupabaseConfig.client.auth.refreshSession();
+        // Biometric verified - use saved credentials to re-authenticate
+        final authService = ref.read(authServiceProvider);
+        final response = await authService.authenticateWithSavedCredentials();
 
-        final user = SupabaseConfig.client.auth.currentUser;
+        if (response?.user != null) {
+          logger.info(
+            'Biometric login successful',
+            category: LogCategory.auth,
+            tag: 'LoginScreen',
+            metadata: {'userId': response!.user!.id},
+          );
 
-        if (user == null) {
-          // Session expired or invalid - user needs to login with password
+          // Track login and set user ID
+          final analytics = ref.read(analyticsServiceProvider);
+          analytics.logLogin('biometric').catchError((e) {
+            logger.warning('Analytics logLogin failed: $e', category: LogCategory.analytics, tag: 'LoginScreen');
+          });
+          analytics.setUserId(response.user!.id).catchError((e) {
+            logger.warning('Analytics setUserId failed: $e', category: LogCategory.analytics, tag: 'LoginScreen');
+          });
+
+          if (!mounted) return;
+          context.go(AppRoutes.home);
+        } else {
+          // No saved credentials available
           if (mounted) {
             setState(() => _isLoading = false);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('انتهت صلاحية الجلسة. يرجى تسجيل الدخول بكلمة المرور'),
-                backgroundColor: AppColors.error,
-                duration: Duration(seconds: 3),
-              ),
-            );
+            _showSessionExpiredError();
           }
-          return;
         }
+      } on AuthException catch (e) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
 
-        logger.info(
-          'Biometric login successful - session restored',
+        logger.warning(
+          'Biometric login failed - auth error',
           category: LogCategory.auth,
           tag: 'LoginScreen',
-          metadata: {'userId': user.id},
+          metadata: {'error': e.message},
         );
 
-        // Track login and set user ID
-        final analytics = ref.read(analyticsServiceProvider);
-        analytics.logLogin('biometric').catchError((e) {
-          logger.warning('Analytics logLogin failed: $e', category: LogCategory.analytics, tag: 'LoginScreen');
-        });
-        analytics.setUserId(user.id).catchError((e) {
-          logger.warning('Analytics setUserId failed: $e', category: LogCategory.analytics, tag: 'LoginScreen');
-        });
-
-        if (!mounted) return;
-        context.go(AppRoutes.home);
+        _showSessionExpiredError();
       } catch (e) {
         if (!mounted) return;
         setState(() => _isLoading = false);
 
         logger.warning(
-          'Biometric login failed - session refresh error',
+          'Biometric login failed - unexpected error',
           category: LogCategory.auth,
           tag: 'LoginScreen',
           metadata: {'error': e.toString()},
         );
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('انتهت صلاحية الجلسة. يرجى تسجيل الدخول بكلمة المرور'),
-            backgroundColor: AppColors.error,
-            duration: Duration(seconds: 3),
-          ),
-        );
+        _showSessionExpiredError();
       }
     } else if (result.error) {
       if (mounted) {
+        final errorColor = ref.read(themeColorsProvider).statusError;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result.errorMessage ?? 'فشل المصادقة البيومترية'),
-            backgroundColor: AppColors.error,
+            backgroundColor: errorColor,
             duration: const Duration(seconds: 3),
           ),
         );
       }
     }
+  }
+
+  void _showSessionExpiredError() {
+    final errorColor = ref.read(themeColorsProvider).statusError;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('انتهت صلاحية الجلسة. يرجى تسجيل الدخول بكلمة المرور'),
+        backgroundColor: errorColor,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+    // Also refresh the biometric availability check since credentials may have been cleared
+    _checkBiometricAvailability();
   }
 
   Future<void> _login() async {
@@ -219,13 +229,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (!mounted) return;
         setState(() => _isLoading = false);
 
+        final errorColor = ref.read(themeColorsProvider).statusError;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text(
               'فشل تهيئة الاتصال بالخادم. يرجى إعادة تشغيل التطبيق والمحاولة مرة أخرى.\n'
               'Server connection failed to initialize. Please restart the app and try again.',
             ),
-            backgroundColor: AppColors.error,
+            backgroundColor: errorColor,
             duration: const Duration(seconds: 5),
           ),
         );
@@ -370,10 +381,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         metadata: {'errorMessage': errorMessage},
       );
 
+      final errorColor = ref.read(themeColorsProvider).statusError;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
-          backgroundColor: AppColors.error,
+          backgroundColor: errorColor,
           duration: const Duration(seconds: 3),
         ),
       );
@@ -416,10 +428,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         metadata: {'errorMessage': errorMessage},
       );
 
+      final unexpectedErrorColor = ref.read(themeColorsProvider).statusError;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
-          backgroundColor: AppColors.error,
+          backgroundColor: unexpectedErrorColor,
           duration: const Duration(seconds: 3),
         ),
       );
@@ -493,20 +506,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         await authService.resetPassword(emailController.text.trim());
 
         if (mounted) {
+          final successColor = ref.read(themeColorsProvider).statusSuccess;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني'),
-              backgroundColor: AppColors.success,
-              duration: Duration(seconds: 4),
+            SnackBar(
+              content: const Text('تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني'),
+              backgroundColor: successColor,
+              duration: const Duration(seconds: 4),
             ),
           );
         }
       } catch (e) {
         if (mounted) {
+          final resetErrorColor = ref.read(themeColorsProvider).statusError;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(errorHandler.getArabicMessage(e)),
-              backgroundColor: AppColors.error,
+              backgroundColor: resetErrorColor,
               duration: const Duration(seconds: 3),
             ),
           );
@@ -638,10 +653,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (!mounted) return;
       setState(() => _isAppleLoading = false);
 
+      final appleAuthErrorColor = ref.read(themeColorsProvider).statusError;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AuthService.getErrorMessage(e.message)),
-          backgroundColor: AppColors.error,
+          backgroundColor: appleAuthErrorColor,
           duration: const Duration(seconds: 3),
         ),
       );
@@ -649,10 +665,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (!mounted) return;
       setState(() => _isAppleLoading = false);
 
+      final appleErrorColor = ref.read(themeColorsProvider).statusError;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AuthService.getErrorMessage(e.toString())),
-          backgroundColor: AppColors.error,
+          backgroundColor: appleErrorColor,
           duration: const Duration(seconds: 3),
         ),
       );

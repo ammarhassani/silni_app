@@ -1328,10 +1328,11 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
 
   Future<void> _exportTree() async {
     if (_currentTreeData == null || _currentRelatives == null) {
+      final errorColor = ref.read(themeColorsProvider).statusError;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('لا توجد شجرة للتصدير'),
-          backgroundColor: AppColors.error,
+        SnackBar(
+          content: const Text('لا توجد شجرة للتصدير'),
+          backgroundColor: errorColor,
         ),
       );
       return;
@@ -1369,10 +1370,11 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       );
     } catch (e) {
       if (mounted) {
+        final errorColor = ref.read(themeColorsProvider).statusError;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('حدث خطأ: $e'),
-            backgroundColor: AppColors.error,
+            backgroundColor: errorColor,
           ),
         );
       }

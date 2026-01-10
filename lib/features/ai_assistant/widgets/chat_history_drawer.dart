@@ -9,6 +9,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/ai/ai_identity.dart';
 import '../../../core/ai/ai_models.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../providers/ai_chat_provider.dart';
 
 /// Drawer showing chat history with past conversations
@@ -478,7 +479,7 @@ class ChatHistoryDrawer extends ConsumerWidget {
               ref.invalidate(chatHistoryProvider);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
+              backgroundColor: ref.read(themeColorsProvider).statusError,
               foregroundColor: Colors.white,
             ),
             child: Text(

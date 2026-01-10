@@ -51,7 +51,7 @@ class RelativeStreakIndicator extends ConsumerWidget {
     // Choose emoji and color based on state
     final emoji = isEndangered ? '⏳' : '🔥';
     final glowColor = isEndangered
-        ? (isCritical ? AppColors.error : AppColors.joyfulOrange)
+        ? (isCritical ? themeColors.statusError : AppColors.joyfulOrange)
         : AppColors.joyfulOrange;
 
     return Container(
@@ -99,7 +99,7 @@ class RelativeStreakIndicator extends ConsumerWidget {
             Text(
               streak.formattedTimeRemaining,
               style: AppTypography.labelSmall.copyWith(
-                color: isCritical ? AppColors.error : AppColors.joyfulOrange,
+                color: isCritical ? themeColors.statusError : AppColors.joyfulOrange,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -214,7 +214,7 @@ class RelativeStreakCard extends ConsumerWidget {
           colors: isEndangered
               ? [
                   AppColors.joyfulOrange.withValues(alpha: 0.15),
-                  AppColors.error.withValues(alpha: 0.1),
+                  themeColors.statusError.withValues(alpha: 0.1),
                 ]
               : [
                   themeColors.glassHighlight,
@@ -254,7 +254,7 @@ class RelativeStreakCard extends ConsumerWidget {
                         'متبقي: ${streak.formattedTimeRemaining}',
                         style: AppTypography.labelSmall.copyWith(
                           color: warningState == StreakWarningState.critical
-                              ? AppColors.error
+                              ? themeColors.statusError
                               : AppColors.joyfulOrange,
                           fontWeight: FontWeight.w600,
                         ),

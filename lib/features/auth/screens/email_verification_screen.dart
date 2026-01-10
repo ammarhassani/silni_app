@@ -117,7 +117,7 @@ class _EmailVerificationScreenState
         UIHelpers.showSnackBar(
           context,
           'تم إرسال رابط التحقق إلى بريدك الإلكتروني',
-          backgroundColor: AppColors.success,
+          backgroundColor: ref.read(themeColorsProvider).statusSuccess,
         );
 
         // Start cooldown

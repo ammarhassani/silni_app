@@ -4,6 +4,9 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../shared/widgets/gradient_button.dart';
 
+// Fallback error color for dialog without theme context
+const _kErrorColor = Color(0xFFE53935);
+
 /// A dialog that prompts the user to enter their display name
 /// Used after Apple Sign-In when user chose "Hide My Email"
 class NamePromptDialog extends StatefulWidget {
@@ -190,7 +193,7 @@ class _NamePromptDialogState extends State<NamePromptDialog> {
                 ),
                 errorText: _errorMessage,
                 errorStyle: AppTypography.bodySmall.copyWith(
-                  color: AppColors.error,
+                  color: _kErrorColor,
                 ),
               ),
               onSubmitted: (_) => _submit(),

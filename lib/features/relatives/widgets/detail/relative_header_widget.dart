@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_typography.dart';
 import '../../../../core/router/app_routes.dart';
@@ -8,6 +9,7 @@ import '../../../../core/theme/app_themes.dart';
 import '../../../../shared/widgets/relative_avatar.dart';
 import '../../../../shared/models/relative_model.dart';
 import '../../../ai_assistant/widgets/health_badge.dart';
+import 'relative_streak_badge.dart';
 
 /// Header widget displaying relative avatar, name, and relationship
 class RelativeHeaderWidget extends ConsumerWidget {
@@ -24,17 +26,6 @@ class RelativeHeaderWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final priorityColor = relative.priority == 1
-        ? Colors.red
-        : relative.priority == 2
-            ? Colors.orange
-            : Colors.blue;
-    final priorityLabel = relative.priority == 1
-        ? 'عالية'
-        : relative.priority == 2
-            ? 'متوسطة'
-            : 'منخفضة';
-
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
@@ -44,23 +35,23 @@ class RelativeHeaderWidget extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                icon: const Icon(
+                icon: Icon(
                   Icons.arrow_forward_rounded,
-                  color: Colors.white,
+                  color: themeColors.textPrimary,
                 ),
                 onPressed: () => context.pop(),
               ),
               Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.edit_rounded, color: Colors.white),
+                    icon: Icon(Icons.edit_rounded, color: themeColors.textPrimary),
                     onPressed: () {
                       context.push('${AppRoutes.editRelative}/${relative.id}');
                     },
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   IconButton(
-                    icon: const Icon(Icons.delete_rounded, color: Colors.red),
+                    icon: Icon(Icons.delete_rounded, color: themeColors.accent),
                     onPressed: onDelete,
                   ),
                 ],
@@ -86,7 +77,7 @@ class RelativeHeaderWidget extends ConsumerWidget {
           Text(
             relative.fullName,
             style: AppTypography.headlineLarge.copyWith(
-              color: Colors.white,
+              color: themeColors.textPrimary,
               fontWeight: FontWeight.bold,
             ),
             textAlign: TextAlign.center,
@@ -96,7 +87,7 @@ class RelativeHeaderWidget extends ConsumerWidget {
 
           const SizedBox(height: AppSpacing.xs),
 
-          // Relationship
+          // Relationship badge
           Container(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
@@ -108,61 +99,115 @@ class RelativeHeaderWidget extends ConsumerWidget {
             ),
             child: Text(
               relative.relationshipType.arabicName,
-              style: AppTypography.titleMedium.copyWith(color: Colors.white),
+              style: AppTypography.titleMedium.copyWith(color: themeColors.onPrimary),
             ),
           ),
 
           const SizedBox(height: AppSpacing.sm),
 
-          // Favorite badge
-          if (relative.isFavorite)
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.xs,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.2),
-                border: Border.all(color: Colors.amber),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.star, color: Colors.amber, size: 16),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(
-                    'مفضل',
-                    style: AppTypography.labelMedium.copyWith(
-                      color: Colors.amber,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          const SizedBox(height: AppSpacing.sm),
-
-          // Health badge with score
-          HealthBadge(
-            relative: relative,
-            showLabel: true,
-            showScore: true,
-          ),
-
-          const SizedBox(height: AppSpacing.sm),
-
-          // Priority indicator
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          // Compact row: Favorite + Health + Streak + Priority
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
             children: [
-              Icon(Icons.priority_high, color: priorityColor, size: 16),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                'أولوية $priorityLabel',
-                style: AppTypography.labelMedium.copyWith(color: priorityColor),
+              // Favorite badge (if applicable)
+              if (relative.isFavorite)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: themeColors.streakFire,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.star, color: themeColors.onPrimary, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        'مفضل',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: themeColors.onPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Health badge
+              HealthBadge(
+                relative: relative,
+                showLabel: true,
+                showScore: false,
               ),
+
+              // Streak badge
+              RelativeStreakBadge(relativeId: relative.id),
+
+              // Priority badge
+              _PriorityBadge(priority: relative.priority, themeColors: themeColors),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Compact priority badge using theme gradients
+class _PriorityBadge extends StatelessWidget {
+  const _PriorityBadge({
+    required this.priority,
+    required this.themeColors,
+  });
+
+  final int priority;
+  final ThemeColors themeColors;
+
+  @override
+  Widget build(BuildContext context) {
+    // Use theme gradients and differentiate with icons
+    IconData icon;
+    String label;
+
+    switch (priority) {
+      case 1: // High
+        icon = LucideIcons.chevronsUp;
+        label = 'عالية';
+        break;
+      case 2: // Medium
+        icon = LucideIcons.minus;
+        label = 'متوسطة';
+        break;
+      default: // Low
+        icon = LucideIcons.chevronsDown;
+        label = 'منخفضة';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        gradient: themeColors.primaryGradient,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: themeColors.onPrimary, size: 14),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: AppTypography.labelSmall.copyWith(
+              color: themeColors.onPrimary,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),

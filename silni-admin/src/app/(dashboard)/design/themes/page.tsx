@@ -70,6 +70,42 @@ const THEME_COLOR_KEYS = {
     { key: "divider", label: "الفاصل", labelEn: "Divider" },
     { key: "disabled", label: "معطّل", labelEn: "Disabled" },
   ],
+  status: [
+    { key: "status_success", label: "نجاح", labelEn: "Success" },
+    { key: "status_error", label: "خطأ", labelEn: "Error" },
+    { key: "status_warning", label: "تحذير", labelEn: "Warning" },
+    { key: "status_info", label: "معلومات", labelEn: "Info" },
+  ],
+  contact: [
+    { key: "contact_excellent", label: "تواصل ممتاز", labelEn: "Excellent Contact" },
+    { key: "contact_good", label: "تواصل جيد", labelEn: "Good Contact" },
+    { key: "contact_normal", label: "تواصل عادي", labelEn: "Normal Contact" },
+    { key: "contact_needs_care", label: "يحتاج رعاية", labelEn: "Needs Care" },
+    { key: "contact_critical", label: "حرج", labelEn: "Critical" },
+    { key: "contact_elderly", label: "مسن", labelEn: "Elderly" },
+    { key: "contact_disabled", label: "ذوي احتياجات", labelEn: "Disabled" },
+  ],
+  mood: [
+    { key: "mood_happy", label: "سعيد", labelEn: "Happy" },
+    { key: "mood_neutral", label: "محايد", labelEn: "Neutral" },
+    { key: "mood_sad", label: "حزين", labelEn: "Sad" },
+    { key: "mood_excited", label: "متحمس", labelEn: "Excited" },
+    { key: "mood_calm", label: "هادئ", labelEn: "Calm" },
+    { key: "mood_worried", label: "قلق", labelEn: "Worried" },
+  ],
+  priority: [
+    { key: "priority_high", label: "أولوية عالية", labelEn: "High Priority" },
+    { key: "priority_medium", label: "أولوية متوسطة", labelEn: "Medium Priority" },
+    { key: "priority_low", label: "أولوية منخفضة", labelEn: "Low Priority" },
+  ],
+  level: [
+    { key: "level_1", label: "مستوى 1", labelEn: "Level 1" },
+    { key: "level_2", label: "مستوى 2", labelEn: "Level 2" },
+    { key: "level_3", label: "مستوى 3", labelEn: "Level 3" },
+    { key: "level_4", label: "مستوى 4", labelEn: "Level 4" },
+    { key: "level_5", label: "مستوى 5", labelEn: "Level 5" },
+    { key: "level_max", label: "المستوى الأقصى", labelEn: "Max Level" },
+  ],
 };
 
 const GRADIENT_KEYS = [
@@ -77,6 +113,10 @@ const GRADIENT_KEYS = [
   { key: "background", label: "تدرج الخلفية", labelEn: "Background Gradient" },
   { key: "golden", label: "التدرج الذهبي", labelEn: "Golden Gradient" },
   { key: "streak_fire", label: "تدرج النار", labelEn: "Streak Fire" },
+  { key: "tier_legendary", label: "تدرج أسطوري", labelEn: "Legendary Tier" },
+  { key: "tier_epic", label: "تدرج ملحمي", labelEn: "Epic Tier" },
+  { key: "tier_rare", label: "تدرج نادر", labelEn: "Rare Tier" },
+  { key: "tier_starter", label: "تدرج مبتدئ", labelEn: "Starter Tier" },
 ];
 
 // All 6 base theme templates
@@ -114,12 +154,47 @@ const BASE_THEMES = {
       card_border: "#FFFFFF33",
       divider: "#FFFFFF33",
       disabled: "#FFFFFF80",
+      // Semantic status
+      status_success: "#4CAF50",
+      status_error: "#E53935",
+      status_warning: "#FFA726",
+      status_info: "#29B6F6",
+      // Contact frequency
+      contact_excellent: "#4CAF50",
+      contact_good: "#8BC34A",
+      contact_normal: "#2196F3",
+      contact_needs_care: "#FF9800",
+      contact_critical: "#F44336",
+      contact_elderly: "#9C27B0",
+      contact_disabled: "#607D8B",
+      // Mood
+      mood_happy: "#FFEB3B",
+      mood_neutral: "#9E9E9E",
+      mood_sad: "#5C6BC0",
+      mood_excited: "#FF5722",
+      mood_calm: "#26C6DA",
+      mood_worried: "#FFA726",
+      // Priority
+      priority_high: "#E53935",
+      priority_medium: "#FFA726",
+      priority_low: "#66BB6A",
+      // Level
+      level_1: "#81C784",
+      level_2: "#4CAF50",
+      level_3: "#388E3C",
+      level_4: "#2E7D32",
+      level_5: "#1B5E20",
+      level_max: "#FFD700",
     },
     gradients: {
       primary: { colors: ["#2E7D32", "#60AD5E", "#81C784"] },
       background: { colors: ["#1B5E20", "#2E7D32", "#388E3C"] },
       golden: { colors: ["#FFD700", "#FFA000", "#FF6F00"] },
       streak_fire: { colors: ["#FF6F00", "#FF8F00", "#FFA726"] },
+      tier_legendary: { colors: ["#FFD700", "#FFA000", "#FF6F00"] },
+      tier_epic: { colors: ["#9C27B0", "#7B1FA2", "#E91E63"] },
+      tier_rare: { colors: ["#2196F3", "#1976D2", "#00BCD4"] },
+      tier_starter: { colors: ["#81C784", "#4CAF50", "#388E3C"] },
     },
   },
   lavender: {
@@ -1042,6 +1117,121 @@ export default function ThemesPage() {
                   </CollapsibleTrigger>
                   <CollapsibleContent className="grid grid-cols-2 gap-3 pt-3">
                     {THEME_COLOR_KEYS.utility.map(({ key, label }) => (
+                      <ColorPicker
+                        key={key}
+                        label={label}
+                        value={(formData.colors as Record<string, string>)?.[key] || ""}
+                        onChange={(value) =>
+                          setFormData((f) => ({
+                            ...f,
+                            colors: { ...f.colors, [key]: value },
+                          }))
+                        }
+                      />
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* Status Colors */}
+                <Collapsible>
+                  <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 bg-muted rounded-lg hover:bg-muted/80">
+                    <ChevronDown className="h-4 w-4" />
+                    <span className="font-medium">ألوان الحالة</span>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="grid grid-cols-2 gap-3 pt-3">
+                    {THEME_COLOR_KEYS.status.map(({ key, label }) => (
+                      <ColorPicker
+                        key={key}
+                        label={label}
+                        value={(formData.colors as Record<string, string>)?.[key] || ""}
+                        onChange={(value) =>
+                          setFormData((f) => ({
+                            ...f,
+                            colors: { ...f.colors, [key]: value },
+                          }))
+                        }
+                      />
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* Contact Colors */}
+                <Collapsible>
+                  <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 bg-muted rounded-lg hover:bg-muted/80">
+                    <ChevronDown className="h-4 w-4" />
+                    <span className="font-medium">ألوان التواصل</span>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="grid grid-cols-2 gap-3 pt-3">
+                    {THEME_COLOR_KEYS.contact.map(({ key, label }) => (
+                      <ColorPicker
+                        key={key}
+                        label={label}
+                        value={(formData.colors as Record<string, string>)?.[key] || ""}
+                        onChange={(value) =>
+                          setFormData((f) => ({
+                            ...f,
+                            colors: { ...f.colors, [key]: value },
+                          }))
+                        }
+                      />
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* Mood Colors */}
+                <Collapsible>
+                  <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 bg-muted rounded-lg hover:bg-muted/80">
+                    <ChevronDown className="h-4 w-4" />
+                    <span className="font-medium">ألوان المزاج</span>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="grid grid-cols-2 gap-3 pt-3">
+                    {THEME_COLOR_KEYS.mood.map(({ key, label }) => (
+                      <ColorPicker
+                        key={key}
+                        label={label}
+                        value={(formData.colors as Record<string, string>)?.[key] || ""}
+                        onChange={(value) =>
+                          setFormData((f) => ({
+                            ...f,
+                            colors: { ...f.colors, [key]: value },
+                          }))
+                        }
+                      />
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* Priority Colors */}
+                <Collapsible>
+                  <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 bg-muted rounded-lg hover:bg-muted/80">
+                    <ChevronDown className="h-4 w-4" />
+                    <span className="font-medium">ألوان الأولوية</span>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="grid grid-cols-2 gap-3 pt-3">
+                    {THEME_COLOR_KEYS.priority.map(({ key, label }) => (
+                      <ColorPicker
+                        key={key}
+                        label={label}
+                        value={(formData.colors as Record<string, string>)?.[key] || ""}
+                        onChange={(value) =>
+                          setFormData((f) => ({
+                            ...f,
+                            colors: { ...f.colors, [key]: value },
+                          }))
+                        }
+                      />
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* Level Colors */}
+                <Collapsible>
+                  <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 bg-muted rounded-lg hover:bg-muted/80">
+                    <ChevronDown className="h-4 w-4" />
+                    <span className="font-medium">ألوان المستوى</span>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="grid grid-cols-2 gap-3 pt-3">
+                    {THEME_COLOR_KEYS.level.map(({ key, label }) => (
                       <ColorPicker
                         key={key}
                         label={label}

@@ -1,26 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
+import '../../core/theme/app_themes.dart';
+import '../../core/theme/theme_provider.dart';
 import 'glass_card.dart';
 
-/// Health status options for relatives
+/// Health status options for relatives (represents communication frequency)
 enum HealthStatusOption {
-  excellent('excellent', 'ممتاز', '💪', Color(0xFF4CAF50)),
-  good('good', 'جيد', '😊', Color(0xFF8BC34A)),
-  normal('normal', 'عادي', '🙂', Color(0xFF2196F3)),
-  needsCare('needs_care', 'يحتاج رعاية', '🩺', Color(0xFFFF9800)),
-  sick('sick', 'مريض', '🤒', Color(0xFFF44336)),
-  elderly('elderly', 'مسن', '👴', Color(0xFF9C27B0)),
-  disabled('disabled', 'ذوي احتياجات خاصة', '♿', Color(0xFF607D8B));
+  excellent('excellent', 'ممتاز', '💪'),
+  good('good', 'جيد', '😊'),
+  normal('normal', 'عادي', '🙂'),
+  needsCare('needs_care', 'يحتاج رعاية', '🩺'),
+  sick('sick', 'مريض', '🤒'),
+  elderly('elderly', 'مسن', '👴'),
+  disabled('disabled', 'ذوي احتياجات خاصة', '♿');
 
   final String value;
   final String arabicName;
   final String emoji;
-  final Color color;
 
-  const HealthStatusOption(this.value, this.arabicName, this.emoji, this.color);
+  const HealthStatusOption(this.value, this.arabicName, this.emoji);
+
+  /// Get theme-aware color for this status
+  Color getColor(ThemeColors colors) => switch (this) {
+        excellent => colors.contactExcellent,
+        good => colors.contactGood,
+        normal => colors.contactNormal,
+        needsCare => colors.contactNeedsCare,
+        sick => colors.contactCritical,
+        elderly => colors.contactElderly,
+        disabled => colors.contactDisabled,
+      };
 
   static HealthStatusOption? fromString(String? value) {
     if (value == null) return null;
@@ -32,7 +45,7 @@ enum HealthStatusOption {
 }
 
 /// A health status picker widget for recording relative's health condition
-class HealthStatusPicker extends StatelessWidget {
+class HealthStatusPicker extends ConsumerWidget {
   final String? selectedStatus;
   final ValueChanged<String?> onStatusChanged;
   final bool showLabel;
@@ -45,7 +58,9 @@ class HealthStatusPicker extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = ref.watch(themeColorsProvider);
+
     return GlassCard(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -56,7 +71,7 @@ class HealthStatusPicker extends StatelessWidget {
               children: [
                 Icon(
                   Icons.health_and_safety_rounded,
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: colors.textOnGradient.withValues(alpha: 0.7),
                   size: 20,
                 ),
                 const SizedBox(width: AppSpacing.sm),
@@ -67,13 +82,13 @@ class HealthStatusPicker extends StatelessWidget {
                       Text(
                         'الحالة الصحية',
                         style: AppTypography.titleMedium.copyWith(
-                          color: Colors.white,
+                          color: colors.textOnGradient,
                         ),
                       ),
                       Text(
                         'اختياري - لتذكيرك بالاطمئنان على صحتهم',
                         style: AppTypography.labelSmall.copyWith(
-                          color: Colors.white.withValues(alpha: 0.6),
+                          color: colors.textOnGradient.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -88,19 +103,25 @@ class HealthStatusPicker extends StatelessWidget {
             runSpacing: AppSpacing.sm,
             children: HealthStatusOption.values.map((status) {
               final isSelected = selectedStatus == status.value;
-              return _buildStatusChip(status, isSelected);
+              return _buildStatusChip(status, isSelected, colors);
             }).toList(),
           ),
           if (selectedStatus != null) ...[
             const SizedBox(height: AppSpacing.sm),
-            _buildSelectedInfo(),
+            _buildSelectedInfo(colors),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildStatusChip(HealthStatusOption status, bool isSelected) {
+  Widget _buildStatusChip(
+    HealthStatusOption status,
+    bool isSelected,
+    ThemeColors colors,
+  ) {
+    final statusColor = status.getColor(colors);
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
@@ -117,21 +138,25 @@ class HealthStatusPicker extends StatelessWidget {
           gradient: isSelected
               ? LinearGradient(
                   colors: [
-                    status.color.withValues(alpha: 0.8),
-                    status.color,
+                    statusColor.withValues(alpha: 0.8),
+                    statusColor,
                   ],
                 )
               : null,
-          color: isSelected ? null : Colors.white.withValues(alpha: 0.1),
+          color: isSelected
+              ? null
+              : colors.glassBackground.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           border: Border.all(
-            color: isSelected ? status.color : Colors.white.withValues(alpha: 0.3),
+            color: isSelected
+                ? statusColor
+                : colors.glassBorder.withValues(alpha: 0.3),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: status.color.withValues(alpha: 0.4),
+                    color: statusColor.withValues(alpha: 0.4),
                     blurRadius: 8,
                     spreadRadius: 1,
                   ),
@@ -149,7 +174,7 @@ class HealthStatusPicker extends StatelessWidget {
             Text(
               status.arabicName,
               style: AppTypography.labelMedium.copyWith(
-                color: Colors.white,
+                color: colors.textOnGradient,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -159,9 +184,11 @@ class HealthStatusPicker extends StatelessWidget {
     );
   }
 
-  Widget _buildSelectedInfo() {
+  Widget _buildSelectedInfo(ThemeColors colors) {
     final status = HealthStatusOption.fromString(selectedStatus);
     if (status == null) return const SizedBox.shrink();
+
+    final statusColor = status.getColor(colors);
 
     String hint = '';
     switch (status) {
@@ -186,17 +213,17 @@ class HealthStatusPicker extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
-        color: status.color.withValues(alpha: 0.1),
+        color: statusColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
         border: Border.all(
-          color: status.color.withValues(alpha: 0.3),
+          color: statusColor.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
         children: [
           Icon(
             Icons.info_outline_rounded,
-            color: status.color,
+            color: statusColor,
             size: 16,
           ),
           const SizedBox(width: AppSpacing.xs),
@@ -204,7 +231,7 @@ class HealthStatusPicker extends StatelessWidget {
             child: Text(
               hint,
               style: AppTypography.labelSmall.copyWith(
-                color: Colors.white.withValues(alpha: 0.8),
+                color: colors.textOnGradient.withValues(alpha: 0.8),
                 fontStyle: FontStyle.italic,
               ),
             ),

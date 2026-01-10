@@ -2,12 +2,15 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/errors/app_errors.dart';
 import '../utils/ui_helpers.dart';
 import 'gradient_button.dart';
+
+// Fallback error colors for widgets that don't have theme context
+const _kErrorColor = Color(0xFFE53935);
+const _kWarningColor = Color(0xFFFFA726);
 
 /// Inline error widget for displaying errors within lists or cards
 class InlineErrorWidget extends StatelessWidget {
@@ -52,7 +55,7 @@ class InlineErrorWidget extends StatelessWidget {
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: AppColors.error.withValues(alpha: 0.1),
+        color: _kErrorColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
       ),
       child: Row(
@@ -60,7 +63,7 @@ class InlineErrorWidget extends StatelessWidget {
         children: [
           Icon(
             Icons.error_outline_rounded,
-            color: AppColors.error,
+            color: _kErrorColor,
             size: AppSpacing.iconSm,
           ),
           const SizedBox(width: AppSpacing.xs),
@@ -68,7 +71,7 @@ class InlineErrorWidget extends StatelessWidget {
             child: Text(
               message,
               style: AppTypography.bodySmall.copyWith(
-                color: AppColors.error,
+                color: _kErrorColor,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -80,7 +83,7 @@ class InlineErrorWidget extends StatelessWidget {
               onTap: onRetry,
               child: Icon(
                 Icons.refresh_rounded,
-                color: AppColors.error,
+                color: _kErrorColor,
                 size: AppSpacing.iconSm,
               ),
             ),
@@ -102,13 +105,13 @@ class InlineErrorWidget extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                AppColors.error.withValues(alpha: 0.2),
-                AppColors.error.withValues(alpha: 0.1),
+                _kErrorColor.withValues(alpha: 0.2),
+                _kErrorColor.withValues(alpha: 0.1),
               ],
             ),
             borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
             border: Border.all(
-              color: AppColors.error.withValues(alpha: 0.3),
+              color: _kErrorColor.withValues(alpha: 0.3),
               width: 1,
             ),
           ),
@@ -117,7 +120,7 @@ class InlineErrorWidget extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: AppColors.error.withValues(alpha: 0.2),
+                  color: _kErrorColor.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -236,11 +239,11 @@ class FullScreenErrorWidget extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(AppSpacing.lg),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withValues(alpha: 0.2),
+                      color: _kErrorColor.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.error.withValues(alpha: 0.3),
+                          color: _kErrorColor.withValues(alpha: 0.3),
                           blurRadius: 20,
                           spreadRadius: 5,
                         ),
@@ -325,13 +328,13 @@ class OfflineBanner extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppColors.warning.withValues(alpha: 0.9),
-              AppColors.warning,
+              _kWarningColor.withValues(alpha: 0.9),
+              _kWarningColor,
             ],
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.warning.withValues(alpha: 0.3),
+              color: _kWarningColor.withValues(alpha: 0.3),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),

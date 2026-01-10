@@ -3,12 +3,14 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/errors/app_errors.dart';
 import '../utils/ui_helpers.dart';
 import 'gradient_button.dart';
+
+// Fallback error color for widgets that don't have theme context
+const _kErrorColor = Color(0xFFE53935);
 
 /// Error bottom sheet for displaying critical errors
 class ErrorBottomSheet {
@@ -175,11 +177,11 @@ class _ErrorBottomSheetContent extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(AppSpacing.lg),
                       decoration: BoxDecoration(
-                        color: AppColors.error.withValues(alpha: 0.2),
+                        color: _kErrorColor.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.error.withValues(alpha: 0.3),
+                            color: _kErrorColor.withValues(alpha: 0.3),
                             blurRadius: 20,
                             spreadRadius: 5,
                           ),

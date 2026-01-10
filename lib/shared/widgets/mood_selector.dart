@@ -1,25 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
+import '../../core/theme/app_themes.dart';
+import '../../core/theme/theme_provider.dart';
 
 /// Mood options for interactions
 enum MoodOption {
-  excellent('excellent', 'ممتاز', '😄', Color(0xFF4CAF50)),
-  good('good', 'جيد', '🙂', Color(0xFF8BC34A)),
-  neutral('neutral', 'عادي', '😐', Color(0xFFFFC107)),
-  concerned('concerned', 'قلق', '😟', Color(0xFFFF9800)),
-  sad('sad', 'حزين', '😢', Color(0xFF2196F3)),
-  worried('worried', 'مهموم', '😰', Color(0xFF9C27B0));
+  excellent('excellent', 'ممتاز', '😄'),
+  good('good', 'جيد', '🙂'),
+  neutral('neutral', 'عادي', '😐'),
+  concerned('concerned', 'قلق', '😟'),
+  sad('sad', 'حزين', '😢'),
+  worried('worried', 'مهموم', '😰');
 
   final String value;
   final String arabicName;
   final String emoji;
-  final Color color;
 
-  const MoodOption(this.value, this.arabicName, this.emoji, this.color);
+  const MoodOption(this.value, this.arabicName, this.emoji);
+
+  /// Get theme-aware color for this mood
+  Color getColor(ThemeColors colors) => switch (this) {
+        excellent => colors.moodHappy,
+        good => colors.moodCalm,
+        neutral => colors.moodNeutral,
+        concerned => colors.moodWorried,
+        sad => colors.moodSad,
+        worried => colors.moodExcited,
+      };
 
   static MoodOption? fromString(String? value) {
     if (value == null) return null;
@@ -31,7 +42,7 @@ enum MoodOption {
 }
 
 /// A mood selector widget for recording emotional state during interactions
-class MoodSelector extends StatelessWidget {
+class MoodSelector extends ConsumerWidget {
   final String? selectedMood;
   final ValueChanged<String?> onMoodChanged;
   final bool showLabel;
@@ -46,14 +57,16 @@ class MoodSelector extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = ref.watch(themeColorsProvider);
+
     if (compact) {
-      return _buildCompactSelector();
+      return _buildCompactSelector(colors);
     }
-    return _buildFullSelector();
+    return _buildFullSelector(colors);
   }
 
-  Widget _buildFullSelector() {
+  Widget _buildFullSelector(ThemeColors colors) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -62,13 +75,14 @@ class MoodSelector extends StatelessWidget {
             children: [
               Icon(
                 Icons.mood_rounded,
-                color: Colors.white.withValues(alpha: 0.7),
+                color: colors.textOnGradient.withValues(alpha: 0.7),
                 size: 20,
               ),
               const SizedBox(width: AppSpacing.sm),
               Text(
                 'كيف كان شعورك؟',
-                style: AppTypography.titleMedium.copyWith(color: Colors.white),
+                style: AppTypography.titleMedium
+                    .copyWith(color: colors.textOnGradient),
               ),
             ],
           ),
@@ -76,7 +90,7 @@ class MoodSelector extends StatelessWidget {
           Text(
             'اختياري - سجل شعورك خلال هذا التواصل',
             style: AppTypography.bodySmall.copyWith(
-              color: Colors.white.withValues(alpha: 0.6),
+              color: colors.textOnGradient.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -86,24 +100,26 @@ class MoodSelector extends StatelessWidget {
           runSpacing: AppSpacing.sm,
           children: MoodOption.values.map((mood) {
             final isSelected = selectedMood == mood.value;
-            return _buildMoodChip(mood, isSelected);
+            return _buildMoodChip(mood, isSelected, colors);
           }).toList(),
         ),
       ],
     );
   }
 
-  Widget _buildCompactSelector() {
+  Widget _buildCompactSelector(ThemeColors colors) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: MoodOption.values.map((mood) {
         final isSelected = selectedMood == mood.value;
-        return _buildCompactMoodChip(mood, isSelected);
+        return _buildCompactMoodChip(mood, isSelected, colors);
       }).toList(),
     );
   }
 
-  Widget _buildMoodChip(MoodOption mood, bool isSelected) {
+  Widget _buildMoodChip(MoodOption mood, bool isSelected, ThemeColors colors) {
+    final moodColor = mood.getColor(colors);
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
@@ -120,21 +136,25 @@ class MoodSelector extends StatelessWidget {
           gradient: isSelected
               ? LinearGradient(
                   colors: [
-                    mood.color.withValues(alpha: 0.8),
-                    mood.color,
+                    moodColor.withValues(alpha: 0.8),
+                    moodColor,
                   ],
                 )
               : null,
-          color: isSelected ? null : Colors.white.withValues(alpha: 0.1),
+          color: isSelected
+              ? null
+              : colors.glassBackground.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           border: Border.all(
-            color: isSelected ? mood.color : Colors.white.withValues(alpha: 0.3),
+            color: isSelected
+                ? moodColor
+                : colors.glassBorder.withValues(alpha: 0.3),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: mood.color.withValues(alpha: 0.4),
+                    color: moodColor.withValues(alpha: 0.4),
                     blurRadius: 8,
                     spreadRadius: 1,
                   ),
@@ -152,7 +172,7 @@ class MoodSelector extends StatelessWidget {
             Text(
               mood.arabicName,
               style: AppTypography.labelMedium.copyWith(
-                color: Colors.white,
+                color: colors.textOnGradient,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -162,7 +182,13 @@ class MoodSelector extends StatelessWidget {
     );
   }
 
-  Widget _buildCompactMoodChip(MoodOption mood, bool isSelected) {
+  Widget _buildCompactMoodChip(
+    MoodOption mood,
+    bool isSelected,
+    ThemeColors colors,
+  ) {
+    final moodColor = mood.getColor(colors);
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
@@ -177,20 +203,24 @@ class MoodSelector extends StatelessWidget {
           gradient: isSelected
               ? LinearGradient(
                   colors: [
-                    mood.color.withValues(alpha: 0.8),
-                    mood.color,
+                    moodColor.withValues(alpha: 0.8),
+                    moodColor,
                   ],
                 )
               : null,
-          color: isSelected ? null : Colors.white.withValues(alpha: 0.1),
+          color: isSelected
+              ? null
+              : colors.glassBackground.withValues(alpha: 0.1),
           border: Border.all(
-            color: isSelected ? mood.color : Colors.white.withValues(alpha: 0.3),
+            color: isSelected
+                ? moodColor
+                : colors.glassBorder.withValues(alpha: 0.3),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: mood.color.withValues(alpha: 0.4),
+                    color: moodColor.withValues(alpha: 0.4),
                     blurRadius: 6,
                     spreadRadius: 1,
                   ),
@@ -209,7 +239,7 @@ class MoodSelector extends StatelessWidget {
 }
 
 /// A dialog for logging an interaction with full details including mood
-class LogInteractionDialog extends StatefulWidget {
+class LogInteractionDialog extends ConsumerStatefulWidget {
   final String relativeName;
   final Function(String type, String? notes, String? mood, int? duration)
       onSave;
@@ -221,10 +251,11 @@ class LogInteractionDialog extends StatefulWidget {
   });
 
   @override
-  State<LogInteractionDialog> createState() => _LogInteractionDialogState();
+  ConsumerState<LogInteractionDialog> createState() =>
+      _LogInteractionDialogState();
 }
 
-class _LogInteractionDialogState extends State<LogInteractionDialog> {
+class _LogInteractionDialogState extends ConsumerState<LogInteractionDialog> {
   String _selectedType = 'call';
   String? _selectedMood;
   final _notesController = TextEditingController();
@@ -247,8 +278,10 @@ class _LogInteractionDialogState extends State<LogInteractionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = ref.watch(themeColorsProvider);
+
     return Dialog(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.cardRadiusLarge),
       ),
@@ -265,13 +298,13 @@ class _LogInteractionDialogState extends State<LogInteractionDialog> {
                   Container(
                     padding: const EdgeInsets.all(AppSpacing.sm),
                     decoration: BoxDecoration(
-                      gradient: AppColors.primaryGradient,
+                      gradient: colors.primaryGradient,
                       shape: BoxShape.circle,
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Icon(
                         Icons.add_comment_rounded,
-                        color: Colors.white,
+                        color: colors.onPrimary,
                         size: 24,
                       ),
                     ),
@@ -284,20 +317,20 @@ class _LogInteractionDialogState extends State<LogInteractionDialog> {
                         Text(
                           'تسجيل تواصل',
                           style: AppTypography.titleLarge.copyWith(
-                            color: Colors.white,
+                            color: colors.textPrimary,
                           ),
                         ),
                         Text(
                           'مع ${widget.relativeName}',
                           style: AppTypography.bodySmall.copyWith(
-                            color: Colors.white70,
+                            color: colors.textSecondary,
                           ),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white54),
+                    icon: Icon(Icons.close, color: colors.textHint),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -307,7 +340,8 @@ class _LogInteractionDialogState extends State<LogInteractionDialog> {
               // Interaction type selector
               Text(
                 'نوع التواصل',
-                style: AppTypography.titleMedium.copyWith(color: Colors.white),
+                style: AppTypography.titleMedium
+                    .copyWith(color: colors.textPrimary),
               ),
               const SizedBox(height: AppSpacing.sm),
               Wrap(
@@ -326,16 +360,16 @@ class _LogInteractionDialogState extends State<LogInteractionDialog> {
                         vertical: AppSpacing.sm,
                       ),
                       decoration: BoxDecoration(
-                        gradient:
-                            isSelected ? AppColors.primaryGradient : null,
-                        color:
-                            isSelected ? null : Colors.white.withValues(alpha: 0.1),
+                        gradient: isSelected ? colors.primaryGradient : null,
+                        color: isSelected
+                            ? null
+                            : colors.surfaceVariant.withValues(alpha: 0.3),
                         borderRadius:
                             BorderRadius.circular(AppSpacing.radiusLg),
                         border: Border.all(
                           color: isSelected
                               ? Colors.transparent
-                              : Colors.white.withValues(alpha: 0.3),
+                              : colors.divider.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Row(
@@ -349,7 +383,9 @@ class _LogInteractionDialogState extends State<LogInteractionDialog> {
                           Text(
                             type['label'],
                             style: AppTypography.labelMedium.copyWith(
-                              color: Colors.white,
+                              color: isSelected
+                                  ? colors.onPrimary
+                                  : colors.textPrimary,
                               fontWeight: isSelected
                                   ? FontWeight.bold
                                   : FontWeight.normal,
@@ -373,18 +409,19 @@ class _LogInteractionDialogState extends State<LogInteractionDialog> {
               // Duration (optional)
               Text(
                 'المدة (اختياري)',
-                style: AppTypography.titleMedium.copyWith(color: Colors.white),
+                style: AppTypography.titleMedium
+                    .copyWith(color: colors.textPrimary),
               ),
               const SizedBox(height: AppSpacing.sm),
               Row(
                 children: [
-                  _buildDurationChip(5),
+                  _buildDurationChip(5, colors),
                   const SizedBox(width: AppSpacing.sm),
-                  _buildDurationChip(15),
+                  _buildDurationChip(15, colors),
                   const SizedBox(width: AppSpacing.sm),
-                  _buildDurationChip(30),
+                  _buildDurationChip(30, colors),
                   const SizedBox(width: AppSpacing.sm),
-                  _buildDurationChip(60),
+                  _buildDurationChip(60, colors),
                 ],
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -392,20 +429,22 @@ class _LogInteractionDialogState extends State<LogInteractionDialog> {
               // Notes
               Text(
                 'ملاحظات (اختياري)',
-                style: AppTypography.titleMedium.copyWith(color: Colors.white),
+                style: AppTypography.titleMedium
+                    .copyWith(color: colors.textPrimary),
               ),
               const SizedBox(height: AppSpacing.sm),
               TextField(
                 controller: _notesController,
                 maxLines: 3,
-                style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+                style:
+                    AppTypography.bodyMedium.copyWith(color: colors.textPrimary),
                 decoration: InputDecoration(
                   hintText: 'أضف ملاحظات عن هذا التواصل...',
                   hintStyle: AppTypography.bodyMedium.copyWith(
-                    color: Colors.white.withValues(alpha: 0.4),
+                    color: colors.textHint,
                   ),
                   filled: true,
-                  fillColor: Colors.white.withValues(alpha: 0.1),
+                  fillColor: colors.surfaceVariant.withValues(alpha: 0.3),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                     borderSide: BorderSide.none,
@@ -413,13 +452,13 @@ class _LogInteractionDialogState extends State<LogInteractionDialog> {
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                     borderSide: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: colors.divider.withValues(alpha: 0.2),
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                    borderSide: const BorderSide(
-                      color: AppColors.islamicGreenPrimary,
+                    borderSide: BorderSide(
+                      color: colors.primary,
                       width: 2,
                     ),
                   ),
@@ -444,8 +483,8 @@ class _LogInteractionDialogState extends State<LogInteractionDialog> {
                     Navigator.of(context).pop();
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.islamicGreenPrimary,
-                    foregroundColor: Colors.white,
+                    backgroundColor: colors.primary,
+                    foregroundColor: colors.onPrimary,
                     padding: const EdgeInsets.symmetric(
                       vertical: AppSpacing.md,
                     ),
@@ -456,7 +495,7 @@ class _LogInteractionDialogState extends State<LogInteractionDialog> {
                   child: Text(
                     'حفظ التواصل',
                     style: AppTypography.labelLarge.copyWith(
-                      color: Colors.white,
+                      color: colors.onPrimary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -469,7 +508,7 @@ class _LogInteractionDialogState extends State<LogInteractionDialog> {
     );
   }
 
-  Widget _buildDurationChip(int minutes) {
+  Widget _buildDurationChip(int minutes, ThemeColors colors) {
     final isSelected = _duration == minutes;
     final label = minutes >= 60 ? '${minutes ~/ 60} ساعة' : '$minutes دقيقة';
 
@@ -484,19 +523,21 @@ class _LogInteractionDialogState extends State<LogInteractionDialog> {
           vertical: AppSpacing.xs,
         ),
         decoration: BoxDecoration(
-          gradient: isSelected ? AppColors.goldenGradient : null,
-          color: isSelected ? null : Colors.white.withValues(alpha: 0.1),
+          gradient: isSelected ? colors.goldenGradient : null,
+          color: isSelected
+              ? null
+              : colors.surfaceVariant.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           border: Border.all(
             color: isSelected
                 ? Colors.transparent
-                : Colors.white.withValues(alpha: 0.3),
+                : colors.divider.withValues(alpha: 0.3),
           ),
         ),
         child: Text(
           label,
           style: AppTypography.labelSmall.copyWith(
-            color: Colors.white,
+            color: isSelected ? colors.onSecondary : colors.textPrimary,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),

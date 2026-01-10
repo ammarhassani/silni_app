@@ -204,18 +204,23 @@ class _InteractionCard extends StatelessWidget {
           // Mood emoji display
           if (interaction.mood != null) ...[
             const SizedBox(width: AppSpacing.sm),
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: MoodOption.fromString(interaction.mood)
-                    ?.color
-                    .withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                MoodOption.fromString(interaction.mood)?.emoji ?? '',
-                style: const TextStyle(fontSize: 18),
-              ),
+            Builder(
+              builder: (context) {
+                final moodOption = MoodOption.fromString(interaction.mood);
+                final moodColor =
+                    moodOption?.getColor(themeColors) ?? themeColors.moodNeutral;
+                return Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: moodColor.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    moodOption?.emoji ?? '',
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                );
+              },
             ),
           ],
           if (interaction.duration != null)
