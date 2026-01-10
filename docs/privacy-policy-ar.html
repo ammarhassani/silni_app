@@ -4,56 +4,120 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>سياسة الخصوصية - تطبيق صِلْني</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #2E7D32;
             --primary-light: #60AD5E;
+            --primary-dark: #1B5E20;
             --text: #333;
-            --bg: #f9f9f9;
+            --bg: #f8faf8;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'SF Arabic', 'Noto Sans Arabic', sans-serif;
-            line-height: 1.9;
+            font-family: 'Tajawal', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 2;
             color: var(--text);
             background: var(--bg);
             padding: 20px;
         }
         .container {
-            max-width: 800px;
+            max-width: 850px;
             margin: 0 auto;
             background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 50px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 3px solid var(--primary-light);
+        }
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border-radius: 20px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            color: white;
+            font-weight: 700;
         }
         h1 {
             color: var(--primary);
             margin-bottom: 10px;
-            font-size: 2em;
+            font-size: 2.2em;
         }
         .subtitle {
             color: #666;
-            margin-bottom: 30px;
+            font-size: 1.1em;
         }
         h2 {
             color: var(--primary);
-            margin: 30px 0 15px;
-            padding-bottom: 8px;
+            margin: 40px 0 20px;
+            padding-bottom: 10px;
             border-bottom: 2px solid var(--primary-light);
+            font-size: 1.5em;
         }
         h3 {
-            color: var(--primary-light);
-            margin: 20px 0 10px;
+            color: var(--primary-dark);
+            margin: 25px 0 12px;
+            font-size: 1.2em;
         }
-        p, li { margin-bottom: 12px; }
-        ul { padding-right: 25px; padding-left: 0; }
+        p { margin-bottom: 15px; }
+        ul {
+            padding-right: 25px;
+            padding-left: 0;
+            margin-bottom: 20px;
+        }
+        li { margin-bottom: 10px; }
         .highlight {
-            background: #e8f5e9;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
+            background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
+            padding: 20px 25px;
+            border-radius: 12px;
+            margin: 25px 0;
+            border-right: 4px solid var(--primary);
         }
+        .warning {
+            background: #fff8e1;
+            padding: 20px 25px;
+            border-radius: 12px;
+            margin: 25px 0;
+            border-right: 4px solid #ffc107;
+        }
+        .info-box {
+            background: #e3f2fd;
+            padding: 20px 25px;
+            border-radius: 12px;
+            margin: 25px 0;
+            border-right: 4px solid #2196f3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: #fafafa;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 15px;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+        tr:hover { background: #f5f5f5; }
         .lang-switch {
             text-align: left;
             margin-bottom: 20px;
@@ -61,146 +125,260 @@
         .lang-switch a {
             color: var(--primary);
             text-decoration: none;
-            padding: 8px 16px;
-            border: 1px solid var(--primary);
-            border-radius: 20px;
+            padding: 10px 20px;
+            border: 2px solid var(--primary);
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s;
         }
         .lang-switch a:hover {
             background: var(--primary);
             color: white;
         }
         .contact {
-            background: #f5f5f5;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 30px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            padding: 30px;
+            border-radius: 16px;
+            margin-top: 40px;
+            color: white;
+        }
+        .contact h2 {
+            color: white;
+            border-bottom-color: rgba(255,255,255,0.3);
+            margin-top: 0;
+        }
+        .contact a {
+            color: white;
+            font-weight: 600;
         }
         .footer {
             text-align: center;
             margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #eee;
             color: #666;
-            font-size: 0.9em;
+        }
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 30px 20px; }
+            h1 { font-size: 1.8em; }
+            h2 { font-size: 1.3em; }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <a href="index.html" class="back-link">← العودة للرئيسية</a>
+
         <div class="lang-switch">
             <a href="privacy-policy.html">English</a>
         </div>
 
-        <h1>سياسة الخصوصية</h1>
-        <p class="subtitle">آخر تحديث: ديسمبر 2024</p>
+        <div class="header">
+            <div class="logo">صِ</div>
+            <h1>سياسة الخصوصية</h1>
+            <p class="subtitle">آخر تحديث: يناير 2025</p>
+        </div>
 
         <div class="highlight">
-            <strong>صِلْني</strong> ("نحن" أو "التطبيق") ملتزمون بحماية خصوصيتك. توضح هذه السياسة كيف نجمع ونستخدم ونحمي معلوماتك.
+            <strong>صِلْني</strong> ("نحن" أو "التطبيق") ملتزمون بحماية خصوصيتك وبياناتك الشخصية. توضح هذه السياسة كيف نجمع ونستخدم ونحمي معلوماتك عند استخدام تطبيقنا.
         </div>
 
         <h2>1. المعلومات التي نجمعها</h2>
 
         <h3>1.1 معلومات الحساب</h3>
-        <ul>
-            <li><strong>البريد الإلكتروني</strong> - لإنشاء الحساب والمصادقة</li>
-            <li><strong>الاسم</strong> - للتخصيص داخل التطبيق</li>
-            <li><strong>صورة الملف الشخصي</strong> - اختيارية، لعرض ملفك الشخصي</li>
-        </ul>
+        <table>
+            <tr>
+                <th>البيانات</th>
+                <th>الغرض</th>
+            </tr>
+            <tr>
+                <td>البريد الإلكتروني</td>
+                <td>إنشاء الحساب والمصادقة واستعادة كلمة المرور</td>
+            </tr>
+            <tr>
+                <td>الاسم</td>
+                <td>تخصيص تجربة التطبيق والمساعد الذكي</td>
+            </tr>
+            <tr>
+                <td>صورة الملف الشخصي</td>
+                <td>اختيارية - لعرض ملفك الشخصي</td>
+            </tr>
+        </table>
 
         <h3>1.2 بيانات أفراد العائلة</h3>
         <ul>
-            <li><strong>الأسماء والعلاقات</strong> - لتتبع روابط عائلتك</li>
-            <li><strong>معلومات الاتصال</strong> - عند الاستيراد من جهات اتصال جهازك</li>
-            <li><strong>سجل التواصل</strong> - سجلات المكالمات والزيارات والرسائل التي تسجلها</li>
+            <li><strong>الأسماء والعلاقات</strong> - لتتبع وإدارة روابط عائلتك</li>
+            <li><strong>معلومات الاتصال</strong> - أرقام الهواتف (عند الاستيراد من جهات الاتصال)</li>
+            <li><strong>التواريخ المهمة</strong> - أعياد الميلاد والمناسبات للتذكيرات</li>
+            <li><strong>سجل التواصل</strong> - المكالمات والزيارات والرسائل التي تسجلها يدوياً</li>
+            <li><strong>الملاحظات</strong> - أي ملاحظات تضيفها عن أقاربك</li>
         </ul>
 
         <h3>1.3 بيانات استخدام التطبيق</h3>
         <ul>
-            <li><strong>بيانات التحفيز</strong> - النقاط والشارات والسلاسل والإنجازات</li>
-            <li><strong>تفضيلات التذكير</strong> - إعدادات الإشعارات الخاصة بك</li>
-            <li><strong>محادثات المساعد الذكي</strong> - تفاعلاتك مع المساعد الذكي</li>
+            <li><strong>بيانات التحفيز</strong> - النقاط، الشارات، السلاسل، والإنجازات</li>
+            <li><strong>تفضيلات التذكير</strong> - جداول الإشعارات وإعداداتها</li>
+            <li><strong>محادثات المساعد الذكي</strong> - تفاعلاتك مع مساعد الذكاء الاصطناعي</li>
+            <li><strong>التفضيلات</strong> - المظهر واللغة وإعدادات التطبيق</li>
         </ul>
 
         <h3>1.4 البيانات التقنية</h3>
         <ul>
-            <li><strong>معرّفات الجهاز</strong> - للإشعارات الفورية</li>
+            <li><strong>رموز الإشعارات</strong> - لإرسال الإشعارات الفورية</li>
             <li><strong>تقارير الأعطال</strong> - لتحسين استقرار التطبيق</li>
-            <li><strong>مقاييس الأداء</strong> - لتحسين تجربة التطبيق</li>
+            <li><strong>معلومات الجهاز</strong> - نوع الجهاز ونظام التشغيل (للدعم الفني)</li>
         </ul>
 
         <h2>2. كيف نستخدم معلوماتك</h2>
-        <ul>
-            <li>تقديم وتخصيص ميزات التطبيق</li>
-            <li>إرسال إشعارات التذكير للتواصل العائلي</li>
-            <li>تشغيل ميزات التحفيز (النقاط والشارات والسلاسل)</li>
-            <li>تقديم نصائح العلاقات المدعومة بالذكاء الاصطناعي</li>
-            <li>تحسين أداء التطبيق وإصلاح الأخطاء</li>
-            <li>إرسال تحديثات الخدمة المهمة</li>
-        </ul>
 
-        <h2>3. خدمات الطرف الثالث</h2>
-        <p>نستخدم خدمات الطرف الثالث التالية:</p>
-
-        <h3>3.1 Supabase</h3>
-        <p>الواجهة الخلفية الأساسية لتخزين البيانات والمصادقة. يتم تخزين بياناتك بشكل آمن على خوادم Supabase.</p>
-
-        <h3>3.2 Firebase</h3>
-        <ul>
-            <li><strong>المراسلة السحابية (FCM)</strong> - للإشعارات الفورية</li>
-            <li><strong>التحليلات</strong> - إحصائيات استخدام مجهولة</li>
-        </ul>
-
-        <h3>3.3 Sentry</h3>
-        <p>لتقارير الأعطال وتتبع الأخطاء لتحسين استقرار التطبيق.</p>
-
-        <h3>3.4 DeepSeek AI</h3>
-        <p>يشغّل ميزة المساعد الذكي لنصائح العلاقات. قد تتم معالجة محادثاتك بواسطة خدمات الذكاء الاصطناعي.</p>
-
-        <h3>3.5 مزودو المصادقة</h3>
-        <ul>
-            <li><strong>تسجيل الدخول بـ Google</strong> - لإنشاء حساب سريع</li>
-            <li><strong>تسجيل الدخول بـ Apple</strong> - لمستخدمي iOS</li>
-        </ul>
-
-        <h2>4. تخزين البيانات والأمان</h2>
-        <ul>
-            <li>بياناتك مشفرة أثناء النقل والتخزين</li>
-            <li>نستخدم إجراءات أمان قياسية في الصناعة</li>
-            <li>الوصول إلى بيانات المستخدم محدود بشكل صارم</li>
-            <li>لا نبيع معلوماتك الشخصية</li>
-        </ul>
-
-        <h2>5. حقوقك</h2>
-        <p>لديك الحق في:</p>
-        <ul>
-            <li><strong>الوصول</strong> - عرض جميع البيانات التي لدينا عنك</li>
-            <li><strong>التصدير</strong> - تنزيل بياناتك بتنسيق قابل للنقل</li>
-            <li><strong>الحذف</strong> - طلب حذف حسابك وبياناتك</li>
-            <li><strong>إلغاء الاشتراك</strong> - تعطيل جمع التحليلات في الإعدادات</li>
-        </ul>
-
-        <h2>6. الاحتفاظ بالبيانات</h2>
-        <p>نحتفظ ببياناتك طالما حسابك نشط. عند حذف الحساب:</p>
-        <ul>
-            <li>يتم حذف البيانات الشخصية خلال 30 يومًا</li>
-            <li>قد يتم الاحتفاظ بالتحليلات المجهولة للتحسين</li>
-            <li>يتم مسح بيانات النسخ الاحتياطي خلال 90 يومًا</li>
-        </ul>
-
-        <h2>7. خصوصية الأطفال</h2>
-        <p>صِلْني غير مخصص للمستخدمين الذين تقل أعمارهم عن 13 عامًا. لا نجمع بيانات من الأطفال عن قصد.</p>
-
-        <h2>8. التغييرات على هذه السياسة</h2>
-        <p>قد نقوم بتحديث هذه السياسة من وقت لآخر. سنخطرك بالتغييرات المهمة من خلال التطبيق أو البريد الإلكتروني.</p>
-
-        <div class="contact">
-            <h2>9. تواصل معنا</h2>
-            <p>إذا كان لديك أسئلة حول سياسة الخصوصية هذه أو بياناتك:</p>
-            <ul>
-                <li>البريد الإلكتروني: <a href="mailto:silniapp@outlook.com">silniapp@outlook.com</a></li>
+        <div class="info-box">
+            <strong>نستخدم بياناتك فقط لـ:</strong>
+            <ul style="margin-top: 15px; margin-bottom: 0;">
+                <li>تقديم وتخصيص ميزات التطبيق</li>
+                <li>إرسال تذكيرات التواصل العائلي</li>
+                <li>تشغيل نظام التحفيز (النقاط والشارات)</li>
+                <li>تقديم نصائح ورسائل مخصصة عبر المساعد الذكي</li>
+                <li>تحسين أداء التطبيق وإصلاح الأخطاء</li>
+                <li>إرسال تحديثات الخدمة المهمة</li>
             </ul>
         </div>
 
+        <h2>3. خدمات الطرف الثالث</h2>
+        <p>نستخدم الخدمات التالية لتشغيل التطبيق:</p>
+
+        <table>
+            <tr>
+                <th>الخدمة</th>
+                <th>الغرض</th>
+                <th>البيانات المشاركة</th>
+            </tr>
+            <tr>
+                <td><strong>Supabase</strong></td>
+                <td>قاعدة البيانات والمصادقة</td>
+                <td>بيانات الحساب والأقارب</td>
+            </tr>
+            <tr>
+                <td><strong>Firebase Cloud Messaging</strong></td>
+                <td>الإشعارات الفورية</td>
+                <td>رموز الجهاز فقط</td>
+            </tr>
+            <tr>
+                <td><strong>Sentry</strong></td>
+                <td>تتبع الأخطاء</td>
+                <td>تقارير الأعطال (مجهولة)</td>
+            </tr>
+            <tr>
+                <td><strong>DeepSeek AI</strong></td>
+                <td>المساعد الذكي</td>
+                <td>محادثات المساعد</td>
+            </tr>
+            <tr>
+                <td><strong>RevenueCat</strong></td>
+                <td>إدارة الاشتراكات</td>
+                <td>معرف المستخدم وحالة الاشتراك</td>
+            </tr>
+            <tr>
+                <td><strong>Cloudinary</strong></td>
+                <td>تخزين الصور</td>
+                <td>صور الملف الشخصي والأقارب</td>
+            </tr>
+        </table>
+
+        <h2>4. الاشتراكات والمدفوعات</h2>
+        <ul>
+            <li>تتم معالجة المدفوعات عبر <strong>Apple App Store</strong> أو <strong>Google Play Store</strong></li>
+            <li>لا نخزن أي معلومات مالية أو بطاقات ائتمان</li>
+            <li>يمكنك إدارة اشتراكك من إعدادات المتجر</li>
+            <li>نستخدم <strong>RevenueCat</strong> لتتبع حالة الاشتراك فقط</li>
+        </ul>
+
+        <h2>5. تخزين البيانات والأمان</h2>
+
+        <div class="highlight">
+            <strong>إجراءات الأمان:</strong>
+            <ul style="margin-top: 15px; margin-bottom: 0;">
+                <li>تشفير البيانات أثناء النقل (TLS/SSL) والتخزين</li>
+                <li>مصادقة آمنة مع دعم المصادقة البيومترية (Face ID/Touch ID)</li>
+                <li>الوصول المحدود لبيانات المستخدمين</li>
+                <li>خوادم آمنة تتوافق مع معايير الصناعة</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ مهم:</strong> لا نبيع ولا نشارك ولا نؤجر معلوماتك الشخصية لأي طرف ثالث لأغراض تسويقية.
+        </div>
+
+        <h2>6. حقوقك</h2>
+        <p>لديك الحقوق التالية فيما يتعلق ببياناتك:</p>
+        <ul>
+            <li><strong>الوصول</strong> - عرض جميع البيانات المحفوظة عنك</li>
+            <li><strong>التصدير</strong> - تنزيل بياناتك بتنسيق قابل للنقل (لمشتركي MAX)</li>
+            <li><strong>التعديل</strong> - تحديث معلوماتك الشخصية في أي وقت</li>
+            <li><strong>الحذف</strong> - طلب حذف حسابك وجميع بياناتك</li>
+            <li><strong>الإلغاء</strong> - إلغاء الاشتراك من أي اتصالات تسويقية</li>
+        </ul>
+
+        <h2>7. الاحتفاظ بالبيانات</h2>
+        <table>
+            <tr>
+                <th>نوع البيانات</th>
+                <th>مدة الاحتفاظ</th>
+            </tr>
+            <tr>
+                <td>بيانات الحساب النشط</td>
+                <td>طوال فترة نشاط الحساب</td>
+            </tr>
+            <tr>
+                <td>البيانات بعد حذف الحساب</td>
+                <td>تُحذف خلال 30 يوماً</td>
+            </tr>
+            <tr>
+                <td>النسخ الاحتياطية</td>
+                <td>تُحذف خلال 90 يوماً</td>
+            </tr>
+            <tr>
+                <td>التحليلات المجهولة</td>
+                <td>قد تُحتفظ للتحسين</td>
+            </tr>
+        </table>
+
+        <h2>8. خصوصية الأطفال</h2>
+        <p>صِلْني غير مخصص للمستخدمين الذين تقل أعمارهم عن 13 عامًا. لا نجمع بيانات من الأطفال عن قصد. إذا علمنا أننا جمعنا بيانات من طفل، سنحذفها فوراً.</p>
+
+        <h2>9. التغييرات على هذه السياسة</h2>
+        <p>قد نقوم بتحديث سياسة الخصوصية من وقت لآخر. سنخطرك بالتغييرات المهمة من خلال:</p>
+        <ul>
+            <li>إشعار داخل التطبيق</li>
+            <li>رسالة بريد إلكتروني (للتغييرات الجوهرية)</li>
+            <li>تحديث تاريخ "آخر تحديث" في هذه الصفحة</li>
+        </ul>
+
+        <div class="contact">
+            <h2>10. تواصل معنا</h2>
+            <p>إذا كان لديك أسئلة أو استفسارات حول سياسة الخصوصية أو بياناتك:</p>
+            <p style="margin-top: 20px;">
+                <strong>البريد الإلكتروني:</strong> <a href="mailto:silniapp@outlook.com">silniapp@outlook.com</a>
+            </p>
+            <p>سنرد على استفساراتك خلال 48 ساعة عمل.</p>
+        </div>
+
         <div class="footer">
-            <p>&copy; 2024 تطبيق صِلْني. جميع الحقوق محفوظة.</p>
+            <p>&copy; 2025 صِلْني. جميع الحقوق محفوظة.</p>
+            <p><a href="terms-ar.html">شروط الخدمة</a> | <a href="index.html">الرئيسية</a></p>
         </div>
     </div>
 </body>

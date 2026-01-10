@@ -4,60 +4,127 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>شروط الخدمة - تطبيق صِلْني</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #2E7D32;
             --primary-light: #60AD5E;
+            --primary-dark: #1B5E20;
             --text: #333;
-            --bg: #f9f9f9;
+            --bg: #f8faf8;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'SF Arabic', 'Noto Sans Arabic', sans-serif;
-            line-height: 1.9;
+            font-family: 'Tajawal', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 2;
             color: var(--text);
             background: var(--bg);
             padding: 20px;
         }
         .container {
-            max-width: 800px;
+            max-width: 850px;
             margin: 0 auto;
             background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 50px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 3px solid var(--primary-light);
+        }
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border-radius: 20px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            color: white;
+            font-weight: 700;
         }
         h1 {
             color: var(--primary);
             margin-bottom: 10px;
-            font-size: 2em;
+            font-size: 2.2em;
         }
         .subtitle {
             color: #666;
-            margin-bottom: 30px;
+            font-size: 1.1em;
         }
         h2 {
             color: var(--primary);
-            margin: 30px 0 15px;
-            padding-bottom: 8px;
+            margin: 40px 0 20px;
+            padding-bottom: 10px;
             border-bottom: 2px solid var(--primary-light);
+            font-size: 1.5em;
         }
-        p, li { margin-bottom: 12px; }
-        ul { padding-right: 25px; padding-left: 0; }
+        h3 {
+            color: var(--primary-dark);
+            margin: 25px 0 12px;
+            font-size: 1.2em;
+        }
+        p { margin-bottom: 15px; }
+        ul {
+            padding-right: 25px;
+            padding-left: 0;
+            margin-bottom: 20px;
+        }
+        li { margin-bottom: 10px; }
         .highlight {
-            background: #e8f5e9;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
+            background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
+            padding: 20px 25px;
+            border-radius: 12px;
+            margin: 25px 0;
+            border-right: 4px solid var(--primary);
         }
         .warning {
-            background: #fff3e0;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
+            background: #fff8e1;
+            padding: 20px 25px;
+            border-radius: 12px;
+            margin: 25px 0;
             border-right: 4px solid #ff9800;
-            border-left: none;
         }
+        .info-box {
+            background: #e3f2fd;
+            padding: 20px 25px;
+            border-radius: 12px;
+            margin: 25px 0;
+            border-right: 4px solid #2196f3;
+        }
+        .danger-box {
+            background: #ffebee;
+            padding: 20px 25px;
+            border-radius: 12px;
+            margin: 25px 0;
+            border-right: 4px solid #f44336;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: #fafafa;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 15px;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+        tr:hover { background: #f5f5f5; }
         .lang-switch {
             text-align: left;
             margin-bottom: 20px;
@@ -65,135 +132,263 @@
         .lang-switch a {
             color: var(--primary);
             text-decoration: none;
-            padding: 8px 16px;
-            border: 1px solid var(--primary);
-            border-radius: 20px;
+            padding: 10px 20px;
+            border: 2px solid var(--primary);
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s;
         }
         .lang-switch a:hover {
             background: var(--primary);
             color: white;
         }
         .contact {
-            background: #f5f5f5;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 30px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            padding: 30px;
+            border-radius: 16px;
+            margin-top: 40px;
+            color: white;
+        }
+        .contact h2 {
+            color: white;
+            border-bottom-color: rgba(255,255,255,0.3);
+            margin-top: 0;
+        }
+        .contact a {
+            color: white;
+            font-weight: 600;
         }
         .footer {
             text-align: center;
             margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #eee;
             color: #666;
-            font-size: 0.9em;
+        }
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 30px 20px; }
+            h1 { font-size: 1.8em; }
+            h2 { font-size: 1.3em; }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <a href="index.html" class="back-link">← العودة للرئيسية</a>
+
         <div class="lang-switch">
             <a href="terms.html">English</a>
         </div>
 
-        <h1>شروط الخدمة</h1>
-        <p class="subtitle">آخر تحديث: ديسمبر 2024</p>
+        <div class="header">
+            <div class="logo">صِ</div>
+            <h1>شروط الخدمة</h1>
+            <p class="subtitle">آخر تحديث: يناير 2025</p>
+        </div>
 
         <div class="highlight">
-            باستخدام <strong>صِلْني</strong>، فإنك توافق على هذه الشروط. يرجى قراءتها بعناية.
+            باستخدام تطبيق <strong>صِلْني</strong>، فإنك توافق على هذه الشروط والأحكام. يرجى قراءتها بعناية قبل استخدام التطبيق.
         </div>
 
         <h2>1. قبول الشروط</h2>
-        <p>بتنزيل أو تثبيت أو استخدام تطبيق صِلْني ("التطبيق")، فإنك توافق على الالتزام بشروط الخدمة هذه. إذا كنت لا توافق، يرجى عدم استخدام التطبيق.</p>
+        <p>بتنزيل أو تثبيت أو استخدام تطبيق صِلْني ("التطبيق")، فإنك توافق على الالتزام بشروط الخدمة هذه ("الشروط"). إذا كنت لا توافق على أي جزء من هذه الشروط، يرجى عدم استخدام التطبيق.</p>
+        <p>نحتفظ بالحق في تعديل هذه الشروط في أي وقت. سنخطرك بالتغييرات المهمة، واستمرارك في استخدام التطبيق يعني قبولك للشروط المعدلة.</p>
 
         <h2>2. وصف الخدمة</h2>
-        <p>صِلْني هو تطبيق لتتبع التواصل العائلي يساعدك على:</p>
-        <ul>
-            <li>تتبع وإدارة العلاقات العائلية</li>
-            <li>تعيين تذكيرات للبقاء على تواصل مع الأقارب</li>
-            <li>كسب نقاط وإنجازات للحفاظ على التواصل</li>
-            <li>الحصول على نصائح مدعومة بالذكاء الاصطناعي للتواصل العائلي</li>
-            <li>تصور شجرة عائلتك</li>
-        </ul>
+        <p>صِلْني هو تطبيق لإدارة وتعزيز التواصل العائلي، يقدم الخدمات التالية:</p>
 
-        <h2>3. مسؤوليات الحساب</h2>
-        <p>عند إنشاء حساب، توافق على:</p>
-        <ul>
-            <li>تقديم معلومات دقيقة وكاملة</li>
-            <li>الحفاظ على أمان بيانات تسجيل الدخول الخاصة بك</li>
-            <li>إخطارنا فورًا بأي وصول غير مصرح به</li>
-            <li>تحمل المسؤولية عن جميع الأنشطة تحت حسابك</li>
-        </ul>
-
-        <h2>4. الاستخدام المقبول</h2>
-        <p>توافق على عدم:</p>
-        <ul>
-            <li>استخدام التطبيق لأي غرض غير قانوني</li>
-            <li>تحميل محتوى ضار أو مسيء أو غير لائق</li>
-            <li>محاولة اختراق أو استغلال أو تعريض التطبيق للخطر</li>
-            <li>انتحال شخصية الآخرين أو إنشاء حسابات مزيفة</li>
-            <li>استخدام التطبيق للإزعاج أو المضايقة</li>
-            <li>الهندسة العكسية أو نسخ وظائف التطبيق</li>
-        </ul>
-
-        <h2>5. محتوى المستخدم</h2>
-        <p>تحتفظ بملكية المحتوى الذي تنشئه في التطبيق (ملفات أفراد العائلة، الملاحظات، إلخ). ومع ذلك، تمنحنا ترخيصًا لـ:</p>
-        <ul>
-            <li>تخزين ومعالجة محتواك لتقديم الخدمة</li>
-            <li>إنشاء إحصائيات مجمعة ومجهولة للتحسين</li>
-        </ul>
-        <p>أنت مسؤول عن التأكد من أن لديك إذنًا لإضافة معلومات الآخرين إلى التطبيق.</p>
-
-        <h2>6. إخلاء مسؤولية المساعد الذكي</h2>
-        <div class="warning">
-            <p>يقدم المساعد الذكي اقتراحات عامة للتواصل العائلي. وهو ليس بديلاً عن:</p>
-            <ul>
-                <li>الاستشارة أو العلاج المهني</li>
-                <li>النصائح القانونية أو الطبية أو المالية</li>
-                <li>الفتاوى الشرعية - استشر العلماء المؤهلين</li>
+        <div class="info-box">
+            <strong>الخدمات الأساسية (مجانية):</strong>
+            <ul style="margin-top: 15px; margin-bottom: 0;">
+                <li>إدارة قائمة الأقارب وتفاصيلهم</li>
+                <li>عرض شجرة العائلة التفاعلية</li>
+                <li>تعيين تذكيرات للتواصل (حتى 3 تذكيرات)</li>
+                <li>تتبع التفاعلات والزيارات</li>
+                <li>نظام النقاط والشارات والإنجازات</li>
+                <li>اختيار المظاهر والألوان</li>
             </ul>
         </div>
 
-        <h2>7. توفر الخدمة</h2>
-        <p>نسعى لتقديم خدمة موثوقة، ولكن:</p>
+        <div style="background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05)); padding: 20px 25px; border-radius: 12px; margin: 25px 0; border-right: 4px solid #ffd700;">
+            <strong>خدمات MAX (الاشتراك المدفوع):</strong>
+            <ul style="margin-top: 15px; margin-bottom: 0;">
+                <li>مساعد الذكاء الاصطناعي الشخصي</li>
+                <li>كتابة الرسائل والتهاني بالذكاء الاصطناعي</li>
+                <li>تحليل العلاقات والاقتراحات الذكية</li>
+                <li>تذكيرات غير محدودة</li>
+                <li>إحصائيات وتقارير متقدمة</li>
+                <li>لوحة المتصدرين</li>
+                <li>تصدير البيانات</li>
+            </ul>
+        </div>
+
+        <h2>3. الاشتراكات والمدفوعات</h2>
+
+        <h3>3.1 خطط الاشتراك</h3>
+        <table>
+            <tr>
+                <th>الخطة</th>
+                <th>الفترة</th>
+                <th>التجديد</th>
+            </tr>
+            <tr>
+                <td>MAX الشهري</td>
+                <td>شهر واحد</td>
+                <td>تلقائي</td>
+            </tr>
+            <tr>
+                <td>MAX السنوي</td>
+                <td>12 شهراً</td>
+                <td>تلقائي</td>
+            </tr>
+        </table>
+
+        <h3>3.2 الفوترة والتجديد</h3>
         <ul>
-            <li>يُقدم التطبيق "كما هو" دون ضمانات</li>
-            <li>قد نواجه توقفًا للصيانة أو التحديثات</li>
-            <li>قد تتغير الميزات أو يتم إيقافها</li>
-            <li>لا نضمن خدمة متواصلة أو خالية من الأخطاء</li>
+            <li>تتم معالجة جميع المدفوعات عبر Apple App Store أو Google Play Store</li>
+            <li>يتم تحصيل رسوم الاشتراك من حساب متجرك عند التأكيد</li>
+            <li>يتجدد الاشتراك تلقائياً ما لم يتم إلغاؤه قبل 24 ساعة من نهاية الفترة الحالية</li>
+            <li>يمكنك إدارة أو إلغاء اشتراكك من إعدادات حساب المتجر</li>
         </ul>
 
-        <h2>8. تحديد المسؤولية</h2>
-        <p>إلى أقصى حد يسمح به القانون:</p>
+        <h3>3.3 الإلغاء والاسترداد</h3>
+        <ul>
+            <li>عند الإلغاء، يظل اشتراكك نشطاً حتى نهاية فترة الفوترة الحالية</li>
+            <li>لا يوجد استرداد للفترات الجزئية أو الأيام غير المستخدمة</li>
+            <li>لطلب استرداد استثنائي، تواصل مع دعم Apple أو Google</li>
+        </ul>
+
+        <h2>4. مسؤوليات الحساب</h2>
+        <p>عند إنشاء حساب في صِلْني، توافق على:</p>
+        <ul>
+            <li>تقديم معلومات دقيقة وكاملة وحديثة</li>
+            <li>الحفاظ على سرية بيانات تسجيل الدخول</li>
+            <li>إخطارنا فوراً بأي وصول غير مصرح به لحسابك</li>
+            <li>تحمل المسؤولية الكاملة عن جميع الأنشطة تحت حسابك</li>
+            <li>عدم مشاركة حسابك مع آخرين</li>
+        </ul>
+
+        <h2>5. الاستخدام المقبول</h2>
+
+        <div class="danger-box">
+            <strong>يُحظر عليك:</strong>
+            <ul style="margin-top: 15px; margin-bottom: 0;">
+                <li>استخدام التطبيق لأي غرض غير قانوني أو ضار</li>
+                <li>تحميل محتوى مسيء أو غير لائق أو ينتهك حقوق الآخرين</li>
+                <li>محاولة اختراق أو استغلال أو تعريض التطبيق للخطر</li>
+                <li>انتحال شخصية الآخرين أو إنشاء حسابات مزيفة</li>
+                <li>استخدام التطبيق للإزعاج أو المضايقة أو التحرش</li>
+                <li>الهندسة العكسية أو نسخ وظائف التطبيق</li>
+                <li>استخدام روبوتات أو أدوات آلية للتفاعل مع التطبيق</li>
+                <li>بيع أو نقل حسابك للآخرين</li>
+            </ul>
+        </div>
+
+        <h2>6. محتوى المستخدم</h2>
+        <p>تحتفظ بملكية جميع المحتوى الذي تنشئه في التطبيق (ملفات الأقارب، الملاحظات، الصور، إلخ). بإضافة محتوى للتطبيق:</p>
+        <ul>
+            <li>تمنحنا ترخيصاً لتخزين ومعالجة محتواك لتقديم الخدمة</li>
+            <li>تؤكد أن لديك الحق في إضافة هذا المحتوى</li>
+            <li>توافق على أننا قد ننشئ إحصائيات مجمعة ومجهولة للتحسين</li>
+        </ul>
+
+        <div class="warning">
+            <strong>⚠️ تنبيه:</strong> تأكد من حصولك على إذن الأشخاص قبل إضافة معلوماتهم الشخصية أو صورهم للتطبيق.
+        </div>
+
+        <h2>7. إخلاء مسؤولية المساعد الذكي</h2>
+
+        <div class="warning">
+            <p>يقدم المساعد الذكي اقتراحات ونصائح عامة للتواصل العائلي. <strong>وهو ليس بديلاً عن:</strong></p>
+            <ul style="margin-top: 15px; margin-bottom: 0;">
+                <li>الاستشارة النفسية أو العلاج المهني</li>
+                <li>النصائح القانونية أو الطبية أو المالية</li>
+                <li>الفتاوى الشرعية - يرجى استشارة العلماء المؤهلين</li>
+                <li>المشورة المهنية في أي مجال</li>
+            </ul>
+            <p style="margin-top: 15px; margin-bottom: 0;">استخدم اقتراحات المساعد كإرشادات عامة فقط، وتحمل مسؤولية قراراتك الشخصية.</p>
+        </div>
+
+        <h2>8. توفر الخدمة</h2>
+        <p>نسعى لتقديم خدمة موثوقة ومتاحة، ولكن:</p>
+        <ul>
+            <li>يُقدم التطبيق "كما هو" و"حسب التوفر" دون ضمانات</li>
+            <li>قد نواجه فترات توقف للصيانة أو التحديثات</li>
+            <li>قد تتغير الميزات أو يتم إضافتها أو إزالتها</li>
+            <li>لا نضمن خدمة متواصلة أو خالية من الأخطاء</li>
+            <li>لا نتحمل مسؤولية فقدان البيانات (احرص على النسخ الاحتياطي)</li>
+        </ul>
+
+        <h2>9. الملكية الفكرية</h2>
+        <ul>
+            <li>صِلْني وشعاره وتصميمه ملكية حصرية لنا</li>
+            <li>لا يحق لك استخدام علامتنا التجارية دون إذن كتابي</li>
+            <li>نحترم حقوق الملكية الفكرية للآخرين</li>
+        </ul>
+
+        <h2>10. تحديد المسؤولية</h2>
+        <p>إلى أقصى حد يسمح به القانون المعمول به:</p>
         <ul>
             <li>لسنا مسؤولين عن أي أضرار غير مباشرة أو عرضية أو تبعية</li>
-            <li>مسؤوليتنا الإجمالية محدودة بالمبلغ الذي دفعته للتطبيق (إن وجد)</li>
-            <li>لسنا مسؤولين عن محتوى المستخدم أو خدمات الطرف الثالث</li>
+            <li>مسؤوليتنا الإجمالية محدودة بالمبلغ الذي دفعته للتطبيق خلال الـ 12 شهراً الماضية</li>
+            <li>لسنا مسؤولين عن محتوى المستخدمين أو خدمات الطرف الثالث</li>
+            <li>لسنا مسؤولين عن أي قرارات تتخذها بناءً على اقتراحات المساعد الذكي</li>
         </ul>
 
-        <h2>9. إنهاء الحساب</h2>
+        <h2>11. إنهاء الحساب</h2>
         <p>قد نعلق أو ننهي حسابك إذا:</p>
         <ul>
-            <li>انتهكت شروط الخدمة هذه</li>
+            <li>انتهكت أياً من شروط الخدمة هذه</li>
             <li>شاركت في نشاط احتيالي أو ضار</li>
-            <li>بقيت غير نشط لفترة طويلة</li>
+            <li>أسأت استخدام التطبيق بشكل متكرر</li>
+            <li>بقيت غير نشط لفترة طويلة (أكثر من 24 شهراً)</li>
         </ul>
-        <p>يمكنك حذف حسابك في أي وقت من خلال إعدادات التطبيق.</p>
+        <p>يمكنك حذف حسابك في أي وقت من إعدادات التطبيق. عند الحذف:</p>
+        <ul>
+            <li>سيتم إلغاء اشتراكك (إن وجد)</li>
+            <li>ستُحذف بياناتك وفقاً لسياسة الخصوصية</li>
+        </ul>
 
-        <h2>10. التغييرات على الشروط</h2>
-        <p>قد نقوم بتحديث هذه الشروط من وقت لآخر. يشكل استمرار استخدام التطبيق بعد التغييرات قبولاً للشروط الجديدة.</p>
+        <h2>12. القانون الحاكم وحل النزاعات</h2>
+        <ul>
+            <li>تخضع هذه الشروط للقوانين المعمول بها في المملكة العربية السعودية</li>
+            <li>نسعى لحل أي نزاعات ودياً أولاً</li>
+            <li>في حال عدم التوصل لحل ودي، تُحال النزاعات للجهات القضائية المختصة</li>
+        </ul>
 
-        <h2>11. القانون الحاكم</h2>
-        <p>تخضع هذه الشروط للقوانين المحلية المعمول بها. سيتم حل أي نزاعات من خلال القنوات القانونية المناسبة.</p>
+        <h2>13. أحكام عامة</h2>
+        <ul>
+            <li>إذا تبين أن أي حكم من هذه الشروط غير قابل للتنفيذ، تظل الأحكام الأخرى سارية</li>
+            <li>عدم ممارستنا لأي حق لا يعني التنازل عنه</li>
+            <li>هذه الشروط تمثل الاتفاق الكامل بيننا فيما يتعلق بالتطبيق</li>
+        </ul>
 
         <div class="contact">
-            <h2>12. تواصل معنا</h2>
-            <p>للأسئلة حول هذه الشروط:</p>
-            <ul>
-                <li>البريد الإلكتروني: <a href="mailto:silniapp@outlook.com">silniapp@outlook.com</a></li>
-            </ul>
+            <h2>14. تواصل معنا</h2>
+            <p>للأسئلة أو الاستفسارات حول شروط الخدمة:</p>
+            <p style="margin-top: 20px;">
+                <strong>البريد الإلكتروني:</strong> <a href="mailto:silniapp@outlook.com">silniapp@outlook.com</a>
+            </p>
+            <p>سنرد على استفساراتك خلال 48 ساعة عمل.</p>
         </div>
 
         <div class="footer">
-            <p>&copy; 2024 تطبيق صِلْني. جميع الحقوق محفوظة.</p>
-            <p><a href="privacy-policy-ar.html">سياسة الخصوصية</a></p>
+            <p>&copy; 2025 صِلْني. جميع الحقوق محفوظة.</p>
+            <p><a href="privacy-policy-ar.html">سياسة الخصوصية</a> | <a href="index.html">الرئيسية</a></p>
         </div>
     </div>
 </body>
