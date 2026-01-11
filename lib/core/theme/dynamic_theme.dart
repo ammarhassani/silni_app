@@ -83,7 +83,7 @@ class DynamicTheme {
     final fallback = _getFallbackTheme(admin.themeKey);
 
     // Helper to parse color from JSON
-    // Supports both 6-char RGB (#RRGGBB) and 8-char RGBA (#RRGGBBAA)
+    // Supports both 6-char RGB (#RRGGBB) and 8-char ARGB (#AARRGGBB)
     Color parseColor(String key, Color fallbackColor) {
       final colorData = admin.colors[key];
       if (colorData == null) return fallbackColor;
@@ -94,10 +94,9 @@ class DynamicTheme {
             // RGB without alpha - add FF for full opacity
             return Color(int.parse('FF$hex', radix: 16));
           } else if (hex.length == 8) {
-            // RGBA format (CSS): RRGGBBAA -> Flutter format: AARRGGBB
-            final alpha = hex.substring(6, 8);
-            final rgb = hex.substring(0, 6);
-            return Color(int.parse('$alpha$rgb', radix: 16));
+            // Already in Flutter's AARRGGBB format (e.g., #26FFFFFF = 15% white)
+            // Do NOT swap - use as-is
+            return Color(int.parse(hex, radix: 16));
           }
           return fallbackColor;
         } catch (_) {
@@ -134,10 +133,8 @@ class DynamicTheme {
                 if (hex.length == 6) {
                   return Color(int.parse('FF$hex', radix: 16));
                 } else if (hex.length == 8) {
-                  // RGBA format (CSS): RRGGBBAA -> Flutter format: AARRGGBB
-                  final alpha = hex.substring(6, 8);
-                  final rgb = hex.substring(0, 6);
-                  return Color(int.parse('$alpha$rgb', radix: 16));
+                  // Already in Flutter's AARRGGBB format - use as-is
+                  return Color(int.parse(hex, radix: 16));
                 }
               }
               return Colors.grey;
