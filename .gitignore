@@ -48,6 +48,7 @@ app.*.map.json
 .env
 .env.*
 !.env.example
+!.env.*.example
 
 # Generated environment files (contain obfuscated secrets - do not commit!)
 lib/core/config/env/*.g.dart
