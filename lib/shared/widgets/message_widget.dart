@@ -26,7 +26,6 @@ class _GlassmorphicContainer extends StatelessWidget {
   final Color? tintColor;
   final double borderRadius;
   final EdgeInsets? padding;
-  final BoxBorder? border;
 
   const _GlassmorphicContainer({
     required this.child,
@@ -35,7 +34,6 @@ class _GlassmorphicContainer extends StatelessWidget {
     this.tintColor,
     this.borderRadius = 16,
     this.padding,
-    this.border,
   });
 
   @override
@@ -52,7 +50,7 @@ class _GlassmorphicContainer extends StatelessWidget {
           decoration: BoxDecoration(
             color: tint.withValues(alpha: opacity),
             borderRadius: BorderRadius.circular(borderRadius),
-            border: border ?? Border.all(
+            border: Border.all(
               color: Colors.white.withValues(alpha: isDark ? 0.2 : 0.3),
               width: 1,
             ),
@@ -395,7 +393,6 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
   void _showModalMessage(Message message) {
     debugPrint('[MessageWidget] _showModalMessage called for: ${message.id}');
     final themeColors = ref.read(themeColorsProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final accentColor = message.accentColorParsed ?? themeColors.primary;
 
     // Create confetti controller

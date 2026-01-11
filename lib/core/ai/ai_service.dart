@@ -1,5 +1,5 @@
-/// Abstract AI Service Interface
-/// Defines the contract for AI service implementations
+// Abstract AI Service Interface
+// Defines the contract for AI service implementations
 
 import '../../../shared/models/relative_model.dart';
 import 'ai_models.dart';

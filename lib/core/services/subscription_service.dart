@@ -338,7 +338,7 @@ class SubscriptionService {
         metadata: {'packageId': package.identifier},
       );
 
-      final result = await rc.Purchases.purchasePackage(package);
+      final result = await rc.Purchases.purchase(rc.PurchaseParams.package(package));
 
       // Debug: Log all entitlements received after purchase
       debugPrint('🎫 Purchase result - All entitlements: ${result.customerInfo.entitlements.all.keys.toList()}');

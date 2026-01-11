@@ -64,9 +64,9 @@ class RelativeStreak {
     final minutes = remaining.inMinutes % 60;
 
     if (hours > 0) {
-      return '${hours}س ${minutes}د';
+      return '$hoursس $minutesد';
     }
-    return '${minutes}د';
+    return '$minutesد';
   }
 
   /// Create from Supabase JSON

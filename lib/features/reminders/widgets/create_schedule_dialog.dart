@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
-import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/services/reminder_schedules_service.dart';
 import '../../../shared/widgets/collapsible_picker.dart';
@@ -131,8 +130,6 @@ class _CreateScheduleDialogState extends ConsumerState<CreateScheduleDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final themeColors = ref.watch(themeColorsProvider);
-
     return ThemeAwareAlertDialog(
       title: 'إنشاء ${widget.template.title}',
       titleIcon: const Icon(Icons.add_alarm_rounded, color: Colors.white),

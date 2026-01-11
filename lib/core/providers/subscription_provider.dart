@@ -47,7 +47,7 @@ final subscriptionTierProvider = Provider<SubscriptionTier>((ref) {
   return stateAsync.when(
     data: (state) => state.tier,
     loading: () => SubscriptionTier.free,
-    error: (_, __) => SubscriptionTier.free,
+    error: (_, _) => SubscriptionTier.free,
   );
 });
 
@@ -63,7 +63,7 @@ final isTrialActiveProvider = Provider<bool>((ref) {
   return stateAsync.when(
     data: (state) => state.isTrialActive,
     loading: () => false,
-    error: (_, __) => false,
+    error: (_, _) => false,
   );
 });
 
@@ -73,7 +73,7 @@ final trialDaysRemainingProvider = Provider<int>((ref) {
   return stateAsync.when(
     data: (state) => state.trialDaysRemaining,
     loading: () => 0,
-    error: (_, __) => 0,
+    error: (_, _) => 0,
   );
 });
 
@@ -83,7 +83,7 @@ final offeringsProvider = Provider<rc.Offerings?>((ref) {
   return stateAsync.when(
     data: (state) => state.offerings,
     loading: () => null,
-    error: (_, __) => null,
+    error: (_, _) => null,
   );
 });
 
@@ -93,7 +93,7 @@ final subscriptionLoadingProvider = Provider<bool>((ref) {
   return stateAsync.when(
     data: (state) => state.isLoading,
     loading: () => true,
-    error: (_, __) => false,
+    error: (_, _) => false,
   );
 });
 
@@ -103,7 +103,7 @@ final subscriptionErrorProvider = Provider<String?>((ref) {
   return stateAsync.when(
     data: (state) => state.error,
     loading: () => null,
-    error: (e, __) => e.toString(),
+    error: (e, _) => e.toString(),
   );
 });
 
@@ -132,7 +132,7 @@ final subscriptionExpirationProvider = Provider<DateTime?>((ref) {
   return stateAsync.when(
     data: (state) => state.expirationDate,
     loading: () => null,
-    error: (_, __) => null,
+    error: (_, _) => null,
   );
 });
 
@@ -142,6 +142,6 @@ final isExpiringProvider = Provider<bool>((ref) {
   return stateAsync.when(
     data: (state) => state.isExpiringSoon,
     loading: () => false,
-    error: (_, __) => false,
+    error: (_, _) => false,
   );
 });

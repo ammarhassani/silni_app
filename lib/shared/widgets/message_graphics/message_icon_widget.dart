@@ -109,10 +109,10 @@ class MessageIconWidget extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha:0.15),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha:0.2),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -135,7 +135,7 @@ class MessageIconWidget extends StatelessWidget {
         color: color,
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.4),
+            color: color.withValues(alpha:0.4),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -185,7 +185,7 @@ class MessageIconWidget extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.4),
+            color: color.withValues(alpha:0.4),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -224,7 +224,7 @@ class MessageIconBadge extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(6),
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha:0.15),
       ),
       child: Icon(
         icon,
@@ -268,8 +268,8 @@ class MessageHeroIcon extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  color.withOpacity(0.3),
-                  color.withOpacity(0.0),
+                  color.withValues(alpha:0.3),
+                  color.withValues(alpha:0.0),
                 ],
               ),
             ),
@@ -301,7 +301,7 @@ class MessageHeroIcon extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(0.4),
+                color: color.withValues(alpha:0.4),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),

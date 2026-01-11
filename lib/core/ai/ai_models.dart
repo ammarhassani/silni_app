@@ -1,5 +1,5 @@
-/// AI Models for Silni App
-/// Contains data structures for AI chat, responses, and context
+// AI Models for Silni App
+// Contains data structures for AI chat, responses, and context
 
 /// Counseling mode enum
 enum CounselingMode {

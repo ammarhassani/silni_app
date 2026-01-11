@@ -164,7 +164,7 @@ $personality
                         statsAsync.when(
                           data: (stats) => _buildWeeklyStats(themeColors, stats),
                           loading: () => _buildLoadingCard(themeColors),
-                          error: (_, __) => const SizedBox.shrink(),
+                          error: (_, _) => const SizedBox.shrink(),
                         ),
                         const SizedBox(height: AppSpacing.lg),
 
@@ -173,7 +173,7 @@ $personality
                           data: (relatives) =>
                               _buildTopConnections(themeColors, relatives),
                           loading: () => _buildLoadingCard(themeColors),
-                          error: (_, __) => const SizedBox.shrink(),
+                          error: (_, _) => const SizedBox.shrink(),
                         ),
                         const SizedBox(height: AppSpacing.lg),
 

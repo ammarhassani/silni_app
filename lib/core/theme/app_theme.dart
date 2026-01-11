@@ -29,7 +29,7 @@ class AppTheme {
         onPrimary: Colors.white,
         secondary: themeColors.secondary,
         onSecondary: Colors.white,
-        error: AppColors.error,
+        error: Color(0xFFE53935),
         onError: Colors.white,
         surface: surfaceColor,
         onSurface: textColor,
@@ -111,7 +111,7 @@ class AppTheme {
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           borderSide: const BorderSide(
-            color: AppColors.error,
+            color: Color(0xFFE53935),
             width: 2,
           ),
         ),
@@ -185,7 +185,7 @@ class AppTheme {
       onPrimary: Colors.white,
       secondary: AppColors.premiumGold,
       onSecondary: Colors.white,
-      error: AppColors.error,
+      error: Color(0xFFE53935),
       onError: Colors.white,
       surface: AppColors.cardLight,
       onSurface: AppColors.textPrimary,
@@ -264,7 +264,7 @@ class AppTheme {
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         borderSide: const BorderSide(
-          color: AppColors.error,
+          color: Color(0xFFE53935),
           width: 2,
         ),
       ),
@@ -337,7 +337,7 @@ class AppTheme {
       onPrimary: Colors.black,
       secondary: AppColors.premiumGold,
       onSecondary: Colors.black,
-      error: AppColors.error,
+      error: Color(0xFFE53935),
       onError: Colors.white,
       surface: AppColors.cardDark,
       onSurface: AppColors.textWhite,
@@ -407,7 +407,7 @@ class AppTheme {
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         borderSide: const BorderSide(
-          color: AppColors.error,
+          color: Color(0xFFE53935),
           width: 2,
         ),
       ),

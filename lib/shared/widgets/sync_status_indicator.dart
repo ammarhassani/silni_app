@@ -54,7 +54,7 @@ class SyncStatusIndicator extends ConsumerWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha:0.2),
           shape: BoxShape.circle,
           border: Border.all(color: color, width: 1.5),
         ),
@@ -94,9 +94,9 @@ class SyncStatusIndicator extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha:0.1),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha:0.3)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -241,7 +241,7 @@ class SyncStatusAppBarAction extends ConsumerWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha:0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(

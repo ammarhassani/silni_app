@@ -352,7 +352,7 @@ void main() {
         final metadata = {'full_name': 'محمد أحمد'};
         final email = 'test@example.com';
 
-        final displayName = metadata['full_name'] ?? email ?? 'أنا';
+        final displayName = metadata['full_name'] ?? email;
         expect(displayName, equals('محمد أحمد'));
       });
 

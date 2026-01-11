@@ -28,7 +28,6 @@ class MessageLottieWidget extends StatefulWidget {
 class _MessageLottieWidgetState extends State<MessageLottieWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  bool _isLoaded = false;
 
   @override
   void initState() {
@@ -77,7 +76,6 @@ class _MessageLottieWidgetState extends State<MessageLottieWidget>
               _controller.forward();
             }
           }
-          setState(() => _isLoaded = true);
         },
         errorBuilder: (context, error, stackTrace) {
           debugPrint('[MessageLottie] Error loading $lottiePath: $error');

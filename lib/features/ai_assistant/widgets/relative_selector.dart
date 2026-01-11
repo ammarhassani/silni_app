@@ -47,7 +47,7 @@ class _RelativeSelectorState extends ConsumerState<RelativeSelector> {
     return relativesAsync.when(
       data: (relatives) => _buildSelector(relatives),
       loading: () => _buildLoadingState(),
-      error: (_, __) => _buildErrorState(),
+      error: (_, _) => _buildErrorState(),
     );
   }
 

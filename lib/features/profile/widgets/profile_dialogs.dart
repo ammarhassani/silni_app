@@ -72,8 +72,6 @@ void showChangePasswordDialog({
   required BuildContext context,
   required WidgetRef ref,
 }) {
-  final scaffoldMessenger = ScaffoldMessenger.of(context);
-
   showDialog(
     context: context,
     builder: (dialogContext) => ThemeAwareAlertDialog(
@@ -168,10 +166,6 @@ void showDeleteAccountDialog({
   required BuildContext context,
   required WidgetRef ref,
 }) {
-  final scaffoldMessenger = ScaffoldMessenger.of(context);
-  final navigator = Navigator.of(context);
-  final router = GoRouter.of(context);
-
   showDialog(
     context: context,
     builder: (dialogContext) => ThemeAwareAlertDialog(

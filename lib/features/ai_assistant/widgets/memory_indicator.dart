@@ -85,10 +85,10 @@ class _MemorySavedIndicatorState extends State<MemorySavedIndicator>
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: AppColors.islamicGreenPrimary.withOpacity(0.15),
+            color: AppColors.islamicGreenPrimary.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: AppColors.islamicGreenPrimary.withOpacity(0.3),
+              color: AppColors.islamicGreenPrimary.withValues(alpha: 0.3),
               width: 1,
             ),
           ),
@@ -115,7 +115,7 @@ class _MemorySavedIndicatorState extends State<MemorySavedIndicator>
                 Icon(
                   Icons.arrow_forward_ios,
                   size: 12,
-                  color: AppColors.islamicGreenLight.withOpacity(0.7),
+                  color: AppColors.islamicGreenLight.withValues(alpha: 0.7),
                 ),
               ],
             ],
