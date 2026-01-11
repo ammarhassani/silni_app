@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Pre-push hook to prevent direct pushes to main branch
+# Install: git config core.hooksPath .githooks
+
+protected_branch="main"
+current_branch=$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')
+
+if [ "$current_branch" = "$protected_branch" ]; then
+    echo ""
+    echo "⚠️  HOLD UP! You're pushing directly to '$protected_branch'"
+    echo ""
+    echo "Best practice workflow:"
+    echo "  1. Push to a feature branch or 'develop'"
+    echo "  2. Create a Pull Request on GitHub"
+    echo "  3. Merge via PR"
+    echo ""
+    read -p "Are you SURE you want to push to $protected_branch? (y/N): " confirm
+    if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
+        echo "Push cancelled. Create a PR instead!"
+        exit 1
+    fi
+fi
+
+exit 0
