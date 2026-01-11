@@ -7,15 +7,20 @@ ALTER TABLE users
 ADD COLUMN IF NOT EXISTS streak_deadline TIMESTAMPTZ,
 ADD COLUMN IF NOT EXISTS streak_day_start TIMESTAMPTZ;
 
--- Migrate existing data from last_interaction_at
+-- Migrate existing data from last_interaction_at (if column exists)
 -- streak_deadline = last_interaction_at + 24 hours (when streak would break)
 -- streak_day_start = last_interaction_at (when current streak "day" started)
-UPDATE users
-SET
-  streak_deadline = last_interaction_at + INTERVAL '24 hours',
-  streak_day_start = last_interaction_at
-WHERE last_interaction_at IS NOT NULL
-  AND streak_deadline IS NULL;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'last_interaction_at') THEN
+    UPDATE users
+    SET
+      streak_deadline = last_interaction_at + INTERVAL '24 hours',
+      streak_day_start = last_interaction_at
+    WHERE last_interaction_at IS NOT NULL
+      AND streak_deadline IS NULL;
+  END IF;
+END $$;
 
 -- Create index for efficient deadline queries (used by cron job)
 CREATE INDEX IF NOT EXISTS idx_users_streak_deadline ON users(streak_deadline);
