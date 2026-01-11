@@ -7,12 +7,15 @@ set -e
 
 ENV=$1
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CURRENT_BRANCH=$(git -C "$PROJECT_ROOT" branch --show-current)
 
 if [ -z "$ENV" ]; then
     echo "Usage: ./scripts/switch-env.sh [staging|production]"
     echo ""
     echo "Current environment:"
-    grep "APP_ENV=" "$PROJECT_ROOT/.env" | head -1
+    grep "APP_ENV=" "$PROJECT_ROOT/.env" 2>/dev/null | head -1 || echo "APP_ENV not set"
+    echo ""
+    echo "Current branch: $CURRENT_BRANCH"
     exit 1
 fi
 
@@ -21,9 +24,27 @@ if [ "$ENV" != "staging" ] && [ "$ENV" != "production" ]; then
     exit 1
 fi
 
+# Safety check: warn if switching to production on non-main branch
+if [ "$ENV" == "production" ] && [ "$CURRENT_BRANCH" != "main" ]; then
+    echo "⚠️  WARNING: You're switching to PRODUCTION on branch '$CURRENT_BRANCH'"
+    echo "   Production builds should typically be done on 'main' branch."
+    echo ""
+    read -p "Are you sure you want to continue? (y/N): " confirm
+    if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
+        echo "Cancelled."
+        exit 1
+    fi
+fi
+
 echo "Switching to $ENV environment..."
 
 # Copy the appropriate env file
+if [ ! -f "$PROJECT_ROOT/.env.$ENV" ]; then
+    echo "Error: .env.$ENV file not found"
+    echo "Please create it first based on .env.example"
+    exit 1
+fi
+
 cp "$PROJECT_ROOT/.env.$ENV" "$PROJECT_ROOT/.env"
 
 # Update the generated env file
@@ -74,4 +95,5 @@ EOF
 fi
 
 echo ""
+echo "Branch: $CURRENT_BRANCH"
 echo "Remember to restart your app or run 'flutter run' again."
