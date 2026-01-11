@@ -237,33 +237,35 @@ INSERT INTO admin_ai_error_messages (error_code, message_ar, show_retry_button) 
 -- 5. SUBSCRIPTION TABLES
 -- =====================================================
 
+-- NOTE: Flutter app only recognizes 'free' and 'max' tiers - DO NOT use 'premium'!
 DELETE FROM admin_subscription_tiers WHERE true;
 INSERT INTO admin_subscription_tiers (tier_key, display_name_ar, display_name_en, reminder_limit, features, is_default, sort_order) VALUES
   ('free', 'مجاني', 'Free', 3, '["basic_reminders", "streak_tracking", "basic_stats"]', true, 1),
-  ('premium', 'مميز', 'Premium', -1, '["unlimited_reminders", "ai_counselor", "advanced_stats", "custom_themes", "family_tree", "export_data"]', false, 2);
+  ('max', 'ماكس', 'MAX', -1, '["unlimited_reminders", "ai_counselor", "advanced_stats", "custom_themes", "family_tree", "export_data"]', false, 2);
 
 DELETE FROM admin_subscription_products WHERE true;
 INSERT INTO admin_subscription_products (product_id, tier_key, display_name_ar, display_name_en, billing_period, price_usd, price_sar, savings_percentage, is_featured, sort_order) VALUES
-  ('premium_monthly', 'premium', 'اشتراك شهري', 'Monthly', 'monthly', 4.99, 18.99, 0, false, 1),
-  ('premium_annual', 'premium', 'اشتراك سنوي', 'Annual', 'annual', 39.99, 149.99, 33, true, 2);
+  ('max_monthly', 'max', 'اشتراك شهري', 'Monthly', 'monthly', 4.99, 18.99, 0, false, 1),
+  ('max_annual', 'max', 'اشتراك سنوي', 'Annual', 'annual', 39.99, 149.99, 33, true, 2);
 
 DELETE FROM admin_trial_config WHERE true;
 INSERT INTO admin_trial_config (config_key) VALUES ('default');
 
+-- NOTE: minimum_tier must be 'free' or 'max' - Flutter app doesn't recognize 'premium'!
 DELETE FROM admin_features WHERE true;
 INSERT INTO admin_features (feature_id, display_name_ar, display_name_en, category, minimum_tier, icon_name, sort_order) VALUES
-  ('ai_chat', 'المستشار الذكي', 'AI Counselor', 'ai', 'premium', 'brain', 1),
-  ('ai_message_generator', 'مولد الرسائل', 'Message Generator', 'ai', 'premium', 'message-square-plus', 2),
-  ('ai_weekly_report', 'التقرير الأسبوعي', 'Weekly Report', 'ai', 'premium', 'file-text', 3),
-  ('ai_suggestions', 'اقتراحات ذكية', 'Smart Suggestions', 'ai', 'premium', 'lightbulb', 4),
-  ('advanced_stats', 'إحصائيات متقدمة', 'Advanced Stats', 'analytics', 'premium', 'trending-up', 10),
-  ('export_data', 'تصدير البيانات', 'Export Data', 'analytics', 'premium', 'download', 11),
-  ('family_tree', 'شجرة العائلة', 'Family Tree', 'social', 'premium', 'git-branch', 20),
-  ('unlimited_reminders', 'تذكيرات غير محدودة', 'Unlimited Reminders', 'utility', 'premium', 'bell-plus', 30),
-  ('custom_themes', 'سمات مخصصة', 'Custom Themes', 'customization', 'premium', 'palette', 40),
-  ('pattern_effects', 'تأثيرات الخلفية', 'Background Effects', 'customization', 'premium', 'sparkles', 41),
-  ('ad_free', 'بدون إعلانات', 'Ad Free', 'utility', 'premium', 'shield', 50),
-  ('priority_support', 'دعم أولوي', 'Priority Support', 'utility', 'premium', 'headphones', 51);
+  ('ai_chat', 'المستشار الذكي', 'AI Counselor', 'ai', 'max', 'brain', 1),
+  ('ai_message_generator', 'مولد الرسائل', 'Message Generator', 'ai', 'max', 'message-square-plus', 2),
+  ('ai_weekly_report', 'التقرير الأسبوعي', 'Weekly Report', 'ai', 'max', 'file-text', 3),
+  ('ai_suggestions', 'اقتراحات ذكية', 'Smart Suggestions', 'ai', 'max', 'lightbulb', 4),
+  ('advanced_stats', 'إحصائيات متقدمة', 'Advanced Stats', 'analytics', 'max', 'trending-up', 10),
+  ('export_data', 'تصدير البيانات', 'Export Data', 'analytics', 'max', 'download', 11),
+  ('family_tree', 'شجرة العائلة', 'Family Tree', 'social', 'max', 'git-branch', 20),
+  ('unlimited_reminders', 'تذكيرات غير محدودة', 'Unlimited Reminders', 'utility', 'max', 'bell-plus', 30),
+  ('custom_themes', 'سمات مخصصة', 'Custom Themes', 'customization', 'max', 'palette', 40),
+  ('pattern_effects', 'تأثيرات الخلفية', 'Background Effects', 'customization', 'max', 'sparkles', 41),
+  ('ad_free', 'بدون إعلانات', 'Ad Free', 'utility', 'max', 'shield', 50),
+  ('priority_support', 'دعم أولوي', 'Priority Support', 'utility', 'max', 'headphones', 51);
 
 -- =====================================================
 -- 6. COMMUNICATION SCENARIOS
