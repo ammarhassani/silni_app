@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Post-checkout hook to auto-switch environments based on branch
+# main = production, develop = staging
+
+# Only run on branch checkout (not file checkout)
+# $3 is 1 for branch checkout, 0 for file checkout
+if [ "$3" != "1" ]; then
+    exit 0
+fi
+
+BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+PROJECT_ROOT=$(git rev-parse --show-toplevel)
+
+if [ "$BRANCH" = "main" ]; then
+    if [ -f "$PROJECT_ROOT/.env.production" ]; then
+        echo "🔄 Auto-switching to PRODUCTION environment..."
+        "$PROJECT_ROOT/scripts/switch-env.sh" production
+    fi
+elif [ "$BRANCH" = "develop" ] || [[ "$BRANCH" == feature/* ]] || [[ "$BRANCH" == fix/* ]]; then
+    if [ -f "$PROJECT_ROOT/.env.staging" ]; then
+        echo "🔄 Auto-switching to STAGING environment..."
+        "$PROJECT_ROOT/scripts/switch-env.sh" staging
+    fi
+fi
