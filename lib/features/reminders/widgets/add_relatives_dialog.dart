@@ -122,13 +122,15 @@ class _AddRelativesDialogState extends ConsumerState<AddRelativesDialog> {
               ),
       ),
       actions: [
-        TextButton(
+        ThemeAwareDialogButton(
+          text: 'إلغاء',
+          isPrimary: false,
           onPressed: () => Navigator.pop(context),
-          child: const Text('إلغاء'),
         ),
-        TextButton(
-          onPressed: _selectedRelativeIds.isEmpty ? null : _addRelatives,
-          child: const Text('إضافة'),
+        ThemeAwareDialogButton(
+          text: 'إضافة',
+          isPrimary: true,
+          onPressed: _selectedRelativeIds.isEmpty ? () {} : _addRelatives,
         ),
       ],
     );

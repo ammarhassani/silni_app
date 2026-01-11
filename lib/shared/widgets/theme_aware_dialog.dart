@@ -423,6 +423,16 @@ class ThemeAwareTextField extends ConsumerWidget {
   }
 }
 
+/// Button variant for dialog buttons
+enum DialogButtonVariant {
+  /// Filled button with primary color background
+  filled,
+  /// Text button with no background
+  text,
+  /// Destructive text button (red/error color)
+  destructive,
+}
+
 /// A theme-aware button for dialogs
 class ThemeAwareDialogButton extends ConsumerWidget {
   const ThemeAwareDialogButton({
@@ -431,24 +441,63 @@ class ThemeAwareDialogButton extends ConsumerWidget {
     required this.onPressed,
     this.isPrimary = true,
     this.isLoading = false,
+    this.variant = DialogButtonVariant.text,
   });
 
   final String text;
   final VoidCallback onPressed;
   final bool isPrimary;
   final bool isLoading;
+  final DialogButtonVariant variant;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeColors = ref.watch(themeColorsProvider);
 
+    // For text and destructive variants, use TextButton
+    if (variant == DialogButtonVariant.text || variant == DialogButtonVariant.destructive) {
+      final textColor = variant == DialogButtonVariant.destructive
+          ? themeColors.dialogButtonDestructive
+          : isPrimary
+              ? themeColors.dialogButtonPrimary
+              : themeColors.dialogButtonSecondary;
+
+      return TextButton(
+        onPressed: isLoading ? null : onPressed,
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+        ),
+        child: isLoading
+            ? SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(textColor),
+                ),
+              )
+            : Text(
+                text,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: isPrimary ? FontWeight.bold : FontWeight.w500,
+                  color: textColor,
+                ),
+              ),
+      );
+    }
+
+    // Filled variant - original behavior
     return ElevatedButton(
       onPressed: isLoading ? null : onPressed,
       style: ElevatedButton.styleFrom(
         backgroundColor: isPrimary
             ? themeColors.primary
             : themeColors.background2,
-        foregroundColor: isPrimary ? Colors.white : Colors.white,
+        foregroundColor: themeColors.textPrimary,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
@@ -465,7 +514,7 @@ class ThemeAwareDialogButton extends ConsumerWidget {
               child: CircularProgressIndicator(
                 strokeWidth: 2,
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  isPrimary ? Colors.white : themeColors.primary,
+                  isPrimary ? themeColors.textPrimary : themeColors.primary,
                 ),
               ),
             )
@@ -474,7 +523,7 @@ class ThemeAwareDialogButton extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: isPrimary ? Colors.white : Colors.white,
+                color: themeColors.textPrimary,
               ),
             ),
     );

@@ -408,13 +408,15 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         title: 'حذف التذكير',
         content: const Text('هل أنت متأكد من حذف هذا التذكير؟'),
         actions: [
-          TextButton(
+          ThemeAwareDialogButton(
+            text: 'إلغاء',
+            isPrimary: false,
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('إلغاء'),
           ),
-          TextButton(
+          ThemeAwareDialogButton(
+            text: 'حذف',
+            variant: DialogButtonVariant.destructive,
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('حذف', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

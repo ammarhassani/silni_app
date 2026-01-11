@@ -484,17 +484,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
         actions: [
-          TextButton(
+          ThemeAwareDialogButton(
+            text: 'إلغاء',
+            isPrimary: false,
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('إلغاء'),
           ),
-          TextButton(
+          ThemeAwareDialogButton(
+            text: 'إرسال',
+            isPrimary: true,
             onPressed: () {
               if (formKey.currentState!.validate()) {
                 Navigator.of(context).pop(true);
               }
             },
-            child: const Text('إرسال'),
           ),
         ],
       ),
@@ -529,7 +531,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     }
 
-    emailController.dispose();
   }
 
   // Sign in with Google

@@ -81,11 +81,14 @@ void showChangePasswordDialog({
         style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
       ),
       actions: [
-        TextButton(
+        ThemeAwareDialogButton(
+          text: 'إلغاء',
+          isPrimary: false,
           onPressed: () => Navigator.pop(dialogContext),
-          child: const Text('إلغاء'),
         ),
-        TextButton(
+        ThemeAwareDialogButton(
+          text: 'إرسال',
+          isPrimary: true,
           onPressed: () async {
             Navigator.pop(dialogContext);
 
@@ -119,7 +122,6 @@ void showChangePasswordDialog({
               }
             }
           },
-          child: const Text('إرسال'),
         ),
       ],
     ),
@@ -175,11 +177,14 @@ void showDeleteAccountDialog({
         style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
       ),
       actions: [
-        TextButton(
+        ThemeAwareDialogButton(
+          text: 'إلغاء',
+          isPrimary: false,
           onPressed: () => Navigator.pop(dialogContext),
-          child: const Text('إلغاء'),
         ),
-        TextButton(
+        ThemeAwareDialogButton(
+          text: 'حذف',
+          variant: DialogButtonVariant.destructive,
           onPressed: () async {
             Navigator.pop(dialogContext);
 
@@ -200,7 +205,7 @@ void showDeleteAccountDialog({
               if (context.mounted) {
                 Navigator.of(context).pop(); // Close loading
                 GoRouter.of(context).go(AppRoutes.login);
-                
+
                 UIHelpers.showSnackBar(
                   context,
                   'تم حذف حسابك بنجاح',
@@ -218,7 +223,6 @@ void showDeleteAccountDialog({
               }
             }
           },
-          child: const Text('حذف', style: TextStyle(color: Colors.red)),
         ),
       ],
     ),
