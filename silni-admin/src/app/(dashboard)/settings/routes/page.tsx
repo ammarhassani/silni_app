@@ -15,28 +15,22 @@ import { useFeatures } from "@/hooks/use-subscriptions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Select,
   SelectContent,
@@ -44,8 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Pencil, Plus, Trash2, FolderTree, Route, Lock, Crown, Eye, EyeOff } from "lucide-react";
+import { Pencil, Plus, Trash2, Route, Lock, Crown, ChevronDown, Settings2, Eye, EyeOff, FolderOpen } from "lucide-react";
 
 export default function RoutesPage() {
   const { data, isLoading } = useRoutesHierarchy();
@@ -60,8 +53,10 @@ export default function RoutesPage() {
   const [editingCategory, setEditingCategory] = useState<RouteCategory | null>(null);
   const [isNewRoute, setIsNewRoute] = useState(false);
   const [isNewCategory, setIsNewCategory] = useState(false);
-  const [deleteRouteId, setDeleteRouteId] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
+  // Simplified route form - essential fields only
   const [routeForm, setRouteForm] = useState({
     path: "",
     route_key: "",
@@ -88,8 +83,19 @@ export default function RoutesPage() {
     is_active: true,
   });
 
+  // Auto-generate route_key from path
+  const handlePathChange = (path: string) => {
+    const key = path.replace(/^\//, "").replace(/\//g, "_") || "";
+    setRouteForm((f) => ({
+      ...f,
+      path,
+      route_key: f.route_key || key, // Only auto-fill if empty
+    }));
+  };
+
   const handleOpenNewRoute = () => {
     setIsNewRoute(true);
+    setShowAdvanced(false);
     setRouteForm({
       path: "",
       route_key: "",
@@ -111,6 +117,7 @@ export default function RoutesPage() {
 
   const handleOpenEditRoute = (route: AppRoute) => {
     setIsNewRoute(false);
+    setShowAdvanced(false);
     setEditingRoute(route);
     setRouteForm({
       path: route.path,
@@ -131,45 +138,28 @@ export default function RoutesPage() {
   };
 
   const handleSaveRoute = () => {
+    const payload = {
+      path: routeForm.path,
+      route_key: routeForm.route_key,
+      label_ar: routeForm.label_ar,
+      label_en: routeForm.label_en || null,
+      icon: routeForm.icon || null,
+      description_ar: routeForm.description_ar || null,
+      category_key: routeForm.category_key,
+      parent_route_key: routeForm.parent_route_key || null,
+      sort_order: routeForm.sort_order,
+      is_active: routeForm.is_active,
+      is_public: routeForm.is_public,
+      requires_auth: routeForm.requires_auth,
+      requires_premium: routeForm.requires_premium,
+      feature_id: routeForm.feature_id || null,
+    };
+
     if (isNewRoute) {
-      createRoute.mutate(
-        {
-          path: routeForm.path,
-          route_key: routeForm.route_key,
-          label_ar: routeForm.label_ar,
-          label_en: routeForm.label_en || null,
-          icon: routeForm.icon || null,
-          description_ar: routeForm.description_ar || null,
-          category_key: routeForm.category_key,
-          parent_route_key: routeForm.parent_route_key || null,
-          sort_order: routeForm.sort_order,
-          is_active: routeForm.is_active,
-          is_public: routeForm.is_public,
-          requires_auth: routeForm.requires_auth,
-          requires_premium: routeForm.requires_premium,
-          feature_id: routeForm.feature_id || null,
-        },
-        { onSuccess: () => setEditingRoute(null) }
-      );
+      createRoute.mutate(payload, { onSuccess: () => setEditingRoute(null) });
     } else if (editingRoute?.id) {
       updateRoute.mutate(
-        {
-          id: editingRoute.id,
-          path: routeForm.path,
-          route_key: routeForm.route_key,
-          label_ar: routeForm.label_ar,
-          label_en: routeForm.label_en || null,
-          icon: routeForm.icon || null,
-          description_ar: routeForm.description_ar || null,
-          category_key: routeForm.category_key,
-          parent_route_key: routeForm.parent_route_key || null,
-          sort_order: routeForm.sort_order,
-          is_active: routeForm.is_active,
-          is_public: routeForm.is_public,
-          requires_auth: routeForm.requires_auth,
-          requires_premium: routeForm.requires_premium,
-          feature_id: routeForm.feature_id || null,
-        },
+        { id: editingRoute.id, ...payload },
         { onSuccess: () => setEditingRoute(null) }
       );
     }
@@ -202,40 +192,39 @@ export default function RoutesPage() {
   };
 
   const handleSaveCategory = () => {
+    const payload = {
+      category_key: categoryForm.category_key,
+      label_ar: categoryForm.label_ar,
+      label_en: categoryForm.label_en || null,
+      icon: categoryForm.icon || null,
+      sort_order: categoryForm.sort_order,
+      is_active: categoryForm.is_active,
+    };
+
     if (isNewCategory) {
-      createCategory.mutate(
-        {
-          category_key: categoryForm.category_key,
-          label_ar: categoryForm.label_ar,
-          label_en: categoryForm.label_en || null,
-          icon: categoryForm.icon || null,
-          sort_order: categoryForm.sort_order,
-          is_active: categoryForm.is_active,
-        },
-        { onSuccess: () => setEditingCategory(null) }
-      );
+      createCategory.mutate(payload, { onSuccess: () => setEditingCategory(null) });
     } else if (editingCategory?.id) {
       updateCategory.mutate(
-        {
-          id: editingCategory.id,
-          category_key: categoryForm.category_key,
-          label_ar: categoryForm.label_ar,
-          label_en: categoryForm.label_en || null,
-          icon: categoryForm.icon || null,
-          sort_order: categoryForm.sort_order,
-          is_active: categoryForm.is_active,
-        },
+        { id: editingCategory.id, ...payload },
         { onSuccess: () => setEditingCategory(null) }
       );
     }
   };
 
   const handleDeleteRoute = () => {
-    if (deleteRouteId) {
-      deleteRoute.mutate(deleteRouteId, {
-        onSuccess: () => setDeleteRouteId(null),
+    if (deleteConfirm) {
+      deleteRoute.mutate(deleteConfirm, {
+        onSuccess: () => setDeleteConfirm(null),
       });
     }
+  };
+
+  // Quick toggle active status
+  const toggleRouteActive = (route: AppRoute) => {
+    updateRoute.mutate({
+      id: route.id,
+      is_active: !route.is_active,
+    });
   };
 
   if (isLoading) {
@@ -252,342 +241,298 @@ export default function RoutesPage() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">مسارات التطبيق</h1>
           <p className="text-muted-foreground mt-1">
-            إدارة مسارات التنقل في التطبيق
+            {data?.routes.length || 0} مسار في {data?.categories.length || 0} تصنيف
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleOpenNewCategory}>
-            <Plus className="h-4 w-4 ml-2" />
-            تصنيف جديد
+          <Button variant="outline" size="sm" onClick={handleOpenNewCategory}>
+            <FolderOpen className="h-4 w-4 ml-1" />
+            تصنيف
           </Button>
-          <Button onClick={handleOpenNewRoute}>
-            <Plus className="h-4 w-4 ml-2" />
-            مسار جديد
+          <Button size="sm" onClick={handleOpenNewRoute}>
+            <Plus className="h-4 w-4 ml-1" />
+            مسار
           </Button>
         </div>
       </div>
 
-      <Tabs defaultValue="routes" className="w-full">
-        <TabsList>
-          <TabsTrigger value="routes" className="flex items-center gap-2">
-            <Route className="h-4 w-4" />
-            المسارات ({data?.routes.length || 0})
-          </TabsTrigger>
-          <TabsTrigger value="categories" className="flex items-center gap-2">
-            <FolderTree className="h-4 w-4" />
-            التصنيفات ({data?.categories.length || 0})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="routes" className="space-y-4 mt-4">
-          {Object.entries(data?.hierarchy || {}).map(([categoryKey, { category, routes }]) => (
-            <Card key={categoryKey}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {category.icon && <span className="text-xl">{category.icon}</span>}
-                    <CardTitle className="text-lg">{category.label_ar}</CardTitle>
-                    <Badge variant="secondary">{routes.length}</Badge>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleOpenEditCategory(category)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {routes.map((route) => (
-                    <div
-                      key={route.id}
-                      className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        {route.icon && <span className="text-lg">{route.icon}</span>}
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{route.label_ar}</span>
-                            {!route.is_active && (
-                              <Badge variant="secondary" className="text-xs">
-                                <EyeOff className="h-3 w-3 ml-1" />
-                                مخفي
-                              </Badge>
-                            )}
-                            {route.requires_auth && (
-                              <Lock className="h-3 w-3 text-muted-foreground" />
-                            )}
-                            {route.requires_premium && (
-                              <Crown className="h-3 w-3 text-yellow-500" />
-                            )}
-                          </div>
-                          <code className="text-xs text-muted-foreground">{route.path}</code>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleOpenEditRoute(route)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setDeleteRouteId(route.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  {routes.length === 0 && (
-                    <p className="text-center text-muted-foreground py-4">
-                      لا توجد مسارات في هذا التصنيف
-                    </p>
+      {/* Routes by Category */}
+      <div className="space-y-4">
+        {Object.entries(data?.hierarchy || {}).map(([categoryKey, { category, routes }]) => (
+          <Card key={categoryKey} className={!category.is_active ? "opacity-60" : ""}>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {category.icon && <span className="text-lg">{category.icon}</span>}
+                  <CardTitle className="text-base">{category.label_ar}</CardTitle>
+                  <Badge variant="outline" className="text-xs">
+                    {routes.length}
+                  </Badge>
+                  {!category.is_active && (
+                    <Badge variant="secondary" className="text-xs">مخفي</Badge>
                   )}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </TabsContent>
-
-        <TabsContent value="categories" className="space-y-4 mt-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {data?.categories.map((category) => (
-              <Card key={category.id}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {category.icon && <span className="text-2xl">{category.icon}</span>}
-                      <div>
-                        <CardTitle className="text-lg">{category.label_ar}</CardTitle>
-                        <CardDescription>{category.category_key}</CardDescription>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handleOpenEditCategory(category)}
+                >
+                  <Pencil className="h-3 w-3" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="divide-y">
+                {routes.map((route) => (
+                  <div
+                    key={route.id}
+                    className={`flex items-center justify-between py-2 group ${!route.is_active ? "opacity-50" : ""}`}
+                  >
+                    <div
+                      className="flex items-center gap-2 flex-1 cursor-pointer"
+                      onClick={() => handleOpenEditRoute(route)}
+                    >
+                      {route.icon && <span className="text-sm">{route.icon}</span>}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-medium truncate">{route.label_ar}</span>
+                          {route.requires_auth && <Lock className="h-3 w-3 text-muted-foreground shrink-0" />}
+                          {route.requires_premium && <Crown className="h-3 w-3 text-yellow-500 shrink-0" />}
+                        </div>
+                        <code className="text-xs text-muted-foreground">{route.path}</code>
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleOpenEditCategory(category)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => toggleRouteActive(route)}
+                        title={route.is_active ? "إخفاء" : "إظهار"}
+                      >
+                        {route.is_active ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => handleOpenEditRoute(route)}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => setDeleteConfirm(route.id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">عدد المسارات</span>
-                    <span className="font-medium">
-                      {data?.hierarchy[category.category_key]?.routes.length || 0}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm mt-2">
-                    <span className="text-muted-foreground">الترتيب</span>
-                    <span className="font-medium">{category.sort_order}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-      </Tabs>
+                ))}
+                {routes.length === 0 && (
+                  <p className="text-center text-muted-foreground text-sm py-3">
+                    لا توجد مسارات
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-      {/* Route Edit Dialog */}
+      {/* Route Edit Dialog - Simplified */}
       <Dialog open={!!editingRoute} onOpenChange={() => setEditingRoute(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{isNewRoute ? "إضافة مسار جديد" : "تعديل المسار"}</DialogTitle>
-            <DialogDescription>
-              {isNewRoute ? "أضف مسار جديد للتطبيق" : "تعديل إعدادات المسار"}
-            </DialogDescription>
+            <DialogTitle className="flex items-center gap-2">
+              <Route className="h-5 w-5" />
+              {isNewRoute ? "إضافة مسار" : "تعديل المسار"}
+            </DialogTitle>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>المسار (path)</Label>
-                <Input
-                  value={routeForm.path}
-                  onChange={(e) => setRouteForm((f) => ({ ...f, path: e.target.value }))}
-                  placeholder="/home"
-                  dir="ltr"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>مفتاح المسار</Label>
-                <Input
-                  value={routeForm.route_key}
-                  onChange={(e) => setRouteForm((f) => ({ ...f, route_key: e.target.value }))}
-                  placeholder="home"
-                  dir="ltr"
-                />
-              </div>
+          <div className="space-y-4 py-2">
+            {/* Essential Fields */}
+            <div className="space-y-2">
+              <Label>المسار</Label>
+              <Input
+                value={routeForm.path}
+                onChange={(e) => handlePathChange(e.target.value)}
+                placeholder="/relatives"
+                dir="ltr"
+              />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>الاسم (عربي)</Label>
-                <Input
-                  value={routeForm.label_ar}
-                  onChange={(e) => setRouteForm((f) => ({ ...f, label_ar: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>الاسم (إنجليزي)</Label>
-                <Input
-                  value={routeForm.label_en}
-                  onChange={(e) => setRouteForm((f) => ({ ...f, label_en: e.target.value }))}
-                  dir="ltr"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>الاسم</Label>
+              <Input
+                value={routeForm.label_ar}
+                onChange={(e) => setRouteForm((f) => ({ ...f, label_ar: e.target.value }))}
+                placeholder="الأقارب"
+              />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>الأيقونة</Label>
-                <Input
-                  value={routeForm.icon}
-                  onChange={(e) => setRouteForm((f) => ({ ...f, icon: e.target.value }))}
-                  placeholder="home"
-                  dir="ltr"
-                />
-              </div>
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>التصنيف</Label>
                 <Select
                   value={routeForm.category_key}
                   onValueChange={(v) => setRouteForm((f) => ({ ...f, category_key: v }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {data?.categories.map((cat) => (
                       <SelectItem key={cat.category_key} value={cat.category_key}>
-                        {cat.label_ar}
+                        {cat.icon} {cat.label_ar}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>الترتيب</Label>
+                <Label>الأيقونة</Label>
                 <Input
-                  type="number"
-                  value={routeForm.sort_order}
-                  onChange={(e) =>
-                    setRouteForm((f) => ({ ...f, sort_order: parseInt(e.target.value) || 0 }))
-                  }
+                  value={routeForm.icon}
+                  onChange={(e) => setRouteForm((f) => ({ ...f, icon: e.target.value }))}
+                  placeholder="👥"
+                  className="h-9"
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>الوصف</Label>
-              <Input
-                value={routeForm.description_ar}
-                onChange={(e) => setRouteForm((f) => ({ ...f, description_ar: e.target.value }))}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>المسار الأب</Label>
-                <Select
-                  value={routeForm.parent_route_key || "none"}
-                  onValueChange={(v) =>
-                    setRouteForm((f) => ({ ...f, parent_route_key: v === "none" ? "" : v }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">بدون</SelectItem>
-                    {data?.routes
-                      .filter((r) => r.route_key !== routeForm.route_key)
-                      .map((route) => (
-                        <SelectItem key={route.route_key} value={route.route_key}>
-                          {route.label_ar}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+            {/* Quick Toggles */}
+            <div className="flex flex-wrap gap-3 pt-2">
+              <div
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-colors ${
+                  routeForm.is_active ? "bg-green-100 border-green-300 dark:bg-green-950 dark:border-green-800" : "bg-muted"
+                }`}
+                onClick={() => setRouteForm((f) => ({ ...f, is_active: !f.is_active }))}
+              >
+                {routeForm.is_active ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                <span className="text-xs">{routeForm.is_active ? "مفعّل" : "مخفي"}</span>
               </div>
-              <div className="space-y-2">
-                <Label>الميزة المرتبطة</Label>
-                <Select
-                  value={routeForm.feature_id || "none"}
-                  onValueChange={(v) =>
-                    setRouteForm((f) => ({ ...f, feature_id: v === "none" ? "" : v }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">بدون</SelectItem>
-                    {features?.map((feature) => (
-                      <SelectItem key={feature.feature_id} value={feature.feature_id}>
-                        {feature.display_name_ar}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-colors ${
+                  routeForm.requires_auth ? "bg-blue-100 border-blue-300 dark:bg-blue-950 dark:border-blue-800" : "bg-muted"
+                }`}
+                onClick={() => setRouteForm((f) => ({ ...f, requires_auth: !f.requires_auth }))}
+              >
+                <Lock className="h-3 w-3" />
+                <span className="text-xs">{routeForm.requires_auth ? "يتطلب دخول" : "عام"}</span>
+              </div>
+              <div
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-colors ${
+                  routeForm.requires_premium ? "bg-yellow-100 border-yellow-300 dark:bg-yellow-950 dark:border-yellow-800" : "bg-muted"
+                }`}
+                onClick={() => setRouteForm((f) => ({ ...f, requires_premium: !f.requires_premium }))}
+              >
+                <Crown className="h-3 w-3" />
+                <span className="text-xs">{routeForm.requires_premium ? "مميز" : "مجاني"}</span>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-6 pt-4">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>مفعل</Label>
-                  <Switch
-                    checked={routeForm.is_active}
-                    onCheckedChange={(c) => setRouteForm((f) => ({ ...f, is_active: c }))}
+            {/* Advanced Options - Collapsible */}
+            <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+              <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full pt-2">
+                <Settings2 className="h-4 w-4" />
+                <span>خيارات متقدمة</span>
+                <ChevronDown className={`h-4 w-4 mr-auto transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-3 pt-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-xs">المفتاح</Label>
+                    <Input
+                      value={routeForm.route_key}
+                      onChange={(e) => setRouteForm((f) => ({ ...f, route_key: e.target.value }))}
+                      placeholder="relatives"
+                      dir="ltr"
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">الترتيب</Label>
+                    <Input
+                      type="number"
+                      value={routeForm.sort_order}
+                      onChange={(e) => setRouteForm((f) => ({ ...f, sort_order: parseInt(e.target.value) || 0 }))}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">الاسم (إنجليزي)</Label>
+                  <Input
+                    value={routeForm.label_en}
+                    onChange={(e) => setRouteForm((f) => ({ ...f, label_en: e.target.value }))}
+                    placeholder="Relatives"
+                    dir="ltr"
+                    className="h-8 text-xs"
                   />
                 </div>
-                <div className="flex items-center justify-between">
-                  <Label>عام</Label>
-                  <Switch
-                    checked={routeForm.is_public}
-                    onCheckedChange={(c) => setRouteForm((f) => ({ ...f, is_public: c }))}
-                  />
+                <div className="space-y-2">
+                  <Label className="text-xs">المسار الأب</Label>
+                  <Select
+                    value={routeForm.parent_route_key || "none"}
+                    onValueChange={(v) => setRouteForm((f) => ({ ...f, parent_route_key: v === "none" ? "" : v }))}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">بدون</SelectItem>
+                      {data?.routes
+                        .filter((r) => r.route_key !== routeForm.route_key)
+                        .map((route) => (
+                          <SelectItem key={route.route_key} value={route.route_key}>
+                            {route.label_ar}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>يتطلب تسجيل الدخول</Label>
-                  <Switch
-                    checked={routeForm.requires_auth}
-                    onCheckedChange={(c) => setRouteForm((f) => ({ ...f, requires_auth: c }))}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label>يتطلب اشتراك مميز</Label>
-                  <Switch
-                    checked={routeForm.requires_premium}
-                    onCheckedChange={(c) => setRouteForm((f) => ({ ...f, requires_premium: c }))}
-                  />
-                </div>
-              </div>
-            </div>
+                {features && features.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs">الميزة المرتبطة</Label>
+                    <Select
+                      value={routeForm.feature_id || "none"}
+                      onValueChange={(v) => setRouteForm((f) => ({ ...f, feature_id: v === "none" ? "" : v }))}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">بدون</SelectItem>
+                        {features.map((feature) => (
+                          <SelectItem key={feature.feature_id} value={feature.feature_id}>
+                            {feature.display_name_ar}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingRoute(null)}>
+            <Button variant="outline" size="sm" onClick={() => setEditingRoute(null)}>
               إلغاء
             </Button>
             <Button
+              size="sm"
               onClick={handleSaveRoute}
-              disabled={createRoute.isPending || updateRoute.isPending}
+              disabled={createRoute.isPending || updateRoute.isPending || !routeForm.path || !routeForm.label_ar}
             >
               {(createRoute.isPending || updateRoute.isPending) ? "جاري الحفظ..." : "حفظ"}
             </Button>
@@ -595,124 +540,104 @@ export default function RoutesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Category Edit Dialog */}
+      {/* Category Edit Dialog - Simplified */}
       <Dialog open={!!editingCategory} onOpenChange={() => setEditingCategory(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>
-              {isNewCategory ? "إضافة تصنيف جديد" : "تعديل التصنيف"}
+            <DialogTitle className="flex items-center gap-2">
+              <FolderOpen className="h-5 w-5" />
+              {isNewCategory ? "إضافة تصنيف" : "تعديل التصنيف"}
             </DialogTitle>
-            <DialogDescription>
-              {isNewCategory ? "أضف تصنيف جديد للمسارات" : "تعديل إعدادات التصنيف"}
-            </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label>مفتاح التصنيف</Label>
-              <Input
-                value={categoryForm.category_key}
-                onChange={(e) =>
-                  setCategoryForm((f) => ({ ...f, category_key: e.target.value }))
-                }
-                placeholder="main"
-                dir="ltr"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>الاسم (عربي)</Label>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-2 col-span-2">
+                <Label>الاسم</Label>
                 <Input
                   value={categoryForm.label_ar}
-                  onChange={(e) =>
-                    setCategoryForm((f) => ({ ...f, label_ar: e.target.value }))
-                  }
+                  onChange={(e) => setCategoryForm((f) => ({ ...f, label_ar: e.target.value }))}
+                  placeholder="الرئيسية"
                 />
               </div>
               <div className="space-y-2">
-                <Label>الاسم (إنجليزي)</Label>
+                <Label>أيقونة</Label>
                 <Input
-                  value={categoryForm.label_en}
-                  onChange={(e) =>
-                    setCategoryForm((f) => ({ ...f, label_en: e.target.value }))
-                  }
-                  dir="ltr"
+                  value={categoryForm.icon}
+                  onChange={(e) => setCategoryForm((f) => ({ ...f, icon: e.target.value }))}
+                  placeholder="🏠"
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>الأيقونة</Label>
+                <Label className="text-xs">المفتاح</Label>
                 <Input
-                  value={categoryForm.icon}
-                  onChange={(e) =>
-                    setCategoryForm((f) => ({ ...f, icon: e.target.value }))
-                  }
-                  placeholder="home"
+                  value={categoryForm.category_key}
+                  onChange={(e) => setCategoryForm((f) => ({ ...f, category_key: e.target.value }))}
+                  placeholder="main"
                   dir="ltr"
+                  className="h-8 text-xs"
                 />
               </div>
               <div className="space-y-2">
-                <Label>الترتيب</Label>
+                <Label className="text-xs">الترتيب</Label>
                 <Input
                   type="number"
                   value={categoryForm.sort_order}
-                  onChange={(e) =>
-                    setCategoryForm((f) => ({
-                      ...f,
-                      sort_order: parseInt(e.target.value) || 0,
-                    }))
-                  }
+                  onChange={(e) => setCategoryForm((f) => ({ ...f, sort_order: parseInt(e.target.value) || 0 }))}
+                  className="h-8 text-xs"
                 />
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <Label>مفعل</Label>
+            <div className="flex items-center justify-between pt-2">
+              <Label>مفعّل</Label>
               <Switch
                 checked={categoryForm.is_active}
-                onCheckedChange={(c) =>
-                  setCategoryForm((f) => ({ ...f, is_active: c }))
-                }
+                onCheckedChange={(c) => setCategoryForm((f) => ({ ...f, is_active: c }))}
               />
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingCategory(null)}>
+            <Button variant="outline" size="sm" onClick={() => setEditingCategory(null)}>
               إلغاء
             </Button>
             <Button
+              size="sm"
               onClick={handleSaveCategory}
-              disabled={createCategory.isPending || updateCategory.isPending}
+              disabled={createCategory.isPending || updateCategory.isPending || !categoryForm.label_ar}
             >
-              {(createCategory.isPending || updateCategory.isPending)
-                ? "جاري الحفظ..."
-                : "حفظ"}
+              {(createCategory.isPending || updateCategory.isPending) ? "جاري الحفظ..." : "حفظ"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteRouteId} onOpenChange={() => setDeleteRouteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
-            <AlertDialogDescription>
-              سيتم حذف هذا المسار نهائياً. هذا الإجراء لا يمكن التراجع عنه.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction
+      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle>حذف المسار؟</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            هذا الإجراء لا يمكن التراجع عنه.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setDeleteConfirm(null)}>
+              إلغاء
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
               onClick={handleDeleteRoute}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteRoute.isPending}
             >
               {deleteRoute.isPending ? "جاري الحذف..." : "حذف"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

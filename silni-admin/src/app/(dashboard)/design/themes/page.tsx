@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   useThemes,
   useCreateTheme,
@@ -28,7 +28,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Pencil, Trash2, Sun, Moon, Crown, Sparkles, Check, ChevronDown, Code, HelpCircle, Copy, RotateCcw, Palette } from "lucide-react";
+import { Plus, Pencil, Trash2, Sun, Moon, Crown, Sparkles, Check, ChevronDown, Code, Copy, RotateCcw, Palette } from "lucide-react";
 import type { AdminTheme } from "@/types/database";
 
 // Color keys that match ThemeColors in Flutter app
@@ -119,292 +119,23 @@ const GRADIENT_KEYS = [
   { key: "tier_starter", label: "تدرج مبتدئ", labelEn: "Starter Tier" },
 ];
 
-// All 6 base theme templates
-const BASE_THEMES = {
-  default: {
-    key: "default",
-    name: "صِلني الأخضر",
-    nameEn: "Silni Green",
-    preview: ["#1B5E20", "#2E7D32", "#388E3C"],
-    colors: {
-      primary: "#2E7D32",
-      primary_light: "#60AD5E",
-      primary_dark: "#005005",
-      secondary: "#FFD700",
-      accent: "#FF6F00",
-      background_1: "#1B5E20",
-      background_2: "#2E7D32",
-      background_3: "#388E3C",
-      on_primary: "#FFFFFF",
-      on_secondary: "#1B5E20",
-      surface: "#1B5E20",
-      on_surface: "#FFFFFF",
-      surface_variant: "#2E7D32",
-      on_surface_variant: "#E8F5E9",
-      glass_background: "#FFFFFF26",
-      glass_border: "#FFFFFF33",
-      glass_highlight: "#FFFFFF4D",
-      text_primary: "#FFFFFF",
-      text_secondary: "#FFFFFFB3",
-      text_hint: "#FFFFFF80",
-      text_on_gradient: "#FFFFFF",
-      shimmer_base: "#2E7D32",
-      shimmer_highlight: "#81C784",
-      card_background: "#FFFFFF26",
-      card_border: "#FFFFFF33",
-      divider: "#FFFFFF33",
-      disabled: "#FFFFFF80",
-      // Semantic status
-      status_success: "#4CAF50",
-      status_error: "#E53935",
-      status_warning: "#FFA726",
-      status_info: "#29B6F6",
-      // Contact frequency
-      contact_excellent: "#4CAF50",
-      contact_good: "#8BC34A",
-      contact_normal: "#2196F3",
-      contact_needs_care: "#FF9800",
-      contact_critical: "#F44336",
-      contact_elderly: "#9C27B0",
-      contact_disabled: "#607D8B",
-      // Mood
-      mood_happy: "#FFEB3B",
-      mood_neutral: "#9E9E9E",
-      mood_sad: "#5C6BC0",
-      mood_excited: "#FF5722",
-      mood_calm: "#26C6DA",
-      mood_worried: "#FFA726",
-      // Priority
-      priority_high: "#E53935",
-      priority_medium: "#FFA726",
-      priority_low: "#66BB6A",
-      // Level
-      level_1: "#81C784",
-      level_2: "#4CAF50",
-      level_3: "#388E3C",
-      level_4: "#2E7D32",
-      level_5: "#1B5E20",
-      level_max: "#FFD700",
-    },
-    gradients: {
-      primary: { colors: ["#2E7D32", "#60AD5E", "#81C784"] },
-      background: { colors: ["#1B5E20", "#2E7D32", "#388E3C"] },
-      golden: { colors: ["#FFD700", "#FFA000", "#FF6F00"] },
-      streak_fire: { colors: ["#FF6F00", "#FF8F00", "#FFA726"] },
-      tier_legendary: { colors: ["#FFD700", "#FFA000", "#FF6F00"] },
-      tier_epic: { colors: ["#9C27B0", "#7B1FA2", "#E91E63"] },
-      tier_rare: { colors: ["#2196F3", "#1976D2", "#00BCD4"] },
-      tier_starter: { colors: ["#81C784", "#4CAF50", "#388E3C"] },
-    },
-  },
-  lavender: {
-    key: "lavender",
-    name: "خزامى",
-    nameEn: "Lavender Purple",
-    preview: ["#4A148C", "#6A1B9A", "#7B1FA2"],
-    colors: {
-      primary: "#7B1FA2",
-      primary_light: "#BA68C8",
-      primary_dark: "#4A0072",
-      secondary: "#FFD700",
-      accent: "#E040FB",
-      background_1: "#4A148C",
-      background_2: "#6A1B9A",
-      background_3: "#7B1FA2",
-      on_primary: "#FFFFFF",
-      on_secondary: "#4A148C",
-      surface: "#4A148C",
-      on_surface: "#FFFFFF",
-      surface_variant: "#6A1B9A",
-      on_surface_variant: "#F3E5F5",
-      glass_background: "#FFFFFF26",
-      glass_border: "#FFFFFF33",
-      glass_highlight: "#FFFFFF4D",
-      text_primary: "#FFFFFF",
-      text_secondary: "#FFFFFFB3",
-      text_hint: "#FFFFFF80",
-      text_on_gradient: "#FFFFFF",
-      shimmer_base: "#7B1FA2",
-      shimmer_highlight: "#BA68C8",
-      card_background: "#FFFFFF26",
-      card_border: "#FFFFFF33",
-      divider: "#FFFFFF33",
-      disabled: "#FFFFFF80",
-    },
-    gradients: {
-      primary: { colors: ["#7B1FA2", "#9C27B0", "#BA68C8"] },
-      background: { colors: ["#4A148C", "#6A1B9A", "#7B1FA2"] },
-      golden: { colors: ["#FFD700", "#FFA000", "#FF6F00"] },
-      streak_fire: { colors: ["#E040FB", "#CE93D8", "#BA68C8"] },
-    },
-  },
-  royal: {
-    key: "royal",
-    name: "الأزرق الملكي",
-    nameEn: "Royal Blue",
-    preview: ["#0D47A1", "#1565C0", "#1976D2"],
-    colors: {
-      primary: "#1565C0",
-      primary_light: "#5E92F3",
-      primary_dark: "#003C8F",
-      secondary: "#FFD700",
-      accent: "#00B0FF",
-      background_1: "#0D47A1",
-      background_2: "#1565C0",
-      background_3: "#1976D2",
-      on_primary: "#FFFFFF",
-      on_secondary: "#0D47A1",
-      surface: "#0D47A1",
-      on_surface: "#FFFFFF",
-      surface_variant: "#1565C0",
-      on_surface_variant: "#E3F2FD",
-      glass_background: "#FFFFFF26",
-      glass_border: "#FFFFFF33",
-      glass_highlight: "#FFFFFF4D",
-      text_primary: "#FFFFFF",
-      text_secondary: "#FFFFFFB3",
-      text_hint: "#FFFFFF80",
-      text_on_gradient: "#FFFFFF",
-      shimmer_base: "#1565C0",
-      shimmer_highlight: "#42A5F5",
-      card_background: "#FFFFFF26",
-      card_border: "#FFFFFF33",
-      divider: "#FFFFFF33",
-      disabled: "#FFFFFF80",
-    },
-    gradients: {
-      primary: { colors: ["#1565C0", "#1976D2", "#42A5F5"] },
-      background: { colors: ["#0D47A1", "#1565C0", "#1976D2"] },
-      golden: { colors: ["#FFD700", "#FFA000", "#FF6F00"] },
-      streak_fire: { colors: ["#00B0FF", "#40C4FF", "#80D8FF"] },
-    },
-  },
-  sunset: {
-    key: "sunset",
-    name: "غروب الشمس",
-    nameEn: "Sunset Orange",
-    preview: ["#BF360C", "#D84315", "#E64A19"],
-    colors: {
-      primary: "#E65100",
-      primary_light: "#FF8A50",
-      primary_dark: "#AC1900",
-      secondary: "#FFD700",
-      accent: "#FF6F00",
-      background_1: "#BF360C",
-      background_2: "#D84315",
-      background_3: "#E64A19",
-      on_primary: "#FFFFFF",
-      on_secondary: "#BF360C",
-      surface: "#BF360C",
-      on_surface: "#FFFFFF",
-      surface_variant: "#D84315",
-      on_surface_variant: "#FBE9E7",
-      glass_background: "#FFFFFF26",
-      glass_border: "#FFFFFF33",
-      glass_highlight: "#FFFFFF4D",
-      text_primary: "#FFFFFF",
-      text_secondary: "#FFFFFFB3",
-      text_hint: "#FFFFFF80",
-      text_on_gradient: "#FFFFFF",
-      shimmer_base: "#E65100",
-      shimmer_highlight: "#FF9800",
-      card_background: "#FFFFFF26",
-      card_border: "#FFFFFF33",
-      divider: "#FFFFFF33",
-      disabled: "#FFFFFF80",
-    },
-    gradients: {
-      primary: { colors: ["#E65100", "#FF6F00", "#FF9800"] },
-      background: { colors: ["#BF360C", "#D84315", "#E64A19"] },
-      golden: { colors: ["#FFD700", "#FFA000", "#FF6F00"] },
-      streak_fire: { colors: ["#FF6F00", "#FF8F00", "#FFA726"] },
-    },
-  },
-  rose: {
-    key: "rose",
-    name: "ذهبي وردي",
-    nameEn: "Rose Gold",
-    preview: ["#880E4F", "#AD1457", "#C2185B"],
-    colors: {
-      primary: "#C2185B",
-      primary_light: "#F06292",
-      primary_dark: "#880E4F",
-      secondary: "#FFD700",
-      accent: "#FF4081",
-      background_1: "#880E4F",
-      background_2: "#AD1457",
-      background_3: "#C2185B",
-      on_primary: "#FFFFFF",
-      on_secondary: "#880E4F",
-      surface: "#880E4F",
-      on_surface: "#FFFFFF",
-      surface_variant: "#AD1457",
-      on_surface_variant: "#FCE4EC",
-      glass_background: "#FFFFFF26",
-      glass_border: "#FFFFFF33",
-      glass_highlight: "#FFFFFF4D",
-      text_primary: "#FFFFFF",
-      text_secondary: "#FFFFFFB3",
-      text_hint: "#FFFFFF80",
-      text_on_gradient: "#FFFFFF",
-      shimmer_base: "#C2185B",
-      shimmer_highlight: "#F06292",
-      card_background: "#FFFFFF26",
-      card_border: "#FFFFFF33",
-      divider: "#FFFFFF33",
-      disabled: "#FFFFFF80",
-    },
-    gradients: {
-      primary: { colors: ["#C2185B", "#E91E63", "#F06292"] },
-      background: { colors: ["#880E4F", "#AD1457", "#C2185B"] },
-      golden: { colors: ["#FFD700", "#FFA000", "#FF6F00"] },
-      streak_fire: { colors: ["#FF4081", "#FF80AB", "#F48FB1"] },
-    },
-  },
-  midnight: {
-    key: "midnight",
-    name: "ليل",
-    nameEn: "Midnight Dark",
-    preview: ["#0A0E27", "#1A237E", "#283593"],
-    colors: {
-      primary: "#1A237E",
-      primary_light: "#534BAE",
-      primary_dark: "#000051",
-      secondary: "#FFD700",
-      accent: "#536DFE",
-      background_1: "#0A0E27",
-      background_2: "#1A237E",
-      background_3: "#283593",
-      on_primary: "#FFFFFF",
-      on_secondary: "#0A0E27",
-      surface: "#0A0E27",
-      on_surface: "#FFFFFF",
-      surface_variant: "#1A237E",
-      on_surface_variant: "#E8EAF6",
-      glass_background: "#FFFFFF26",
-      glass_border: "#FFFFFF33",
-      glass_highlight: "#FFFFFF4D",
-      text_primary: "#FFFFFF",
-      text_secondary: "#FFFFFFB3",
-      text_hint: "#FFFFFF80",
-      text_on_gradient: "#FFFFFF",
-      shimmer_base: "#1A237E",
-      shimmer_highlight: "#3949AB",
-      card_background: "#FFFFFF26",
-      card_border: "#FFFFFF33",
-      divider: "#FFFFFF33",
-      disabled: "#FFFFFF80",
-    },
-    gradients: {
-      primary: { colors: ["#1A237E", "#283593", "#3949AB"] },
-      background: { colors: ["#0A0E27", "#1A237E", "#283593"] },
-      golden: { colors: ["#FFD700", "#FFA000", "#FF6F00"] },
-      streak_fire: { colors: ["#536DFE", "#7C4DFF", "#B388FF"] },
-    },
-  },
-};
+// Helper to extract preview colors from a theme
+function getThemePreviewColors(theme: AdminTheme): string[] {
+  const colors = theme.colors as Record<string, string>;
+  const gradients = theme.gradients as Record<string, { colors?: string[] }>;
 
-type BaseThemeKey = keyof typeof BASE_THEMES;
+  // Try to get background gradient colors first
+  if (gradients?.background?.colors?.length) {
+    return gradients.background.colors.slice(0, 3);
+  }
+
+  // Fall back to main colors
+  return [
+    colors?.primary || colors?.background || "#1A5F5B",
+    colors?.secondary || colors?.surface || "#D4A853",
+    colors?.accent || colors?.text || "#FFFFFF",
+  ];
+}
 
 // Color picker component
 function ColorPicker({
@@ -541,22 +272,27 @@ export default function ThemesPage() {
   const [colorsJson, setColorsJson] = useState("{}");
   const [gradientsJson, setGradientsJson] = useState("{}");
   const [showReference, setShowReference] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<BaseThemeKey>("default");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+
+  // Get selected template from themes
+  const selectedTemplate = useMemo(() => {
+    if (!themes || !selectedTemplateId) return themes?.[0] || null;
+    return themes.find(t => t.id === selectedTemplateId) || themes[0] || null;
+  }, [themes, selectedTemplateId]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
   };
 
-  // Apply a base theme template to the form
-  const applyTemplate = (templateKey: BaseThemeKey) => {
-    const template = BASE_THEMES[templateKey];
+  // Apply a database theme as a template
+  const applyTemplate = (theme: AdminTheme) => {
     setFormData((f) => ({
       ...f,
-      colors: { ...template.colors },
-      gradients: { ...template.gradients },
+      colors: { ...(theme.colors as Record<string, string>) },
+      gradients: { ...(theme.gradients as Record<string, { colors?: string[] }>) },
     }));
-    setColorsJson(JSON.stringify(template.colors, null, 2));
-    setGradientsJson(JSON.stringify(template.gradients, null, 2));
+    setColorsJson(JSON.stringify(theme.colors || {}, null, 2));
+    setGradientsJson(JSON.stringify(theme.gradients || {}, null, 2));
   };
 
   // Sync JSON when formData changes (from color pickers)
@@ -688,170 +424,142 @@ export default function ThemesPage() {
         </Card>
       </div>
 
-      {/* Quick Reference - All 6 Base Themes */}
-      <Collapsible open={showReference} onOpenChange={setShowReference}>
-        <Card>
-          <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-              <CardTitle className="flex items-center gap-2">
-                <Palette className="h-5 w-5 text-blue-500" />
-                مرجع الثيمات الأساسية (6 ثيمات)
-                <ChevronDown className={`h-4 w-4 mr-auto transition-transform ${showReference ? "rotate-180" : ""}`} />
-              </CardTitle>
-              <CardDescription>
-                اختر ثيم أساسي كقالب أو انسخ ألوانه
-              </CardDescription>
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="space-y-4">
-              {/* Theme Selector Grid */}
-              <div className="grid grid-cols-6 gap-2">
-                {(Object.keys(BASE_THEMES) as BaseThemeKey[]).map((key) => {
-                  const theme = BASE_THEMES[key];
-                  const isSelected = selectedTemplate === key;
-                  return (
-                    <div
-                      key={key}
-                      className={`flex flex-col items-center p-3 border rounded-lg cursor-pointer transition-all ${
-                        isSelected ? "ring-2 ring-primary bg-muted" : "hover:bg-muted/50"
-                      }`}
-                      onClick={() => setSelectedTemplate(key)}
-                    >
-                      {/* Gradient Preview */}
+      {/* Quick Reference - Database Themes */}
+      {themes && themes.length > 0 && (
+        <Collapsible open={showReference} onOpenChange={setShowReference}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="h-5 w-5 text-blue-500" />
+                  مرجع الثيمات المسجلة ({themes.length} ثيم)
+                  <ChevronDown className={`h-4 w-4 mr-auto transition-transform ${showReference ? "rotate-180" : ""}`} />
+                </CardTitle>
+                <CardDescription>
+                  اختر ثيم موجود كقالب أو انسخ ألوانه
+                </CardDescription>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="space-y-4">
+                {/* Theme Selector Grid - Dynamic from DB */}
+                <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
+                  {themes.map((theme) => {
+                    const previewColors = getThemePreviewColors(theme);
+                    const isSelected = selectedTemplate?.id === theme.id;
+                    return (
                       <div
-                        className="w-full h-10 rounded-md mb-2"
-                        style={{
-                          background: `linear-gradient(to right, ${theme.preview.join(", ")})`,
-                        }}
-                      />
-                      <span className="text-xs font-medium text-center">{theme.name}</span>
-                      <span className="text-[10px] text-muted-foreground">{theme.nameEn}</span>
-                      {isSelected && <Check className="h-3 w-3 text-primary mt-1" />}
+                        key={theme.id}
+                        className={`flex flex-col items-center p-3 border rounded-lg cursor-pointer transition-all ${
+                          isSelected ? "ring-2 ring-primary bg-muted" : "hover:bg-muted/50"
+                        }`}
+                        onClick={() => setSelectedTemplateId(theme.id)}
+                      >
+                        {/* Gradient Preview */}
+                        <div
+                          className="w-full h-10 rounded-md mb-2"
+                          style={{
+                            background: `linear-gradient(to right, ${previewColors.join(", ")})`,
+                          }}
+                        />
+                        <span className="text-xs font-medium text-center truncate w-full">{theme.display_name_ar}</span>
+                        <span className="text-[10px] text-muted-foreground truncate w-full text-center">{theme.display_name_en || theme.theme_key}</span>
+                        <div className="flex items-center gap-1 mt-1">
+                          {theme.is_dark && <Moon className="h-3 w-3 text-muted-foreground" />}
+                          {theme.is_premium && <Crown className="h-3 w-3 text-yellow-500" />}
+                          {isSelected && <Check className="h-3 w-3 text-primary" />}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Selected Theme Colors */}
+                {selectedTemplate && (
+                  <div className="border-t pt-4">
+                    <p className="text-sm font-medium mb-3">
+                      ألوان {selectedTemplate.display_name_ar} ({selectedTemplate.display_name_en || selectedTemplate.theme_key})
+                    </p>
+
+                    {/* Show all available colors from this theme */}
+                    <div className="grid grid-cols-5 md:grid-cols-8 gap-2">
+                      {Object.entries((selectedTemplate.colors as Record<string, string>) || {}).map(([key, hex]) => (
+                        <div
+                          key={key}
+                          className="flex flex-col items-center p-2 border rounded-lg cursor-pointer hover:bg-muted/50"
+                          onClick={() => copyToClipboard(hex)}
+                          title={`${key}: ${hex} - انقر للنسخ`}
+                        >
+                          <div
+                            className="w-8 h-8 rounded-lg border mb-1"
+                            style={{ backgroundColor: hex }}
+                          />
+                          <span className="text-[9px] font-mono truncate w-full text-center">{hex}</span>
+                          <span className="text-[9px] text-muted-foreground truncate w-full text-center">{key}</span>
+                        </div>
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                )}
 
-              {/* Selected Theme Colors */}
-              <div className="border-t pt-4">
-                <p className="text-sm font-medium mb-3">
-                  ألوان {BASE_THEMES[selectedTemplate].name} ({BASE_THEMES[selectedTemplate].nameEn})
-                </p>
+                {/* Action Buttons */}
+                {selectedTemplate && (
+                  <div className="flex flex-wrap gap-2 pt-2 border-t">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => {
+                        applyTemplate(selectedTemplate);
+                        setIsDialogOpen(true);
+                      }}
+                    >
+                      <RotateCcw className="h-3 w-3 ml-1" />
+                      استخدم كقالب جديد
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToClipboard(JSON.stringify(selectedTemplate.colors, null, 2))}
+                    >
+                      <Copy className="h-3 w-3 ml-1" />
+                      نسخ الألوان JSON
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToClipboard(JSON.stringify(selectedTemplate.gradients, null, 2))}
+                    >
+                      <Copy className="h-3 w-3 ml-1" />
+                      نسخ التدرجات JSON
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToClipboard(JSON.stringify({
+                        colors: selectedTemplate.colors,
+                        gradients: selectedTemplate.gradients,
+                      }, null, 2))}
+                    >
+                      <Copy className="h-3 w-3 ml-1" />
+                      نسخ الكل
+                    </Button>
+                  </div>
+                )}
 
-                {/* Main Colors */}
-                <div className="grid grid-cols-5 gap-2 mb-3">
-                  {[
-                    { key: "primary", label: "Primary" },
-                    { key: "primary_light", label: "Light" },
-                    { key: "primary_dark", label: "Dark" },
-                    { key: "secondary", label: "Secondary" },
-                    { key: "accent", label: "Accent" },
-                  ].map(({ key, label }) => {
-                    const hex = BASE_THEMES[selectedTemplate].colors[key as keyof typeof BASE_THEMES.default.colors];
-                    return (
-                      <div
-                        key={key}
-                        className="flex flex-col items-center p-2 border rounded-lg cursor-pointer hover:bg-muted/50"
-                        onClick={() => copyToClipboard(hex)}
-                        title={`انقر لنسخ ${hex}`}
-                      >
-                        <div
-                          className="w-8 h-8 rounded-lg border mb-1"
-                          style={{ backgroundColor: hex }}
-                        />
-                        <span className="text-[10px] font-mono">{hex}</span>
-                        <span className="text-[10px] text-muted-foreground">{label}</span>
-                      </div>
-                    );
-                  })}
+                {/* Tips */}
+                <div className="bg-muted/50 p-3 rounded-lg text-sm space-y-1">
+                  <p className="font-medium">نصائح:</p>
+                  <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                    <li>التدرجات اختيارية - إذا لم تحددها، ستُولّد تلقائياً من الألوان</li>
+                    <li>الشفافية: 26 = 15%، 33 = 20%، 4D = 30%، 80 = 50%، B3 = 70%</li>
+                    <li>للثيمات الداكنة: استخدم ألوان أفتح للنصوص (عادة أبيض #FFFFFF)</li>
+                  </ul>
                 </div>
-
-                {/* Background Colors */}
-                <div className="grid grid-cols-5 gap-2">
-                  {[
-                    { key: "background_1", label: "BG 1" },
-                    { key: "background_2", label: "BG 2" },
-                    { key: "background_3", label: "BG 3" },
-                    { key: "surface", label: "Surface" },
-                    { key: "surface_variant", label: "Variant" },
-                  ].map(({ key, label }) => {
-                    const hex = BASE_THEMES[selectedTemplate].colors[key as keyof typeof BASE_THEMES.default.colors];
-                    return (
-                      <div
-                        key={key}
-                        className="flex flex-col items-center p-2 border rounded-lg cursor-pointer hover:bg-muted/50"
-                        onClick={() => copyToClipboard(hex)}
-                        title={`انقر لنسخ ${hex}`}
-                      >
-                        <div
-                          className="w-8 h-8 rounded-lg border mb-1"
-                          style={{ backgroundColor: hex }}
-                        />
-                        <span className="text-[10px] font-mono">{hex}</span>
-                        <span className="text-[10px] text-muted-foreground">{label}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap gap-2 pt-2 border-t">
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => {
-                    applyTemplate(selectedTemplate);
-                    setIsDialogOpen(true);
-                  }}
-                >
-                  <RotateCcw className="h-3 w-3 ml-1" />
-                  استخدم كقالب جديد
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copyToClipboard(JSON.stringify(BASE_THEMES[selectedTemplate].colors, null, 2))}
-                >
-                  <Copy className="h-3 w-3 ml-1" />
-                  نسخ الألوان JSON
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copyToClipboard(JSON.stringify(BASE_THEMES[selectedTemplate].gradients, null, 2))}
-                >
-                  <Copy className="h-3 w-3 ml-1" />
-                  نسخ التدرجات JSON
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copyToClipboard(JSON.stringify({
-                    colors: BASE_THEMES[selectedTemplate].colors,
-                    gradients: BASE_THEMES[selectedTemplate].gradients,
-                  }, null, 2))}
-                >
-                  <Copy className="h-3 w-3 ml-1" />
-                  نسخ الكل
-                </Button>
-              </div>
-
-              {/* Tips */}
-              <div className="bg-muted/50 p-3 rounded-lg text-sm space-y-1">
-                <p className="font-medium">نصائح:</p>
-                <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                  <li>التدرجات اختيارية - إذا لم تحددها، ستُولّد تلقائياً من الألوان</li>
-                  <li>الشفافية: 26 = 15%، 33 = 20%، 4D = 30%، 80 = 50%، B3 = 70%</li>
-                  <li>للثيمات الداكنة: استخدم ألوان أفتح للنصوص (عادة أبيض #FFFFFF)</li>
-                  <li>راجع <code className="bg-muted px-1 rounded">THEME_REFERENCE.md</code> للتفاصيل الكاملة</li>
-                </ul>
-              </div>
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+      )}
 
       {/* Light Themes */}
       <Card>
@@ -962,47 +670,50 @@ export default function ThemesPage() {
               />
             </div>
 
-            {/* Reset to Template */}
-            <div className="border rounded-lg p-3 bg-muted/30">
-              <div className="flex items-center gap-2 mb-2">
-                <RotateCcw className="h-4 w-4 text-muted-foreground" />
-                <Label className="text-sm font-medium">تحميل ألوان من قالب أساسي</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 grid grid-cols-6 gap-1">
-                  {(Object.keys(BASE_THEMES) as BaseThemeKey[]).map((key) => {
-                    const theme = BASE_THEMES[key];
-                    return (
-                      <div
-                        key={key}
-                        className={`flex flex-col items-center p-1.5 border rounded cursor-pointer transition-all ${
-                          selectedTemplate === key ? "ring-2 ring-primary bg-background" : "hover:bg-background"
-                        }`}
-                        onClick={() => setSelectedTemplate(key)}
-                        title={theme.nameEn}
-                      >
-                        <div
-                          className="w-full h-4 rounded"
-                          style={{
-                            background: `linear-gradient(to right, ${theme.preview.join(", ")})`,
-                          }}
-                        />
-                        <span className="text-[9px] mt-0.5 truncate w-full text-center">{theme.name}</span>
-                      </div>
-                    );
-                  })}
+            {/* Reset to Template - From Database */}
+            {themes && themes.length > 0 && (
+              <div className="border rounded-lg p-3 bg-muted/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <RotateCcw className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-sm font-medium">تحميل ألوان من ثيم موجود</Label>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => applyTemplate(selectedTemplate)}
-                  className="whitespace-nowrap"
-                >
-                  <Palette className="h-3 w-3 ml-1" />
-                  تحميل
-                </Button>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 grid grid-cols-4 md:grid-cols-7 gap-1">
+                    {themes.map((theme) => {
+                      const previewColors = getThemePreviewColors(theme);
+                      return (
+                        <div
+                          key={theme.id}
+                          className={`flex flex-col items-center p-1.5 border rounded cursor-pointer transition-all ${
+                            selectedTemplate?.id === theme.id ? "ring-2 ring-primary bg-background" : "hover:bg-background"
+                          }`}
+                          onClick={() => setSelectedTemplateId(theme.id)}
+                          title={theme.display_name_en || theme.theme_key}
+                        >
+                          <div
+                            className="w-full h-4 rounded"
+                            style={{
+                              background: `linear-gradient(to right, ${previewColors.join(", ")})`,
+                            }}
+                          />
+                          <span className="text-[9px] mt-0.5 truncate w-full text-center">{theme.display_name_ar}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => selectedTemplate && applyTemplate(selectedTemplate)}
+                    disabled={!selectedTemplate}
+                    className="whitespace-nowrap"
+                  >
+                    <Palette className="h-3 w-3 ml-1" />
+                    تحميل
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Colors & Gradients Tabs */}
             <Tabs defaultValue="colors" className="w-full">

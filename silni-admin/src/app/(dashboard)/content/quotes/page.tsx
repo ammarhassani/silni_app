@@ -56,7 +56,7 @@ export default function QuotesPage() {
     fetchNextPage,
   } = useQuotesList(filters);
 
-  const { data: categories } = useQuoteCategories();
+  const { data: categories } = useQuoteCategories() as { data: string[] | undefined };
   const deleteQuote = useDeleteQuote();
   const updateQuote = useUpdateQuote();
 

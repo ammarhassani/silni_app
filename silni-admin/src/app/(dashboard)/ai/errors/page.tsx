@@ -3,49 +3,82 @@
 import { useState } from "react";
 import { useAIErrorMessages, useUpdateAIErrorMessage } from "@/hooks/use-ai";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertCircle, Pencil, RefreshCw, WifiOff, Clock, Server, Ban } from "lucide-react";
+import { AlertCircle, Pencil, RefreshCw, WifiOff, Clock, Server, Ban, ShieldX, KeyRound, Search } from "lucide-react";
 import type { AdminAIErrorMessage } from "@/hooks/use-ai";
 
-const errorCodeIcons: Record<number, React.ReactNode> = {
-  400: <Ban className="h-4 w-4" />,
-  401: <Ban className="h-4 w-4" />,
-  403: <Ban className="h-4 w-4" />,
-  404: <AlertCircle className="h-4 w-4" />,
-  408: <Clock className="h-4 w-4" />,
-  429: <Clock className="h-4 w-4" />,
-  500: <Server className="h-4 w-4" />,
-  502: <Server className="h-4 w-4" />,
-  503: <Server className="h-4 w-4" />,
-  0: <WifiOff className="h-4 w-4" />,
-};
-
-const errorCodeDescriptions: Record<number, string> = {
-  0: "لا يوجد اتصال بالإنترنت",
-  400: "طلب غير صالح",
-  401: "غير مصرح",
-  403: "محظور",
-  404: "غير موجود",
-  408: "انتهاء المهلة",
-  429: "تجاوز الحد المسموح",
-  500: "خطأ في الخادم",
-  502: "بوابة غير صالحة",
-  503: "الخدمة غير متاحة",
+// Error categories with user-friendly names and icons
+const ERROR_CONFIG: Record<number, { icon: React.ReactNode; label: string; description: string; color: string }> = {
+  0: {
+    icon: <WifiOff className="h-5 w-5" />,
+    label: "لا يوجد اتصال",
+    description: "المستخدم غير متصل بالإنترنت",
+    color: "bg-slate-500"
+  },
+  400: {
+    icon: <Ban className="h-5 w-5" />,
+    label: "طلب غير صالح",
+    description: "خطأ في صيغة الطلب",
+    color: "bg-orange-500"
+  },
+  401: {
+    icon: <KeyRound className="h-5 w-5" />,
+    label: "غير مصرح",
+    description: "انتهت صلاحية الجلسة",
+    color: "bg-amber-500"
+  },
+  403: {
+    icon: <ShieldX className="h-5 w-5" />,
+    label: "محظور",
+    description: "ليس لديه صلاحية",
+    color: "bg-red-500"
+  },
+  404: {
+    icon: <Search className="h-5 w-5" />,
+    label: "غير موجود",
+    description: "المورد المطلوب غير متاح",
+    color: "bg-blue-500"
+  },
+  408: {
+    icon: <Clock className="h-5 w-5" />,
+    label: "انتهاء المهلة",
+    description: "استغرق الطلب وقتاً طويلاً",
+    color: "bg-yellow-500"
+  },
+  429: {
+    icon: <Clock className="h-5 w-5" />,
+    label: "كثرة الطلبات",
+    description: "تجاوز المستخدم الحد المسموح",
+    color: "bg-purple-500"
+  },
+  500: {
+    icon: <Server className="h-5 w-5" />,
+    label: "خطأ في الخادم",
+    description: "مشكلة داخلية في السيرفر",
+    color: "bg-red-600"
+  },
+  502: {
+    icon: <Server className="h-5 w-5" />,
+    label: "بوابة غير صالحة",
+    description: "خطأ في الاتصال بالخادم",
+    color: "bg-red-500"
+  },
+  503: {
+    icon: <Server className="h-5 w-5" />,
+    label: "الخدمة غير متاحة",
+    description: "الخادم مشغول أو تحت الصيانة",
+    color: "bg-gray-600"
+  },
 };
 
 export default function ErrorMessagesPage() {
@@ -53,19 +86,13 @@ export default function ErrorMessagesPage() {
   const updateError = useUpdateAIErrorMessage();
 
   const [editingError, setEditingError] = useState<AdminAIErrorMessage | null>(null);
-  const [formData, setFormData] = useState({
-    message_ar: "",
-    message_en: "",
-    show_retry_button: true,
-  });
+  const [messageText, setMessageText] = useState("");
+  const [showRetry, setShowRetry] = useState(true);
 
   const handleOpenEdit = (error: AdminAIErrorMessage) => {
     setEditingError(error);
-    setFormData({
-      message_ar: error.message_ar,
-      message_en: error.message_en || "",
-      show_retry_button: error.show_retry_button,
-    });
+    setMessageText(error.message_ar);
+    setShowRetry(error.show_retry_button);
   };
 
   const handleSave = () => {
@@ -73,9 +100,8 @@ export default function ErrorMessagesPage() {
     updateError.mutate(
       {
         id: editingError.id,
-        message_ar: formData.message_ar,
-        message_en: formData.message_en || null,
-        show_retry_button: formData.show_retry_button,
+        message_ar: messageText,
+        show_retry_button: showRetry,
       },
       { onSuccess: () => setEditingError(null) }
     );
@@ -85,7 +111,11 @@ export default function ErrorMessagesPage() {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-96" />
+        <div className="grid gap-4 md:grid-cols-2">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -95,163 +125,140 @@ export default function ErrorMessagesPage() {
       <div>
         <h1 className="text-3xl font-bold">رسائل الأخطاء</h1>
         <p className="text-muted-foreground mt-1">
-          تخصيص رسائل الخطأ التي تظهر للمستخدمين عند حدوث مشاكل
+          تخصيص الرسائل التي تظهر للمستخدم عند حدوث مشكلة
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
-              <AlertCircle className="h-5 w-5 text-red-500" />
-            </div>
-            <div>
-              <CardTitle>رسائل الأخطاء</CardTitle>
-              <CardDescription>
-                {errorMessages?.length || 0} رسالة خطأ مُعرّفة
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-24">كود الخطأ</TableHead>
-                <TableHead>الوصف</TableHead>
-                <TableHead>الرسالة (عربي)</TableHead>
-                <TableHead className="w-32">زر إعادة المحاولة</TableHead>
-                <TableHead className="w-20">إجراء</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {errorMessages?.map((error) => (
-                <TableRow key={error.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="text-muted-foreground">
-                        {errorCodeIcons[error.error_code] || <AlertCircle className="h-4 w-4" />}
+      {/* Error Cards Grid */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {errorMessages?.map((error) => {
+          const config = ERROR_CONFIG[error.error_code] || {
+            icon: <AlertCircle className="h-5 w-5" />,
+            label: `خطأ ${error.error_code}`,
+            description: "خطأ غير معروف",
+            color: "bg-gray-500"
+          };
+
+          return (
+            <Card
+              key={error.id}
+              className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer group"
+              onClick={() => handleOpenEdit(error)}
+            >
+              <CardContent className="p-0">
+                <div className="flex">
+                  {/* Left color bar with icon */}
+                  <div className={`${config.color} w-16 flex flex-col items-center justify-center text-white`}>
+                    {config.icon}
+                    <span className="text-xs font-bold mt-1">{error.error_code}</span>
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 p-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="font-semibold">{config.label}</h3>
+                        <p className="text-xs text-muted-foreground mb-2">{config.description}</p>
                       </div>
-                      <Badge
-                        variant={error.error_code >= 500 ? "destructive" : "secondary"}
-                        className="font-mono"
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEdit(error);
+                        }}
                       >
-                        {error.error_code}
-                      </Badge>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {errorCodeDescriptions[error.error_code] || "خطأ غير معروف"}
-                  </TableCell>
-                  <TableCell className="max-w-xs">
-                    <p className="truncate" title={error.message_ar}>
+
+                    {/* Message Preview */}
+                    <p className="text-sm text-muted-foreground line-clamp-2 bg-muted/50 p-2 rounded-md">
                       {error.message_ar}
                     </p>
-                  </TableCell>
-                  <TableCell>
-                    {error.show_retry_button ? (
-                      <Badge variant="default" className="gap-1">
-                        <RefreshCw className="h-3 w-3" />
-                        نعم
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">لا</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleOpenEdit(error)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
 
-      {/* Preview Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {errorMessages?.slice(0, 3).map((error) => (
-          <Card key={error.id} className="border-red-500/20">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
-                  {errorCodeIcons[error.error_code] || <AlertCircle className="h-5 w-5 text-red-500" />}
+                    {/* Retry Badge */}
+                    {error.show_retry_button && (
+                      <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                        <RefreshCw className="h-3 w-3" />
+                        <span>يمكن إعادة المحاولة</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium text-red-500 mb-1">
-                    خطأ {error.error_code}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Edit Dialog - Simplified */}
+      <Dialog open={!!editingError} onOpenChange={() => setEditingError(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className={`${ERROR_CONFIG[editingError?.error_code || 0]?.color || "bg-gray-500"} w-10 h-10 rounded-lg flex items-center justify-center text-white`}>
+                {ERROR_CONFIG[editingError?.error_code || 0]?.icon || <AlertCircle className="h-5 w-5" />}
+              </div>
+              <div>
+                <p>{ERROR_CONFIG[editingError?.error_code || 0]?.label || "خطأ"}</p>
+                <p className="text-xs text-muted-foreground font-normal">
+                  {ERROR_CONFIG[editingError?.error_code || 0]?.description}
+                </p>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Message */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium">الرسالة للمستخدم</p>
+              <Textarea
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                rows={3}
+                placeholder="أدخل الرسالة التي ستظهر للمستخدم..."
+              />
+            </div>
+
+            {/* Retry Toggle */}
+            <div
+              className="flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer"
+              onClick={() => setShowRetry(!showRetry)}
+            >
+              <div className="flex items-center gap-3">
+                <RefreshCw className={`h-4 w-4 ${showRetry ? "text-primary" : "text-muted-foreground"}`} />
+                <div>
+                  <p className="text-sm font-medium">السماح بإعادة المحاولة</p>
+                  <p className="text-xs text-muted-foreground">
+                    إظهار زر "حاول مرة أخرى"
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    {error.message_ar}
-                  </p>
-                  {error.show_retry_button && (
-                    <Button size="sm" variant="outline" className="mt-3">
-                      <RefreshCw className="h-3 w-3 ml-2" />
+                </div>
+              </div>
+              <Switch
+                checked={showRetry}
+                onCheckedChange={setShowRetry}
+              />
+            </div>
+
+            {/* Preview */}
+            <div className="border rounded-lg p-4 bg-red-50 dark:bg-red-950/20">
+              <p className="text-xs text-muted-foreground mb-2">معاينة:</p>
+              <div className="flex items-start gap-3">
+                <div className={`${ERROR_CONFIG[editingError?.error_code || 0]?.color || "bg-gray-500"} w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0`}>
+                  {ERROR_CONFIG[editingError?.error_code || 0]?.icon || <AlertCircle className="h-4 w-4" />}
+                </div>
+                <div>
+                  <p className="text-sm">{messageText || "..."}</p>
+                  {showRetry && (
+                    <Button size="sm" variant="outline" className="mt-2 h-7 text-xs">
+                      <RefreshCw className="h-3 w-3 ml-1" />
                       إعادة المحاولة
                     </Button>
                   )}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Edit Dialog */}
-      <Dialog open={!!editingError} onOpenChange={() => setEditingError(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              تعديل رسالة الخطأ
-              <Badge variant="secondary" className="font-mono">
-                {editingError?.error_code}
-              </Badge>
-            </DialogTitle>
-            <DialogDescription>
-              {errorCodeDescriptions[editingError?.error_code || 0] || "خطأ غير معروف"}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label>الرسالة (عربي)</Label>
-              <Textarea
-                value={formData.message_ar}
-                onChange={(e) => setFormData((f) => ({ ...f, message_ar: e.target.value }))}
-                rows={3}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>الرسالة (إنجليزي) - اختياري</Label>
-              <Textarea
-                value={formData.message_en}
-                onChange={(e) => setFormData((f) => ({ ...f, message_en: e.target.value }))}
-                rows={3}
-                dir="ltr"
-              />
-            </div>
-
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center gap-2">
-                <RefreshCw className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="font-medium text-sm">إظهار زر إعادة المحاولة</p>
-                  <p className="text-xs text-muted-foreground">
-                    يسمح للمستخدم بإعادة محاولة الطلب
-                  </p>
-                </div>
-              </div>
-              <Switch
-                checked={formData.show_retry_button}
-                onCheckedChange={(c) => setFormData((f) => ({ ...f, show_retry_button: c }))}
-              />
             </div>
           </div>
 
@@ -260,7 +267,7 @@ export default function ErrorMessagesPage() {
               إلغاء
             </Button>
             <Button onClick={handleSave} disabled={updateError.isPending}>
-              {updateError.isPending ? "جاري الحفظ..." : "حفظ التغييرات"}
+              {updateError.isPending ? "جاري الحفظ..." : "حفظ"}
             </Button>
           </DialogFooter>
         </DialogContent>

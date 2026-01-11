@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useUsers,
   useUserStats,
@@ -57,6 +58,7 @@ import {
   Calendar,
   TrendingUp,
   Clock,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -78,9 +80,23 @@ export default function UsersPage() {
     email: string;
   } | null>(null);
 
-  const { data: usersData, isLoading } = useUsers(filters);
+  const queryClient = useQueryClient();
+  const { data: usersData, isLoading, isFetching } = useUsers(filters);
   const { data: stats, isLoading: statsLoading } = useUserStats();
   const updateRole = useUpdateUserRole();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    // Clear cache completely and force refetch
+    queryClient.removeQueries({ queryKey: ["users"] });
+    queryClient.removeQueries({ queryKey: ["user-stats"] });
+    queryClient.removeQueries({ queryKey: ["user"] });
+    await queryClient.refetchQueries({ queryKey: ["users"], type: "all" });
+    await queryClient.refetchQueries({ queryKey: ["user-stats"], type: "all" });
+    toast.success("تم تحديث البيانات");
+    setIsRefreshing(false);
+  };
 
   const handleSearch = (value: string) => {
     setFilters((f) => ({ ...f, search: value, page: 1 }));
@@ -148,11 +164,22 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">دليل المستخدمين</h1>
-        <p className="text-muted-foreground mt-1">
-          عرض وإدارة جميع مستخدمي التطبيق
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">دليل المستخدمين</h1>
+          <p className="text-muted-foreground mt-1">
+            عرض وإدارة جميع مستخدمي التطبيق
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isRefreshing || isFetching}
+        >
+          <RefreshCw className={`h-4 w-4 ml-2 ${isRefreshing || isFetching ? "animate-spin" : ""}`} />
+          تحديث
+        </Button>
       </div>
 
       {/* Debug Info - Auth vs Profiles */}

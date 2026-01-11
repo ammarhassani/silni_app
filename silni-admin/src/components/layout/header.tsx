@@ -14,6 +14,7 @@ import {
 import { Moon, Sun, LogOut, User, Bell } from "lucide-react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
+import { EnvironmentIndicator } from "@/components/environment-indicator";
 
 interface HeaderProps {
   user: {
@@ -40,6 +41,8 @@ export function Header({ user }: HeaderProps) {
         <h2 className="text-lg font-semibold">
           مرحباً، {user.display_name || "المدير"}
         </h2>
+        {/* Environment Indicator */}
+        <EnvironmentIndicator compact />
       </div>
 
       <div className="flex items-center gap-2">
