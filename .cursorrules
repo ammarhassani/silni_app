@@ -1,0 +1,27 @@
+# Cursor AI Rules for Silni App
+
+## Environment Safety
+- NEVER modify `.env` to use production without explicit permission
+- NEVER push to `main` branch directly
+- ALWAYS use `develop` branch for development work
+- ALWAYS use staging environment (dqqyhmydodjpqboykzow) for testing
+
+## Branch Rules
+- main = PRODUCTION (protected, PR only)
+- develop = STAGING (safe to work on)
+- feature/* = new features
+- fix/* = bug fixes
+
+## Before Any Production Action
+Ask: "Has this been tested on staging?"
+
+## Commands Reference
+- Switch to staging: `./scripts/switch-env.sh staging`
+- Switch to production: `./scripts/switch-env.sh production`
+- Current branch: `git branch --show-current`
+
+## Tech Stack
+- Flutter/Dart for mobile app
+- Supabase for backend (Auth, Database, Edge Functions)
+- Next.js for admin dashboard (silni-admin/)
+- Firebase for push notifications only
