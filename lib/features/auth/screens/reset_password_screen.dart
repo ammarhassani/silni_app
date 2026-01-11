@@ -54,6 +54,37 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       final authService = ref.read(authServiceProvider);
       logger.debug('AuthService retrieved from provider', category: LogCategory.auth, tag: 'ResetPasswordScreen');
 
+      // Check if there's a valid session (should be established by recovery link)
+      final currentUser = authService.currentUser;
+      logger.debug(
+        'Session check',
+        category: LogCategory.auth,
+        tag: 'ResetPasswordScreen',
+        metadata: {
+          'hasUser': currentUser != null,
+          'userId': currentUser?.id,
+          'email': currentUser?.email,
+        },
+      );
+
+      if (currentUser == null) {
+        logger.error(
+          'No active session for password reset',
+          category: LogCategory.auth,
+          tag: 'ResetPasswordScreen',
+        );
+
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+
+        UIHelpers.showSnackBar(
+          context,
+          'يرجى فتح رابط إعادة التعيين من البريد الإلكتروني',
+          isError: true,
+        );
+        return;
+      }
+
       logger.info('Calling updatePassword...', category: LogCategory.auth, tag: 'ResetPasswordScreen');
 
       await authService.updatePassword(_passwordController.text);
@@ -81,12 +112,13 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       logger.info('Navigation to login executed - Password reset flow completed', category: LogCategory.auth, tag: 'ResetPasswordScreen');
     } on AuthException catch (e, stackTrace) {
       logger.error(
-        'AuthException during password update',
+        'AuthException during password update: ${e.message}',
         category: LogCategory.auth,
         tag: 'ResetPasswordScreen',
         metadata: {
           'message': e.message,
           'statusCode': e.statusCode,
+          'hasSession': ref.read(authServiceProvider).currentUser != null,
         },
         stackTrace: stackTrace,
       );
@@ -99,7 +131,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       setState(() => _isLoading = false);
 
       String errorMessage = AuthService.getErrorMessage(e.message);
-      logger.debug('Showing error to user', category: LogCategory.auth, tag: 'ResetPasswordScreen', metadata: {'errorMessage': errorMessage});
+      logger.debug('Showing error to user', category: LogCategory.auth, tag: 'ResetPasswordScreen', metadata: {
+        'originalError': e.message,
+        'translatedError': errorMessage,
+      });
 
       UIHelpers.showSnackBar(
         context,
@@ -110,12 +145,13 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       logger.error('Password update failed with auth error', category: LogCategory.auth, tag: 'ResetPasswordScreen');
     } catch (e, stackTrace) {
       logger.error(
-        'Unexpected exception during password update',
+        'Unexpected exception during password update: $e',
         category: LogCategory.auth,
         tag: 'ResetPasswordScreen',
         metadata: {
           'exceptionType': e.runtimeType.toString(),
           'exception': e.toString(),
+          'hasSession': ref.read(authServiceProvider).currentUser != null,
         },
         stackTrace: stackTrace,
       );
@@ -128,7 +164,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       setState(() => _isLoading = false);
 
       String errorMessage = AuthService.getErrorMessage(e.toString());
-      logger.debug('Showing error to user', category: LogCategory.auth, tag: 'ResetPasswordScreen', metadata: {'errorMessage': errorMessage});
+      logger.debug('Showing error to user', category: LogCategory.auth, tag: 'ResetPasswordScreen', metadata: {
+        'originalError': e.toString(),
+        'translatedError': errorMessage,
+      });
 
       UIHelpers.showSnackBar(
         context,

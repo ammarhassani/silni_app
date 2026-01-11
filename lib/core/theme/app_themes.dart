@@ -116,6 +116,11 @@ class ThemeColors {
   final LinearGradient tierRareGradient;
   final LinearGradient tierStarterGradient;
 
+  // === Dialog Button Colors ===
+  final Color dialogButtonPrimary;
+  final Color dialogButtonSecondary;
+  final Color dialogButtonDestructive;
+
   const ThemeColors({
     required this.primary,
     required this.primaryLight,
@@ -187,6 +192,10 @@ class ThemeColors {
     required this.tierEpicGradient,
     required this.tierRareGradient,
     required this.tierStarterGradient,
+    // Dialog button colors
+    this.dialogButtonPrimary = const Color(0xFFFFFFFF),
+    this.dialogButtonSecondary = const Color(0xB3FFFFFF),
+    this.dialogButtonDestructive = const Color(0xFFE53935),
   });
 
   /// Silni Green Theme (Default)

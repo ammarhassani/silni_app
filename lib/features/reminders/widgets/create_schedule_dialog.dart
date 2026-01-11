@@ -223,13 +223,15 @@ class _CreateScheduleDialogState extends ConsumerState<CreateScheduleDialog> {
         ),
       ),
       actions: [
-        TextButton(
+        ThemeAwareDialogButton(
+          text: 'إلغاء',
+          isPrimary: false,
           onPressed: () => Navigator.pop(context),
-          child: const Text('إلغاء'),
         ),
-        TextButton(
+        ThemeAwareDialogButton(
+          text: 'إنشاء',
+          isPrimary: true,
           onPressed: _createSchedule,
-          child: const Text('إنشاء'),
         ),
       ],
     );

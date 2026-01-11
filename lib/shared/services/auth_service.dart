@@ -1398,6 +1398,25 @@ class AuthService {
     } else if (lowerMessage.contains('captcha') ||
         lowerMessage.contains('verification')) {
       return 'فشل التحقق. يرجى المحاولة مرة أخرى';
+    } else if (lowerMessage.contains('session expired') ||
+        lowerMessage.contains('token expired') ||
+        lowerMessage.contains('jwt expired') ||
+        lowerMessage.contains('token is expired')) {
+      return 'انتهت صلاحية الرابط. يرجى طلب رابط جديد';
+    } else if (lowerMessage.contains('invalid refresh token') ||
+        lowerMessage.contains('invalid token') ||
+        lowerMessage.contains('refresh_token_not_found')) {
+      return 'الرابط غير صالح. يرجى طلب رابط جديد';
+    } else if (lowerMessage.contains('session missing') ||
+        lowerMessage.contains('no session') ||
+        lowerMessage.contains('not authenticated') ||
+        lowerMessage.contains('auth session missing')) {
+      return 'يرجى فتح رابط إعادة التعيين من البريد الإلكتروني';
+    } else if (lowerMessage.contains('same password') ||
+        lowerMessage.contains('different from the old password')) {
+      return 'يرجى اختيار كلمة مرور مختلفة عن السابقة';
+    } else if (lowerMessage.contains('new password should be different')) {
+      return 'كلمة المرور الجديدة يجب أن تكون مختلفة عن القديمة';
     } else {
       return 'حدث خطأ ما. يرجى المحاولة مرة أخرى';
     }

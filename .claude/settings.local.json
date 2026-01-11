@@ -153,7 +153,9 @@
       "Bash(git -C /Users/engammar/Apps/silni_app check-ignore:*)",
       "Bash(SUPABASE_URL=\"https://bapwklwxmwhpucutyras.supabase.co\" SUPABASE_KEY=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhcHdrbHd4bXdocHVjdXR5cmFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxMDA2MjUsImV4cCI6MjA3OTY3NjYyNX0.1logTpQ9UnMDzYsZytjL6HAWFpknuMOyqGu0TyWj6eA\" curl -s \"$SUPABASE_URL/rest/v1/admin_features?feature_id=eq.family_tree&select=feature_id,minimum_tier,is_active\" -H \"apikey: $SUPABASE_KEY\" -H \"Authorization: Bearer $SUPABASE_KEY\")",
       "Bash(git cherry-pick:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(git -C /Users/engammar/Apps/silni_app status --short lib/features/profile/widgets/profile_dialogs.dart)",
+      "Bash(git -C /Users/engammar/Apps/silni_app branch:*)"
     ],
     "deny": [],
     "ask": []

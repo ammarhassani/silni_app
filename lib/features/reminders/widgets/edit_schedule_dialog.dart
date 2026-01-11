@@ -167,13 +167,15 @@ class _EditScheduleDialogState extends ConsumerState<EditScheduleDialog> {
         ),
       ),
       actions: [
-        TextButton(
+        ThemeAwareDialogButton(
+          text: 'إلغاء',
+          isPrimary: false,
           onPressed: () => Navigator.pop(context),
-          child: const Text('إلغاء'),
         ),
-        TextButton(
+        ThemeAwareDialogButton(
+          text: 'حفظ',
+          isPrimary: true,
           onPressed: _saveChanges,
-          child: const Text('حفظ'),
         ),
       ],
     );
