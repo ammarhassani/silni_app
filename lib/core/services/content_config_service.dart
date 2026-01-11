@@ -77,8 +77,11 @@ class ContentConfigService {
     }
   }
 
-  List<AdminHadith> get hadithList =>
-      _hadithCache ?? AdminHadith.fallbackHadith();
+  /// Get active hadith from database only (no fallback)
+  List<AdminHadith> get hadithList => _hadithCache ?? [];
+
+  /// Get active quotes from database only (no fallback)
+  List<AdminQuote> get quotesList => _quotesCache ?? [];
 
   /// Get a daily hadith (rotates based on day of year)
   AdminHadith? getDailyHadith() {
@@ -97,26 +100,33 @@ class ContentConfigService {
 
   /// Get daily Islamic content (alternates between hadith and quotes)
   /// Returns either AdminHadith or AdminQuote based on the day
+  /// Priority: Try preferred type first, then other type, then fallback
   dynamic getDailyIslamicContent() {
     final dayOfYear = DateTime.now().difference(DateTime(DateTime.now().year, 1, 1)).inDays;
+    final hadith = hadithList;
+    final quotes = quotesList;
 
     // Alternate between hadith and quotes
     if (dayOfYear % 2 == 0) {
-      // Even days: hadith
-      final list = hadithList;
-      if (list.isNotEmpty) {
-        return list[(dayOfYear ~/ 2) % list.length];
+      // Even days: prefer hadith, fallback to quotes
+      if (hadith.isNotEmpty) {
+        return hadith[(dayOfYear ~/ 2) % hadith.length];
+      }
+      if (quotes.isNotEmpty) {
+        return quotes[(dayOfYear ~/ 2) % quotes.length];
       }
     } else {
-      // Odd days: quotes
-      final list = quotesList;
-      if (list.isNotEmpty) {
-        return list[(dayOfYear ~/ 2) % list.length];
+      // Odd days: prefer quotes, fallback to hadith
+      if (quotes.isNotEmpty) {
+        return quotes[(dayOfYear ~/ 2) % quotes.length];
+      }
+      if (hadith.isNotEmpty) {
+        return hadith[(dayOfYear ~/ 2) % hadith.length];
       }
     }
 
-    // Fallback to hadith if quotes empty
-    return getDailyHadith();
+    // Both empty - return null (HadithService will use hardcoded fallback)
+    return null;
   }
 
   // ============ Quotes ============
@@ -136,9 +146,6 @@ class ContentConfigService {
       debugPrint('[ContentConfigService] Error fetching quotes: $e');
     }
   }
-
-  List<AdminQuote> get quotesList =>
-      _quotesCache ?? AdminQuote.fallbackQuotes();
 
   /// Get a daily quote (rotates based on day of year)
   AdminQuote? getDailyQuote() {
