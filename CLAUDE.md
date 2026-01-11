@@ -60,10 +60,8 @@ silni-admin/        # Next.js admin dashboard
 
 ## Key Configuration Files
 
-- `.env` - Current environment (gitignored)
-- `.env.staging` - Staging config (gitignored)
-- `.env.production` - Production config (gitignored)
-- `lib/core/config/env/env.g.dart` - Generated env file
+- `.env` - Single env file with all keys, APP_ENV toggles environment (gitignored)
+- `lib/core/config/env/env.g.dart` - Generated env file (auto-updated by switch script)
 
 ## Workflow for New Features
 
