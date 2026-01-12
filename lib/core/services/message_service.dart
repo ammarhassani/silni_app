@@ -12,12 +12,17 @@ class Message {
   final String? ctaAction;
   final String? ctaActionType; // route, url, action, none
   final String? imageUrl;
+  final int? imageWidth;
+  final int? imageHeight;
+  final double imageOverlayOpacity; // 0.0 to 1.0 (0=promotional, 0.3=default, 0.6=dark bg)
   final String? iconName;
 
   // Enhanced graphics system
   final String graphicType; // icon, lottie, illustration, emoji
   final String? lottieName; // Name of Lottie animation file
   final String? illustrationUrl; // URL to custom illustration
+  final int? illustrationWidth;
+  final int? illustrationHeight;
   final String iconStyle; // default, filled, outlined, gradient
 
   // Color mode: theme = adapts to user theme, custom = uses configured colors
@@ -40,10 +45,15 @@ class Message {
     this.ctaAction,
     this.ctaActionType,
     this.imageUrl,
+    this.imageWidth,
+    this.imageHeight,
+    this.imageOverlayOpacity = 0.3,
     this.iconName,
     this.graphicType = 'icon',
     this.lottieName,
     this.illustrationUrl,
+    this.illustrationWidth,
+    this.illustrationHeight,
     this.iconStyle = 'default',
     this.colorMode = 'theme',
     required this.backgroundColor,
@@ -65,10 +75,15 @@ class Message {
       ctaAction: json['cta_action'] as String?,
       ctaActionType: json['cta_action_type'] as String?,
       imageUrl: json['image_url'] as String?,
+      imageWidth: json['image_width'] as int?,
+      imageHeight: json['image_height'] as int?,
+      imageOverlayOpacity: (json['image_overlay_opacity'] as num?)?.toDouble() ?? 0.3,
       iconName: json['icon_name'] as String?,
       graphicType: json['graphic_type'] as String? ?? 'icon',
       lottieName: json['lottie_name'] as String?,
       illustrationUrl: json['illustration_url'] as String?,
+      illustrationWidth: json['illustration_width'] as int?,
+      illustrationHeight: json['illustration_height'] as int?,
       iconStyle: json['icon_style'] as String? ?? 'default',
       colorMode: json['color_mode'] as String? ?? 'theme',
       backgroundColor: json['background_color'] as String? ?? '#FFFFFF',

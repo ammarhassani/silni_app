@@ -1228,21 +1228,23 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
                 },
               ),
 
-              // Gradient overlay
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.black.withValues(alpha: 0.6),
-                        Colors.black.withValues(alpha: 0.2),
-                      ],
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
+              // Gradient overlay (dynamic based on imageOverlayOpacity)
+              // 0 = no overlay (promotional), 0.3+ = gradient overlay for text readability
+              if (message.imageOverlayOpacity > 0)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.black.withValues(alpha: message.imageOverlayOpacity * 2), // Bottom (darker)
+                          Colors.black.withValues(alpha: message.imageOverlayOpacity * 0.5), // Top (lighter)
+                        ],
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                      ),
                     ),
                   ),
                 ),
-              ),
 
               // Content
               Positioned(

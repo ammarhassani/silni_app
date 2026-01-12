@@ -27,7 +27,9 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
 import { RouteSelector } from "@/components/ui/route-selector";
+import { ImageUploader } from "@/components/ui/image-uploader";
 import {
   Dialog,
   DialogContent,
@@ -71,6 +73,7 @@ import {
   MapPin,
   Settings2,
   RotateCcw,
+  Image as ImageIcon,
 } from "lucide-react";
 
 // Trigger type options - when/how the message appears
@@ -219,11 +222,16 @@ const defaultMessage: InAppMessageInput = {
   cta_action: null,
   cta_action_type: "route",
   image_url: null,
+  image_width: null,
+  image_height: null,
+  image_overlay_opacity: 0.3,
   icon_name: "bell",
   // Enhanced graphics
   graphic_type: "icon",
   lottie_name: null,
   illustration_url: null,
+  illustration_width: null,
+  illustration_height: null,
   icon_style: "default",
   // Color mode
   color_mode: "theme",
@@ -327,11 +335,16 @@ export default function InAppMessagesPage() {
       cta_action: message.cta_action,
       cta_action_type: message.cta_action_type,
       image_url: message.image_url,
+      image_width: message.image_width,
+      image_height: message.image_height,
+      image_overlay_opacity: message.image_overlay_opacity ?? 0.3,
       icon_name: message.icon_name,
       // Enhanced graphics
       graphic_type: message.graphic_type || "icon",
       lottie_name: message.lottie_name,
       illustration_url: message.illustration_url,
+      illustration_width: message.illustration_width,
+      illustration_height: message.illustration_height,
       icon_style: message.icon_style || "default",
       // Color mode
       color_mode: message.color_mode || "theme",
@@ -966,6 +979,78 @@ export default function InAppMessagesPage() {
               </div>
             </div>
 
+            {/* IMAGES - Banner and Illustration */}
+            <div className="p-4 border rounded-lg bg-muted/20 space-y-4">
+              <Label className="flex items-center gap-2 text-base font-medium">
+                <ImageIcon className="h-4 w-4" />
+                الصور
+              </Label>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Banner Image */}
+                <ImageUploader
+                  value={formData.image_url}
+                  onChange={(url) => setFormData(prev => ({ ...prev, image_url: url }))}
+                  width={formData.image_width}
+                  height={formData.image_height}
+                  onDimensionChange={(w, h) => setFormData(prev => ({
+                    ...prev,
+                    image_width: w,
+                    image_height: h
+                  }))}
+                  folder="banners"
+                  label="صورة البانر"
+                  description="صورة عريضة للعرض في أعلى الرسالة"
+                />
+
+                {/* Illustration */}
+                <ImageUploader
+                  value={formData.illustration_url}
+                  onChange={(url) => setFormData(prev => ({
+                    ...prev,
+                    illustration_url: url,
+                    graphic_type: url ? "illustration" : prev.graphic_type
+                  }))}
+                  width={formData.illustration_width}
+                  height={formData.illustration_height}
+                  onDimensionChange={(w, h) => setFormData(prev => ({
+                    ...prev,
+                    illustration_width: w,
+                    illustration_height: h
+                  }))}
+                  folder="illustrations"
+                  label="صورة توضيحية"
+                  description="صورة للعرض في جسم الرسالة"
+                />
+              </div>
+
+              {/* Overlay Control - show when image_url exists */}
+              {formData.image_url && (
+                <div className="space-y-2 pt-2 border-t">
+                  <Label className="text-sm flex items-center justify-between">
+                    <span>تعتيم الصورة</span>
+                    <span className="text-muted-foreground text-xs">
+                      {Math.round((formData.image_overlay_opacity ?? 0.3) * 100)}%
+                    </span>
+                  </Label>
+                  <Slider
+                    value={[(formData.image_overlay_opacity ?? 0.3) * 100]}
+                    onValueChange={([v]) => setFormData({
+                      ...formData,
+                      image_overlay_opacity: v / 100
+                    })}
+                    min={0}
+                    max={70}
+                    step={5}
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>صورة ترويجية (بدون تعتيم)</span>
+                    <span>خلفية (معتمة)</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* ADVANCED SETTINGS - Collapsible */}
             <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
               <CollapsibleTrigger asChild>
@@ -1022,20 +1107,6 @@ export default function InAppMessagesPage() {
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">صورة توضيحية</Label>
-                      <Input
-                        value={formData.illustration_url || ""}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            illustration_url: e.target.value || null,
-                            graphic_type: e.target.value ? "illustration" : formData.graphic_type,
-                          })
-                        }
-                        placeholder="https://..."
-                      />
                     </div>
                   </div>
                 </div>

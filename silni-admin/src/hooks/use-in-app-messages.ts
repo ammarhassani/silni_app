@@ -18,11 +18,16 @@ export interface InAppMessage {
   cta_action: string | null;
   cta_action_type: "route" | "url" | "action" | "none" | null;
   image_url: string | null;
+  image_width: number | null;
+  image_height: number | null;
+  image_overlay_opacity: number; // 0 to 1 (0=promotional, 0.3=default, 0.6=dark bg)
   icon_name: string | null;
   // Enhanced graphics system
   graphic_type: "icon" | "lottie" | "illustration" | "emoji";
   lottie_name: string | null;
   illustration_url: string | null;
+  illustration_width: number | null;
+  illustration_height: number | null;
   icon_style: "default" | "filled" | "outlined" | "gradient";
   // Color mode: theme = adapts to user's theme, custom = uses configured colors
   color_mode: "theme" | "custom";
@@ -407,11 +412,16 @@ export function useDuplicateInAppMessage() {
         cta_action: message.cta_action,
         cta_action_type: message.cta_action_type,
         image_url: message.image_url,
+        image_width: message.image_width,
+        image_height: message.image_height,
+        image_overlay_opacity: message.image_overlay_opacity,
         icon_name: message.icon_name,
         // Enhanced graphics
         graphic_type: message.graphic_type,
         lottie_name: message.lottie_name,
         illustration_url: message.illustration_url,
+        illustration_width: message.illustration_width,
+        illustration_height: message.illustration_height,
         icon_style: message.icon_style,
         // Color mode
         color_mode: message.color_mode,
