@@ -9,8 +9,9 @@ const DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions";
 const DEEPSEEK_MODEL = "deepseek-chat";
 
 // Rate limiting: requests per user per day
-const RATE_LIMIT_FREE = 5;
-const RATE_LIMIT_PREMIUM = 50;
+// Note: Free users don't have AI access (blocked at app level), but keeping small limit as safeguard
+const RATE_LIMIT_FREE = 0;
+const RATE_LIMIT_PREMIUM = 200;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
