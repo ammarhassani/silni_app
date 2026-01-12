@@ -77,7 +77,6 @@ export interface RevenueCatSyncStatus {
     type: string;
   }[];
   error?: string;
-  rawResponse?: unknown; // For debugging
 }
 
 const REVENUECAT_API_URL = "https://api.revenuecat.com/v2";

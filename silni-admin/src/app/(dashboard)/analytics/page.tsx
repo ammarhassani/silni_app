@@ -1,8 +1,4 @@
 "use client";
-
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { createClient } from "@/lib/supabase/client";
 import {
   useDashboardOverview,
   useUserGrowth,
@@ -115,19 +111,6 @@ function StatCard({
 }
 
 export default function AnalyticsPage() {
-  const [showDebug, setShowDebug] = useState(false);
-  const supabase = createClient();
-
-  const { data: debugData, refetch: refetchDebug, isLoading: debugLoading } = useQuery({
-    queryKey: ["debug-admin-stats"],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("debug_admin_stats");
-      if (error) return { error: error.message };
-      return data;
-    },
-    enabled: showDebug,
-  });
-
   const { data: overview, isLoading: overviewLoading } = useDashboardOverview();
   const { data: userGrowth, isLoading: growthLoading } = useUserGrowth(30);
   const { data: subscriptionDist, isLoading: subDistLoading } = useSubscriptionDistribution();
@@ -154,28 +137,7 @@ export default function AnalyticsPage() {
             </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => { setShowDebug(!showDebug); if (!showDebug) refetchDebug(); }}>
-          {showDebug ? "إخفاء التصحيح" : "عرض التصحيح"}
-        </Button>
       </div>
-
-      {/* Debug Info */}
-      {showDebug && (
-        <Card className="border-yellow-500/50 bg-yellow-500/5">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-yellow-600">معلومات التصحيح</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {debugLoading ? (
-              <Skeleton className="h-20 w-full" />
-            ) : (
-              <pre className="text-xs overflow-auto max-h-60 bg-black/5 p-3 rounded">
-                {JSON.stringify(debugData, null, 2)}
-              </pre>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Overview Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

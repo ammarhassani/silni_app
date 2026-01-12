@@ -73,20 +73,19 @@ import {
   RotateCcw,
 } from "lucide-react";
 
-// Combined location options - user-friendly dropdown
-const locationOptions = [
-  { value: "app_open", label: "عند فتح التطبيق", trigger: "app_open", triggerValue: null },
-  { value: "home", label: "الشاشة الرئيسية", trigger: "screen_view", triggerValue: "/home" },
-  { value: "home_top", label: "أعلى الرئيسية (بانر)", trigger: "position", triggerValue: "home_top" },
-  { value: "home_bottom", label: "أسفل الرئيسية (بانر)", trigger: "position", triggerValue: "home_bottom" },
-  { value: "profile", label: "الملف الشخصي", trigger: "screen_view", triggerValue: "/profile" },
-  { value: "reminders", label: "التذكيرات", trigger: "screen_view", triggerValue: "/reminders" },
-  { value: "ai_hub", label: "واصل (AI)", trigger: "screen_view", triggerValue: "/ai-hub" },
-  { value: "relatives", label: "صلة الرحم", trigger: "screen_view", triggerValue: "/relatives" },
-  { value: "badges", label: "الأوسمة", trigger: "screen_view", triggerValue: "/badges" },
-  { value: "paywall", label: "شاشة الاشتراك", trigger: "screen_view", triggerValue: "/paywall" },
-  { value: "settings", label: "الإعدادات", trigger: "screen_view", triggerValue: "/settings" },
-  { value: "custom", label: "شاشة أخرى...", trigger: "screen_view", triggerValue: null },
+// Trigger type options - when/how the message appears
+const triggerTypeOptions = [
+  { value: "app_open", label: "عند فتح التطبيق", description: "يظهر عند فتح التطبيق" },
+  { value: "screen_view", label: "عند زيارة شاشة", description: "يظهر عند فتح شاشة معينة" },
+  { value: "position", label: "موقع ثابت (بانر)", description: "يظهر في موقع محدد بالشاشة" },
+];
+
+// Position options for banner placement
+const positionOptions = [
+  { value: "home_top", label: "أعلى الشاشة الرئيسية" },
+  { value: "home_bottom", label: "أسفل الشاشة الرئيسية" },
+  { value: "profile_top", label: "أعلى صفحة الملف الشخصي" },
+  { value: "settings_top", label: "أعلى صفحة الإعدادات" },
 ];
 
 // Grouped icons with emojis for the consolidated icon picker
@@ -250,14 +249,17 @@ const defaultMessage: InAppMessageInput = {
   clicks: 0,
 };
 
-// Helper to get location value from trigger
-function getLocationValue(trigger_type: string, trigger_value: string | null): string {
-  const found = locationOptions.find(
-    (opt) => opt.trigger === trigger_type && opt.triggerValue === trigger_value
-  );
-  if (found) return found.value;
-  if (trigger_type === "screen_view" && trigger_value) return "custom";
-  return "app_open";
+// Helper to get trigger label for display
+function getTriggerLabel(trigger_type: string, trigger_value: string | null): string {
+  if (trigger_type === "app_open") return "عند فتح التطبيق";
+  if (trigger_type === "position") {
+    const pos = positionOptions.find(p => p.value === trigger_value);
+    return pos?.label || trigger_value || "موقع ثابت";
+  }
+  if (trigger_type === "screen_view") {
+    return trigger_value || "شاشة";
+  }
+  return "غير محدد";
 }
 
 export default function InAppMessagesPage() {
@@ -290,8 +292,6 @@ export default function InAppMessagesPage() {
 
   // Form state
   const [formData, setFormData] = useState<InAppMessageInput>(defaultMessage);
-  const [selectedLocation, setSelectedLocation] = useState("app_open");
-  const [customRoute, setCustomRoute] = useState<string | null>(null);
 
   // Auto-generate admin name from Arabic title
   useEffect(() => {
@@ -308,8 +308,6 @@ export default function InAppMessagesPage() {
       start_date: getCurrentDateTime(),
       end_date: getEndDateTime(),
     });
-    setSelectedLocation("app_open");
-    setCustomRoute(null);
     setAdvancedOpen(false);
     setDialogOpen(true);
   };
@@ -358,24 +356,17 @@ export default function InAppMessagesPage() {
       impressions: message.impressions,
       clicks: message.clicks,
     });
-
-    const loc = getLocationValue(message.trigger_type, message.trigger_value);
-    setSelectedLocation(loc);
-    setCustomRoute(loc === "custom" ? message.trigger_value : null);
     setAdvancedOpen(false);
     setDialogOpen(true);
   };
 
-  const handleLocationChange = (value: string) => {
-    setSelectedLocation(value);
-    const option = locationOptions.find((opt) => opt.value === value);
-    if (option && value !== "custom") {
-      setFormData({
-        ...formData,
-        trigger_type: option.trigger as InAppMessageInput["trigger_type"],
-        trigger_value: option.triggerValue,
-      });
-    }
+  const handleTriggerTypeChange = (value: string) => {
+    // Reset trigger_value when changing trigger type
+    setFormData({
+      ...formData,
+      trigger_type: value as InAppMessageInput["trigger_type"],
+      trigger_value: value === "app_open" ? null : formData.trigger_value,
+    });
   };
 
   const handleTypeChange = (value: string) => {
@@ -388,12 +379,7 @@ export default function InAppMessagesPage() {
   };
 
   const handleSubmit = async () => {
-    // Apply custom route if selected
     let submitData = { ...formData };
-    if (selectedLocation === "custom" && customRoute) {
-      submitData.trigger_type = "screen_view";
-      submitData.trigger_value = customRoute;
-    }
 
     // Convert local datetime strings to ISO for database storage
     if (submitData.start_date) {
@@ -426,14 +412,9 @@ export default function InAppMessagesPage() {
   const totalClicks = messages?.reduce((sum, m) => sum + (m.clicks || 0), 0) || 0;
   const overallCTR = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(1) : "0";
 
-  // Get human-readable location
+  // Get human-readable location - uses the helper function
   const getLocationLabel = (message: InAppMessage) => {
-    const found = locationOptions.find(
-      (opt) => opt.trigger === message.trigger_type && opt.triggerValue === message.trigger_value
-    );
-    if (found) return found.label;
-    if (message.trigger_value) return message.trigger_value;
-    return "غير محدد";
+    return getTriggerLabel(message.trigger_type, message.trigger_value);
   };
 
   return (
@@ -690,71 +671,108 @@ export default function InAppMessagesPage() {
           <div className="space-y-6">
             {/* BASIC FIELDS - Always visible */}
             <div className="space-y-4">
-              {/* Row 1: Type + Location (2 selects) */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>نوع الرسالة</Label>
-                  <Select
-                    key={formData.message_type}
-                    value={formData.message_type}
-                    onValueChange={handleTypeChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر النوع">
-                        {messageTypeLabels[formData.message_type] || formData.message_type}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="banner">بانر (شريط)</SelectItem>
-                      <SelectItem value="modal">نافذة منبثقة</SelectItem>
-                      <SelectItem value="bottom_sheet">شريط سفلي</SelectItem>
-                      <SelectItem value="motd">رسالة اليوم</SelectItem>
-                      <SelectItem value="full_screen">ملء الشاشة</SelectItem>
-                      <SelectItem value="tooltip">تلميح</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
-                    مكان الظهور
-                  </Label>
-                  <Select
-                    value={selectedLocation}
-                    onValueChange={handleLocationChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locationOptions.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Row 1: Message Type */}
+              <div className="space-y-2">
+                <Label>نوع الرسالة</Label>
+                <Select
+                  key={formData.message_type}
+                  value={formData.message_type}
+                  onValueChange={handleTypeChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر النوع">
+                      {messageTypeLabels[formData.message_type] || formData.message_type}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="banner">بانر (شريط)</SelectItem>
+                    <SelectItem value="modal">نافذة منبثقة</SelectItem>
+                    <SelectItem value="bottom_sheet">شريط سفلي</SelectItem>
+                    <SelectItem value="motd">رسالة اليوم</SelectItem>
+                    <SelectItem value="full_screen">ملء الشاشة</SelectItem>
+                    <SelectItem value="tooltip">تلميح</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* Custom route picker */}
-              {selectedLocation === "custom" && (
-                <div className="space-y-2">
-                  <Label>اختر الشاشة</Label>
-                  <RouteSelector
-                    value={customRoute}
-                    onChange={(value) => {
-                      setCustomRoute(value);
-                      setFormData({
-                        ...formData,
-                        trigger_type: "screen_view",
-                        trigger_value: value,
-                      });
-                    }}
-                    placeholder="اختر شاشة من التطبيق"
-                  />
+              {/* Row 2: Trigger Configuration - User-friendly section */}
+              <div className="p-4 border rounded-lg bg-muted/20 space-y-4">
+                <Label className="flex items-center gap-2 text-base font-medium">
+                  <MapPin className="h-4 w-4" />
+                  متى وأين تظهر الرسالة؟
+                </Label>
+
+                {/* Trigger Type Selection */}
+                <div className="grid grid-cols-3 gap-2">
+                  {triggerTypeOptions.map((opt) => (
+                    <Button
+                      key={opt.value}
+                      type="button"
+                      variant={formData.trigger_type === opt.value ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleTriggerTypeChange(opt.value)}
+                      className="flex flex-col h-auto py-3 px-2"
+                    >
+                      <span className="text-sm font-medium">{opt.label}</span>
+                      <span className="text-[10px] opacity-70 mt-1">{opt.description}</span>
+                    </Button>
+                  ))}
                 </div>
-              )}
+
+                {/* Screen Selection - Dynamic from database */}
+                {formData.trigger_type === "screen_view" && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">اختر الشاشة التي ستظهر فيها الرسالة</Label>
+                    <RouteSelector
+                      value={formData.trigger_value}
+                      onChange={(value) =>
+                        setFormData({
+                          ...formData,
+                          trigger_value: value || null,
+                        })
+                      }
+                      placeholder="اختر شاشة من التطبيق..."
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      يتم جلب الشاشات تلقائياً من قاعدة البيانات - أي شاشة جديدة تضيفها ستظهر هنا
+                    </p>
+                  </div>
+                )}
+
+                {/* Position Selection */}
+                {formData.trigger_type === "position" && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">اختر موقع البانر</Label>
+                    <Select
+                      value={formData.trigger_value || ""}
+                      onValueChange={(value) =>
+                        setFormData({
+                          ...formData,
+                          trigger_value: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر الموقع" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {positionOptions.map((pos) => (
+                          <SelectItem key={pos.value} value={pos.value}>
+                            {pos.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* App Open - No additional config needed */}
+                {formData.trigger_type === "app_open" && (
+                  <p className="text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950 p-3 rounded-lg">
+                    ℹ️ ستظهر الرسالة مباشرة عند فتح التطبيق
+                  </p>
+                )}
+              </div>
 
               {/* Row 2: Title */}
               <div className="space-y-2">
@@ -835,34 +853,46 @@ export default function InAppMessagesPage() {
                 </div>
               </div>
 
-              {/* Row 5: CTA Button */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>نص الزر</Label>
-                  <Input
-                    value={formData.cta_text_ar || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        cta_text_ar: e.target.value || null,
-                      })
-                    }
-                    placeholder="مثال: اشترك الآن"
-                  />
+              {/* Row 5: CTA Button - Enhanced */}
+              <div className="p-4 border rounded-lg bg-muted/20 space-y-4">
+                <Label className="flex items-center gap-2 text-base font-medium">
+                  <MousePointerClick className="h-4 w-4" />
+                  زر الإجراء (CTA)
+                </Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm">نص الزر</Label>
+                    <Input
+                      value={formData.cta_text_ar || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          cta_text_ar: e.target.value || null,
+                        })
+                      }
+                      placeholder="مثال: اشترك الآن"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm">أين ينقل الزر المستخدم؟</Label>
+                    <RouteSelector
+                      value={formData.cta_action}
+                      onChange={(value) =>
+                        setFormData({
+                          ...formData,
+                          cta_action: value || null,
+                          cta_action_type: "route",
+                        })
+                      }
+                      placeholder="اختر الشاشة المستهدفة..."
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>وجهة الزر</Label>
-                  <RouteSelector
-                    value={formData.cta_action}
-                    onChange={(value) =>
-                      setFormData({
-                        ...formData,
-                        cta_action: value || null,
-                      })
-                    }
-                    placeholder="اختر الوجهة"
-                  />
-                </div>
+                {formData.cta_text_ar && !formData.cta_action && (
+                  <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950 p-2 rounded">
+                    ⚠️ أضفت نص للزر لكن لم تحدد وجهته - الزر سيغلق الرسالة فقط
+                  </p>
+                )}
               </div>
 
               {/* Row 6: Schedule + Frequency (3 cols) */}

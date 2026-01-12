@@ -97,22 +97,32 @@ export function useAppRoutes(filters?: { categoryKey?: string; activeOnly?: bool
 
 // ============ Combined Hierarchy (for RouteSelector) ============
 
-export function useRoutesHierarchy() {
+export function useRoutesHierarchy(options?: { includeInactive?: boolean }) {
+  const includeInactive = options?.includeInactive ?? false;
+
   return useQuery({
-    queryKey: ["admin", "routes-hierarchy"],
+    queryKey: ["admin", "routes-hierarchy", { includeInactive }],
     queryFn: async () => {
       // Fetch categories and routes in parallel
+      let categoriesQuery = supabase
+        .from("admin_route_categories")
+        .select("*")
+        .order("sort_order", { ascending: true });
+
+      let routesQuery = supabase
+        .from("admin_app_routes")
+        .select("*")
+        .order("sort_order", { ascending: true });
+
+      // Only filter by is_active if not including inactive
+      if (!includeInactive) {
+        categoriesQuery = categoriesQuery.eq("is_active", true);
+        routesQuery = routesQuery.eq("is_active", true);
+      }
+
       const [categoriesRes, routesRes] = await Promise.all([
-        supabase
-          .from("admin_route_categories")
-          .select("*")
-          .eq("is_active", true)
-          .order("sort_order", { ascending: true }),
-        supabase
-          .from("admin_app_routes")
-          .select("*")
-          .eq("is_active", true)
-          .order("sort_order", { ascending: true }),
+        categoriesQuery,
+        routesQuery,
       ]);
 
       if (categoriesRes.error) throw categoriesRes.error;

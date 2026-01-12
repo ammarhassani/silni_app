@@ -702,7 +702,7 @@ ${budget != null ? '## الميزانية: $budget' : ''}
       "brand": "الماركة",
       "price": 299,
       "retailer": "Amazon.sa",
-      "url": "https://www.amazon.sa/dp/XXXXX",
+      "url": "رابط المنتج الفعلي من المتجر",
       "reason": "سبب اختيار هذه الهدية"
     }
   ]

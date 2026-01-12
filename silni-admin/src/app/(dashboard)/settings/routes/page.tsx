@@ -41,7 +41,8 @@ import {
 import { Pencil, Plus, Trash2, Route, Lock, Crown, ChevronDown, Settings2, Eye, EyeOff, FolderOpen } from "lucide-react";
 
 export default function RoutesPage() {
-  const { data, isLoading } = useRoutesHierarchy();
+  // Include inactive routes so toggling visibility doesn't make them disappear
+  const { data, isLoading } = useRoutesHierarchy({ includeInactive: true });
   const { data: features } = useFeatures();
   const createRoute = useCreateRoute();
   const updateRoute = useUpdateRoute();
