@@ -23,6 +23,10 @@ import '../../auth/providers/auth_provider.dart';
 import '../../subscription/screens/paywall_screen.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/message_widget.dart';
+import '../../../core/config/env/env.dart';
+
+/// Admin email for showing environment badge
+const _adminEmail = 'azahrani337@gmail.com';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -198,12 +202,60 @@ class SettingsScreen extends ConsumerWidget {
                       },
                     ),
                   ),
+
+                  // Environment badge for admin user
+                  _buildAdminEnvBadge(ref, themeColors),
                 ],
               ),
             ),
           ],
         ),
       ),
+      ),
+    );
+  }
+
+  /// Build environment badge for admin user only
+  Widget _buildAdminEnvBadge(WidgetRef ref, dynamic themeColors) {
+    final user = Supabase.instance.client.auth.currentUser;
+    final isAdmin = user?.email == _adminEmail;
+
+    if (!isAdmin) return const SizedBox.shrink();
+
+    final isProduction = Env.appEnv == 'production';
+    final envLabel = isProduction ? 'PRODUCTION' : 'STAGING';
+    final envColor = isProduction ? Colors.red : Colors.orange;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.lg),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: envColor.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: envColor, width: 2),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isProduction ? Icons.warning_rounded : Icons.bug_report_rounded,
+                color: envColor,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                envLabel,
+                style: AppTypography.labelMedium.copyWith(
+                  color: envColor,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
