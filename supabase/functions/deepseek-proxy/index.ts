@@ -93,6 +93,7 @@ serve(async (req: Request) => {
     } = await supabaseClient.auth.getUser();
 
     if (authError || !user) {
+      console.log("[DEBUG] Auth failed:", authError?.message);
       return new Response(
         JSON.stringify({ error: "Invalid token", code: "INVALID_TOKEN" }),
         {
@@ -102,6 +103,8 @@ serve(async (req: Request) => {
       );
     }
 
+    console.log("[DEBUG] User authenticated:", user.id, user.email);
+
     // Create service role client for rate limit operations
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -110,14 +113,36 @@ serve(async (req: Request) => {
     );
 
     // Check subscription status for rate limit tier
-    const { data: profile } = await serviceClient
-      .from("profiles")
-      .select("subscription_tier")
+    // Query 'users' table for 'subscription_status' column
+    // App syncs MAX tier as 'premium' to the database
+    const { data: userData, error: userError } = await serviceClient
+      .from("users")
+      .select("subscription_status")
       .eq("id", user.id)
       .single();
 
-    const isPremium = profile?.subscription_tier === "max";
-    const rateLimit = isPremium ? RATE_LIMIT_PREMIUM : RATE_LIMIT_FREE;
+    // Debug: log the query result
+    console.log("[DEBUG] User query result:", {
+      userData,
+      userError: userError?.message,
+      subscription_status: userData?.subscription_status,
+    });
+
+    // If user record not found or no status, assume they're authenticated
+    // and give them base limit (app-side handles actual feature gating)
+    let isPremium = false;
+    if (!userError && userData?.subscription_status === "premium") {
+      isPremium = true;
+    }
+
+    console.log("[DEBUG] isPremium:", isPremium);
+
+    // Give all authenticated users at least 50 requests (free users blocked at app level)
+    // Premium users get 200
+    const BASE_LIMIT = 50;
+    const rateLimit = isPremium ? RATE_LIMIT_PREMIUM : BASE_LIMIT;
+
+    console.log("[DEBUG] Rate limit set to:", rateLimit);
 
     // Check rate limiting
     const today = new Date().toISOString().split("T")[0];
@@ -129,6 +154,13 @@ serve(async (req: Request) => {
       .single();
 
     const currentCount = rateData?.request_count || 0;
+
+    console.log("[DEBUG] Rate check:", {
+      today,
+      currentCount,
+      rateLimit,
+      wouldExceed: currentCount >= rateLimit,
+    });
 
     if (currentCount >= rateLimit) {
       return new Response(

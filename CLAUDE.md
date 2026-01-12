@@ -3,46 +3,57 @@
 ## Project Overview
 Silni (صِلني) is a Flutter app for maintaining family relationships through interaction tracking, streaks, and AI-powered insights.
 
-## Branch & Environment Strategy
+## Environment Rules (CRITICAL)
 
-### Branches
-| Branch | Environment | Purpose |
-|--------|-------------|---------|
-| `main` | Production | App Store releases - DO NOT modify directly |
-| `develop` | Staging | Integration testing, safe to modify |
-| `feature/*` | Local | New features |
-| `fix/*` | Local | Bug fixes |
+### Production-Only Workflow
+- **Always use production** for ALL development and testing
+- `.env` should always have `APP_ENV=production`
+- Deploy migrations and functions to production: `--project-ref bapwklwxmwhpucutyras`
+- Test with real production data using test user accounts
+- NO syncing between environments - production is the single source of truth
 
 ### Supabase Environments
 | Environment | Project ID | Purpose |
 |-------------|------------|---------|
-| Production | `bapwklwxmwhpucutyras` | Live App Store users |
-| Staging | `dqqyhmydodjpqboykzow` | Development & testing |
+| **Production** | `bapwklwxmwhpucutyras` | **USE THIS FOR EVERYTHING** |
+| Staging | `dqqyhmydodjpqboykzow` | Emergency backup ONLY (Plan B) |
+
+### Staging = Plan B (Emergency Only)
+- Staging exists ONLY as emergency backup
+- **DO NOT** use staging for normal development workflow
+- **DO NOT** sync data between staging and production
+- Only use staging if production has catastrophic failure (DB corruption, etc.)
+
+### When to Use Staging (RARE)
+- Production database corrupted and needs restore
+- Testing destructive migration before production (very rare)
+- NEVER for regular feature development
 
 ## Critical Rules for AI Assistants
 
 ### DO NOT:
-- Push directly to `main` branch
-- Modify production environment variables without explicit permission
-- Change `.env` to point to production unless building for App Store
-- Run migrations directly on production database
+- Use staging environment for development
+- Sync data between staging and production
+- Switch to staging unless explicitly asked for emergency recovery
 - Commit API keys, secrets, or credentials
 
 ### ALWAYS:
-- Work on `develop` branch or feature branches
-- Use staging environment for testing
-- Ask before any production-related changes
-- Use `./scripts/switch-env.sh staging` for development
-- Create PRs for merging to `main`
+- Use production environment (`APP_ENV=production`)
+- Deploy to production: `supabase functions deploy --project-ref bapwklwxmwhpucutyras`
+- Run migrations on production: `supabase db push --project-ref bapwklwxmwhpucutyras`
+- Test using test user accounts on production
 
-## Environment Switching
+## Environment Commands
 
 ```bash
-# For development (DEFAULT)
-./scripts/switch-env.sh staging
-
-# For App Store builds ONLY
+# Ensure production environment (should already be set)
 ./scripts/switch-env.sh production
+
+# Deploy edge functions
+supabase functions deploy --project-ref bapwklwxmwhpucutyras
+
+# Apply migrations
+supabase db push --project-ref bapwklwxmwhpucutyras
 ```
 
 ## File Structure
@@ -65,27 +76,22 @@ silni-admin/        # Next.js admin dashboard
 
 ## Workflow for New Features
 
-1. `git checkout develop`
-2. `git checkout -b feature/feature-name`
-3. Make changes
-4. Test with staging environment
-5. Push and create PR to `develop`
-6. After testing on `develop`, create PR to `main`
+1. Work on `main` branch (or `feature/*` branch for large features)
+2. Make changes
+3. Test with production environment using test accounts
+4. Deploy directly to production
+5. For large features, merge feature branch to `main`
 
 ## Database Migrations
 
-- Test migrations on staging first: `supabase db push --project-ref dqqyhmydodjpqboykzow`
-- Only apply to production after thorough testing
-- Never run destructive migrations without backup
+- Apply migrations directly to production: `supabase db push --project-ref bapwklwxmwhpucutyras`
+- For destructive migrations, create a backup first
+- No need to test on staging - production is the only environment
 
-## When User Asks for Production Changes
+## Branches
 
-If the user asks to:
-- Deploy to production
-- Build for App Store
-- Modify production database
-
-Always confirm:
-1. Are you sure this is ready for production?
-2. Has this been tested on staging?
-3. Is the current branch `main`?
+| Branch | Purpose |
+|--------|---------|
+| `main` | Primary development branch |
+| `feature/*` | Large feature development |
+| `fix/*` | Bug fixes |
