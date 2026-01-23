@@ -3,6 +3,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
 const DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions";
@@ -13,12 +14,6 @@ const DEEPSEEK_MODEL = "deepseek-chat";
 const RATE_LIMIT_FREE = 0;
 const RATE_LIMIT_PREMIUM = 200;
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
 interface ChatRequest {
   messages: Array<{ role: string; content: string }>;
   temperature?: number;
@@ -28,6 +23,8 @@ interface ChatRequest {
 }
 
 serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
