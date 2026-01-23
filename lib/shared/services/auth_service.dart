@@ -571,8 +571,25 @@ class AuthService {
       // Mark user as explicitly logged out
       await _sessionPersistence.markUserLoggedOut();
 
+      // Clear biometric data on logout for security (stolen phone protection)
+      try {
+        await _sessionPersistence.clearAllBiometricData();
+        logger.debug(
+          'Biometric data cleared',
+          category: LogCategory.auth,
+          tag: 'signOut',
+        );
+      } catch (e) {
+        logger.warning(
+          'Failed to clear biometric data (non-critical)',
+          category: LogCategory.auth,
+          tag: 'signOut',
+          metadata: {'error': e.toString()},
+        );
+      }
+
       logger.info(
-        'Sign out successful (biometric re-login still available)',
+        'Sign out successful',
         category: LogCategory.auth,
         tag: 'signOut',
       );
