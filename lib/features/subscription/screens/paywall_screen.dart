@@ -533,7 +533,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       children: [
         TextButton(
           onPressed: () => launchUrl(
-            Uri.parse('https://ammarhassani.github.io/silni_app/privacy-policy-ar.html'),
+            Uri.parse('https://ammarhassani.github.io/silni_app/privacy-policy.html'),
             mode: LaunchMode.externalApplication,
           ),
           child: Text(
@@ -550,7 +550,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         ),
         TextButton(
           onPressed: () => launchUrl(
-            Uri.parse('https://ammarhassani.github.io/silni_app/terms-ar.html'),
+            Uri.parse('https://ammarhassani.github.io/silni_app/terms.html'),
             mode: LaunchMode.externalApplication,
           ),
           child: Text(

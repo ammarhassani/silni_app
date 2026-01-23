@@ -54,7 +54,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>صِلني يستخدم الكاميرا لالتقاط صور أقاربك لإضافتها إلى ملفاتهم الشخصية</string>
+	<string>صِلني يحتاج الوصول للكاميرا لالتقاط صور شخصية لأقاربك. على سبيل المثال، يمكنك التقاط صورة عند إضافة قريب جديد لتخصيص ملفه الشخصي في شجرة العائلة.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>صِلني يستخدم جهات الاتصال لمساعدتك في إضافة أقاربك بسهولة من قائمة جهات الاتصال الخاصة بك</string>
 	<key>NSFaceIDUsageDescription</key>

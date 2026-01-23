@@ -485,7 +485,7 @@ class _NavigationWrapperState extends ConsumerState<_NavigationWrapper> {
         animated: true,
         child: Stack(
           children: [
-            // Main content with bottom padding to prevent overlap
+            // Main content - nav bar floats on top
             Positioned.fill(
               child: Column(
                 children: [
@@ -494,13 +494,11 @@ class _NavigationWrapperState extends ConsumerState<_NavigationWrapper> {
                     isOffline: !isOnline,
                     onTap: () => ref.read(connectivityServiceProvider).refresh(),
                   ),
-                  // Main content
+                  // Main content with bottom padding for floating nav
                   Expanded(
                     child: Padding(
                       padding: EdgeInsets.only(
-                        bottom: isNavVisible
-                            ? 95
-                            : 20, // Account for nav bar height + margin
+                        bottom: isNavVisible ? 110 : 0,
                       ),
                       child: KeyedSubtree(key: _childKey, child: widget.child),
                     ),
@@ -509,19 +507,20 @@ class _NavigationWrapperState extends ConsumerState<_NavigationWrapper> {
               ),
             ),
 
-            // Navigation bar at bottom
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: SafeArea(
-                child: PersistentBottomNav(
-                  onNavTapped: (route) {
-                    context.push(route);
-                  },
+            // Navigation bar at bottom (floats on content)
+            if (isNavVisible)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: SafeArea(
+                  child: PersistentBottomNav(
+                    onNavTapped: (route) {
+                      context.push(route);
+                    },
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),

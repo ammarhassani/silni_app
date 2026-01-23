@@ -490,12 +490,12 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                     child: Stack(
                       children: [
                         // Content
-                        Padding(
-                          padding: const EdgeInsets.all(AppSpacing.md),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
+                        Positioned.fill(
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
                               Container(
                                 padding: const EdgeInsets.all(AppSpacing.xs),
                                 decoration: BoxDecoration(
@@ -527,6 +527,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                             ],
                           ),
                         ),
+                      ),
 
                         // Coming Soon Badge
                         if (comingSoon)

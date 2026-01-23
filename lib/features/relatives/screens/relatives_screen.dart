@@ -134,7 +134,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
             ),
             // Glassmorphism FAB positioned on left
             Positioned(
-              bottom: 100, // Above navigation bar
+              bottom: 130, // Above floating navigation bar
               left: 20, // Left side instead of right
               child: _buildGlassmorphismFAB(context, themeColors),
             ),
