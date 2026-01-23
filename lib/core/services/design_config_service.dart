@@ -42,7 +42,6 @@ class DesignConfigService {
 
   /// Refresh all configs from server
   Future<void> refresh() async {
-    debugPrint('[DesignConfigService] Refreshing design configs...');
     try {
       await Future.wait([
         _fetchColors(),
@@ -51,9 +50,8 @@ class DesignConfigService {
         _fetchPatternAnimations(),
       ]);
       _lastFetchTime = DateTime.now();
-      debugPrint('[DesignConfigService] All design configs refreshed');
-    } catch (e) {
-      debugPrint('[DesignConfigService] Error refreshing configs: $e');
+    } catch (_) {
+      // Config refresh failed silently
     }
   }
 
@@ -79,9 +77,8 @@ class DesignConfigService {
           .map((json) => AdminColor.fromJson(json))
           .toList();
       _colorsCache = {for (var c in colors) c.colorKey: c};
-      debugPrint('[DesignConfigService] Loaded ${_colorsCache?.length} colors');
-    } catch (e) {
-      debugPrint('[DesignConfigService] Error fetching colors: $e');
+    } catch (_) {
+      // Colors fetch failed silently
     }
   }
 
@@ -144,9 +141,8 @@ class DesignConfigService {
       _themesCache = (response as List)
           .map((json) => AdminTheme.fromJson(json))
           .toList();
-      debugPrint('[DesignConfigService] Loaded ${_themesCache?.length} themes');
-    } catch (e) {
-      debugPrint('[DesignConfigService] Error fetching themes: $e');
+    } catch (_) {
+      // Themes fetch failed silently
     }
   }
 
@@ -191,9 +187,8 @@ class DesignConfigService {
           .map((json) => AdminAnimation.fromJson(json))
           .toList();
       _animationsCache = {for (var a in animations) a.animationKey: a};
-      debugPrint('[DesignConfigService] Loaded ${_animationsCache?.length} animations');
-    } catch (e) {
-      debugPrint('[DesignConfigService] Error fetching animations: $e');
+    } catch (_) {
+      // Animations fetch failed silently
     }
   }
 
@@ -244,9 +239,8 @@ class DesignConfigService {
       _patternAnimationsCache = (response as List)
           .map((json) => AdminPatternAnimation.fromJson(json))
           .toList();
-      debugPrint('[DesignConfigService] Loaded ${_patternAnimationsCache?.length} pattern animations');
-    } catch (e) {
-      debugPrint('[DesignConfigService] Error fetching pattern animations: $e');
+    } catch (_) {
+      // Pattern animations fetch failed silently
     }
   }
 

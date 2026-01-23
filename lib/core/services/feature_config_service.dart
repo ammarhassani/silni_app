@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'cache_config_service.dart';
 
@@ -189,11 +188,8 @@ class FeatureConfigService {
           .map((json) => FeatureConfig.fromJson(json))
           .toList();
       _lastFetchTime = DateTime.now();
-
-      debugPrint('[FeatureConfigService] Fetched ${_featuresCache!.length} features');
       return _featuresCache!;
-    } catch (e) {
-      debugPrint('[FeatureConfigService] Error fetching features: $e');
+    } catch (_) {
       // Return cache if available, even if expired
       if (_featuresCache != null) return _featuresCache!;
       // Return empty list with fallback to hardcoded behavior
@@ -217,11 +213,8 @@ class FeatureConfigService {
           .map((json) => TierConfig.fromJson(json))
           .toList();
       _lastFetchTime = DateTime.now();
-
-      debugPrint('[FeatureConfigService] Fetched ${_tiersCache!.length} tiers');
       return _tiersCache!;
-    } catch (e) {
-      debugPrint('[FeatureConfigService] Error fetching tiers: $e');
+    } catch (_) {
       if (_tiersCache != null) return _tiersCache!;
       return [];
     }
@@ -252,12 +245,10 @@ class FeatureConfigService {
     final feature = await getFeature(featureId);
     if (feature == null) {
       // Feature not in config - fallback to allowing access (backwards compatibility)
-      debugPrint('[FeatureConfigService] Feature $featureId not found in config, allowing access');
       return true;
     }
 
     if (!feature.isActive) {
-      debugPrint('[FeatureConfigService] Feature $featureId is disabled');
       return false;
     }
 
@@ -302,10 +293,8 @@ class FeatureConfigService {
           .single();
 
       _trialConfigCache = TrialConfig.fromJson(response);
-      debugPrint('[FeatureConfigService] Fetched trial config: ${_trialConfigCache!.trialDurationDays} days, enabled=${_trialConfigCache!.isTrialEnabled}');
       return _trialConfigCache!;
-    } catch (e) {
-      debugPrint('[FeatureConfigService] Error fetching trial config: $e');
+    } catch (_) {
       if (_trialConfigCache != null) return _trialConfigCache!;
       return TrialConfig.fallback;
     }
@@ -336,7 +325,6 @@ class FeatureConfigService {
     _tiersCache = null;
     _trialConfigCache = null;
     _lastFetchTime = null;
-    debugPrint('[FeatureConfigService] Cache cleared');
   }
 
   /// Refresh all configs
@@ -355,12 +343,8 @@ class FeatureConfigService {
 
   /// Sync method to check feature access (uses cache, for use in providers)
   bool hasFeatureAccessSync(String featureId, String userTier) {
-    debugPrint('[FeatureConfigService] Checking access for $featureId, tier=$userTier');
-    debugPrint('[FeatureConfigService] Cache loaded: features=${_featuresCache?.length}, tiers=${_tiersCache?.length}');
-
     if (_featuresCache == null || _tiersCache == null) {
       // Cache not loaded yet - fallback to hardcoded behavior
-      debugPrint('[FeatureConfigService] Cache not loaded, using hardcoded fallback');
       return _hardcodedFeatureAccess(featureId, userTier);
     }
 
@@ -371,14 +355,10 @@ class FeatureConfigService {
 
     if (feature == null) {
       // Feature not in config - use hardcoded fallback
-      debugPrint('[FeatureConfigService] Feature $featureId not found in config, using hardcoded');
       return _hardcodedFeatureAccess(featureId, userTier);
     }
 
-    debugPrint('[FeatureConfigService] Feature found: ${feature.featureId}, isActive=${feature.isActive}, minimumTier=${feature.minimumTier}');
-
     if (!feature.isActive) {
-      debugPrint('[FeatureConfigService] BLOCKED: Feature $featureId is disabled in admin');
       return false;
     }
 
@@ -389,13 +369,10 @@ class FeatureConfigService {
     );
 
     if (tierConfig != null && tierConfig.hasFeature(featureId)) {
-      debugPrint('[FeatureConfigService] ALLOWED: Feature in tier features array');
       return true;
     }
 
-    final allowed = feature.isAccessibleFor(userTier);
-    debugPrint('[FeatureConfigService] Access by minimum_tier: $allowed');
-    return allowed;
+    return feature.isAccessibleFor(userTier);
   }
 
   /// Hardcoded fallback for when config isn't loaded

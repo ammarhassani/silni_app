@@ -191,10 +191,7 @@ class OnboardingConfigService {
           .map((json) => OnboardingScreenConfig.fromJson(json))
           .toList();
       _lastFetchTime = DateTime.now();
-
-      debugPrint('[OnboardingConfigService] Fetched ${_screensCache!.length} screens');
-    } catch (e) {
-      debugPrint('[OnboardingConfigService] Error fetching screens: $e');
+    } catch (_) {
       // Keep existing cache if available
     }
   }
@@ -262,7 +259,6 @@ class OnboardingConfigService {
   void clearCache() {
     _screensCache = null;
     _lastFetchTime = null;
-    debugPrint('[OnboardingConfigService] Cache cleared');
   }
 
   /// Check if screens are loaded

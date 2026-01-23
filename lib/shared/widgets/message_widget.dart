@@ -156,7 +156,6 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
   void initState() {
     super.initState();
     // On widget init, dismissedIds is empty - all messages can appear
-    debugPrint('[MessageWidget] initState - dismissedIds cleared, messages will load fresh');
     // Load messages on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadMessages();
@@ -190,15 +189,8 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
 
       List<Message> messages;
 
-      debugPrint('[MessageWidget] Loading messages...');
-      debugPrint('  - screenPath: ${widget.screenPath}');
-      debugPrint('  - position: ${widget.position}');
-      debugPrint('  - userTier: $userTier');
-      debugPrint('  - platform: $platform');
-
       if (widget.position != null) {
         // Position-based (legacy banner positions)
-        debugPrint('[MessageWidget] Fetching for position: ${widget.position}');
         messages = await _service.getMessagesForPosition(
           widget.position!,
           userTier: userTier,
@@ -210,26 +202,18 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
             ? widget.screenPath!
             : '/${widget.screenPath!}';
 
-        debugPrint('[MessageWidget] Fetching for screen: $routePath');
         messages = await _service.getMessagesForScreen(
           routePath,
           userTier: userTier,
           platform: platform,
         );
       } else if (widget.triggerType == 'app_open') {
-        debugPrint('[MessageWidget] Fetching for app_open');
         messages = await _service.getMessagesForAppOpen(
           userTier: userTier,
           platform: platform,
         );
       } else {
-        debugPrint('[MessageWidget] No valid trigger - returning empty');
         messages = [];
-      }
-
-      debugPrint('[MessageWidget] Received ${messages.length} messages');
-      for (final m in messages) {
-        debugPrint('  - ${m.id}: ${m.titleAr} (type: ${m.messageType})');
       }
 
       // Filter by message type if specified
@@ -237,7 +221,6 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
         messages = messages
             .where((m) => m.messageType == widget.messageType)
             .toList();
-        debugPrint('[MessageWidget] After type filter: ${messages.length} messages');
       }
 
       if (mounted) {
@@ -246,9 +229,7 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
           _isLoading = false;
         });
       }
-    } catch (e, stack) {
-      debugPrint('[MessageWidget] Error loading messages: $e');
-      debugPrint('[MessageWidget] Stack: $stack');
+    } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -258,8 +239,6 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
   /// Dismiss message for current session only
   /// Message will reappear after hot restart or app kill/relaunch
   void _dismissMessage(Message message) {
-    debugPrint('[MessageWidget] Dismissing message: ${message.id} (${message.messageType})');
-    debugPrint('[MessageWidget] Session-only dismissal - will reappear on app restart');
     _service.recordDismiss(message.id); // Analytics only
     if (mounted) {
       setState(() {
@@ -336,11 +315,8 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         for (final message in overlayMessages) {
           if (!_shownOverlays.contains(message.id)) {
-            debugPrint('[MessageWidget] Showing overlay: ${message.id} (${message.messageType})');
             _shownOverlays.add(message.id);
             _showOverlayMessage(message);
-          } else {
-            debugPrint('[MessageWidget] Overlay already shown this session: ${message.id}');
           }
         }
       });
@@ -351,7 +327,6 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
 
     // Show only the highest priority inline message
     final message = inlineMessages.first;
-    debugPrint('[MessageWidget] Rendering inline message: ${message.id} (${message.messageType})');
 
     // Record impression when message is displayed
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -391,7 +366,6 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
   /// Premium dialog with glow border and celebration animations
   /// For achievements, level-ups, and important announcements
   void _showModalMessage(Message message) {
-    debugPrint('[MessageWidget] _showModalMessage called for: ${message.id}');
     final themeColors = ref.read(themeColorsProvider);
     final accentColor = message.accentColorParsed ?? themeColors.primary;
 
@@ -649,7 +623,6 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
   /// Solid surface with drag handle and horizontal layout
   /// For feature announcements and contextual actions
   void _showBottomSheetMessage(Message message) {
-    debugPrint('[MessageWidget] _showBottomSheetMessage called for: ${message.id}');
     final themeColors = ref.read(themeColorsProvider);
     final accentColor = message.accentColorParsed ?? themeColors.primary;
 
@@ -847,7 +820,6 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
   /// Rich gradient background with floating sparkles
   /// For major milestones, onboarding completion, special events
   void _showFullScreenMessage(Message message) {
-    debugPrint('[MessageWidget] _showFullScreenMessage called for: ${message.id}');
     final accentColor = message.accentColorParsed ?? Theme.of(context).primaryColor;
 
     // Darker shade for gradient
@@ -1521,7 +1493,6 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
   /// Fully adaptive - uses theme colors (glassmorphic) or custom admin colors
   /// Quick tips and contextual hints - tap anywhere to dismiss
   Widget _buildTooltipMessage(Message message) {
-    debugPrint('[MessageWidget] Building tooltip: ${message.id}');
     final themeColors = ref.watch(themeColorsProvider);
     final accentColor = message.accentColorParsed ?? themeColors.primary;
 

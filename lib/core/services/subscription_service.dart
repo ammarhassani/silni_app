@@ -97,10 +97,6 @@ class SubscriptionService {
         return;
       }
 
-      // Debug: Log API key status (first 10 chars only for security)
-      final keyPreview = apiKey.length > 10 ? '${apiKey.substring(0, 10)}...' : apiKey;
-      debugPrint('🔑 RevenueCat API Key: $keyPreview (${apiKey.length} chars)');
-
       // Check if API key is configured
       if (apiKey.isEmpty) {
         _logger.warning(
@@ -108,7 +104,6 @@ class SubscriptionService {
           category: LogCategory.service,
           tag: 'SubscriptionService',
         );
-        debugPrint('❌ RevenueCat API key is EMPTY! Check .env and run build_runner');
         _isInitialized = true;
         _updateState(_currentState.copyWith(isLoading: false));
         return;
@@ -142,8 +137,6 @@ class SubscriptionService {
 
       // Log the actual RevenueCat app user ID being used
       final customerInfo = await rc.Purchases.getCustomerInfo();
-      debugPrint('🔑 RevenueCat App User ID: ${customerInfo.originalAppUserId}');
-      debugPrint('🔑 Active Entitlements: ${customerInfo.entitlements.active.keys.toList()}');
       _logger.info(
         'RevenueCat customer info retrieved',
         category: LogCategory.service,
@@ -199,25 +192,6 @@ class SubscriptionService {
       final customerInfo = await rc.Purchases.getCustomerInfo();
       final offerings = await rc.Purchases.getOfferings();
 
-      // Debug: Log offerings details
-      debugPrint('📦 Offerings fetch result:');
-      debugPrint('  - current offering: ${offerings.current?.identifier ?? "NULL"}');
-      debugPrint('  - all offerings count: ${offerings.all.length}');
-      for (final entry in offerings.all.entries) {
-        debugPrint('  - Offering "${entry.key}": ${entry.value.availablePackages.length} packages');
-        for (final pkg in entry.value.availablePackages) {
-          debugPrint('    - Package: ${pkg.identifier} -> ${pkg.storeProduct.identifier}');
-        }
-      }
-      if (offerings.current != null) {
-        debugPrint('  - Current offering packages:');
-        for (final pkg in offerings.current!.availablePackages) {
-          debugPrint('    - ${pkg.identifier}: ${pkg.storeProduct.identifier} (${pkg.storeProduct.priceString})');
-        }
-      } else {
-        debugPrint('  ⚠️ NO CURRENT OFFERING SET! Check RevenueCat dashboard.');
-      }
-
       _logger.info(
         'Offerings fetched',
         category: LogCategory.service,
@@ -239,7 +213,6 @@ class SubscriptionService {
         metadata: {'error': e.toString()},
         stackTrace: stackTrace,
       );
-      debugPrint('❌ Failed to refresh subscription: $e');
       _updateState(_currentState.copyWith(
         isLoading: false,
         error: 'فشل تحميل حالة الاشتراك',
@@ -340,11 +313,6 @@ class SubscriptionService {
 
       final result = await rc.Purchases.purchase(rc.PurchaseParams.package(package));
 
-      // Debug: Log all entitlements received after purchase
-      debugPrint('🎫 Purchase result - All entitlements: ${result.customerInfo.entitlements.all.keys.toList()}');
-      debugPrint('🎫 Purchase result - Active entitlements: ${result.customerInfo.entitlements.active.keys.toList()}');
-      debugPrint('🎫 Looking for MAX: "${SubscriptionProducts.entitlementMax}"');
-
       _processCustomerInfo(result.customerInfo, _currentState.offerings);
 
       _logger.info(
@@ -353,8 +321,6 @@ class SubscriptionService {
         tag: 'SubscriptionService',
         metadata: {'tier': _currentState.tier.id},
       );
-
-      debugPrint('✅ Purchase complete - New tier: ${_currentState.tier.id}');
 
       return _currentState.tier != SubscriptionTier.free;
     } on rc.PurchasesErrorCode catch (e) {

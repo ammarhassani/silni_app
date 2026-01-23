@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../ai/ai_context_engine.dart';
@@ -45,7 +44,6 @@ class AITouchPointService {
 
   /// Refresh touch points from server
   Future<void> refresh() async {
-    debugPrint('[AITouchPointService] Refreshing touch points...');
     try {
       final response = await _supabase
           .from('admin_ai_touch_points')
@@ -60,10 +58,8 @@ class AITouchPointService {
         for (var tp in touchPoints) '${tp.screenKey}:${tp.touchPointKey}': tp
       };
       _lastFetchTime = DateTime.now();
-
-      debugPrint('[AITouchPointService] Loaded ${_touchPointsCache?.length} touch points');
-    } catch (e) {
-      debugPrint('[AITouchPointService] Error refreshing: $e');
+    } catch (_) {
+      // Touch points refresh failed silently
     }
   }
 
@@ -77,7 +73,6 @@ class AITouchPointService {
   /// Clear only AI response cache (for refresh functionality)
   void clearResponseCache() {
     _responseCache.clear();
-    debugPrint('[AITouchPointService] Response cache cleared');
   }
 
   /// Get a specific touch point configuration
@@ -125,7 +120,6 @@ class AITouchPointService {
       if (useCache) {
         final cached = _getCachedResponse(promptHash, touchPoint.cacheDurationSeconds);
         if (cached != null) {
-          debugPrint('[AITouchPointService] Using cached response for $screenKey:$touchPointKey');
           return AITouchPointResult.success(cached, fromCache: true);
         }
       }
@@ -152,8 +146,7 @@ class AITouchPointService {
       );
 
       return AITouchPointResult.success(response);
-    } catch (e) {
-      debugPrint('[AITouchPointService] Error generating: $e');
+    } catch (_) {
       return AITouchPointResult.error('حدث خطأ أثناء توليد المحتوى');
     }
   }
@@ -329,7 +322,6 @@ class AITouchPointService {
     );
 
     stopwatch.stop();
-    debugPrint('[AITouchPointService] API call took ${stopwatch.elapsedMilliseconds}ms');
 
     if (response.status != 200) {
       throw Exception('API error: ${response.status}');
@@ -359,8 +351,8 @@ class AITouchPointService {
         'response': response.length > 500 ? response.substring(0, 500) : response,
         'latency_ms': latencyMs,
       });
-    } catch (e) {
-      debugPrint('[AITouchPointService] Error tracking usage: $e');
+    } catch (_) {
+      // Usage tracking failed silently
     }
   }
 }
@@ -472,8 +464,8 @@ class AITouchPointResult {
         final decoded = jsonDecode(jsonMatch.group(0)!);
         return parser(decoded);
       }
-    } catch (e) {
-      debugPrint('[AITouchPointResult] Error parsing JSON: $e');
+    } catch (_) {
+      // JSON parsing failed
     }
     return null;
   }

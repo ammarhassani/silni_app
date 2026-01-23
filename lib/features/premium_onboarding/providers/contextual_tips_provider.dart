@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/subscription_provider.dart';
@@ -64,8 +63,8 @@ class ContextualTipsNotifier extends StateNotifier<ContextualTipsState> {
         isLoading: false,
       );
       _isInitialized = true;
-    } catch (e) {
-      debugPrint('[ContextualTips] Failed to load dismissed tips: $e');
+    } catch (_) {
+      // Failed to load dismissed tips silently
       state = state.copyWith(isLoading: false);
     }
   }
@@ -92,7 +91,6 @@ class ContextualTipsNotifier extends StateNotifier<ContextualTipsState> {
   /// Show a specific tip
   void showTip(String tipId) {
     state = state.copyWith(currentTipId: tipId);
-    debugPrint('[ContextualTips] Showing tip: $tipId');
   }
 
   /// Dismiss a tip
@@ -107,7 +105,6 @@ class ContextualTipsNotifier extends StateNotifier<ContextualTipsState> {
 
     // Save to storage
     await _storage.saveDismissedTips(updatedDismissed);
-    debugPrint('[ContextualTips] Dismissed tip: $tipId');
   }
 
   /// Dismiss all tips for a screen
@@ -125,7 +122,6 @@ class ContextualTipsNotifier extends StateNotifier<ContextualTipsState> {
     );
 
     await _storage.saveDismissedTips(updatedDismissed);
-    debugPrint('[ContextualTips] Dismissed all tips for: $screenRoute');
   }
 
   /// Enable/disable tips globally
@@ -134,7 +130,6 @@ class ContextualTipsNotifier extends StateNotifier<ContextualTipsState> {
     if (!enabled) {
       state = state.copyWith(clearCurrentTip: true);
     }
-    debugPrint('[ContextualTips] Tips enabled: $enabled');
   }
 
   /// Clear current tip without dismissing
@@ -149,7 +144,6 @@ class ContextualTipsNotifier extends StateNotifier<ContextualTipsState> {
       clearCurrentTip: true,
     );
     await _storage.saveDismissedTips({});
-    debugPrint('[ContextualTips] All tips reset');
   }
 
   /// Check if a specific tip has been dismissed

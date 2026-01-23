@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'cache_config_service.dart';
 
@@ -161,7 +161,6 @@ class MessageService {
   /// Initialize the service
   Future<void> initialize() async {
     // Pre-warm cache if needed
-    debugPrint('[MessageService] Initialized');
   }
 
   // ==================== FETCH METHODS ====================
@@ -258,15 +257,8 @@ class MessageService {
   }) async {
     try {
       final userId = _supabase.auth.currentUser?.id;
-      debugPrint('[MessageService] _fetchMessages called');
-      debugPrint('  - userId: $userId');
-      debugPrint('  - triggerType: $triggerType');
-      debugPrint('  - triggerValue: $triggerValue');
-      debugPrint('  - userTier: $userTier');
-      debugPrint('  - platform: $platform');
 
       if (userId == null) {
-        debugPrint('[MessageService] No user ID - returning empty');
         return [];
       }
 
@@ -278,10 +270,7 @@ class MessageService {
         'p_platform': platform,
       });
 
-      debugPrint('[MessageService] RPC response: $response');
-
       if (response == null) {
-        debugPrint('[MessageService] Response is null - returning empty');
         return [];
       }
 
@@ -290,17 +279,13 @@ class MessageService {
           .map((json) => Message.fromJson(json))
           .toList();
 
-      debugPrint('[MessageService] Parsed ${messages.length} messages');
-
       // Apply message type filter if specified
       if (messageTypeFilter != null) {
         messages = messages.where((m) => m.messageType == messageTypeFilter).toList();
       }
 
       return messages;
-    } catch (e, stack) {
-      debugPrint('[MessageService] Error fetching messages: $e');
-      debugPrint('[MessageService] Stack: $stack');
+    } catch (_) {
       return [];
     }
   }
@@ -333,8 +318,8 @@ class MessageService {
       });
 
       _shownInSession.add(messageId);
-    } catch (e) {
-      debugPrint('[MessageService] Error recording impression: $e');
+    } catch (_) {
+      // Impression recording failed silently
     }
   }
 
@@ -354,8 +339,8 @@ class MessageService {
       await _supabase.rpc('increment_message_clicks', params: {
         'p_message_id': messageId,
       });
-    } catch (e) {
-      debugPrint('[MessageService] Error recording click: $e');
+    } catch (_) {
+      // Click recording failed silently
     }
   }
 
@@ -370,8 +355,8 @@ class MessageService {
         'p_message_id': messageId,
         'p_interaction_type': 'dismiss',
       });
-    } catch (e) {
-      debugPrint('[MessageService] Error recording dismiss: $e');
+    } catch (_) {
+      // Dismiss recording failed silently
     }
   }
 
@@ -385,7 +370,6 @@ class MessageService {
   /// Clear session shown tracking (call on logout)
   void clearSession() {
     _shownInSession.clear();
-    debugPrint('[MessageService] Session cleared');
   }
 
   /// Check if cache needs refresh

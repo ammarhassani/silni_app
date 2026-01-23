@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import 'cache_config_service.dart';
@@ -35,9 +34,8 @@ class NotificationConfigService {
         _fetchTimeSlots(),
       ]);
       _lastRefresh = DateTime.now();
-      debugPrint('[NotificationConfigService] Refreshed all config');
-    } catch (e) {
-      debugPrint('[NotificationConfigService] Error refreshing: $e');
+    } catch (_) {
+      // Refresh failed silently
     } finally {
       _isLoading = false;
     }
@@ -69,9 +67,8 @@ class NotificationConfigService {
           .map((json) => NotificationTemplate.fromJson(json))
           .toList();
       _templatesCache = {for (var t in templates) t.templateKey: t};
-      debugPrint('[NotificationConfigService] Loaded ${_templatesCache?.length} templates');
-    } catch (e) {
-      debugPrint('[NotificationConfigService] Error fetching templates: $e');
+    } catch (_) {
+      // Fetch templates failed silently
     }
   }
 
@@ -183,9 +180,8 @@ class NotificationConfigService {
       _timeSlotsCache = (response as List)
           .map((json) => ReminderTimeSlot.fromJson(json))
           .toList();
-      debugPrint('[NotificationConfigService] Loaded ${_timeSlotsCache?.length} time slots');
-    } catch (e) {
-      debugPrint('[NotificationConfigService] Error fetching time slots: $e');
+    } catch (_) {
+      // Fetch time slots failed silently
     }
   }
 

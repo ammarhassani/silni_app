@@ -78,7 +78,7 @@ class _MessageLottieWidgetState extends State<MessageLottieWidget>
           }
         },
         errorBuilder: (context, error, stackTrace) {
-          debugPrint('[MessageLottie] Error loading $lottiePath: $error');
+          // Lottie load error - showing fallback icon
           return _buildFallbackIcon();
         },
       ),

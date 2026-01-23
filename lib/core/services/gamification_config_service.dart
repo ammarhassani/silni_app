@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../shared/models/interaction_model.dart';
@@ -41,7 +40,6 @@ class GamificationConfigService {
 
   /// Refresh all configs from server
   Future<void> refresh() async {
-    debugPrint('[GamificationConfigService] Refreshing all gamification configs...');
     try {
       await Future.wait([
         _fetchPointsConfig(),
@@ -51,9 +49,8 @@ class GamificationConfigService {
         _fetchStreakConfig(),
       ]);
       _lastFetchTime = DateTime.now();
-      debugPrint('[GamificationConfigService] All configs refreshed successfully');
-    } catch (e) {
-      debugPrint('[GamificationConfigService] Error refreshing configs: $e');
+    } catch (_) {
+      // Config refresh failed silently
     }
   }
 
@@ -79,9 +76,8 @@ class GamificationConfigService {
           .map((json) => PointsConfig.fromJson(json))
           .toList();
       _pointsConfigCache = {for (var c in configs) c.interactionType: c};
-      debugPrint('[GamificationConfigService] Loaded ${_pointsConfigCache?.length} points configs');
-    } catch (e) {
-      debugPrint('[GamificationConfigService] Error fetching points config: $e');
+    } catch (_) {
+      // Points config fetch failed silently
     }
   }
 
@@ -90,10 +86,8 @@ class GamificationConfigService {
     final typeStr = type.name;
     final config = _pointsConfigCache?[typeStr];
     if (config != null) {
-      debugPrint('[GamificationConfigService] getPointsConfig: type=$typeStr, found in cache, basePoints=${config.basePoints}');
       return config;
     }
-    debugPrint('[GamificationConfigService] getPointsConfig: type=$typeStr, NOT in cache (available: ${_pointsConfigCache?.keys.toList()}), using fallback');
     return PointsConfig.fallback(typeStr);
   }
 
@@ -101,14 +95,12 @@ class GamificationConfigService {
   /// This ensures if any interaction type has a higher cap, that's used globally
   int get dailyPointCap {
     if (_pointsConfigCache == null || _pointsConfigCache!.isEmpty) {
-      debugPrint('[GamificationConfigService] No points config loaded, using fallback daily cap: 200');
       return 200;
     }
     // Use the MAX daily cap across all interaction types
     final maxCap = _pointsConfigCache!.values
         .map((c) => c.dailyCap)
         .reduce((a, b) => a > b ? a : b);
-    debugPrint('[GamificationConfigService] Daily cap from config: $maxCap');
     return maxCap;
   }
 
@@ -142,16 +134,14 @@ class GamificationConfigService {
       _badgesCache = (response as List)
           .map((json) => BadgeConfig.fromJson(json))
           .toList();
-      debugPrint('[GamificationConfigService] Loaded ${_badgesCache?.length} badges');
-    } catch (e) {
-      debugPrint('[GamificationConfigService] Error fetching badges: $e');
+    } catch (_) {
+      // Badges fetch failed silently
     }
   }
 
   /// Get badges config - uses fallback if cache is empty or null
   List<BadgeConfig> get badges {
     if (_badgesCache == null || _badgesCache!.isEmpty) {
-      debugPrint('[GamificationConfigService] badges: Using fallback badges (cache is ${_badgesCache == null ? "null" : "empty"})');
       return BadgeConfig.fallbackBadges();
     }
     return _badgesCache!;
@@ -270,16 +260,14 @@ class GamificationConfigService {
           .toList()
         // Ensure levels are sorted ASCENDING by level number (required for calculateLevel)
         ..sort((a, b) => a.level.compareTo(b.level));
-      debugPrint('[GamificationConfigService] Loaded ${_levelsCache?.length} levels');
-    } catch (e) {
-      debugPrint('[GamificationConfigService] Error fetching levels: $e');
+    } catch (_) {
+      // Levels fetch failed silently
     }
   }
 
   /// Get levels config - uses fallback if cache is empty or null
   List<LevelConfig> get levels {
     if (_levelsCache == null || _levelsCache!.isEmpty) {
-      debugPrint('[GamificationConfigService] levels: Using fallback levels (cache is ${_levelsCache == null ? "null" : "empty"})');
       return LevelConfig.fallbackLevels();
     }
     return _levelsCache!;
@@ -300,7 +288,6 @@ class GamificationConfigService {
     // Iterate from highest level to lowest
     for (int i = lvls.length - 1; i >= 0; i--) {
       if (xp >= lvls[i].xpRequired) {
-        debugPrint('[GamificationConfigService] calculateLevel: xp=$xp -> level ${lvls[i].level}');
         return lvls[i].level;
       }
     }
@@ -325,9 +312,8 @@ class GamificationConfigService {
           .eq('is_active', true)
           .single();
       _streakConfigCache = StreakConfig.fromJson(response);
-      debugPrint('[GamificationConfigService] Loaded streak config');
-    } catch (e) {
-      debugPrint('[GamificationConfigService] Error fetching streak config: $e');
+    } catch (_) {
+      // Streak config fetch failed silently
     }
   }
 
@@ -348,16 +334,14 @@ class GamificationConfigService {
           .map((json) => ChallengeConfig.fromJson(json))
           .where((c) => c.isAvailable(now))
           .toList();
-      debugPrint('[GamificationConfigService] Loaded ${_challengesCache?.length} active challenges');
-    } catch (e) {
-      debugPrint('[GamificationConfigService] Error fetching challenges: $e');
+    } catch (_) {
+      // Challenges fetch failed silently
     }
   }
 
   /// Get all active challenges
   List<ChallengeConfig> get challenges {
     if (_challengesCache == null || _challengesCache!.isEmpty) {
-      debugPrint('[GamificationConfigService] challenges: Using fallback challenges');
       return ChallengeConfig.fallbackChallenges();
     }
     return _challengesCache!;

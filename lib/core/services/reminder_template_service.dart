@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'cache_config_service.dart';
@@ -148,7 +147,6 @@ class ReminderTemplateService {
 
   /// Refresh templates from server
   Future<void> refresh() async {
-    debugPrint('[ReminderTemplateService] Refreshing templates...');
     try {
       final response = await _supabase
           .from('admin_reminder_templates')
@@ -161,9 +159,7 @@ class ReminderTemplateService {
           .toList();
 
       _lastFetchTime = DateTime.now();
-      debugPrint('[ReminderTemplateService] Loaded ${_templatesCache!.length} templates');
-    } catch (e) {
-      debugPrint('[ReminderTemplateService] Error refreshing templates: $e');
+    } catch (_) {
       // Keep existing cache or use fallback
       _templatesCache ??= AdminReminderTemplate.fallbackTemplates;
     }

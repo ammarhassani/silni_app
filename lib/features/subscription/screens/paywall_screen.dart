@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart' as rc;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
@@ -93,6 +94,11 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 
                         // Restore purchases
                         _buildRestoreButton(themeColors),
+
+                        const SizedBox(height: AppSpacing.xs),
+
+                        // Legal links (required by App Store)
+                        _buildLegalLinks(),
 
                         const SizedBox(height: AppSpacing.md),
                       ],
@@ -521,6 +527,44 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     );
   }
 
+  Widget _buildLegalLinks() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        TextButton(
+          onPressed: () => launchUrl(
+            Uri.parse('https://ammarhassani.github.io/silni_app/privacy-policy-ar.html'),
+            mode: LaunchMode.externalApplication,
+          ),
+          child: Text(
+            'سياسة الخصوصية',
+            style: AppTypography.bodySmall.copyWith(
+              color: Colors.white54,
+              decoration: TextDecoration.underline,
+            ),
+          ),
+        ),
+        Text(
+          ' | ',
+          style: AppTypography.bodySmall.copyWith(color: Colors.white38),
+        ),
+        TextButton(
+          onPressed: () => launchUrl(
+            Uri.parse('https://ammarhassani.github.io/silni_app/terms-ar.html'),
+            mode: LaunchMode.externalApplication,
+          ),
+          child: Text(
+            'الشروط والأحكام',
+            style: AppTypography.bodySmall.copyWith(
+              color: Colors.white54,
+              decoration: TextDecoration.underline,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildPurchaseButton(
     dynamic themeColors,
     rc.Offerings? offerings,
@@ -561,7 +605,6 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 
   Future<void> _purchase(rc.Offerings? offerings) async {
     if (offerings == null) {
-      debugPrint('❌ Purchase failed: offerings is null');
       _showError('لا توجد عروض متاحة حالياً');
       return;
     }
@@ -571,15 +614,8 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     try {
       final offering = offerings.current;
       if (offering == null) {
-        debugPrint('❌ Purchase failed: current offering is null');
         _showError('لا توجد عروض متاحة حالياً');
         return;
-      }
-
-      // Debug: Log all available packages
-      debugPrint('📦 Available packages in offering "${offering.identifier}":');
-      for (final pkg in offering.availablePackages) {
-        debugPrint('  - ${pkg.identifier}: ${pkg.storeProduct.identifier} (${pkg.storeProduct.priceString})');
       }
 
       // Find the MAX package (only tier now)
@@ -587,13 +623,10 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       final productSuffix = _isAnnual ? 'annual' : 'monthly';
       final targetPackageId = 'max_$productSuffix'; // e.g., "max_monthly"
 
-      debugPrint('🎯 Looking for package: $targetPackageId');
-
       // Try to find the specific package by package identifier
       for (final pkg in offering.availablePackages) {
         if (pkg.identifier == targetPackageId) {
           package = pkg;
-          debugPrint('✅ Found package: ${pkg.identifier} -> ${pkg.storeProduct.identifier}');
           break;
         }
       }
@@ -601,13 +634,9 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       // Fallback to default packages
       if (package == null) {
         package = _isAnnual ? offering.annual : offering.monthly;
-        if (package != null) {
-          debugPrint('⚠️ Using fallback package: ${package.identifier}');
-        }
       }
 
       if (package != null) {
-        debugPrint('🛒 Initiating purchase for: ${package.storeProduct.identifier}');
         final success = await SubscriptionService.instance.purchase(package);
         if (success && mounted) {
           // Force refresh all subscription providers
@@ -627,9 +656,6 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
           }
         }
       } else {
-        debugPrint('❌ No package found for $targetPackageId');
-        debugPrint('❌ offering.annual: ${offering.annual?.identifier}');
-        debugPrint('❌ offering.monthly: ${offering.monthly?.identifier}');
         _showError('المنتج غير متاح - تأكد من إكمال بيانات المنتج في App Store Connect');
       }
     } catch (e) {
