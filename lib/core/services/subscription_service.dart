@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:purchases_flutter/purchases_flutter.dart' as rc;
 
 import '../config/env/app_environment.dart';
@@ -21,6 +22,15 @@ class SubscriptionService {
   SubscriptionState _currentState = const SubscriptionState();
 
   SubscriptionService._();
+
+  // =====================================================
+  // CACHE CONSTANTS
+  // =====================================================
+  static const String _cacheBoxName = 'subscription_cache';
+  static const String _cacheTierKey = 'tier';
+  static const String _cacheExpirationKey = 'expiration';
+  static const String _cacheTimestampKey = 'cached_at';
+  static const Duration _cacheValidity = Duration(hours: 24);
 
   /// Singleton instance
   static SubscriptionService get instance {
@@ -207,11 +217,46 @@ class SubscriptionService {
       _processCustomerInfo(customerInfo, offerings);
     } catch (e, stackTrace) {
       _logger.error(
-        'Failed to refresh subscription status',
+        'Failed to refresh subscription status from RevenueCat',
         category: LogCategory.service,
         tag: 'SubscriptionService',
         metadata: {'error': e.toString()},
         stackTrace: stackTrace,
+      );
+
+      // Fallback chain: RevenueCat failed → try Cache → try Supabase → Free
+
+      // Fallback 1: Load from local cache
+      final cachedState = await _loadCachedSubscriptionState();
+      if (cachedState != null) {
+        _logger.info(
+          'Using cached subscription state as fallback',
+          category: LogCategory.service,
+          tag: 'SubscriptionService',
+          metadata: {'tier': cachedState.tier.id},
+        );
+        _updateState(cachedState.copyWith(isLoading: false));
+        return;
+      }
+
+      // Fallback 2: Load from Supabase
+      final supabaseState = await _loadFromSupabaseFallback();
+      if (supabaseState != null) {
+        _logger.info(
+          'Using Supabase subscription fallback',
+          category: LogCategory.service,
+          tag: 'SubscriptionService',
+          metadata: {'tier': supabaseState.tier.id},
+        );
+        _updateState(supabaseState.copyWith(isLoading: false));
+        return;
+      }
+
+      // No fallback available - default to free with error
+      _logger.warning(
+        'All subscription fallbacks failed, defaulting to free tier',
+        category: LogCategory.service,
+        tag: 'SubscriptionService',
       );
       _updateState(_currentState.copyWith(
         isLoading: false,
@@ -269,9 +314,13 @@ class SubscriptionService {
       if (trialDaysRemaining < 0) trialDaysRemaining = 0;
     }
 
+    // Validate subscription is active: must be paid tier with valid expiration
+    final isActive = tier != SubscriptionTier.free &&
+        (expirationDate == null || expirationDate.isAfter(DateTime.now()));
+
     final newState = SubscriptionState(
       tier: tier,
-      isActive: tier != SubscriptionTier.free,
+      isActive: isActive,
       expirationDate: expirationDate,
       isTrialActive: isTrialActive,
       trialDaysRemaining: trialDaysRemaining,
@@ -458,6 +507,8 @@ class SubscriptionService {
       );
 
       await rc.Purchases.logOut();
+      // Clear local subscription cache on logout
+      await clearSubscriptionCache();
       _updateState(SubscriptionState.free());
     } catch (e) {
       _logger.error(
@@ -465,6 +516,148 @@ class SubscriptionService {
         category: LogCategory.service,
         tag: 'SubscriptionService',
         metadata: {'error': e.toString()},
+      );
+    }
+  }
+
+  // =====================================================
+  // SUBSCRIPTION CACHE & FALLBACK
+  // =====================================================
+
+  /// Cache subscription state locally using Hive
+  Future<void> _cacheSubscriptionState(SubscriptionState state) async {
+    try {
+      final box = await Hive.openBox(_cacheBoxName);
+      await box.put(_cacheTierKey, state.tier.id);
+      await box.put(_cacheExpirationKey, state.expirationDate?.toIso8601String());
+      await box.put(_cacheTimestampKey, DateTime.now().toIso8601String());
+      _logger.info(
+        'Subscription state cached',
+        category: LogCategory.service,
+        tag: 'SubscriptionService',
+        metadata: {'tier': state.tier.id},
+      );
+    } catch (e) {
+      _logger.warning(
+        'Failed to cache subscription state: $e',
+        category: LogCategory.service,
+        tag: 'SubscriptionService',
+      );
+    }
+  }
+
+  /// Load cached subscription state from Hive
+  Future<SubscriptionState?> _loadCachedSubscriptionState() async {
+    try {
+      final box = await Hive.openBox(_cacheBoxName);
+      final tierStr = box.get(_cacheTierKey) as String?;
+      final expirationStr = box.get(_cacheExpirationKey) as String?;
+      final cachedAtStr = box.get(_cacheTimestampKey) as String?;
+
+      if (tierStr == null) return null;
+
+      // Check if cache is still valid (within 24 hours)
+      if (cachedAtStr != null) {
+        final cachedAt = DateTime.parse(cachedAtStr);
+        if (DateTime.now().difference(cachedAt) > _cacheValidity) {
+          _logger.info(
+            'Subscription cache expired',
+            category: LogCategory.service,
+            tag: 'SubscriptionService',
+          );
+          return null; // Cache expired
+        }
+      }
+
+      final tier = SubscriptionTierExtension.fromString(tierStr);
+      final expirationDate = expirationStr != null ? DateTime.tryParse(expirationStr) : null;
+
+      // Validate expiration - if subscription expired, return free tier
+      if (tier != SubscriptionTier.free && expirationDate != null) {
+        if (expirationDate.isBefore(DateTime.now())) {
+          _logger.info(
+            'Cached subscription expired, returning free tier',
+            category: LogCategory.service,
+            tag: 'SubscriptionService',
+            metadata: {'expiredAt': expirationStr},
+          );
+          return SubscriptionState.free(); // Subscription expired
+        }
+      }
+
+      // At this point, if tier is paid, expiration has already been validated above
+      final isActive = tier != SubscriptionTier.free &&
+          (expirationDate == null || expirationDate.isAfter(DateTime.now()));
+
+      return SubscriptionState(
+        tier: tier,
+        isActive: isActive,
+        expirationDate: expirationDate,
+        isLoading: false,
+      );
+    } catch (e) {
+      _logger.warning(
+        'Failed to load cached subscription state: $e',
+        category: LogCategory.service,
+        tag: 'SubscriptionService',
+      );
+      return null;
+    }
+  }
+
+  /// Fallback to Supabase subscription_status when RevenueCat fails
+  Future<SubscriptionState?> _loadFromSupabaseFallback() async {
+    try {
+      final supabase = SupabaseConfig.client;
+      final userId = supabase.auth.currentUser?.id;
+      if (userId == null) return null;
+
+      final response = await supabase
+          .from('users')
+          .select('subscription_status')
+          .eq('id', userId)
+          .single();
+
+      final status = response['subscription_status'] as String?;
+      if (status == 'premium' || status == 'max') {
+        _logger.info(
+          'Supabase fallback returned premium status',
+          category: LogCategory.service,
+          tag: 'SubscriptionService',
+          metadata: {'status': status},
+        );
+        return SubscriptionState(
+          tier: SubscriptionTier.max,
+          isActive: true,
+          isLoading: false,
+        );
+      }
+      return SubscriptionState.free();
+    } catch (e) {
+      _logger.warning(
+        'Supabase fallback failed: $e',
+        category: LogCategory.service,
+        tag: 'SubscriptionService',
+      );
+      return null;
+    }
+  }
+
+  /// Clear subscription cache (useful on logout)
+  Future<void> clearSubscriptionCache() async {
+    try {
+      final box = await Hive.openBox(_cacheBoxName);
+      await box.clear();
+      _logger.info(
+        'Subscription cache cleared',
+        category: LogCategory.service,
+        tag: 'SubscriptionService',
+      );
+    } catch (e) {
+      _logger.warning(
+        'Failed to clear subscription cache: $e',
+        category: LogCategory.service,
+        tag: 'SubscriptionService',
       );
     }
   }
@@ -491,9 +684,11 @@ class SubscriptionService {
     _currentState = state;
     _stateController.add(state);
 
-    // Sync to Supabase when tier changes (and not loading)
+    // When tier changes and not loading, sync and cache
     if (tierChanged && !state.isLoading) {
       _syncSubscriptionToSupabase(state);
+      // Cache subscription state locally for offline fallback
+      _cacheSubscriptionState(state);
     }
   }
 
