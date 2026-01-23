@@ -12,5 +12,10 @@
 	<array>
 		<string>Default</string>
 	</array>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:silni-app.com</string>
+		<string>applinks:www.silni-app.com</string>
+	</array>
 </dict>
 </plist>
