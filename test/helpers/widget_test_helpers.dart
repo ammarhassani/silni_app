@@ -5,22 +5,57 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:silni_app/core/router/app_routes.dart';
+import 'package:silni_app/core/theme/theme_provider.dart';
+import 'package:silni_app/core/theme/app_themes.dart';
+import 'package:silni_app/core/theme/dynamic_theme.dart';
 import 'package:silni_app/features/home/screens/home_screen.dart';
 import 'package:silni_app/features/relatives/screens/relatives_screen.dart';
 import 'package:silni_app/features/profile/screens/profile_screen.dart';
 
 // =====================================================
+// THEME PROVIDER OVERRIDES FOR TESTS
+// =====================================================
+
+/// Default theme overrides that mock all theme-related providers
+/// to avoid Supabase dependency in tests.
+///
+/// These overrides are automatically included in [createTestWidget]
+/// to ensure tests don't require Supabase initialization.
+List<Override> get defaultThemeOverrides => [
+  themeKeyProvider.overrideWithValue('default'),
+  themeColorsProvider.overrideWithValue(ThemeColors.defaultGreen),
+  themeProvider.overrideWithValue(AppThemeType.defaultGreen),
+  dynamicThemesProvider.overrideWithValue([
+    DynamicTheme.fromAppTheme(AppThemeType.defaultGreen),
+    DynamicTheme.fromAppTheme(AppThemeType.lavenderPurple),
+  ]),
+  currentDynamicThemeProvider.overrideWithValue(
+    DynamicTheme.fromAppTheme(AppThemeType.defaultGreen),
+  ),
+];
+
+// =====================================================
 // TEST WIDGET WRAPPER
 // =====================================================
 
-/// Creates a test widget wrapped with necessary providers
+/// Creates a test widget wrapped with necessary providers.
+///
+/// Automatically includes theme provider overrides to avoid Supabase dependency.
+/// Set [includeThemeOverrides] to false to disable this behavior.
 Widget createTestWidget({
   required Widget child,
   List<Override>? overrides,
   GoRouter? router,
   ThemeData? theme,
   Locale locale = const Locale('ar'),
+  bool includeThemeOverrides = true,
 }) {
+  // Combine default theme overrides with custom overrides
+  final allOverrides = <Override>[
+    if (includeThemeOverrides) ...defaultThemeOverrides,
+    ...?overrides,
+  ];
+
   final widget = MaterialApp(
     locale: locale,
     theme: theme ?? _createTestTheme(),
@@ -29,7 +64,7 @@ Widget createTestWidget({
 
   if (router != null) {
     return ProviderScope(
-      overrides: overrides ?? [],
+      overrides: allOverrides,
       child: MaterialApp.router(
         routerConfig: router,
         locale: locale,
@@ -39,7 +74,7 @@ Widget createTestWidget({
   }
 
   return ProviderScope(
-    overrides: overrides ?? [],
+    overrides: allOverrides,
     child: widget,
   );
 }

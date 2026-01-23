@@ -74,7 +74,8 @@ class FCMNotificationService {
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => SupabaseConfig.client;
   final AppLoggerService _logger = AppLoggerService();
 
   bool _isInitialized = false;

@@ -98,7 +98,8 @@ class AppRoutesConfigService {
   AppRoutesConfigService._();
   static final AppRoutesConfigService instance = AppRoutesConfigService._();
 
-  final _supabase = Supabase.instance.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => Supabase.instance.client;
 
   // Cached configs
   List<AppRouteConfig>? _routesCache;

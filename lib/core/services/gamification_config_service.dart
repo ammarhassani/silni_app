@@ -9,7 +9,8 @@ class GamificationConfigService {
   GamificationConfigService._();
   static final GamificationConfigService instance = GamificationConfigService._();
 
-  final _supabase = Supabase.instance.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => Supabase.instance.client;
 
   // Cached configs
   Map<String, PointsConfig>? _pointsConfigCache;

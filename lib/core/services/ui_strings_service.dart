@@ -43,7 +43,8 @@ class UIStringsService {
   UIStringsService._();
   static final UIStringsService instance = UIStringsService._();
 
-  final _supabase = Supabase.instance.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => Supabase.instance.client;
 
   // Cache
   Map<String, UIString>? _stringsCache;

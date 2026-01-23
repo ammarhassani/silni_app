@@ -12,7 +12,8 @@ final reminderSchedulesServiceProvider = Provider<ReminderSchedulesService>((
 });
 
 class ReminderSchedulesService {
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => SupabaseConfig.client;
   static const String _table = 'reminder_schedules';
 
   /// Create a new reminder schedule

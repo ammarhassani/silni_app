@@ -11,7 +11,8 @@ class ContentConfigService {
   ContentConfigService._();
   static final ContentConfigService instance = ContentConfigService._();
 
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => SupabaseConfig.client;
 
   // Cache variables
   List<AdminHadith>? _hadithCache;

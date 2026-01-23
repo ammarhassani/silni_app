@@ -22,7 +22,8 @@ class AIContextEngine {
   AIContextEngine._();
   static final AIContextEngine instance = AIContextEngine._();
 
-  final _supabase = Supabase.instance.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => Supabase.instance.client;
 
   // Cached data
   List<Relative>? _relativesCache;

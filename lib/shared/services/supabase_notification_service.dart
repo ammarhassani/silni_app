@@ -20,7 +20,8 @@ class SupabaseNotificationService {
 
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => SupabaseConfig.client;
 
   String? _deviceId;
   bool _isInitialized = false;

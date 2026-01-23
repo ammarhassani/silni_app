@@ -19,7 +19,8 @@ class FreezeUseResult {
 
 /// Service for managing streak freezes
 class StreakFreezeService {
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => SupabaseConfig.client;
   final GamificationEventsController? _eventsController;
 
   StreakFreezeService({

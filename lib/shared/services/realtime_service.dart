@@ -6,7 +6,8 @@ import '../../core/services/app_logger_service.dart';
 /// This service manages subscriptions to database tables and provides
 /// callbacks for when data changes occur
 class RealtimeService {
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => SupabaseConfig.client;
   final AppLoggerService _logger = AppLoggerService();
 
   /// Subscribe to relatives table changes for a specific user

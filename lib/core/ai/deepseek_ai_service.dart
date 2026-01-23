@@ -15,7 +15,8 @@ import 'ai_service.dart';
 class DeepSeekAIService implements AIService {
   static DeepSeekAIService? _instance;
   final AppLoggerService _logger = AppLoggerService();
-  final SupabaseClient _supabase = Supabase.instance.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => Supabase.instance.client;
 
   // Edge function endpoint (proxy to DeepSeek)
   static const String _edgeFunctionName = 'deepseek-proxy';

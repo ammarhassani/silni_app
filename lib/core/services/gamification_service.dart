@@ -10,7 +10,8 @@ import 'gamification_config_service.dart';
 /// Handles points, streaks, badges, and levels
 /// Uses dynamic configuration from admin panel via GamificationConfigService
 class GamificationService {
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => SupabaseConfig.client;
   final AnalyticsService? _analytics;
   final GamificationEventsController? _eventsController;
   final GamificationConfigService _config = GamificationConfigService.instance;

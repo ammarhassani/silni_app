@@ -217,7 +217,8 @@ class SettingsScreen extends ConsumerWidget {
 
   /// Build environment badge for admin user only
   Widget _buildAdminEnvBadge(WidgetRef ref, dynamic themeColors) {
-    final user = Supabase.instance.client.auth.currentUser;
+    // Use the provider instead of directly accessing Supabase
+    final user = ref.watch(currentUserProvider);
     final isAdmin = user?.email == _adminEmail;
 
     if (!isAdmin) return const SizedBox.shrink();

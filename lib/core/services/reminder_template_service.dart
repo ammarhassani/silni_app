@@ -122,7 +122,8 @@ class ReminderTemplateService {
   ReminderTemplateService._();
   static final ReminderTemplateService instance = ReminderTemplateService._();
 
-  final _supabase = Supabase.instance.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => Supabase.instance.client;
   final CacheConfigService _cacheConfig = CacheConfigService();
   static const String _serviceKey = 'reminder_templates';
 

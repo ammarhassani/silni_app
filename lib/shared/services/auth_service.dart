@@ -14,7 +14,8 @@ import 'session_persistence_service.dart';
 import 'unified_notification_service.dart';
 
 class AuthService {
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => SupabaseConfig.client;
   final SessionPersistenceService _sessionPersistence =
       SessionPersistenceService();
 

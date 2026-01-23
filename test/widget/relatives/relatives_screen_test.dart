@@ -10,6 +10,7 @@ import 'package:silni_app/core/router/app_routes.dart';
 import 'package:silni_app/core/providers/realtime_provider.dart';
 
 import '../../helpers/test_helpers.dart';
+import '../../helpers/widget_test_helpers.dart';
 
 void main() {
   group('RelativesScreen Widget Tests', () {
@@ -101,6 +102,8 @@ void main() {
 
       return ProviderScope(
         overrides: [
+          // Include theme overrides to avoid Supabase dependency
+          ...defaultThemeOverrides,
           // Override currentUserProvider
           currentUserProvider.overrideWithValue(mockUser),
           // Override relativesStreamProvider

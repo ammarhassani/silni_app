@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:silni_app/features/auth/screens/signup_screen.dart';
 import 'package:silni_app/core/router/app_routes.dart';
 
+import '../../helpers/widget_test_helpers.dart';
+
 void main() {
   group('SignUpScreen Widget Tests', () {
     late GoRouter router;
@@ -40,6 +42,10 @@ void main() {
 
     Widget createTestWidget() {
       return ProviderScope(
+        overrides: [
+          // Include theme overrides to avoid Supabase dependency
+          ...defaultThemeOverrides,
+        ],
         child: MaterialApp.router(
           routerConfig: router,
         ),

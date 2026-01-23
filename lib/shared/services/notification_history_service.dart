@@ -25,7 +25,8 @@ final unreadNotificationCountProvider =
 });
 
 class NotificationHistoryService {
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => SupabaseConfig.client;
   static const String _table = 'notification_history';
 
   /// Get all notifications for a user as a stream

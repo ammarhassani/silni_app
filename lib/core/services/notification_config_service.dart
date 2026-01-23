@@ -9,7 +9,8 @@ class NotificationConfigService {
   NotificationConfigService._();
   static final NotificationConfigService instance = NotificationConfigService._();
 
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => SupabaseConfig.client;
 
   // Cache variables
   Map<String, NotificationTemplate>? _templatesCache;

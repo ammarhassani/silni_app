@@ -12,7 +12,8 @@ class DesignConfigService {
   DesignConfigService._();
   static final DesignConfigService instance = DesignConfigService._();
 
-  final _supabase = Supabase.instance.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => Supabase.instance.client;
 
   // Cache variables
   Map<String, AdminColor>? _colorsCache;

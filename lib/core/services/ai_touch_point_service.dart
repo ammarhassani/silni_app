@@ -16,7 +16,8 @@ class AITouchPointService {
   AITouchPointService._();
   static final AITouchPointService instance = AITouchPointService._();
 
-  final _supabase = Supabase.instance.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => Supabase.instance.client;
   final _contextEngine = AIContextEngine.instance;
   final _cacheConfig = CacheConfigService();
 
