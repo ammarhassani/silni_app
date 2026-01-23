@@ -1,0 +1,8 @@
+/* Arabic localization for iOS permission descriptions */
+
+"NSCameraUsageDescription" = "صِلني يستخدم الكاميرا لالتقاط صور أقاربك لإضافتها إلى ملفاتهم الشخصية";
+"NSContactsUsageDescription" = "صِلني يستخدم جهات الاتصال لمساعدتك في إضافة أقاربك بسهولة من قائمة جهات الاتصال الخاصة بك";
+"NSFaceIDUsageDescription" = "يستخدم التطبيق Face ID لتسجيل الدخول بشكل آمن وسريع";
+"NSMicrophoneUsageDescription" = "صِلني يستخدم الميكروفون لتسجيل الرسائل الصوتية لأقاربك";
+"NSPhotoLibraryUsageDescription" = "صِلني يستخدم مكتبة الصور لاختيار صور أقاربك لإضافتها إلى ملفاتهم الشخصية";
+"NSPhotoLibraryAddUsageDescription" = "صِلني يحتاج إذنك لحفظ الصور إلى مكتبة الصور الخاصة بك";

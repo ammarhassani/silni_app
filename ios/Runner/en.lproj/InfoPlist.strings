@@ -1,0 +1,8 @@
+/* English localization for iOS permission descriptions */
+
+"NSCameraUsageDescription" = "Silni uses the camera to capture photos of your relatives for their profiles";
+"NSContactsUsageDescription" = "Silni uses your contacts to help you easily add relatives from your contact list";
+"NSFaceIDUsageDescription" = "Silni uses Face ID for secure and quick login";
+"NSMicrophoneUsageDescription" = "Silni uses the microphone to record voice messages for your relatives";
+"NSPhotoLibraryUsageDescription" = "Silni uses the photo library to select photos for your relatives' profiles";
+"NSPhotoLibraryAddUsageDescription" = "Silni needs permission to save photos to your photo library";
