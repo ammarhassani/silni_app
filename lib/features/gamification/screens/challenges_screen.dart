@@ -54,8 +54,8 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
           _isLoading = false;
         });
       }
-    } catch (e) {
-      debugPrint('[ChallengesScreen] Error loading challenges: $e');
+    } catch (_) {
+      // Error loading challenges silently
       if (mounted) {
         setState(() {
           _isLoading = false;

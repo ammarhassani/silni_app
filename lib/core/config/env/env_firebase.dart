@@ -2,17 +2,49 @@ import 'package:envied/envied.dart';
 
 part 'env_firebase.g.dart';
 
-/// Firebase Web configuration (legacy - for potential future web support)
-/// These are public API keys - not obfuscated as they're designed to be public
-@Envied(path: '.env')
+/// Firebase configuration with obfuscation for security
+/// Keys are XOR-encoded to prevent easy extraction from compiled binary
+@Envied(path: '.env', obfuscate: true)
 abstract class EnvFirebase {
-  /// Firebase Web API key
-  @EnviedField(varName: 'FIREBASE_API_KEY', defaultValue: '')
-  static String apiKey = _EnvFirebase.apiKey;
+  // ============ iOS Configuration ============
 
-  /// Firebase Auth domain
+  /// Firebase iOS API key
+  @EnviedField(varName: 'FIREBASE_IOS_API_KEY', defaultValue: '')
+  static String iosApiKey = _EnvFirebase.iosApiKey;
+
+  /// Firebase iOS App ID
+  @EnviedField(varName: 'FIREBASE_IOS_APP_ID', defaultValue: '')
+  static String iosAppId = _EnvFirebase.iosAppId;
+
+  // ============ Android Configuration ============
+
+  /// Firebase Android API key
+  @EnviedField(varName: 'FIREBASE_ANDROID_API_KEY', defaultValue: '')
+  static String androidApiKey = _EnvFirebase.androidApiKey;
+
+  /// Firebase Android App ID
+  @EnviedField(varName: 'FIREBASE_ANDROID_APP_ID', defaultValue: '')
+  static String androidAppId = _EnvFirebase.androidAppId;
+
+  // ============ Web Configuration ============
+
+  /// Firebase Web API key
+  @EnviedField(varName: 'FIREBASE_WEB_API_KEY', defaultValue: '')
+  static String webApiKey = _EnvFirebase.webApiKey;
+
+  /// Firebase Web App ID
+  @EnviedField(varName: 'FIREBASE_WEB_APP_ID', defaultValue: '')
+  static String webAppId = _EnvFirebase.webAppId;
+
+  /// Firebase Auth domain (web only)
   @EnviedField(varName: 'FIREBASE_AUTH_DOMAIN', defaultValue: '')
   static String authDomain = _EnvFirebase.authDomain;
+
+  /// Firebase measurement ID (for analytics, web only)
+  @EnviedField(varName: 'FIREBASE_MEASUREMENT_ID', defaultValue: '')
+  static String measurementId = _EnvFirebase.measurementId;
+
+  // ============ Common Configuration ============
 
   /// Firebase project ID
   @EnviedField(varName: 'FIREBASE_PROJECT_ID', defaultValue: '')
@@ -25,12 +57,4 @@ abstract class EnvFirebase {
   /// Firebase messaging sender ID
   @EnviedField(varName: 'FIREBASE_MESSAGING_SENDER_ID', defaultValue: '')
   static String messagingSenderId = _EnvFirebase.messagingSenderId;
-
-  /// Firebase app ID
-  @EnviedField(varName: 'FIREBASE_APP_ID', defaultValue: '')
-  static String appId = _EnvFirebase.appId;
-
-  /// Firebase measurement ID (for analytics)
-  @EnviedField(varName: 'FIREBASE_MEASUREMENT_ID', defaultValue: '')
-  static String measurementId = _EnvFirebase.measurementId;
 }

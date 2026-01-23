@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart' as rc;
 
@@ -20,22 +19,17 @@ final subscriptionStateProvider = StreamProvider<SubscriptionState>((ref) {
   // This avoids the race condition in the previous asyncExpand implementation
   return Stream<SubscriptionState>.multi((controller) {
     // Emit current state immediately
-    debugPrint('[SubscriptionProvider] Emitting initial state: ${service.currentState.tier.id}');
     controller.add(service.currentState);
 
     // Listen to future updates
     final subscription = service.stateStream.listen(
-      (state) {
-        debugPrint('[SubscriptionProvider] Received stream update: ${state.tier.id}');
-        controller.add(state);
-      },
+      controller.add,
       onError: controller.addError,
       onDone: controller.close,
     );
 
     // Cleanup when provider is disposed
     controller.onCancel = () {
-      debugPrint('[SubscriptionProvider] Stream cancelled');
       subscription.cancel();
     };
   });

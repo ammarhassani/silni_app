@@ -33,7 +33,8 @@ class PaginatedRelativesResult {
 }
 
 class RelativesService {
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => SupabaseConfig.client;
   final AppLoggerService _logger = AppLoggerService();
   final PerformanceMonitoringService _perfService = PerformanceMonitoringService();
   static const String _table = 'relatives';

@@ -22,7 +22,8 @@ class RelativeStreakResult {
 
 /// Service for managing per-relative streaks
 class RelativeStreakService {
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => SupabaseConfig.client;
   final GamificationEventsController? _eventsController;
 
   RelativeStreakService({

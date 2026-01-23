@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'cache_config_service.dart';
 
@@ -44,7 +43,8 @@ class UIStringsService {
   UIStringsService._();
   static final UIStringsService instance = UIStringsService._();
 
-  final _supabase = Supabase.instance.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => Supabase.instance.client;
 
   // Cache
   Map<String, UIString>? _stringsCache;
@@ -130,10 +130,7 @@ class UIStringsService {
 
       _stringsCache = {for (var s in strings) s.stringKey: s};
       _lastFetchTime = DateTime.now();
-
-      debugPrint('[UIStringsService] Fetched ${strings.length} strings');
-    } catch (e) {
-      debugPrint('[UIStringsService] Error fetching strings: $e');
+    } catch (_) {
       // Keep existing cache if available
     }
   }
@@ -202,7 +199,6 @@ class UIStringsService {
   void clearCache() {
     _stringsCache = null;
     _lastFetchTime = null;
-    debugPrint('[UIStringsService] Cache cleared');
   }
 }
 

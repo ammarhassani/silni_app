@@ -98,9 +98,11 @@ class MessageIcons {
     'checkmark': 'assets/animations/messages/success_checkmark.json',
     'gift': 'assets/animations/messages/gift_unwrap.json',
     'gift_unwrap': 'assets/animations/messages/gift_unwrap.json',
-    'levelup': 'assets/animations/messages/level_up_burst.json',
-    'level_up': 'assets/animations/messages/level_up_burst.json',
-    'level_up_burst': 'assets/animations/messages/level_up_burst.json',
+    // Note: level_up_burst.json is 3.2MB due to embedded images
+    // Using celebration_confetti.json (44KB) as lightweight alternative
+    'levelup': 'assets/animations/messages/celebration_confetti.json',
+    'level_up': 'assets/animations/messages/celebration_confetti.json',
+    'level_up_burst': 'assets/animations/messages/celebration_confetti.json',
     'moon': 'assets/animations/messages/moon_glow.json',
     'moon_glow': 'assets/animations/messages/moon_glow.json',
     'ramadan': 'assets/animations/messages/moon_glow.json',

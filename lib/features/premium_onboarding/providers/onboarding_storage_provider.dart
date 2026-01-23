@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -76,8 +75,8 @@ class OnboardingStorageService {
       }
 
       return OnboardingState.fromJsonString(jsonString);
-    } catch (e) {
-      debugPrint('[OnboardingStorage] Failed to load from local: $e');
+    } catch (_) {
+      // Failed to load from local silently
       return null;
     }
   }
@@ -89,8 +88,8 @@ class OnboardingStorageService {
         OnboardingContent.localStorageKey,
         state.toJsonString(),
       );
-    } catch (e) {
-      debugPrint('[OnboardingStorage] Failed to save to local: $e');
+    } catch (_) {
+      // Failed to save to local silently
     }
   }
 
@@ -102,7 +101,6 @@ class OnboardingStorageService {
     try {
       final userId = SupabaseConfig.currentUserId;
       if (userId == null) {
-        debugPrint('[OnboardingStorage] No user ID for cloud fetch');
         return null;
       }
 
@@ -113,7 +111,6 @@ class OnboardingStorageService {
           .maybeSingle();
 
       if (response == null) {
-        debugPrint('[OnboardingStorage] No user record found');
         return null;
       }
 
@@ -127,8 +124,8 @@ class OnboardingStorageService {
       }
 
       return OnboardingState.fromJson(metadata);
-    } catch (e) {
-      debugPrint('[OnboardingStorage] Failed to fetch from Supabase: $e');
+    } catch (_) {
+      // Failed to fetch from Supabase silently
       return null;
     }
   }
@@ -137,18 +134,14 @@ class OnboardingStorageService {
     try {
       final userId = SupabaseConfig.currentUserId;
       if (userId == null) {
-        debugPrint('[OnboardingStorage] No user ID for cloud sync');
         return;
       }
 
       await SupabaseConfig.client.from('users').update({
         OnboardingContent.supabaseColumn: state.toJson(),
       }).eq('id', userId);
-
-      debugPrint('[OnboardingStorage] Synced to Supabase successfully');
-    } catch (e) {
-      debugPrint('[OnboardingStorage] Failed to sync to Supabase: $e');
-      // Don't throw - cloud sync is best effort
+    } catch (_) {
+      // Cloud sync is best effort - fail silently
     }
   }
 
@@ -170,8 +163,8 @@ class OnboardingStorageService {
 
       final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
       return decoded.map((k, v) => MapEntry(k, v as bool));
-    } catch (e) {
-      debugPrint('[OnboardingStorage] Failed to load dismissed tips: $e');
+    } catch (_) {
+      // Failed to load dismissed tips silently
       return {};
     }
   }
@@ -181,8 +174,8 @@ class OnboardingStorageService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_dismissedTipsKey, jsonEncode(dismissedTips));
-    } catch (e) {
-      debugPrint('[OnboardingStorage] Failed to save dismissed tips: $e');
+    } catch (_) {
+      // Failed to save dismissed tips silently
     }
   }
 }

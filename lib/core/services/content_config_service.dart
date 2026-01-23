@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import 'cache_config_service.dart';
@@ -12,7 +11,8 @@ class ContentConfigService {
   ContentConfigService._();
   static final ContentConfigService instance = ContentConfigService._();
 
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => SupabaseConfig.client;
 
   // Cache variables
   List<AdminHadith>? _hadithCache;
@@ -37,9 +37,8 @@ class ContentConfigService {
         _fetchQuotes(),
       ]);
       _lastRefresh = DateTime.now();
-      debugPrint('[ContentConfigService] Refreshed all content');
-    } catch (e) {
-      debugPrint('[ContentConfigService] Error refreshing: $e');
+    } catch (_) {
+      // Content refresh failed silently
     } finally {
       _isLoading = false;
     }
@@ -71,9 +70,8 @@ class ContentConfigService {
       _hadithCache = (response as List)
           .map((json) => AdminHadith.fromJson(json))
           .toList();
-      debugPrint('[ContentConfigService] Loaded ${_hadithCache?.length} hadith');
-    } catch (e) {
-      debugPrint('[ContentConfigService] Error fetching hadith: $e');
+    } catch (_) {
+      // Hadith fetch failed silently
     }
   }
 
@@ -141,9 +139,8 @@ class ContentConfigService {
       _quotesCache = (response as List)
           .map((json) => AdminQuote.fromJson(json))
           .toList();
-      debugPrint('[ContentConfigService] Loaded ${_quotesCache?.length} quotes');
-    } catch (e) {
-      debugPrint('[ContentConfigService] Error fetching quotes: $e');
+    } catch (_) {
+      // Quotes fetch failed silently
     }
   }
 

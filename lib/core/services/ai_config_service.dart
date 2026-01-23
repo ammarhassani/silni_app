@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'cache_config_service.dart';
@@ -9,7 +8,8 @@ class AIConfigService {
   AIConfigService._();
   static final AIConfigService instance = AIConfigService._();
 
-  final _supabase = Supabase.instance.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => Supabase.instance.client;
 
   // Cached configs
   AIIdentityConfig? _identityCache;
@@ -47,7 +47,6 @@ class AIConfigService {
 
   /// Refresh all configs from server
   Future<void> refresh() async {
-    debugPrint('[AIConfigService] Refreshing all AI configs...');
     try {
       await Future.wait([
         _fetchIdentity(),
@@ -64,9 +63,8 @@ class AIConfigService {
         _fetchCommunicationScenarios(),
       ]);
       _lastFetchTime = DateTime.now();
-      debugPrint('[AIConfigService] All configs refreshed successfully');
-    } catch (e) {
-      debugPrint('[AIConfigService] Error refreshing configs: $e');
+    } catch (_) {
+      // Config refresh failed silently
     }
   }
 
@@ -97,9 +95,8 @@ class AIConfigService {
           .eq('is_active', true)
           .single();
       _identityCache = AIIdentityConfig.fromJson(response);
-      debugPrint('[AIConfigService] Loaded identity: ${_identityCache?.aiName}');
-    } catch (e) {
-      debugPrint('[AIConfigService] Error fetching identity: $e');
+    } catch (_) {
+      // Identity fetch failed silently
     }
   }
 
@@ -117,9 +114,8 @@ class AIConfigService {
       _personalityCache = (response as List)
           .map((json) => AIPersonalitySection.fromJson(json))
           .toList();
-      debugPrint('[AIConfigService] Loaded ${_personalityCache?.length} personality sections');
-    } catch (e) {
-      debugPrint('[AIConfigService] Error fetching personality: $e');
+    } catch (_) {
+      // Personality fetch failed silently
     }
   }
 
@@ -156,9 +152,8 @@ class AIConfigService {
       _modesCache = (response as List)
           .map((json) => AICounselingModeConfig.fromJson(json))
           .toList();
-      debugPrint('[AIConfigService] Loaded ${_modesCache?.length} counseling modes');
-    } catch (e) {
-      debugPrint('[AIConfigService] Error fetching modes: $e');
+    } catch (_) {
+      // Modes fetch failed silently
     }
   }
 
@@ -191,9 +186,8 @@ class AIConfigService {
       _occasionsCache = (response as List)
           .map((json) => AIMessageOccasion.fromJson(json))
           .toList();
-      debugPrint('[AIConfigService] Loaded ${_occasionsCache?.length} occasions');
-    } catch (e) {
-      debugPrint('[AIConfigService] Error fetching occasions: $e');
+    } catch (_) {
+      // Occasions fetch failed silently
     }
   }
 
@@ -212,9 +206,8 @@ class AIConfigService {
       _tonesCache = (response as List)
           .map((json) => AIMessageTone.fromJson(json))
           .toList();
-      debugPrint('[AIConfigService] Loaded ${_tonesCache?.length} tones');
-    } catch (e) {
-      debugPrint('[AIConfigService] Error fetching tones: $e');
+    } catch (_) {
+      // Tones fetch failed silently
     }
   }
 
@@ -242,9 +235,8 @@ class AIConfigService {
           .map((json) => AIParameterConfig.fromJson(json))
           .toList();
       _parametersCache = {for (var p in params) p.featureKey: p};
-      debugPrint('[AIConfigService] Loaded ${_parametersCache?.length} parameter configs');
-    } catch (e) {
-      debugPrint('[AIConfigService] Error fetching parameters: $e');
+    } catch (_) {
+      // Parameters fetch failed silently
     }
   }
 
@@ -264,9 +256,8 @@ class AIConfigService {
       _suggestedPromptsCache = (response as List)
           .map((json) => AISuggestedPrompt.fromJson(json))
           .toList();
-      debugPrint('[AIConfigService] Loaded ${_suggestedPromptsCache?.length} suggested prompts');
-    } catch (e) {
-      debugPrint('[AIConfigService] Error fetching suggested prompts: $e');
+    } catch (_) {
+      // Suggested prompts fetch failed silently
     }
   }
 
@@ -285,9 +276,8 @@ class AIConfigService {
           .eq('is_active', true)
           .single();
       _memoryConfigCache = AIMemorySystemConfig.fromJson(response);
-      debugPrint('[AIConfigService] Loaded memory config');
-    } catch (e) {
-      debugPrint('[AIConfigService] Error fetching memory config: $e');
+    } catch (_) {
+      // Memory config fetch failed silently
     }
   }
 
@@ -306,9 +296,8 @@ class AIConfigService {
       _memoryCategoriesCache = (response as List)
           .map((json) => AIMemoryCategoryConfig.fromJson(json))
           .toList();
-      debugPrint('[AIConfigService] Loaded ${_memoryCategoriesCache?.length} memory categories');
-    } catch (e) {
-      debugPrint('[AIConfigService] Error fetching memory categories: $e');
+    } catch (_) {
+      // Memory categories fetch failed silently
     }
   }
 
@@ -326,9 +315,8 @@ class AIConfigService {
           .map((json) => AIErrorMessageConfig.fromJson(json))
           .toList();
       _errorMessagesCache = {for (var m in messages) m.errorCode: m};
-      debugPrint('[AIConfigService] Loaded ${_errorMessagesCache?.length} error messages');
-    } catch (e) {
-      debugPrint('[AIConfigService] Error fetching error messages: $e');
+    } catch (_) {
+      // Error messages fetch failed silently
     }
   }
 
@@ -360,9 +348,8 @@ class AIConfigService {
           .select()
           .single();
       _streamingConfigCache = AIStreamingConfig.fromJson(response);
-      debugPrint('[AIConfigService] Loaded streaming config');
-    } catch (e) {
-      debugPrint('[AIConfigService] Error fetching streaming config: $e');
+    } catch (_) {
+      // Streaming config fetch failed silently
     }
   }
 
@@ -381,9 +368,8 @@ class AIConfigService {
       _scenariosCache = (response as List)
           .map((json) => AICommunicationScenario.fromJson(json))
           .toList();
-      debugPrint('[AIConfigService] Loaded ${_scenariosCache?.length} communication scenarios');
-    } catch (e) {
-      debugPrint('[AIConfigService] Error fetching communication scenarios: $e');
+    } catch (_) {
+      // Communication scenarios fetch failed silently
     }
   }
 

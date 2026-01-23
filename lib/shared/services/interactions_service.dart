@@ -6,7 +6,8 @@ import '../../core/services/app_logger_service.dart';
 import '../models/interaction_model.dart';
 
 class InteractionsService {
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => SupabaseConfig.client;
   final GamificationService? _gamificationService;
   final RelativeStreakService? _relativeStreakService;
   final AppLoggerService _logger = AppLoggerService();

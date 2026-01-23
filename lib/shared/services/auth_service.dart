@@ -14,7 +14,8 @@ import 'session_persistence_service.dart';
 import 'unified_notification_service.dart';
 
 class AuthService {
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => SupabaseConfig.client;
   final SessionPersistenceService _sessionPersistence =
       SessionPersistenceService();
 
@@ -570,8 +571,25 @@ class AuthService {
       // Mark user as explicitly logged out
       await _sessionPersistence.markUserLoggedOut();
 
+      // Clear biometric data on logout for security (stolen phone protection)
+      try {
+        await _sessionPersistence.clearAllBiometricData();
+        logger.debug(
+          'Biometric data cleared',
+          category: LogCategory.auth,
+          tag: 'signOut',
+        );
+      } catch (e) {
+        logger.warning(
+          'Failed to clear biometric data (non-critical)',
+          category: LogCategory.auth,
+          tag: 'signOut',
+          metadata: {'error': e.toString()},
+        );
+      }
+
       logger.info(
-        'Sign out successful (biometric re-login still available)',
+        'Sign out successful',
         category: LogCategory.auth,
         tag: 'signOut',
       );

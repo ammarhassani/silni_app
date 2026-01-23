@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../../shared/models/interaction_model.dart';
@@ -11,7 +10,8 @@ import 'gamification_config_service.dart';
 /// Handles points, streaks, badges, and levels
 /// Uses dynamic configuration from admin panel via GamificationConfigService
 class GamificationService {
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => SupabaseConfig.client;
   final AnalyticsService? _analytics;
   final GamificationEventsController? _eventsController;
   final GamificationConfigService _config = GamificationConfigService.instance;
@@ -33,8 +33,6 @@ class GamificationService {
     final pointsConfig = _config.getPointsConfig(interaction.type);
     int points = pointsConfig.basePoints;
 
-    debugPrint('[GamificationService] calculateInteractionPoints: type=${interaction.type.name}, basePoints=$points');
-
     // Bonus for adding details (from admin config)
     if (interaction.notes != null && interaction.notes!.isNotEmpty) {
       points += _config.notesBonus;
@@ -46,7 +44,6 @@ class GamificationService {
       points += _config.ratingBonus;
     }
 
-    debugPrint('[GamificationService] calculateInteractionPoints: total=$points');
     return points;
   }
 
@@ -56,9 +53,6 @@ class GamificationService {
     required int points,
   }) async {
     try {
-      debugPrint('[GamificationService] awardPoints called: userId=$userId, points=$points');
-      debugPrint('[GamificationService] Config loaded: ${_config.isLoaded}');
-
       // Get today's points to check against daily cap
       final today = DateTime.now();
       final startOfDay = DateTime(today.year, today.month, today.day);
@@ -70,8 +64,6 @@ class GamificationService {
           .gte('date', startOfDay.toIso8601String())
           .lt('date', startOfDay.add(const Duration(days: 1)).toIso8601String());
 
-      debugPrint('[GamificationService] Today interactions count: ${todayInteractions.length}');
-
       // Calculate points earned today
       int pointsEarnedToday = 0;
       for (final interactionData in todayInteractions) {
@@ -81,10 +73,8 @@ class GamificationService {
 
       // Apply daily cap (from admin config)
       final dailyPointCap = _config.dailyPointCap;
-      debugPrint('[GamificationService] Points earned today: $pointsEarnedToday, daily cap: $dailyPointCap');
 
       if (pointsEarnedToday >= dailyPointCap) {
-        debugPrint('[GamificationService] Daily cap reached, skipping points award');
         return;
       }
 
@@ -92,10 +82,7 @@ class GamificationService {
           ? dailyPointCap - pointsEarnedToday
           : points;
 
-      debugPrint('[GamificationService] Points to award after cap: $pointsToAward');
-
       if (pointsToAward <= 0) {
-        debugPrint('[GamificationService] No points to award (<=0), returning');
         return;
       }
 
@@ -211,7 +198,6 @@ class GamificationService {
             streak: newStreak,
           ));
           _analytics?.logStreakMilestone(newStreak);
-          debugPrint('[GamificationService] Streak milestone reached: $newStreak');
 
           // Award freeze at freeze milestones (from admin config: default 7, 30, 100 days)
           if (_config.streakConfig.isFreezeAwardMilestone(newStreak)) {
@@ -333,8 +319,6 @@ class GamificationService {
         visitCount: visitCount,
       );
 
-      debugPrint('[GamificationService] Badge check: currentBadges=${currentBadges.length}, eligible=${newBadges.length}');
-
       // Award new badges
       if (newBadges.isNotEmpty) {
         final updatedBadges = [...currentBadges, ...newBadges];
@@ -351,7 +335,6 @@ class GamificationService {
             badgeDescription: _getBadgeDescription(badge),
           ));
           _analytics?.logBadgeUnlocked(badge);
-          debugPrint('[GamificationService] Badge awarded: $badge');
         }
       }
 
@@ -430,11 +413,7 @@ class GamificationService {
       final int currentLevel = userData['level'] ?? 1;
       final int points = userData['points'] ?? 0;
 
-      debugPrint('[GamificationService] checkAndUpdateLevel: userId=$userId, currentLevel=$currentLevel, points=$points');
-
       final int newLevel = calculateLevel(points);
-
-      debugPrint('[GamificationService] checkAndUpdateLevel: calculatedLevel=$newLevel, shouldLevelUp=${newLevel > currentLevel}');
 
       if (newLevel > currentLevel) {
         // User leveled up!

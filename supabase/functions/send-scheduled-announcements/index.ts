@@ -1,10 +1,18 @@
 // @deno-types="npm:@types/node"
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 // Cron job: Send scheduled admin announcements
 // Schedule: every 15 minutes
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
   try {
     console.log("📢 Starting scheduled announcements check...");
 
@@ -39,7 +47,7 @@ serve(async (req) => {
       console.log("ℹ️ No pending announcements to send");
       return new Response(
         JSON.stringify({ message: "No pending announcements" }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -167,13 +175,13 @@ serve(async (req) => {
         announcementsSent,
         message: `Sent ${announcementsSent} announcement(s)`,
       }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("❌ Unexpected error:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

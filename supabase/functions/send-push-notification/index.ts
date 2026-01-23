@@ -1,6 +1,7 @@
 // @deno-types="npm:@types/node"
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 // Firebase Admin SDK for FCM
 const FIREBASE_SERVICE_ACCOUNT = Deno.env.get("FIREBASE_SERVICE_ACCOUNT");
@@ -52,16 +53,12 @@ interface FCMMessage {
  * }
  */
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   try {
     // CORS headers
     if (req.method === "OPTIONS") {
-      return new Response("ok", {
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST",
-          "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-        },
-      });
+      return new Response("ok", { headers: corsHeaders });
     }
 
     // Parse request
@@ -70,7 +67,7 @@ serve(async (req) => {
     if (!userId || !notificationType || !title || !body) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -93,7 +90,7 @@ serve(async (req) => {
       console.error("❌ Error fetching tokens:", tokensError);
       return new Response(
         JSON.stringify({ error: "Failed to fetch user tokens" }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -101,7 +98,7 @@ serve(async (req) => {
       console.log(`⚠️ No active FCM tokens found for user ${userId}`);
       return new Response(
         JSON.stringify({ message: "No active tokens found for user" }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -196,13 +193,13 @@ serve(async (req) => {
         message: `Notification sent to ${successCount} device(s)`,
         errors: errors.length > 0 ? errors : undefined,
       }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("❌ Unexpected error:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

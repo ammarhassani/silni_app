@@ -104,6 +104,8 @@ class SubscriptionProducts {
   // Product identifiers (must match App Store Connect / Google Play)
   static const String maxMonthly = 'silni_max_monthly';
   static const String maxAnnual = 'silni_max_annual';
+  static const String proMonthly = 'silni_pro_monthly';
+  static const String proAnnual = 'silni_pro_annual';
 
   // Entitlement identifiers (must match RevenueCat dashboard exactly)
   static const String entitlementMax = 'Silni MAX';
@@ -112,11 +114,17 @@ class SubscriptionProducts {
   static Set<String> get allProductIds => {
     maxMonthly,
     maxAnnual,
+    proMonthly,
+    proAnnual,
   };
 
   /// Get tier from product ID
+  ///
+  /// Maps both MAX and PRO products to MAX tier.
+  /// PRO is a lower-priced tier but since the app only has FREE and MAX tiers,
+  /// PRO subscribers get full MAX access (they paid for premium features).
   static SubscriptionTier tierFromProductId(String productId) {
-    if (productId.contains('max')) {
+    if (productId.contains('max') || productId.contains('pro')) {
       return SubscriptionTier.max;
     }
     return SubscriptionTier.free;

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/subscription_provider.dart';
@@ -42,7 +41,6 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
       }
       _isInitialized = true;
     } catch (e) {
-      debugPrint('[OnboardingProvider] Failed to load state: $e');
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),
@@ -73,7 +71,6 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
     );
 
     await _saveState();
-    debugPrint('[OnboardingProvider] Onboarding started');
   }
 
   /// View a specific step (updates progress)
@@ -93,8 +90,6 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
 
     _stepStartTime = DateTime.now();
     await _saveState();
-
-    debugPrint('[OnboardingProvider] Viewed step $index: ${step.id}');
   }
 
   /// Mark a step as completed (user tapped "Try Now")
@@ -111,7 +106,6 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
     );
 
     await _saveState();
-    debugPrint('[OnboardingProvider] Completed step $index: ${step.id}');
   }
 
   /// Skip a specific step
@@ -128,7 +122,6 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
     );
 
     await _saveState();
-    debugPrint('[OnboardingProvider] Skipped step $index: ${step.id}');
   }
 
   /// Skip the entire showcase
@@ -142,7 +135,6 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
     );
 
     await _saveState();
-    debugPrint('[OnboardingProvider] Showcase skipped');
   }
 
   /// Complete the entire onboarding
@@ -155,7 +147,6 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
     );
 
     await _saveState();
-    debugPrint('[OnboardingProvider] Onboarding completed');
   }
 
   /// Mark a screen as viewed (for contextual tips)
@@ -179,8 +170,6 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
       stepProgress: stepProgress,
       isLoading: false,
     );
-
-    debugPrint('[OnboardingProvider] Onboarding reset');
   }
 
   // =====================================================
@@ -231,8 +220,8 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
   Future<void> _saveState() async {
     try {
       await _storage.saveState(state);
-    } catch (e) {
-      debugPrint('[OnboardingProvider] Failed to save state: $e');
+    } catch (_) {
+      // Failed to save state silently
     }
   }
 }

@@ -56,7 +56,7 @@ lib/core/config/env/*.g.dart
 # Firebase configuration files (contains API keys)
 # google-services.json - REMOVED from gitignore (safe to commit)
 # GoogleService-Info.plist - REMOVED from gitignore (safe to commit)
-firebase_options.dart
+# firebase_options.dart - REMOVED from gitignore (now uses obfuscated EnvFirebase)
 *firebase-adminsdk*.json
 
 # Android signing keys (CRITICAL - contains release signing credentials!)

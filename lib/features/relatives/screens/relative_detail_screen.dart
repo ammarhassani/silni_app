@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -340,10 +339,8 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
           backgroundColor: themeColors.primary,
         );
       }
-    } catch (e) {
-      if (mounted && kDebugMode) {
-        debugPrint('Error logging interaction: $e');
-      }
+    } catch (_) {
+      // Interaction logging failed silently
     } finally {
       await Future.delayed(const Duration(seconds: 2));
       _isLoggingInteraction = false;

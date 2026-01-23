@@ -131,7 +131,7 @@ class AppEnvironment {
   // ===========================================
 
   /// Firebase Web API key
-  static String get firebaseApiKey => EnvFirebase.apiKey;
+  static String get firebaseApiKey => EnvFirebase.webApiKey;
 
   /// Firebase Auth domain
   static String get firebaseAuthDomain => EnvFirebase.authDomain;
@@ -146,7 +146,7 @@ class AppEnvironment {
   static String get firebaseMessagingSenderId => EnvFirebase.messagingSenderId;
 
   /// Firebase app ID
-  static String get firebaseAppId => EnvFirebase.appId;
+  static String get firebaseAppId => EnvFirebase.webAppId;
 
   /// Firebase measurement ID
   static String get firebaseMeasurementId => EnvFirebase.measurementId;

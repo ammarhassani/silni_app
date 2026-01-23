@@ -7,6 +7,7 @@ import 'package:silni_app/features/auth/providers/auth_provider.dart';
 import 'package:silni_app/core/router/app_routes.dart';
 
 import '../../helpers/test_helpers.dart';
+import '../../helpers/widget_test_helpers.dart';
 
 void main() {
   group('SettingsScreen Widget Tests', () {
@@ -51,6 +52,8 @@ void main() {
 
       return ProviderScope(
         overrides: [
+          // Include theme overrides to avoid Supabase dependency
+          ...defaultThemeOverrides,
           currentUserProvider.overrideWithValue(mockUser),
         ],
         child: MaterialApp.router(

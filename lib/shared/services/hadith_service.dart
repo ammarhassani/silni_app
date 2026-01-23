@@ -7,7 +7,8 @@ import '../../core/services/content_config_service.dart';
 import '../models/hadith_model.dart';
 
 class HadithService {
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => SupabaseConfig.client;
   final AppLoggerService _logger = AppLoggerService();
   static const String _table = 'hadith';
   static const String _lastIndexKey = 'last_hadith_index';

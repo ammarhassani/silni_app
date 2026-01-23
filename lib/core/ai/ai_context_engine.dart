@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../shared/models/interaction_model.dart';
@@ -23,7 +22,8 @@ class AIContextEngine {
   AIContextEngine._();
   static final AIContextEngine instance = AIContextEngine._();
 
-  final _supabase = Supabase.instance.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => Supabase.instance.client;
 
   // Cached data
   List<Relative>? _relativesCache;
@@ -88,8 +88,6 @@ class AIContextEngine {
 
   /// Refresh all cached data from Supabase
   Future<void> _refreshCache(String userId) async {
-    debugPrint('[AIContextEngine] Refreshing cache for user: $userId');
-
     try {
       await Future.wait([
         _fetchRelatives(userId),
@@ -99,9 +97,8 @@ class AIContextEngine {
         _fetchGamification(userId),
       ]);
       _lastFetchTime = DateTime.now();
-      debugPrint('[AIContextEngine] Cache refreshed successfully');
-    } catch (e) {
-      debugPrint('[AIContextEngine] Error refreshing cache: $e');
+    } catch (_) {
+      // Cache refresh failed silently
     }
   }
 
@@ -116,8 +113,8 @@ class AIContextEngine {
       _relativesCache = (response as List)
           .map((json) => Relative.fromJson(json))
           .toList();
-    } catch (e) {
-      debugPrint('[AIContextEngine] Error fetching relatives: $e');
+    } catch (_) {
+      // Relatives fetch failed silently
     }
   }
 
@@ -135,8 +132,8 @@ class AIContextEngine {
       _interactionsCache = (response as List)
           .map((json) => Interaction.fromJson(json))
           .toList();
-    } catch (e) {
-      debugPrint('[AIContextEngine] Error fetching interactions: $e');
+    } catch (_) {
+      // Interactions fetch failed silently
     }
   }
 
@@ -150,8 +147,8 @@ class AIContextEngine {
           .map((json) => RelativeStreak.fromJson(json))
           .toList();
       _streaksCache = {for (var s in streaks) s.relativeId: s};
-    } catch (e) {
-      debugPrint('[AIContextEngine] Error fetching streaks: $e');
+    } catch (_) {
+      // Streaks fetch failed silently
     }
   }
 
@@ -167,8 +164,8 @@ class AIContextEngine {
       _memoriesCache = (response as List)
           .map((json) => AIMemory.fromJson(json))
           .toList();
-    } catch (e) {
-      debugPrint('[AIContextEngine] Error fetching memories: $e');
+    } catch (_) {
+      // Memories fetch failed silently
     }
   }
 
@@ -185,8 +182,7 @@ class AIContextEngine {
       } else {
         _gamificationCache = GamificationStats.empty();
       }
-    } catch (e) {
-      debugPrint('[AIContextEngine] Error fetching gamification: $e');
+    } catch (_) {
       _gamificationCache = GamificationStats.empty();
     }
   }

@@ -66,19 +66,10 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
       final points = response['points'] as int? ?? 0;
       final dbLevel = response['level'] as int? ?? 1;
 
-      debugPrint('[GamingCenterScreen] User points: $points, DB level: $dbLevel');
-      debugPrint('[GamingCenterScreen] Levels loaded: ${GamificationConfigService.instance.levels.length}');
-      // Show levels in ascending order for clarity
-      final levelsStr = GamificationConfigService.instance.levels
-          .map((l) => 'L${l.level}=${l.xpRequired}')
-          .join(', ');
-      debugPrint('[GamingCenterScreen] Level thresholds (ascending): $levelsStr');
-
       final calculatedLevel = GamificationConfigService.instance.calculateLevel(points);
 
       if (calculatedLevel != dbLevel) {
         // Level is out of sync - update the database
-        debugPrint('[GamingCenterScreen] Level out of sync: DB=$dbLevel, calculated=$calculatedLevel. Syncing...');
         await SupabaseConfig.client.from('users').update({
           'level': calculatedLevel,
         }).eq('id', user.id);
@@ -499,12 +490,12 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                     child: Stack(
                       children: [
                         // Content
-                        Padding(
-                          padding: const EdgeInsets.all(AppSpacing.md),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
+                        Positioned.fill(
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
                               Container(
                                 padding: const EdgeInsets.all(AppSpacing.xs),
                                 decoration: BoxDecoration(
@@ -536,6 +527,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                             ],
                           ),
                         ),
+                      ),
 
                         // Coming Soon Badge
                         if (comingSoon)

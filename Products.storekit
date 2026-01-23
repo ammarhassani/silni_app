@@ -1,11 +1,11 @@
 {
   "appPolicies" : {
-    "eula" : "",
+    "eula" : "https://ammarhassani.github.io/silni_app/terms.html",
     "policies" : [
       {
         "locale" : "en_US",
         "policyText" : "",
-        "policyURL" : ""
+        "policyURL" : "https://ammarhassani.github.io/silni_app/privacy-policy.html"
       }
     ]
   },

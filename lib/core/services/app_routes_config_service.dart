@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'cache_config_service.dart';
@@ -99,7 +98,8 @@ class AppRoutesConfigService {
   AppRoutesConfigService._();
   static final AppRoutesConfigService instance = AppRoutesConfigService._();
 
-  final _supabase = Supabase.instance.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => Supabase.instance.client;
 
   // Cached configs
   List<AppRouteConfig>? _routesCache;
@@ -117,9 +117,8 @@ class AppRoutesConfigService {
         getRoutes(forceRefresh: true),
         getCategories(forceRefresh: true),
       ]);
-      debugPrint('[AppRoutesConfigService] Initialized with ${_routesCache?.length ?? 0} routes, ${_categoriesCache?.length ?? 0} categories');
-    } catch (e) {
-      debugPrint('[AppRoutesConfigService] Error initializing: $e');
+    } catch (_) {
+      // Routes initialization failed silently
     }
   }
 
@@ -141,10 +140,8 @@ class AppRoutesConfigService {
           .toList();
       _lastFetchTime = DateTime.now();
 
-      debugPrint('[AppRoutesConfigService] Fetched ${_routesCache!.length} routes');
       return _routesCache!;
-    } catch (e) {
-      debugPrint('[AppRoutesConfigService] Error fetching routes: $e');
+    } catch (_) {
       if (_routesCache != null) return _routesCache!;
       return _fallbackRoutes;
     }
@@ -167,10 +164,8 @@ class AppRoutesConfigService {
           .map((json) => RouteCategory.fromJson(json))
           .toList();
 
-      debugPrint('[AppRoutesConfigService] Fetched ${_categoriesCache!.length} categories');
       return _categoriesCache!;
-    } catch (e) {
-      debugPrint('[AppRoutesConfigService] Error fetching categories: $e');
+    } catch (_) {
       if (_categoriesCache != null) return _categoriesCache!;
       return [];
     }
@@ -222,7 +217,6 @@ class AppRoutesConfigService {
     _routesCache = null;
     _categoriesCache = null;
     _lastFetchTime = null;
-    debugPrint('[AppRoutesConfigService] Cache cleared');
   }
 
   /// Refresh all configs

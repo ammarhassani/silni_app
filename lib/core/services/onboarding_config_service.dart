@@ -114,7 +114,8 @@ class OnboardingConfigService {
   OnboardingConfigService._();
   static final OnboardingConfigService instance = OnboardingConfigService._();
 
-  final _supabase = Supabase.instance.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => Supabase.instance.client;
 
   // Cache
   List<OnboardingScreenConfig>? _screensCache;
@@ -191,10 +192,7 @@ class OnboardingConfigService {
           .map((json) => OnboardingScreenConfig.fromJson(json))
           .toList();
       _lastFetchTime = DateTime.now();
-
-      debugPrint('[OnboardingConfigService] Fetched ${_screensCache!.length} screens');
-    } catch (e) {
-      debugPrint('[OnboardingConfigService] Error fetching screens: $e');
+    } catch (_) {
       // Keep existing cache if available
     }
   }
@@ -262,7 +260,6 @@ class OnboardingConfigService {
   void clearCache() {
     _screensCache = null;
     _lastFetchTime = null;
-    debugPrint('[OnboardingConfigService] Cache cleared');
   }
 
   /// Check if screens are loaded

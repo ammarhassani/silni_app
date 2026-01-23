@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/subscription_tier.dart';
@@ -57,7 +56,6 @@ class FeatureConfigState {
 
     // Check if feature is active
     if (!feature.isActive) {
-      debugPrint('[FeatureConfigState] Feature $featureId is disabled in admin');
       return false;
     }
 
@@ -121,10 +119,7 @@ class FeatureConfigNotifier extends StateNotifier<FeatureConfigState> {
         isLoading: false,
         lastFetchTime: DateTime.now(),
       );
-
-      debugPrint('[FeatureConfigNotifier] Loaded ${state.features.length} features, ${state.tiers.length} tiers');
     } catch (e) {
-      debugPrint('[FeatureConfigNotifier] Error loading configs: $e');
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),

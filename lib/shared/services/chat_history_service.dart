@@ -5,7 +5,8 @@ import '../../core/config/supabase_config.dart';
 
 /// Service for managing chat history persistence
 class ChatHistoryService {
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => SupabaseConfig.client;
 
   // Singleton
   static final ChatHistoryService _instance = ChatHistoryService._internal();

@@ -1,7 +1,9 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:uuid/uuid.dart';
 import '../../core/config/supabase_config.dart';
 import '../../core/errors/app_errors.dart';
 import '../../core/router/navigation_service.dart';
@@ -18,7 +20,8 @@ class SupabaseNotificationService {
 
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  // Use lazy initialization to avoid accessing Supabase before it's initialized
+  SupabaseClient get _supabase => SupabaseConfig.client;
 
   String? _deviceId;
   bool _isInitialized = false;
@@ -105,10 +108,29 @@ class SupabaseNotificationService {
   }
 
   /// Get or create a unique device ID
+  /// Uses secure storage to persist the device ID across app restarts
   Future<String> _getOrCreateDeviceId() async {
-    // For now, use a simple UUID. In a real app, you might want to
-    // use device-specific identifiers or store in secure storage
-    return 'device_${DateTime.now().millisecondsSinceEpoch}';
+    try {
+      const storage = FlutterSecureStorage();
+      const deviceIdKey = 'device_unique_id';
+
+      // Try to get existing device ID from secure storage
+      String? existingDeviceId = await storage.read(key: deviceIdKey);
+
+      if (existingDeviceId != null && existingDeviceId.isNotEmpty) {
+        return existingDeviceId;
+      }
+
+      // Generate a new UUID and store it
+      final newDeviceId = 'device_${const Uuid().v4()}';
+      await storage.write(key: deviceIdKey, value: newDeviceId);
+
+      return newDeviceId;
+    } catch (e) {
+      // Fallback to in-memory UUID if secure storage fails
+      // This allows notifications to still function even if storage access fails
+      return 'device_${const Uuid().v4()}';
+    }
   }
 
   /// Subscribe to Supabase realtime notifications
