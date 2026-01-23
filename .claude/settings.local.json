@@ -205,7 +205,8 @@
       "Bash(dart --version:*)",
       "Bash(git -C /Users/engammar/Apps/silni_app log -1 --oneline)",
       "Bash(plutil -lint:*)",
-      "Bash(du:*)"
+      "Bash(du:*)",
+      "Bash(svgo:*)"
     ],
     "deny": [],
     "ask": []

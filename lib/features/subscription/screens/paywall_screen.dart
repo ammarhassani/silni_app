@@ -632,9 +632,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       }
 
       // Fallback to default packages
-      if (package == null) {
-        package = _isAnnual ? offering.annual : offering.monthly;
-      }
+      package ??= _isAnnual ? offering.annual : offering.monthly;
 
       if (package != null) {
         final success = await SubscriptionService.instance.purchase(package);
