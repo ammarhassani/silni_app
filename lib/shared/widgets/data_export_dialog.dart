@@ -8,7 +8,6 @@ import '../../core/theme/theme_provider.dart';
 import '../providers/data_export_provider.dart';
 import '../services/data_export_service.dart';
 import '../../shared/utils/ui_helpers.dart';
-import '../../shared/widgets/theme_aware_dialog.dart';
 
 /// Dialog for data export progress and completion
 class DataExportDialog extends ConsumerStatefulWidget {
@@ -73,38 +72,44 @@ class _DataExportDialogState extends ConsumerState<DataExportDialog> {
     final exportState = ref.watch(dataExportNotifierProvider);
     final progress = exportState.progress;
 
+    final dialogWidth = MediaQuery.of(context).size.width - (AppSpacing.md * 2);
+
     return Dialog(
       backgroundColor: themeColors.background1.withValues(alpha: 0.95),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Title
-            Text(
-              'تصدير البيانات',
-              style: AppTypography.headlineSmall.copyWith(
-                color: Colors.white,
+      insetPadding: const EdgeInsets.all(AppSpacing.md),
+      child: SizedBox(
+        width: dialogWidth,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Title
+              Text(
+                'تصدير البيانات',
+                style: AppTypography.headlineSmall.copyWith(
+                  color: Colors.white,
+                ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.lg),
 
-            // Progress indicator or completion state
-            if (progress.status == ExportStatus.complete)
-              _buildCompletionContent(themeColors, exportState)
-            else if (progress.status == ExportStatus.error)
-              _buildErrorContent(themeColors, progress)
-            else
-              _buildProgressContent(themeColors, progress),
+              // Progress indicator or completion state
+              if (progress.status == ExportStatus.complete)
+                _buildCompletionContent(themeColors, exportState)
+              else if (progress.status == ExportStatus.error)
+                _buildErrorContent(themeColors, progress)
+              else
+                _buildProgressContent(themeColors, progress),
 
-            const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.lg),
 
-            // Actions
-            _buildActions(themeColors, progress, exportState),
-          ],
+              // Actions
+              _buildActions(themeColors, progress, exportState),
+            ],
+          ),
         ),
       ),
     );
@@ -259,8 +264,10 @@ class _DataExportDialogState extends ConsumerState<DataExportDialog> {
     ExportProgress progress,
     DataExportState state,
   ) {
+    // Complete with result - show close and share buttons
     if (progress.status == ExportStatus.complete && state.result != null) {
       return Row(
+        mainAxisSize: MainAxisSize.max,
         children: [
           Expanded(
             child: TextButton(
@@ -297,8 +304,28 @@ class _DataExportDialogState extends ConsumerState<DataExportDialog> {
       );
     }
 
+    // Complete without result - just show close button
+    if (progress.status == ExportStatus.complete) {
+      return ElevatedButton(
+        onPressed: () => Navigator.of(context).pop(),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: themeColors.primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.sm,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
+          ),
+        ),
+        child: const Text('إغلاق'),
+      );
+    }
+
     if (progress.status == ExportStatus.error) {
       return Row(
+        mainAxisSize: MainAxisSize.max,
         children: [
           Expanded(
             child: TextButton(
@@ -353,82 +380,119 @@ class _DataExportDialogState extends ConsumerState<DataExportDialog> {
 }
 
 /// Show the data export confirmation dialog
+/// Uses simple Dialog pattern (same as DataExportDialog) to avoid rendering issues
 Future<bool?> showDataExportConfirmationDialog(
   BuildContext context,
   ThemeColors themeColors,
 ) {
+  final dialogWidth = MediaQuery.of(context).size.width - (AppSpacing.md * 2);
+
   return showDialog<bool>(
     context: context,
-    builder: (context) => ThemeAwareAlertDialog(
-      title: 'تصدير بياناتي',
-      titleIcon: const Icon(Icons.download_rounded, color: Colors.white),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'هل تريد تصدير جميع بياناتك؟ سيتم إنشاء ملف يحتوي على:',
-            style: AppTypography.bodyMedium.copyWith(
-              color: Colors.white.withValues(alpha: 0.9),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _buildDataItem(Icons.person_outline, 'الملف الشخصي ونقاط اللعب'),
-          _buildDataItem(Icons.people_outline, 'قائمة الأقارب'),
-          _buildDataItem(Icons.history, 'سجل التفاعلات'),
-          _buildDataItem(Icons.notifications_outlined, 'جداول التذكير'),
-          _buildDataItem(Icons.mail_outline, 'سجل الإشعارات'),
-          const SizedBox(height: AppSpacing.md),
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            decoration: BoxDecoration(
-              color: themeColors.accent.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppSpacing.xs),
-              border: Border.all(
-                color: themeColors.accent.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.verified_outlined,
-                  size: 16,
-                  color: themeColors.accent,
+    builder: (context) => Dialog(
+      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+      ),
+      insetPadding: const EdgeInsets.all(AppSpacing.md),
+      child: SizedBox(
+        width: dialogWidth,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Title with icon
+              const Icon(Icons.download_rounded, color: Colors.white, size: 32),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'تصدير بياناتي',
+                style: AppTypography.titleLarge.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(width: AppSpacing.xs),
-                Expanded(
-                  child: Text(
-                    'متوافق مع GDPR و نظام حماية البيانات السعودي',
-                    style: AppTypography.labelSmall.copyWith(
-                      color: themeColors.accent,
-                    ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+
+              // Description
+              Text(
+                'هل تريد تصدير جميع بياناتك؟ سيتم إنشاء ملف يحتوي على:',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: Colors.white.withValues(alpha: 0.9),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.md),
+
+              // Data items
+              _buildDataItem(Icons.person_outline, 'الملف الشخصي ونقاط اللعب'),
+              _buildDataItem(Icons.people_outline, 'قائمة الأقارب'),
+              _buildDataItem(Icons.history, 'سجل التفاعلات'),
+              _buildDataItem(Icons.notifications_outlined, 'جداول التذكير'),
+              _buildDataItem(Icons.mail_outline, 'سجل الإشعارات'),
+              const SizedBox(height: AppSpacing.md),
+
+              // Compliance badge
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: themeColors.accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppSpacing.xs),
+                  border: Border.all(
+                    color: themeColors.accent.withValues(alpha: 0.3),
                   ),
                 ),
-              ],
-            ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.verified_outlined,
+                      size: 16,
+                      color: themeColors.accent,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Flexible(
+                      child: Text(
+                        'متوافق مع GDPR و نظام حماية البيانات السعودي',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: themeColors.accent,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+
+              // Actions
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: Text(
+                      'إلغاء',
+                      style: AppTypography.buttonMedium.copyWith(
+                        color: themeColors.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: themeColors.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.download, size: 18),
+                    label: const Text('تصدير'),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: Text(
-            'إلغاء',
-            style: AppTypography.buttonMedium.copyWith(
-              color: themeColors.primary,
-            ),
-          ),
-        ),
-        ElevatedButton.icon(
-          onPressed: () => Navigator.of(context).pop(true),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: themeColors.primary,
-            foregroundColor: Colors.white,
-          ),
-          icon: const Icon(Icons.download, size: 18),
-          label: const Text('تصدير'),
-        ),
-      ],
     ),
   );
 }
