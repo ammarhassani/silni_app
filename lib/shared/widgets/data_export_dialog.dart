@@ -380,119 +380,123 @@ class _DataExportDialogState extends ConsumerState<DataExportDialog> {
 }
 
 /// Show the data export confirmation dialog
-/// Uses simple Dialog pattern (same as DataExportDialog) to avoid rendering issues
+/// Uses AlertDialog which handles constraints internally to avoid infinite width issues
 Future<bool?> showDataExportConfirmationDialog(
   BuildContext context,
   ThemeColors themeColors,
 ) {
-  final dialogWidth = MediaQuery.of(context).size.width - (AppSpacing.md * 2);
-
   return showDialog<bool>(
     context: context,
-    builder: (context) => Dialog(
+    builder: (dialogContext) => AlertDialog(
       backgroundColor: themeColors.background1.withValues(alpha: 0.95),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
       ),
-      insetPadding: const EdgeInsets.all(AppSpacing.md),
-      child: SizedBox(
-        width: dialogWidth,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Title with icon
-              const Icon(Icons.download_rounded, color: Colors.white, size: 32),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'تصدير بياناتي',
-                style: AppTypography.titleLarge.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+      titlePadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      contentPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.download_rounded, color: Colors.white, size: 32),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'تصدير بياناتي',
+            style: AppTypography.titleLarge.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'هل تريد تصدير جميع بياناتك؟ سيتم إنشاء ملف يحتوي على:',
+              style: AppTypography.bodyMedium.copyWith(
+                color: Colors.white.withValues(alpha: 0.9),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _buildDataItem(Icons.person_outline, 'الملف الشخصي ونقاط اللعب'),
+            _buildDataItem(Icons.people_outline, 'قائمة الأقارب'),
+            _buildDataItem(Icons.history, 'سجل التفاعلات'),
+            _buildDataItem(Icons.notifications_outlined, 'جداول التذكير'),
+            _buildDataItem(Icons.mail_outline, 'سجل الإشعارات'),
+            const SizedBox(height: AppSpacing.md),
+            // Compliance badge
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: themeColors.accent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.xs),
+                border: Border.all(
+                  color: themeColors.accent.withValues(alpha: 0.3),
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
-
-              // Description
-              Text(
-                'هل تريد تصدير جميع بياناتك؟ سيتم إنشاء ملف يحتوي على:',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white.withValues(alpha: 0.9),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.md),
-
-              // Data items
-              _buildDataItem(Icons.person_outline, 'الملف الشخصي ونقاط اللعب'),
-              _buildDataItem(Icons.people_outline, 'قائمة الأقارب'),
-              _buildDataItem(Icons.history, 'سجل التفاعلات'),
-              _buildDataItem(Icons.notifications_outlined, 'جداول التذكير'),
-              _buildDataItem(Icons.mail_outline, 'سجل الإشعارات'),
-              const SizedBox(height: AppSpacing.md),
-
-              // Compliance badge
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: BoxDecoration(
-                  color: themeColors.accent.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppSpacing.xs),
-                  border: Border.all(
-                    color: themeColors.accent.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.verified_outlined,
-                      size: 16,
-                      color: themeColors.accent,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Flexible(
-                      child: Text(
-                        'متوافق مع GDPR و نظام حماية البيانات السعودي',
-                        style: AppTypography.labelSmall.copyWith(
-                          color: themeColors.accent,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-
-              // Actions
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
+                  Icon(
+                    Icons.verified_outlined,
+                    size: 16,
+                    color: themeColors.accent,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Flexible(
                     child: Text(
-                      'إلغاء',
-                      style: AppTypography.buttonMedium.copyWith(
-                        color: themeColors.primary,
+                      'متوافق مع GDPR و نظام حماية البيانات السعودي',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: themeColors.accent,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  ElevatedButton.icon(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: themeColors.primary,
-                      foregroundColor: Colors.white,
-                    ),
-                    icon: const Icon(Icons.download, size: 18),
-                    label: const Text('تصدير'),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: Text(
+            'إلغاء',
+            style: AppTypography.buttonMedium.copyWith(
+              color: themeColors.primary,
+            ),
+          ),
+        ),
+        ElevatedButton.icon(
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: themeColors.primary,
+            foregroundColor: Colors.white,
+          ),
+          icon: const Icon(Icons.download, size: 18),
+          label: const Text('تصدير'),
+        ),
+      ],
     ),
   );
 }
@@ -501,10 +505,11 @@ Widget _buildDataItem(IconData icon, String text) {
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
     child: Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 18, color: Colors.white.withValues(alpha: 0.7)),
         const SizedBox(width: AppSpacing.sm),
-        Expanded(
+        Flexible(
           child: Text(
             text,
             style: AppTypography.bodySmall.copyWith(
