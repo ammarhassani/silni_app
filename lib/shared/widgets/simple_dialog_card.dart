@@ -22,33 +22,46 @@ class SimpleDialogCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeColors = ref.watch(themeColorsProvider);
+    final radius = BorderRadius.circular(borderRadius);
 
-    return Container(
-      width: width,
-      padding: padding ?? const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(
-          color: themeColors.glassBorder,
-          width: 1.5,
-        ),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            themeColors.glassHighlight,
-            themeColors.glassBackground,
+    // Use Material for proper rendering in Dialog context
+    // Material handles clip/paint ordering correctly
+    return Material(
+      type: MaterialType.transparency,
+      child: Container(
+        width: width,
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          boxShadow: [
+            BoxShadow(
+              color: UIHelpers.withOpacity(themeColors.primaryDark, 0.15),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
           ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: UIHelpers.withOpacity(themeColors.primaryDark, 0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+        child: ClipRRect(
+          borderRadius: radius,
+          child: Container(
+            padding: padding ?? const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: themeColors.glassBorder,
+                width: 1.5,
+              ),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  themeColors.glassHighlight,
+                  themeColors.glassBackground,
+                ],
+              ),
+            ),
+            child: child,
           ),
-        ],
+        ),
       ),
-      child: child,
     );
   }
 }
