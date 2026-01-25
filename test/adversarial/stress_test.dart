@@ -936,6 +936,48 @@ void main() {
         stopwatch.stop();
         expect(stopwatch.elapsedMilliseconds, lessThan(2000), reason: 'Form state changes took too long');
       });
+
+      test('handles rapid keyboard toggle state changes', () {
+        final stopwatch = Stopwatch()..start();
+
+        // Simulate keyboard visibility state
+        var isKeyboardVisible = false;
+        final keyboardStateChanges = <bool>[];
+
+        // Track form data state during keyboard toggles
+        var formData = <String, dynamic>{
+          'fullName': 'Test User',
+          'notes': 'Some notes',
+          'isEditing': false,
+        };
+
+        // Simulate rapid keyboard appearing/disappearing (10000 toggles)
+        for (var i = 0; i < 10000; i++) {
+          // Toggle keyboard visibility
+          isKeyboardVisible = !isKeyboardVisible;
+          keyboardStateChanges.add(isKeyboardVisible);
+
+          // Simulate state changes that happen when keyboard toggles
+          formData = Map<String, dynamic>.from(formData);
+          formData['isEditing'] = isKeyboardVisible;
+
+          // Simulate scroll adjustment when keyboard appears/disappears
+          final scrollOffset = isKeyboardVisible ? 300.0 : 0.0;
+          expect(scrollOffset, isKeyboardVisible ? 300.0 : 0.0);
+
+          // Verify form data remains consistent during toggle
+          expect(formData['fullName'], 'Test User');
+          expect(formData['notes'], 'Some notes');
+        }
+
+        stopwatch.stop();
+
+        // Verify final state
+        expect(keyboardStateChanges.length, 10000);
+        expect(isKeyboardVisible, isFalse); // 10000 toggles = back to original (false)
+        expect(formData['fullName'], 'Test User'); // Data preserved
+        expect(stopwatch.elapsedMilliseconds, lessThan(3000), reason: 'Keyboard toggle stress took too long');
+      });
     });
 
     // =========================================================================

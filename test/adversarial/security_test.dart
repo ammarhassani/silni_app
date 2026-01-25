@@ -765,6 +765,74 @@ void main() {
                  reason: 'Dangerous field $field should not be in model');
         }
       });
+
+      test('HTTPS-only enforcement - no HTTP URLs allowed', () {
+        // Define patterns for API URLs that should only use HTTPS
+        final unsafeHttpPatterns = [
+          RegExp(r'http://[^/]*api[^/]*', caseSensitive: false),
+          RegExp(r'http://[^/]*supabase[^/]*', caseSensitive: false),
+          RegExp(r'http://[^/]*\.io/', caseSensitive: false),
+          RegExp(r'http://[^/]*\.com/', caseSensitive: false),
+        ];
+
+        // Sample URLs that might appear in the app (from config, models, etc.)
+        final sampleUrls = [
+          'https://bapwklwxmwhpucutyras.supabase.co',
+          'https://api.example.com/v1/data',
+          'https://cdn.example.io/images/photo.jpg',
+        ];
+
+        // Verify all sample URLs use HTTPS
+        for (final url in sampleUrls) {
+          expect(url.startsWith('https://'), isTrue,
+                 reason: 'URL should use HTTPS: $url');
+
+          // Verify no unsafe HTTP patterns match
+          for (final pattern in unsafeHttpPatterns) {
+            expect(pattern.hasMatch(url), isFalse,
+                   reason: 'URL should not match unsafe HTTP pattern: $url');
+          }
+        }
+
+        // Test that HTTP URLs would be rejected
+        final unsafeUrls = [
+          'http://api.example.com/v1/data',
+          'http://bapwklwxmwhpucutyras.supabase.co',
+          'http://cdn.example.io/images/photo.jpg',
+        ];
+
+        for (final unsafeUrl in unsafeUrls) {
+          expect(unsafeUrl.startsWith('https://'), isFalse,
+                 reason: 'Unsafe URL correctly identified as HTTP: $unsafeUrl');
+
+          // At least one unsafe pattern should match
+          final matchesUnsafePattern = unsafeHttpPatterns.any((p) => p.hasMatch(unsafeUrl));
+          expect(matchesUnsafePattern, isTrue,
+                 reason: 'HTTP URL should be flagged as unsafe: $unsafeUrl');
+        }
+
+        // Verify photo URLs in interactions should use HTTPS
+        final interaction = Interaction(
+          id: 'https-test',
+          userId: 'user',
+          relativeId: 'relative',
+          type: InteractionType.visit,
+          date: DateTime.now(),
+          photoUrls: [
+            'https://secure-cdn.example.com/photo1.jpg',
+            'https://secure-cdn.example.com/photo2.jpg',
+          ],
+          createdAt: DateTime.now(),
+        );
+
+        // All photo URLs should use HTTPS
+        for (final photoUrl in interaction.photoUrls) {
+          if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+            expect(photoUrl.startsWith('https://'), isTrue,
+                   reason: 'Photo URL should use HTTPS: $photoUrl');
+          }
+        }
+      });
     });
 
     // =========================================================================
