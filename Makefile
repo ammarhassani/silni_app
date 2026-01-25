@@ -1,4 +1,4 @@
-.PHONY: test test-unit test-widget test-integration test-e2e test-golden coverage clean
+.PHONY: test test-unit test-widget test-integration test-e2e test-golden coverage clean bug-scout test-adversarial adversarial-quick
 
 # Run all tests (one command to rule them all)
 test:
@@ -45,3 +45,15 @@ smoke:
 watch:
 	@command -v entr >/dev/null 2>&1 || { echo "Install entr for watch mode: brew install entr"; exit 1; }
 	@find lib test -name "*.dart" | entr -c flutter test
+
+# Adversarial Testing - Bug Scout (The Prosecutor)
+bug-scout:
+	@./scripts/bug_scout.sh
+
+# Run all adversarial tests
+test-adversarial:
+	flutter test test/adversarial/
+
+# Quick adversarial tests (fuzz + security only)
+adversarial-quick:
+	@./scripts/bug_scout.sh --quick
