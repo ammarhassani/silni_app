@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
@@ -12,6 +13,15 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/services/supabase_notification_service.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/message_widget.dart';
+
+/// SharedPreferences keys for notification settings persistence
+class _NotificationPrefsKeys {
+  static const String remindersEnabled = 'notifications_reminders_enabled';
+  static const String dailyRemindersEnabled = 'notifications_daily_enabled';
+  static const String weeklyRemindersEnabled = 'notifications_weekly_enabled';
+  static const String soundEnabled = 'notifications_sound_enabled';
+  static const String vibrationEnabled = 'notifications_vibration_enabled';
+}
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -30,11 +40,45 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   bool _weeklyRemindersEnabled = true;
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _initializeNotificationService();
+    _loadSavedPreferences();
+  }
+
+  /// Load saved notification preferences from SharedPreferences
+  Future<void> _loadSavedPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (mounted) {
+        setState(() {
+          _remindersEnabled = prefs.getBool(_NotificationPrefsKeys.remindersEnabled) ?? true;
+          _dailyRemindersEnabled = prefs.getBool(_NotificationPrefsKeys.dailyRemindersEnabled) ?? true;
+          _weeklyRemindersEnabled = prefs.getBool(_NotificationPrefsKeys.weeklyRemindersEnabled) ?? true;
+          _soundEnabled = prefs.getBool(_NotificationPrefsKeys.soundEnabled) ?? true;
+          _vibrationEnabled = prefs.getBool(_NotificationPrefsKeys.vibrationEnabled) ?? true;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      // If loading fails, use defaults and mark as loaded
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  /// Save a notification preference to SharedPreferences
+  Future<void> _savePreference(String key, bool value) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(key, value);
+    } catch (e) {
+      // Silently fail - the setting is still applied in memory for this session
+    }
   }
 
   Future<void> _initializeNotificationService() async {
@@ -68,7 +112,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               children: [
                 _buildHeader(themeColors),
               Expanded(
-                child: ListView(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ListView(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   children: [
                     // In-App Messages
@@ -92,6 +138,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       onChanged: (value) {
                         HapticFeedback.selectionClick();
                         setState(() => _remindersEnabled = value);
+                        _savePreference(_NotificationPrefsKeys.remindersEnabled, value);
                       },
                       themeColors: themeColors,
                     ),
@@ -105,6 +152,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       onChanged: (value) {
                         HapticFeedback.selectionClick();
                         setState(() => _dailyRemindersEnabled = value);
+                        _savePreference(_NotificationPrefsKeys.dailyRemindersEnabled, value);
                       },
                       themeColors: themeColors,
                       enabled: _remindersEnabled,
@@ -119,6 +167,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       onChanged: (value) {
                         HapticFeedback.selectionClick();
                         setState(() => _weeklyRemindersEnabled = value);
+                        _savePreference(_NotificationPrefsKeys.weeklyRemindersEnabled, value);
                       },
                       themeColors: themeColors,
                       enabled: _remindersEnabled,
@@ -143,6 +192,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       onChanged: (value) {
                         HapticFeedback.selectionClick();
                         setState(() => _soundEnabled = value);
+                        _savePreference(_NotificationPrefsKeys.soundEnabled, value);
                       },
                       themeColors: themeColors,
                     ),
@@ -156,6 +206,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       onChanged: (value) {
                         HapticFeedback.selectionClick();
                         setState(() => _vibrationEnabled = value);
+                        _savePreference(_NotificationPrefsKeys.vibrationEnabled, value);
                       },
                       themeColors: themeColors,
                     ),
