@@ -126,6 +126,19 @@ dev_dependencies:
   integration_test:
     sdk: flutter
 
+  # NEW: E2E Testing with Patrol
+  patrol: ^3.13.0
+  patrol_finders: ^2.3.1
+
+  # NEW: Golden Image Testing (UI regression)
+  golden_toolkit: ^0.15.0
+
+  # NEW: Test Coverage Enforcement
+  test_cov_console: ^0.2.2
+
+  # NEW: Fake data generation
+  faker: ^2.2.0
+
 flutter:
   uses-material-design: true
 
