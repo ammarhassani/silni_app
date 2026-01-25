@@ -1,4 +1,4 @@
-.PHONY: test test-unit test-widget test-integration test-e2e test-golden coverage clean bug-scout test-adversarial adversarial-quick mutation-test
+.PHONY: test test-unit test-widget test-integration test-e2e test-golden coverage clean bug-scout test-adversarial adversarial-quick mutation-test torture-quick torture torture-ultimate nuclear
 
 # Run all tests (one command to rule them all)
 test:
@@ -61,3 +61,48 @@ adversarial-quick:
 # Mutation Testing - Kill Every Mutant!
 mutation-test:
 	@./scripts/mutation_test.sh
+
+# ============================================================================
+# TORTURE TESTING - Leave No Bug Alive!
+# ============================================================================
+
+# Quick torture - fast feedback (analyze + unit + widget)
+torture-quick:
+	@echo ""
+	@echo "⚡ QUICK TORTURE - Fast feedback loop"
+	@echo "======================================="
+	@flutter analyze --no-fatal-infos && \
+	flutter test test/unit/ --coverage && \
+	flutter test test/widget/ --coverage
+	@echo ""
+	@echo "✓ Quick torture complete!"
+
+# Standard torture - comprehensive testing
+torture:
+	@echo ""
+	@echo "🔥 STANDARD TORTURE - Comprehensive testing"
+	@echo "============================================"
+	@./scripts/test_all.sh && ./scripts/bug_scout.sh
+	@echo ""
+	@echo "✓ Standard torture complete!"
+
+# Ultimate torture - the full battery with mutation testing
+torture-ultimate:
+	@./scripts/ultimate_torture.sh --full
+
+# Nuclear option - when you want to be ABSOLUTELY sure
+nuclear:
+	@echo ""
+	@echo "☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️"
+	@echo ""
+	@echo "        N U C L E A R   O P T I O N   A C T I V A T E D"
+	@echo ""
+	@echo "    This will run EVERYTHING. Tests. Fuzzing. Chaos. Mutations."
+	@echo "    No stone will be left unturned. No bug will survive."
+	@echo ""
+	@echo "    Estimated time: 15-30 minutes"
+	@echo ""
+	@echo "☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️  ☢️"
+	@echo ""
+	@sleep 2
+	@./scripts/ultimate_torture.sh --full
