@@ -43,5 +43,5 @@ smoke:
 
 # Watch mode for TDD
 watch:
-	@echo "Running tests in watch mode (requires entr)"
+	@command -v entr >/dev/null 2>&1 || { echo "Install entr for watch mode: brew install entr"; exit 1; }
 	@find lib test -name "*.dart" | entr -c flutter test
