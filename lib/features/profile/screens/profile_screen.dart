@@ -136,6 +136,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     onChangePassword: () => showChangePasswordDialog(
                       context: context,
                       ref: ref,
+                      themeColors: themeColors,
                     ),
                     onPrivacySettings: () {
                       UIHelpers.showSnackBar(
@@ -151,6 +152,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     onDeleteAccount: () => showDeleteAccountDialog(
                       context: context,
                       ref: ref,
+                      themeColors: themeColors,
                     ),
                   ),
                 ),

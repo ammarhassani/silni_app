@@ -247,6 +247,31 @@ class RelativesRepository {
     }
   }
 
+  /// Permanently delete a relative (hard delete).
+  /// Removes from cache immediately for instant UI update.
+  Future<void> permanentlyDeleteRelative(String relativeId) async {
+    // Remove from cache immediately (optimistic update)
+    await _cache.deleteRelative(relativeId);
+
+    if (_connectivity.isOnline) {
+      try {
+        await _service.permanentlyDeleteRelative(relativeId);
+      } catch (e) {
+        // Failed - queue for later
+        _logger.warning(
+          'Failed to permanently delete relative, queued for later',
+          category: LogCategory.database,
+          tag: 'RelativesRepository',
+          metadata: {'relativeId': relativeId, 'error': e.toString()},
+        );
+        await _queueOperation(OperationType.delete, 'relative', relativeId, null);
+      }
+    } else {
+      // Offline: queue for later
+      await _queueOperation(OperationType.delete, 'relative', relativeId, null);
+    }
+  }
+
   /// Toggle favorite status.
   Future<void> toggleFavorite(String relativeId, bool isFavorite) async {
     await updateRelative(relativeId, {'is_favorite': isFavorite});

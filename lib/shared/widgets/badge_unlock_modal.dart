@@ -5,6 +5,7 @@ import 'package:confetti/confetti.dart';
 import '../../core/constants/app_animations.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
+import '../../core/utils/badge_prestige.dart';
 
 /// Dramatic badge unlock celebration modal
 /// Shows when user unlocks a new badge
@@ -89,45 +90,14 @@ class _BadgeUnlockModalState extends State<BadgeUnlockModal>
     super.dispose();
   }
 
-  /// Get emoji for badge based on ID
+  /// Get emoji for badge based on ID (uses centralized BadgePrestige)
   String _getBadgeEmoji(String badgeId) {
-    const Map<String, String> badgeEmojis = {
-      'first_interaction': '🎯',
-      'streak_7': '🔥',
-      'streak_30': '⚡',
-      'streak_100': '💯',
-      'streak_365': '👑',
-      'interactions_10': '✨',
-      'interactions_50': '🌟',
-      'interactions_100': '💫',
-      'interactions_500': '🏆',
-      'interactions_1000': '🎖️',
-      'all_interaction_types': '🎨',
-      'social_butterfly': '🦋',
-      'early_bird': '🌅',
-      'night_owl': '🦉',
-      'weekend_warrior': '⚔️',
-      'generous_giver': '🎁',
-      'family_gatherer': '👨‍👩‍👧‍👦',
-      'frequent_caller': '📞',
-      'devoted_visitor': '🏠',
-    };
-    return badgeEmojis[badgeId] ?? '🏅';
+    return BadgePrestige.getBadgeInfo(badgeId).emoji;
   }
 
-  /// Get color for badge based on ID
+  /// Get color for badge based on ID (uses centralized BadgePrestige)
   Color _getBadgeColor(String badgeId) {
-    if (badgeId.contains('streak')) {
-      return AppColors.energeticRed;
-    } else if (badgeId.contains('interactions')) {
-      return AppColors.islamicGreenPrimary;
-    } else if (badgeId.contains('early') || badgeId.contains('night')) {
-      return AppColors.calmBlue;
-    } else if (badgeId.contains('generous') || badgeId.contains('giver')) {
-      return AppColors.joyfulOrange;
-    } else {
-      return AppColors.emotionalPurple;
-    }
+    return BadgePrestige.getBadgeInfo(badgeId).color;
   }
 
   @override

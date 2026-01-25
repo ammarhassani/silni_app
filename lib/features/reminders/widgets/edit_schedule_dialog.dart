@@ -7,7 +7,7 @@ import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/services/reminder_schedules_service.dart';
 import 'day_selector_widget.dart';
 import '../../../shared/utils/ui_helpers.dart';
-import '../../../shared/widgets/theme_aware_dialog.dart';
+import '../../../core/theme/theme_provider.dart';
 
 /// Dialog for editing an existing reminder schedule
 class EditScheduleDialog extends ConsumerStatefulWidget {
@@ -104,9 +104,46 @@ class _EditScheduleDialogState extends ConsumerState<EditScheduleDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return ThemeAwareAlertDialog(
-      title: 'تعديل التذكير',
-      titleIcon: const Icon(Icons.edit_calendar_rounded, color: Colors.white),
+    final themeColors = ref.watch(themeColorsProvider);
+
+    return AlertDialog(
+      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+      ),
+      titlePadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      contentPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.edit_calendar_rounded, color: Colors.white, size: 32),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'تعديل التذكير',
+            style: AppTypography.titleLarge.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -167,15 +204,20 @@ class _EditScheduleDialogState extends ConsumerState<EditScheduleDialog> {
         ),
       ),
       actions: [
-        ThemeAwareDialogButton(
-          text: 'إلغاء',
-          isPrimary: false,
+        TextButton(
           onPressed: () => Navigator.pop(context),
+          child: Text(
+            'إلغاء',
+            style: TextStyle(color: themeColors.primary),
+          ),
         ),
-        ThemeAwareDialogButton(
-          text: 'حفظ',
-          isPrimary: true,
+        ElevatedButton(
           onPressed: _saveChanges,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: themeColors.primary,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('حفظ'),
         ),
       ],
     );

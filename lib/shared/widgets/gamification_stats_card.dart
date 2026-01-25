@@ -8,6 +8,7 @@ import '../../core/theme/theme_provider.dart';
 import '../../core/theme/app_themes.dart';
 import '../../core/config/supabase_config.dart';
 import '../../core/models/gamification_event.dart';
+import '../../core/utils/badge_prestige.dart';
 import '../../core/providers/gamification_events_provider.dart';
 import 'glass_card.dart';
 import 'animated_counter.dart';
@@ -395,25 +396,8 @@ class _GamificationStatsCardState extends ConsumerState<GamificationStatsCard> {
   }
 
   Map<String, String> _getBadgeInfo(String badge) {
-    final badgeMap = {
-      'first_interaction': {'emoji': '🌟', 'name': 'البداية'},
-      'streak_7': {'emoji': '🔥', 'name': 'أسبوع متواصل'},
-      'streak_30': {'emoji': '💪', 'name': 'شهر متواصل'},
-      'streak_100': {'emoji': '⚡', 'name': '100 يوم'},
-      'streak_365': {'emoji': '👑', 'name': 'عام كامل'},
-      'interactions_10': {'emoji': '📞', 'name': '10 تفاعلات'},
-      'interactions_50': {'emoji': '🎯', 'name': '50 تفاعل'},
-      'interactions_100': {'emoji': '💯', 'name': '100 تفاعل'},
-      'interactions_500': {'emoji': '🚀', 'name': '500 تفاعل'},
-      'interactions_1000': {'emoji': '🏆', 'name': '1000 تفاعل'},
-      'all_interaction_types': {'emoji': '🎨', 'name': 'متنوع'},
-      'social_butterfly': {'emoji': '🦋', 'name': 'اجتماعي'},
-      'generous_giver': {'emoji': '🎁', 'name': 'كريم'},
-      'family_gatherer': {'emoji': '🎉', 'name': 'منظم'},
-      'frequent_caller': {'emoji': '📱', 'name': 'متصل دائم'},
-      'devoted_visitor': {'emoji': '🏠', 'name': 'زائر مخلص'},
-    };
-
-    return badgeMap[badge] ?? {'emoji': '🏅', 'name': badge};
+    // Use centralized BadgePrestige for consistent badge info across app
+    final info = BadgePrestige.getBadgeInfo(badge);
+    return {'emoji': info.emoji, 'name': info.name};
   }
 }

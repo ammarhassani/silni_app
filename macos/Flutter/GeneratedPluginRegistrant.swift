@@ -16,6 +16,7 @@ import google_sign_in_ios
 import local_auth_darwin
 import package_info_plus
 import path_provider_foundation
+import patrol
 import purchases_flutter
 import rive_common
 import sentry_flutter
@@ -37,6 +38,7 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   LocalAuthPlugin.register(with: registry.registrar(forPlugin: "LocalAuthPlugin"))
   FPPPackageInfoPlusPlugin.register(with: registry.registrar(forPlugin: "FPPPackageInfoPlusPlugin"))
   PathProviderPlugin.register(with: registry.registrar(forPlugin: "PathProviderPlugin"))
+  PatrolPlugin.register(with: registry.registrar(forPlugin: "PatrolPlugin"))
   PurchasesFlutterPlugin.register(with: registry.registrar(forPlugin: "PurchasesFlutterPlugin"))
   RivePlugin.register(with: registry.registrar(forPlugin: "RivePlugin"))
   SentryFlutterPlugin.register(with: registry.registrar(forPlugin: "SentryFlutterPlugin"))

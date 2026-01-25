@@ -527,6 +527,20 @@ class BadgeData {
       color: AppColors.emotionalPurple,
     ),
     BadgeInfo(
+      id: 'variety_3',
+      name: 'منوع',
+      description: 'تواصل مع 3 أقارب مختلفين',
+      emoji: '🎨',
+      color: AppColors.calmBlue,
+    ),
+    BadgeInfo(
+      id: 'variety_10',
+      name: 'شبكة علاقات',
+      description: 'تواصل مع 10 أقارب مختلفين',
+      emoji: '🌐',
+      color: AppColors.calmBlue,
+    ),
+    BadgeInfo(
       id: 'social_butterfly',
       name: 'اجتماعي',
       description: 'تفاعلت مع 10 أقارب مختلفين',

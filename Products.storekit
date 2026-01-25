@@ -19,12 +19,12 @@
   "settings" : {
     "_applicationInternalID" : "6756042988",
     "_askToBuyEnabled" : false,
-    "_billingGracePeriodEnabled" : false,
+    "_billingGracePeriodEnabled" : true,
     "_billingIssuesEnabled" : false,
     "_developerTeamID" : "3SPV37F368",
     "_disableDialogs" : false,
     "_failTransactionsEnabled" : false,
-    "_lastSynchronizedDate" : 788696706.17700899,
+    "_lastSynchronizedDate" : 790972588.91737998,
     "_locale" : "en_US",
     "_renewalBillingIssuesEnabled" : false,
     "_storefront" : "USA",
@@ -52,7 +52,12 @@
           "familyShareable" : false,
           "groupNumber" : 4,
           "internalID" : "6757142369",
-          "introductoryOffer" : null,
+          "introductoryOffer" : {
+            "internalID" : "BD73B115",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
           "localizations" : [
             {
               "description" : "جميع الميزات + الذكاء الاصطناعي وتذكيرات غير محدودة",
@@ -80,7 +85,12 @@
           "familyShareable" : false,
           "groupNumber" : 3,
           "internalID" : "6757142104",
-          "introductoryOffer" : null,
+          "introductoryOffer" : {
+            "internalID" : "B3B3EE4A",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
           "localizations" : [
             {
               "description" : "جميع الميزات + الذكاء الاصطناعي وتذكيرات غير محدودة",
@@ -91,62 +101,6 @@
           "productID" : "silni_max_monthly",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "MAX Monthly",
-          "subscriptionGroupID" : "21872134",
-          "type" : "RecurringSubscription",
-          "winbackOffers" : [
-
-          ]
-        },
-        {
-          "adHocOffers" : [
-
-          ],
-          "codeOffers" : [
-
-          ],
-          "displayPrice" : "34.99",
-          "familyShareable" : false,
-          "groupNumber" : 2,
-          "internalID" : "6757142324",
-          "introductoryOffer" : null,
-          "localizations" : [
-            {
-              "description" : "شجرة العائلة والمظاهر المخصصة و10 تذكيرات",
-              "displayName" : "صلني برو - سنوي",
-              "locale" : "ar"
-            }
-          ],
-          "productID" : "silni_pro_annual",
-          "recurringSubscriptionPeriod" : "P1Y",
-          "referenceName" : "PRO Annual",
-          "subscriptionGroupID" : "21872134",
-          "type" : "RecurringSubscription",
-          "winbackOffers" : [
-
-          ]
-        },
-        {
-          "adHocOffers" : [
-
-          ],
-          "codeOffers" : [
-
-          ],
-          "displayPrice" : "2.99",
-          "familyShareable" : false,
-          "groupNumber" : 1,
-          "internalID" : "6757142091",
-          "introductoryOffer" : null,
-          "localizations" : [
-            {
-              "description" : "شجرة العائلة والمظاهر المخصصة و10 تذكيرات",
-              "displayName" : "صلني برو - شهري",
-              "locale" : "ar"
-            }
-          ],
-          "productID" : "silni_pro_monthly",
-          "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "PRO Monthly",
           "subscriptionGroupID" : "21872134",
           "type" : "RecurringSubscription",
           "winbackOffers" : [

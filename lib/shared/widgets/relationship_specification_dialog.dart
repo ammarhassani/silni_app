@@ -9,7 +9,6 @@ import '../../core/constants/app_typography.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/theme/app_themes.dart';
 import 'glass_card.dart';
-import 'gradient_button.dart';
 
 /// Data class for contact with relationship specification
 class ContactWithRelationship {
@@ -65,9 +64,8 @@ class _RelationshipSpecificationDialogState
       final detectedRelationship = _contactsImportService.detectRelationship(
         contact.displayName,
       );
-      final detectedGender = _contactsImportService.detectGender(
-        contact.displayName,
-      );
+      // Use relationship-based gender detection instead of name-based
+      final detectedGender = _getGenderFromRelationship(detectedRelationship);
 
       return ContactWithRelationship(
         contact: contact,
@@ -86,6 +84,8 @@ class _RelationshipSpecificationDialogState
   void _updateRelationshipType(int index, RelationshipType type) {
     setState(() {
       _contactsWithRelationship[index].relationshipType = type;
+      // Auto-set gender based on relationship type
+      _contactsWithRelationship[index].gender = _getGenderFromRelationship(type);
     });
   }
 
@@ -93,6 +93,32 @@ class _RelationshipSpecificationDialogState
     setState(() {
       _contactsWithRelationship[index].customRelationship = customRelationship;
     });
+  }
+
+  /// Get gender from relationship type (auto-detection)
+  /// Returns null for gender-neutral relationships (cousin, other) where user must select
+  Gender? _getGenderFromRelationship(RelationshipType type) {
+    switch (type) {
+      case RelationshipType.father:
+      case RelationshipType.brother:
+      case RelationshipType.son:
+      case RelationshipType.grandfather:
+      case RelationshipType.uncle:
+      case RelationshipType.nephew:
+      case RelationshipType.husband:
+        return Gender.male;
+      case RelationshipType.mother:
+      case RelationshipType.sister:
+      case RelationshipType.daughter:
+      case RelationshipType.grandmother:
+      case RelationshipType.aunt:
+      case RelationshipType.niece:
+      case RelationshipType.wife:
+        return Gender.female;
+      case RelationshipType.cousin:
+      case RelationshipType.other:
+        return null; // User must select
+    }
   }
 
   @override
@@ -254,17 +280,19 @@ class _RelationshipSpecificationDialogState
           const SizedBox(height: AppSpacing.xs),
           _buildRelationshipSelector(index, relationshipType, themeColors),
 
-          const SizedBox(height: AppSpacing.md),
-
-          // Gender selector
-          Text(
-            'الجنس:',
-            style: AppTypography.bodySmall.copyWith(
-              color: Colors.white.withValues(alpha: 0.9),
+          // Gender selector - only show for gender-neutral relationships (cousin, other)
+          if (relationshipType == RelationshipType.cousin ||
+              relationshipType == RelationshipType.other) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'الجنس:',
+              style: AppTypography.bodySmall.copyWith(
+                color: Colors.white.withValues(alpha: 0.9),
+              ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          _buildGenderSelector(index, gender, themeColors),
+            const SizedBox(height: AppSpacing.xs),
+            _buildGenderSelector(index, gender, themeColors),
+          ],
 
           // Custom relationship field (if "other" is selected)
           if (relationshipType == RelationshipType.other) ...[
@@ -455,22 +483,18 @@ class _RelationshipSpecificationDialogState
         ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           // Cancel button
-          GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.md,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.3),
-                  width: 1,
+          Expanded(
+            child: TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                  side: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.3),
+                  ),
                 ),
               ),
               child: Text(
@@ -481,15 +505,24 @@ class _RelationshipSpecificationDialogState
               ),
             ),
           ),
-
+          const SizedBox(width: AppSpacing.md),
           // Confirm button
-          GradientButton(
-            text: 'تأكيد (${_contactsWithRelationship.length})',
-            icon: Icons.check_rounded,
-            onPressed: () {
-              widget.onConfirmed(_contactsWithRelationship);
-              Navigator.of(context).pop();
-            },
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).pop(_contactsWithRelationship);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: themeColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                ),
+              ),
+              icon: const Icon(Icons.check_rounded),
+              label: Text('تأكيد (${_contactsWithRelationship.length})'),
+            ),
           ),
         ],
       ),

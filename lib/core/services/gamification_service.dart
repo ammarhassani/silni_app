@@ -363,6 +363,8 @@ class GamificationService {
       'family_gatherer': 'جامع العائلة',
       'frequent_caller': 'كثير الاتصال',
       'devoted_visitor': 'زائر مخلص',
+      'variety_3': 'منوع',
+      'variety_10': 'شبكة علاقات',
     };
     return fallbackNames[badgeId] ?? badgeId;
   }
@@ -386,6 +388,8 @@ class GamificationService {
       'family_gatherer': 'نظمت 10+ مناسبات عائلية',
       'frequent_caller': 'أجريت 50+ مكالمة',
       'devoted_visitor': 'قمت بـ 25+ زيارة',
+      'variety_3': 'تواصل مع 3 أقارب مختلفين',
+      'variety_10': 'تواصل مع 10 أقارب مختلفين',
     };
     return fallbackDescriptions[badgeId] ?? 'وسام خاص';
   }

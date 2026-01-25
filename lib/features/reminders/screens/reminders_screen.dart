@@ -15,7 +15,6 @@ import '../../auth/providers/auth_provider.dart';
 import '../../home/providers/home_providers.dart';
 import '../../../core/providers/realtime_provider.dart';
 import '../../../shared/utils/ui_helpers.dart';
-import '../../../shared/widgets/theme_aware_dialog.dart';
 import '../widgets/widgets.dart';
 import '../../../shared/widgets/message_widget.dart';
 
@@ -230,15 +229,21 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       );
     }
 
+    // Get IDs of all relatives assigned to any schedule
+    final allAssignedIds = schedules
+        .expand((s) => s.relativeIds)
+        .toSet();
+
     return Column(
       children: schedules.map((schedule) {
         return ScheduleCard(
           schedule: schedule,
           allRelatives: relatives,
+          allAssignedRelativeIds: allAssignedIds,
           onToggle: (value) => _toggleSchedule(schedule, value),
           onEdit: () => _editSchedule(schedule),
           onDelete: () => _deleteSchedule(schedule),
-          onAddRelatives: () => _showAddRelativesToSchedule(schedule, relatives),
+          onAddRelatives: () => _showAddRelativesToSchedule(schedule, schedules, relatives),
           onRemoveRelative: (relativeId) =>
               _removeRelativeFromSchedule(schedule, relativeId),
           onDrop: (relative) => _handleDrop(schedule, relative),
@@ -359,11 +364,11 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
 
   void _showAddRelativesToSchedule(
     ReminderSchedule schedule,
+    List<ReminderSchedule> allSchedules,
     List<Relative> allRelatives,
   ) {
-    final unassigned = allRelatives
-        .where((r) => !schedule.relativeIds.contains(r.id))
-        .toList();
+    // Get relatives not assigned to ANY schedule
+    final unassigned = _getUnassignedRelatives(allRelatives, allSchedules);
 
     showDialog(
       context: context,
@@ -385,11 +390,17 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
 
   void _toggleSchedule(ReminderSchedule schedule, bool value) async {
     final service = ref.read(reminderSchedulesServiceProvider);
+    final user = ref.read(currentUserProvider);
     try {
       await service.updateSchedule(
         schedule.id,
         schedule.copyWith(isActive: value).toJson(),
       );
+
+      // Invalidate provider to refresh UI immediately
+      if (user != null) {
+        ref.invalidate(reminderSchedulesStreamProvider(user.id));
+      }
     } catch (e) {
       if (mounted) {
         UIHelpers.showSnackBar(
@@ -402,21 +413,38 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   }
 
   void _deleteSchedule(ReminderSchedule schedule) async {
+    final themeColors = ref.read(themeColorsProvider);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => ThemeAwareAlertDialog(
-        title: 'حذف التذكير',
-        content: const Text('هل أنت متأكد من حذف هذا التذكير؟'),
+      builder: (context) => AlertDialog(
+        backgroundColor: themeColors.background1.withValues(alpha: 0.95),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        ),
+        title: Text(
+          'حذف التذكير',
+          style: AppTypography.titleLarge.copyWith(color: Colors.white),
+          textAlign: TextAlign.center,
+        ),
+        content: Text(
+          'هل أنت متأكد من حذف هذا التذكير؟',
+          style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+        ),
         actions: [
-          ThemeAwareDialogButton(
-            text: 'إلغاء',
-            isPrimary: false,
+          TextButton(
             onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'إلغاء',
+              style: TextStyle(color: themeColors.primary),
+            ),
           ),
-          ThemeAwareDialogButton(
-            text: 'حذف',
-            variant: DialogButtonVariant.destructive,
+          ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('حذف'),
           ),
         ],
       ),
@@ -424,8 +452,15 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
 
     if (confirmed == true && mounted) {
       final service = ref.read(reminderSchedulesServiceProvider);
+      final user = ref.read(currentUserProvider);
       try {
         await service.deleteSchedule(schedule.id);
+
+        // Invalidate provider to refresh UI immediately
+        if (user != null) {
+          ref.invalidate(reminderSchedulesStreamProvider(user.id));
+        }
+
         if (mounted) {
           UIHelpers.showSnackBar(
             context,
@@ -449,6 +484,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     String relativeId,
   ) async {
     final service = ref.read(reminderSchedulesServiceProvider);
+    final user = ref.read(currentUserProvider);
     try {
       final updatedRelativeIds = List<String>.from(schedule.relativeIds)
         ..remove(relativeId);
@@ -457,6 +493,11 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         schedule.id,
         schedule.copyWith(relativeIds: updatedRelativeIds).toJson(),
       );
+
+      // Invalidate provider to refresh UI immediately
+      if (user != null) {
+        ref.invalidate(reminderSchedulesStreamProvider(user.id));
+      }
     } catch (e) {
       if (mounted) {
         UIHelpers.showSnackBar(
@@ -472,10 +513,16 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     final updatedRelativeIds = [...schedule.relativeIds, relative.id];
 
     final service = ref.read(reminderSchedulesServiceProvider);
+    final user = ref.read(currentUserProvider);
     try {
       await service.updateSchedule(schedule.id, {
         'relative_ids': updatedRelativeIds,
       });
+
+      // Invalidate provider to refresh UI immediately
+      if (user != null) {
+        ref.invalidate(reminderSchedulesStreamProvider(user.id));
+      }
 
       if (mounted) {
         UIHelpers.showSnackBar(

@@ -8,7 +8,7 @@ import '../../../shared/services/reminder_schedules_service.dart';
 import '../../../shared/widgets/collapsible_picker.dart';
 import 'day_selector_widget.dart';
 import '../../../shared/utils/ui_helpers.dart';
-import '../../../shared/widgets/theme_aware_dialog.dart';
+import '../../../core/theme/theme_provider.dart';
 
 /// Dialog for creating a new reminder schedule
 class CreateScheduleDialog extends ConsumerStatefulWidget {
@@ -130,9 +130,46 @@ class _CreateScheduleDialogState extends ConsumerState<CreateScheduleDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return ThemeAwareAlertDialog(
-      title: 'إنشاء ${widget.template.title}',
-      titleIcon: const Icon(Icons.add_alarm_rounded, color: Colors.white),
+    final themeColors = ref.watch(themeColorsProvider);
+
+    return AlertDialog(
+      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+      ),
+      titlePadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      contentPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.add_alarm_rounded, color: Colors.white, size: 32),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'إنشاء ${widget.template.title}',
+            style: AppTypography.titleLarge.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -223,15 +260,20 @@ class _CreateScheduleDialogState extends ConsumerState<CreateScheduleDialog> {
         ),
       ),
       actions: [
-        ThemeAwareDialogButton(
-          text: 'إلغاء',
-          isPrimary: false,
+        TextButton(
           onPressed: () => Navigator.pop(context),
+          child: Text(
+            'إلغاء',
+            style: TextStyle(color: themeColors.primary),
+          ),
         ),
-        ThemeAwareDialogButton(
-          text: 'إنشاء',
-          isPrimary: true,
+        ElevatedButton(
           onPressed: _createSchedule,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: themeColors.primary,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('إنشاء'),
         ),
       ],
     );

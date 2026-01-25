@@ -16,6 +16,7 @@ class ScheduleCard extends ConsumerWidget {
     super.key,
     required this.schedule,
     required this.allRelatives,
+    required this.allAssignedRelativeIds,
     required this.onToggle,
     required this.onEdit,
     required this.onDelete,
@@ -26,6 +27,7 @@ class ScheduleCard extends ConsumerWidget {
 
   final ReminderSchedule schedule;
   final List<Relative> allRelatives;
+  final Set<String> allAssignedRelativeIds;
   final ValueChanged<bool> onToggle;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -41,8 +43,9 @@ class ScheduleCard extends ConsumerWidget {
         .toList();
 
     return DragTarget<Relative>(
+      // Only accept if relative is not already assigned to ANY schedule
       onWillAcceptWithDetails: (details) =>
-          !schedule.relativeIds.contains(details.data.id),
+          !allAssignedRelativeIds.contains(details.data.id),
       onAcceptWithDetails: (details) => onDrop(details.data),
       builder: (context, candidateData, rejectedData) {
         final isHovering = candidateData.isNotEmpty;
@@ -231,19 +234,22 @@ class RelativeChip extends ConsumerWidget {
             relative.fullName,
             style: AppTypography.bodySmall.copyWith(color: Colors.white),
           ),
-          const SizedBox(width: AppSpacing.xs),
           GestureDetector(
             onTap: onRemove,
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.close_rounded,
-                size: 14,
-                color: Colors.white70,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.xs),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.close_rounded,
+                  size: 16,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),

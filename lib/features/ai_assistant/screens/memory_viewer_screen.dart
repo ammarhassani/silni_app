@@ -13,7 +13,6 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../shared/services/chat_history_service.dart';
 import '../providers/ai_chat_provider.dart';
 import '../../../shared/utils/ui_helpers.dart';
-import '../../../shared/widgets/theme_aware_dialog.dart';
 
 /// Screen to view and manage AI memories
 class MemoryViewerScreen extends ConsumerStatefulWidget {
@@ -347,9 +346,23 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
     HapticFeedback.lightImpact();
     return await showDialog<bool>(
           context: context,
-          builder: (context) => ThemeAwareAlertDialog(
-            title: 'حذف المعلومة؟',
-            titleIcon: const Icon(Icons.delete_forever_rounded, color: Colors.red),
+          builder: (context) => AlertDialog(
+            backgroundColor: themeColors.background1.withValues(alpha: 0.95),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+            ),
+            title: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 32),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'حذف المعلومة؟',
+                  style: AppTypography.titleLarge.copyWith(color: Colors.white),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
             content: Text(
               'هل تريد حذف هذه المعلومة من ذاكرة ${AIIdentity.name}؟',
               style: AppTypography.bodyMedium.copyWith(
@@ -361,17 +374,18 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
                 onPressed: () => Navigator.pop(context, false),
                 child: Text(
                   'إلغاء',
-                  style: AppTypography.labelLarge.copyWith(
+                  style: TextStyle(
                     color: themeColors.textOnGradient.withValues(alpha: 0.54),
                   ),
                 ),
               ),
-              TextButton(
+              ElevatedButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: Text(
-                  'حذف',
-                  style: AppTypography.labelLarge.copyWith(color: Colors.red),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
                 ),
+                child: const Text('حذف'),
               ),
             ],
           ),
@@ -405,9 +419,23 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
   void _showInfoDialog(dynamic themeColors) {
     showDialog(
       context: context,
-      builder: (context) => ThemeAwareAlertDialog(
-        title: 'عن ذاكرة ${AIIdentity.name}',
-        titleIcon: Icon(Icons.psychology, color: themeColors.primaryLight),
+      builder: (context) => AlertDialog(
+        backgroundColor: themeColors.background1.withValues(alpha: 0.95),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        ),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.psychology, color: themeColors.primaryLight, size: 32),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'عن ذاكرة ${AIIdentity.name}',
+              style: AppTypography.titleLarge.copyWith(color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
         content: Text(
           '${AIIdentity.name} يتذكر المعلومات المهمة من محادثاتكم لتقديم نصائح شخصية أفضل.\n\n'
           'يحفظ:\n'
@@ -422,14 +450,13 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
           ),
         ),
         actions: [
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(
-              'فهمت',
-              style: AppTypography.labelLarge.copyWith(
-                color: themeColors.primaryLight,
-              ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: themeColors.primaryLight,
+              foregroundColor: Colors.white,
             ),
+            child: const Text('فهمت'),
           ),
         ],
       ),

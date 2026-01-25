@@ -10,10 +10,10 @@ import '../../../core/providers/cache_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
-import '../../../shared/services/relatives_service.dart';
 import '../../../shared/services/auth_service.dart';
 import '../../../core/services/error_handler_service.dart';
 import '../../../core/providers/subscription_provider.dart';
+import '../../home/providers/home_providers.dart';
 import '../widgets/detail/widgets.dart';
 import '../../../shared/utils/ui_helpers.dart';
 
@@ -35,7 +35,6 @@ class RelativeDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
-  final RelativesService _relativesService = RelativesService();
   final AuthService _authService = AuthService();
 
   bool _isLoggingInteraction = false;
@@ -446,7 +445,15 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
 
   Future<void> _deleteRelative(Relative relative) async {
     try {
-      await _relativesService.permanentlyDeleteRelative(relative.id);
+      // Use repository for deletion to update cache immediately
+      final repository = ref.read(relativesRepositoryProvider);
+      await repository.permanentlyDeleteRelative(relative.id);
+
+      // Invalidate provider to refresh any listening widgets
+      final user = _authService.currentUser;
+      if (user != null) {
+        ref.invalidate(relativesStreamProvider(user.id));
+      }
 
       if (!mounted) return;
 

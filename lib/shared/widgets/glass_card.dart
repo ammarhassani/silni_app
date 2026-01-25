@@ -1,10 +1,9 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_animations.dart';
-import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
+import '../../core/theme/app_themes.dart';
 import '../../core/theme/theme_provider.dart';
 import '../utils/ui_helpers.dart';
 
@@ -15,7 +14,6 @@ class GlassCard extends ConsumerStatefulWidget {
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? margin;
   final double borderRadius;
-  final double blurStrength;
   final Color? color;
   final Border? border;
   final Gradient? gradient;
@@ -31,7 +29,6 @@ class GlassCard extends ConsumerStatefulWidget {
     this.padding,
     this.margin,
     this.borderRadius = AppSpacing.cardRadius,
-    this.blurStrength = AppColors.blurStrength,
     this.color,
     this.border,
     this.gradient,
@@ -98,75 +95,10 @@ class _GlassCardState extends ConsumerState<GlassCard>
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
 
-    Widget card = AnimatedBuilder(
-      animation: _scaleAnimation,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: widget.enablePressAnimation ? _scaleAnimation.value : 1.0,
-          child: child,
-        );
-      },
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(widget.borderRadius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: widget.blurStrength,
-            sigmaY: widget.blurStrength,
-          ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              // Use explicit width if provided, otherwise use parent constraints
-              // This prevents infinite width issues with BackdropFilter
-              final effectiveWidth = widget.width ??
-                  (constraints.maxWidth.isFinite ? constraints.maxWidth : null);
+    // Build the card content directly - no LayoutBuilder needed
+    Widget card = _buildCardContent(themeColors);
 
-              return AnimatedContainer(
-                duration: AppAnimations.fast,
-                curve: AppAnimations.toggleCurve,
-                width: effectiveWidth,
-                height: widget.height,
-                padding: widget.padding ?? const EdgeInsets.all(AppSpacing.sm),
-                margin: widget.margin,
-                decoration: BoxDecoration(
-                  color: widget.gradient == null
-                      ? (widget.color ?? themeColors.glassBackground)
-                      : null,
-                  borderRadius: BorderRadius.circular(widget.borderRadius),
-                  border: widget.border ??
-                      Border.all(
-                        color: _isPressed
-                            ? themeColors.glassHighlight
-                            : themeColors.glassBorder,
-                        width: 1.5,
-                      ),
-                  gradient: widget.gradient ??
-                      LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          themeColors.glassHighlight,
-                          themeColors.glassBackground,
-                        ],
-                      ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: UIHelpers.withOpacity(
-                        themeColors.primaryDark,
-                        _isPressed ? 0.2 : 0.15,
-                      ),
-                      blurRadius: _isPressed ? 15 : 20,
-                      offset: Offset(0, _isPressed ? 4 : 8),
-                    ),
-                  ],
-                ),
-                child: widget.child,
-              );
-            },
-          ),
-        ),
-      ),
-    );
-
+    // Wrap with Semantics and GestureDetector
     if (widget.onTap != null) {
       card = Semantics(
         label: widget.semanticsLabel,
@@ -190,6 +122,62 @@ class _GlassCardState extends ConsumerState<GlassCard>
     }
 
     return card;
+  }
+
+  Widget _buildCardContent(ThemeColors themeColors) {
+    // Build the card content - use explicit width if provided, otherwise expand to parent
+    Widget cardContent = AnimatedContainer(
+      duration: AppAnimations.fast,
+      curve: AppAnimations.toggleCurve,
+      width: widget.width,
+      height: widget.height,
+      padding: widget.padding ?? const EdgeInsets.all(AppSpacing.sm),
+      margin: widget.margin,
+      decoration: BoxDecoration(
+        color: widget.gradient == null
+            ? (widget.color ?? themeColors.glassBackground)
+            : null,
+        borderRadius: BorderRadius.circular(widget.borderRadius),
+        border: widget.border ??
+            Border.all(
+              color: _isPressed
+                  ? themeColors.glassHighlight
+                  : themeColors.glassBorder,
+              width: 1.5,
+            ),
+        gradient: widget.gradient ??
+            LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                themeColors.glassHighlight,
+                themeColors.glassBackground,
+              ],
+            ),
+        boxShadow: [
+          BoxShadow(
+            color: UIHelpers.withOpacity(
+              themeColors.primaryDark,
+              _isPressed ? 0.2 : 0.15,
+            ),
+            blurRadius: _isPressed ? 15 : 20,
+            offset: Offset(0, _isPressed ? 4 : 8),
+          ),
+        ],
+      ),
+      child: widget.child,
+    );
+
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: widget.enablePressAnimation ? _scaleAnimation.value : 1.0,
+          child: child,
+        );
+      },
+      child: cardContent,
+    );
   }
 }
 
@@ -274,75 +262,10 @@ class _DramaticGlassCardState extends ConsumerState<DramaticGlassCard>
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
 
-    Widget card = AnimatedBuilder(
-      animation: _scaleAnimation,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: widget.enablePressAnimation ? _scaleAnimation.value : 1.0,
-          child: child,
-        );
-      },
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppSpacing.dramaticRadius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              // Use explicit width if provided, otherwise use parent constraints
-              // This prevents infinite width issues with BackdropFilter
-              final effectiveWidth = widget.width ??
-                  (constraints.maxWidth.isFinite ? constraints.maxWidth : null);
+    // Build the card content directly - no LayoutBuilder needed
+    Widget card = _buildCardContent(themeColors);
 
-              return AnimatedContainer(
-                duration: AppAnimations.fast,
-                curve: AppAnimations.toggleCurve,
-                width: effectiveWidth,
-                height: widget.height,
-                padding: widget.padding ?? const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  gradient: widget.gradient ??
-                      LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          UIHelpers.withOpacity(themeColors.glassHighlight, 0.4),
-                          themeColors.glassBackground,
-                        ],
-                      ),
-                  borderRadius: BorderRadius.circular(AppSpacing.dramaticRadius),
-                  border: Border.all(
-                    color: _isPressed
-                        ? themeColors.glassHighlight
-                        : themeColors.glassBorder,
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: UIHelpers.withOpacity(
-                        themeColors.primaryDark,
-                        _isPressed ? 0.25 : 0.2,
-                      ),
-                      blurRadius: _isPressed ? 30 : 40,
-                      offset: Offset(0, _isPressed ? 15 : 20),
-                    ),
-                    BoxShadow(
-                      color: UIHelpers.withOpacity(
-                        themeColors.primary,
-                        _isPressed ? 0.15 : 0.1,
-                      ),
-                      blurRadius: _isPressed ? 50 : 60,
-                      offset: Offset(0, _isPressed ? 25 : 30),
-                    ),
-                  ],
-                ),
-                child: widget.child,
-              );
-            },
-          ),
-        ),
-      ),
-    );
-
+    // Wrap with Semantics and GestureDetector
     if (widget.onTap != null) {
       card = Semantics(
         label: widget.semanticsLabel,
@@ -366,5 +289,64 @@ class _DramaticGlassCardState extends ConsumerState<DramaticGlassCard>
     }
 
     return card;
+  }
+
+  Widget _buildCardContent(ThemeColors themeColors) {
+    // Build the card content - use explicit width if provided, otherwise expand to parent
+    Widget cardContent = AnimatedContainer(
+      duration: AppAnimations.fast,
+      curve: AppAnimations.toggleCurve,
+      width: widget.width,
+      height: widget.height,
+      padding: widget.padding ?? const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        gradient: widget.gradient ??
+            LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                UIHelpers.withOpacity(themeColors.glassHighlight, 0.4),
+                themeColors.glassBackground,
+              ],
+            ),
+        borderRadius: BorderRadius.circular(AppSpacing.dramaticRadius),
+        border: Border.all(
+          color: _isPressed
+              ? themeColors.glassHighlight
+              : themeColors.glassBorder,
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: UIHelpers.withOpacity(
+              themeColors.primaryDark,
+              _isPressed ? 0.25 : 0.2,
+            ),
+            blurRadius: _isPressed ? 30 : 40,
+            offset: Offset(0, _isPressed ? 15 : 20),
+          ),
+          BoxShadow(
+            color: UIHelpers.withOpacity(
+              themeColors.primary,
+              _isPressed ? 0.15 : 0.1,
+            ),
+            blurRadius: _isPressed ? 50 : 60,
+            offset: Offset(0, _isPressed ? 25 : 30),
+          ),
+        ],
+      ),
+      child: widget.child,
+    );
+
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: widget.enablePressAnimation ? _scaleAnimation.value : 1.0,
+          child: child,
+        );
+      },
+      child: cardContent,
+    );
   }
 }

@@ -448,57 +448,94 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _showForgotPasswordDialog() async {
     final emailController = TextEditingController();
     final formKey = GlobalKey<FormState>();
+    final themeColors = ref.read(themeColorsProvider);
+    final dialogWidth = MediaQuery.of(context).size.width - (AppSpacing.md * 2);
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => ThemeAwareAlertDialog(
-        title: 'إعادة تعيين كلمة المرور',
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'سنرسل لك رابط لإعادة تعيين كلمة المرور',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
-                textAlign: TextAlign.center,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: themeColors.background1.withValues(alpha: 0.95),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        ),
+        insetPadding: const EdgeInsets.all(AppSpacing.md),
+        child: SizedBox(
+          width: dialogWidth,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Title
+                  Text(
+                    'إعادة تعيين كلمة المرور',
+                    style: AppTypography.titleLarge.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  // Description
+                  Text(
+                    'سنرسل لك رابط لإعادة تعيين كلمة المرور',
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  // Email field
+                  ThemeAwareTextField(
+                    controller: emailController,
+                    label: 'البريد الإلكتروني',
+                    hintText: 'user@example.com',
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'يرجى إدخال البريد الإلكتروني';
+                      }
+                      final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                      if (!emailRegex.hasMatch(value)) {
+                        return 'يرجى إدخال بريد إلكتروني صحيح';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  // Actions
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(false),
+                        child: Text(
+                          'إلغاء',
+                          style: AppTypography.buttonMedium.copyWith(
+                            color: themeColors.primary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      ElevatedButton(
+                        onPressed: () {
+                          if (formKey.currentState!.validate()) {
+                            Navigator.of(dialogContext).pop(true);
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: themeColors.primary,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('إرسال'),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 20),
-              ThemeAwareTextField(
-                controller: emailController,
-                label: 'البريد الإلكتروني',
-                hintText: 'user@example.com',
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'يرجى إدخال البريد الإلكتروني';
-                  }
-                  final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-                  if (!emailRegex.hasMatch(value)) {
-                    return 'يرجى إدخال بريد إلكتروني صحيح';
-                  }
-                  return null;
-                },
-              ),
-            ],
+            ),
           ),
         ),
-        actions: [
-          ThemeAwareDialogButton(
-            text: 'إلغاء',
-            isPrimary: false,
-            onPressed: () => Navigator.of(context).pop(false),
-          ),
-          ThemeAwareDialogButton(
-            text: 'إرسال',
-            isPrimary: true,
-            onPressed: () {
-              if (formKey.currentState!.validate()) {
-                Navigator.of(context).pop(true);
-              }
-            },
-          ),
-        ],
       ),
     );
 

@@ -181,7 +181,9 @@ class DataExportService {
           reminderSchedules.length +
           notifications.length;
 
-      onProgress?.call(ExportProgress.complete());
+      // Note: Don't call onProgress(complete) here - the notifier sets complete
+      // when it receives the result, to avoid race condition where dialog sees
+      // complete status but no result yet
 
       return ExportResult(
         filePath: filePath,

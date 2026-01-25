@@ -253,7 +253,7 @@ class ThemeAwareAlertDialog extends ConsumerWidget {
                   ],
                 ),
               ),
-            Flexible(child: content),
+            content,
             if (actions.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.lg),
               Row(

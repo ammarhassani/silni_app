@@ -15,7 +15,6 @@ import '../widgets/ai_error_card.dart';
 import '../widgets/ai_loading_indicator.dart';
 import '../widgets/relative_selector.dart';
 import '../../../shared/utils/ui_helpers.dart';
-import '../../../shared/widgets/theme_aware_dialog.dart';
 
 /// Screen for AI-powered message composition
 class MessageComposerScreen extends ConsumerWidget {
@@ -581,9 +580,44 @@ class _MessageCard extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (context) => ThemeAwareAlertDialog(
-        title: 'تعديل الرسالة',
-        titleIcon: const Icon(Icons.edit_note_rounded, color: Colors.white),
+      builder: (context) => AlertDialog(
+        backgroundColor: themeColors.background1.withValues(alpha: 0.95),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        ),
+        titlePadding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.sm,
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          0,
+          AppSpacing.lg,
+          AppSpacing.md,
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          0,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.edit_note_rounded, color: Colors.white, size: 32),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'تعديل الرسالة',
+              style: AppTypography.titleLarge.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
         content: TextField(
           controller: controller,
           maxLines: 8,
@@ -610,7 +644,7 @@ class _MessageCard extends ConsumerWidget {
             onPressed: () => Navigator.pop(context),
             child: Text(
               'إلغاء',
-              style: AppTypography.labelMedium.copyWith(color: Colors.white54),
+              style: AppTypography.labelMedium.copyWith(color: themeColors.primary),
             ),
           ),
           ElevatedButton(

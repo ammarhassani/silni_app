@@ -18,7 +18,6 @@ import '../../../core/services/subscription_service.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/theme/dynamic_theme.dart';
 import '../../../shared/widgets/glass_card.dart';
-import '../../../shared/widgets/theme_aware_dialog.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../subscription/screens/paywall_screen.dart';
 import '../../../shared/utils/ui_helpers.dart';
@@ -563,16 +562,51 @@ class SettingsScreen extends ConsumerWidget {
         builder: (context, setState) {
           final themeColors = ref.watch(themeColorsProvider);
 
-          return ThemeAwareAlertDialog(
-            title: 'تغيير كلمة المرور',
-            titleIcon: Icon(
-              Icons.lock_outline,
-              color: themeColors.primary,
-              size: 32,
+          return AlertDialog(
+            backgroundColor: themeColors.background1.withValues(alpha: 0.95),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
             ),
-            content: Form(
-              key: formKey,
-              child: SingleChildScrollView(
+            titlePadding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.sm,
+            ),
+            contentPadding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              0,
+              AppSpacing.lg,
+              AppSpacing.md,
+            ),
+            actionsPadding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              0,
+              AppSpacing.lg,
+              AppSpacing.lg,
+            ),
+            title: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.lock_outline,
+                  color: themeColors.primary,
+                  size: 32,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'تغيير كلمة المرور',
+                  style: AppTypography.titleLarge.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Form(
+                key: formKey,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -644,7 +678,7 @@ class SettingsScreen extends ConsumerWidget {
                 onPressed: isLoading ? null : () => Navigator.of(dialogContext).pop(),
                 child: Text(
                   'إلغاء',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+                  style: TextStyle(color: themeColors.primary),
                 ),
               ),
               ElevatedButton(

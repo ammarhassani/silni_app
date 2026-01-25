@@ -37,6 +37,8 @@ class BadgePrestige {
 
     // Special activity badges
     'all_interaction_types',
+    'variety_10',
+    'variety_3',
     'social_butterfly',
 
     // Specific activity badges
@@ -133,6 +135,16 @@ class BadgePrestige {
       emoji: '🎨',
       name: 'متنوع',
       color: AppColors.emotionalPurple,
+    ),
+    'variety_3': BadgeDisplayInfo(
+      emoji: '🎨',
+      name: 'منوع',
+      color: AppColors.calmBlue,
+    ),
+    'variety_10': BadgeDisplayInfo(
+      emoji: '🌐',
+      name: 'شبكة علاقات',
+      color: AppColors.calmBlue,
     ),
     'social_butterfly': BadgeDisplayInfo(
       emoji: '🦋',

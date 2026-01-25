@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/config/supabase_config.dart';
+import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_themes.dart';
@@ -10,7 +11,6 @@ import '../../../core/services/error_handler_service.dart';
 import '../../../shared/providers/data_export_provider.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/data_export_dialog.dart';
-import '../../../shared/widgets/theme_aware_dialog.dart';
 import '../../auth/providers/auth_provider.dart';
 
 /// Show image source selection dialog
@@ -22,8 +22,16 @@ void showImageSourceDialog({
   showDialog(
     context: context,
     builder: (BuildContext context) {
-      return ThemeAwareAlertDialog(
-        title: 'اختر مصدر الصورة',
+      return AlertDialog(
+        backgroundColor: themeColors.background1.withValues(alpha: 0.95),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        ),
+        title: Text(
+          'اختر مصدر الصورة',
+          style: AppTypography.titleLarge.copyWith(color: Colors.white),
+          textAlign: TextAlign.center,
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -56,9 +64,7 @@ void showImageSourceDialog({
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
               'إلغاء',
-              style: AppTypography.buttonMedium.copyWith(
-                color: themeColors.primary,
-              ),
+              style: TextStyle(color: themeColors.primary),
             ),
           ),
         ],
@@ -71,24 +77,33 @@ void showImageSourceDialog({
 void showChangePasswordDialog({
   required BuildContext context,
   required WidgetRef ref,
+  required ThemeColors themeColors,
 }) {
   showDialog(
     context: context,
-    builder: (dialogContext) => ThemeAwareAlertDialog(
-      title: 'تغيير كلمة المرور',
+    builder: (dialogContext) => AlertDialog(
+      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+      ),
+      title: Text(
+        'تغيير كلمة المرور',
+        style: AppTypography.titleLarge.copyWith(color: Colors.white),
+        textAlign: TextAlign.center,
+      ),
       content: Text(
         'سيتم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني',
         style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
       ),
       actions: [
-        ThemeAwareDialogButton(
-          text: 'إلغاء',
-          isPrimary: false,
+        TextButton(
           onPressed: () => Navigator.pop(dialogContext),
+          child: Text(
+            'إلغاء',
+            style: TextStyle(color: themeColors.primary),
+          ),
         ),
-        ThemeAwareDialogButton(
-          text: 'إرسال',
-          isPrimary: true,
+        ElevatedButton(
           onPressed: () async {
             Navigator.pop(dialogContext);
 
@@ -122,6 +137,11 @@ void showChangePasswordDialog({
               }
             }
           },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: themeColors.primary,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('إرسال'),
         ),
       ],
     ),
@@ -167,24 +187,33 @@ Future<void> showExportDataDialogFlow({
 void showDeleteAccountDialog({
   required BuildContext context,
   required WidgetRef ref,
+  required ThemeColors themeColors,
 }) {
   showDialog(
     context: context,
-    builder: (dialogContext) => ThemeAwareAlertDialog(
-      title: 'حذف الحساب',
+    builder: (dialogContext) => AlertDialog(
+      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+      ),
+      title: Text(
+        'حذف الحساب',
+        style: AppTypography.titleLarge.copyWith(color: Colors.white),
+        textAlign: TextAlign.center,
+      ),
       content: Text(
         'هل أنت متأكد من حذف حسابك؟ سيتم حذف جميع بياناتك بشكل نهائي ولا يمكن التراجع عن هذا الإجراء.',
         style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
       ),
       actions: [
-        ThemeAwareDialogButton(
-          text: 'إلغاء',
-          isPrimary: false,
+        TextButton(
           onPressed: () => Navigator.pop(dialogContext),
+          child: Text(
+            'إلغاء',
+            style: TextStyle(color: themeColors.primary),
+          ),
         ),
-        ThemeAwareDialogButton(
-          text: 'حذف',
-          variant: DialogButtonVariant.destructive,
+        ElevatedButton(
           onPressed: () async {
             Navigator.pop(dialogContext);
 
@@ -223,6 +252,11 @@ void showDeleteAccountDialog({
               }
             }
           },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('حذف'),
         ),
       ],
     ),

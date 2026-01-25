@@ -206,7 +206,10 @@
       "Bash(git -C /Users/engammar/Apps/silni_app log -1 --oneline)",
       "Bash(plutil -lint:*)",
       "Bash(du:*)",
-      "Bash(svgo:*)"
+      "Bash(svgo:*)",
+      "Bash(export LANG=en_US.UTF-8)",
+      "Bash(export LC_ALL=en_US.UTF-8:*)",
+      "Bash(make smoke:*)"
     ],
     "deny": [],
     "ask": []
