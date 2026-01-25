@@ -1,0 +1,19 @@
+# Patrol E2E Testing Configuration
+# https://patrol.leancode.co/
+
+app_name: Silni
+
+# iOS configuration
+ios:
+  bundle_id: com.silni.app
+
+# Android configuration
+android:
+  package_name: com.silni.app
+
+# Test settings
+test:
+  # Timeout for finding widgets (seconds)
+  find_timeout: 10
+  # Timeout for settling animations (seconds)
+  settle_timeout: 10
