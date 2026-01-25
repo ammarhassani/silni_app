@@ -24,3 +24,18 @@ silni-admin/        # Next.js admin dashboard
 ## Key Files
 - `.env` - Environment config (gitignored)
 - `lib/core/config/env/env.g.dart` - Generated env file
+
+## Testing
+
+```bash
+# One command to test everything
+make test
+
+# Quick smoke test
+make smoke
+
+# Update golden images (when UI changes intentionally)
+make update-goldens
+```
+
+See `docs/TESTING_GUIDELINES.md` for detailed testing documentation.
