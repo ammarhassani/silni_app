@@ -51,6 +51,47 @@ jobs:
           file: coverage/lcov.info
           fail_ci_if_error: false
 
+      - name: Check coverage threshold
+        run: |
+          # Extract coverage percentage
+          COVERAGE=$(lcov --summary coverage/lcov.info 2>&1 | grep "lines" | grep -oP '\d+\.\d+' | head -1)
+          echo "Current coverage: $COVERAGE%"
+
+          # Minimum threshold - TORTURE MODE DEMANDS 80%
+          THRESHOLD=80
+
+          if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
+            echo "Coverage $COVERAGE% is below threshold $THRESHOLD%"
+            exit 1
+          fi
+
+          echo "Coverage check passed!"
+
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build Android APK
+        run: flutter build apk --debug
+
   build-ios:
     name: Build iOS
     runs-on: macos-latest
