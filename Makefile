@@ -1,4 +1,4 @@
-.PHONY: test test-unit test-widget test-integration test-e2e test-golden coverage clean bug-scout test-adversarial adversarial-quick
+.PHONY: test test-unit test-widget test-integration test-e2e test-golden coverage clean bug-scout test-adversarial adversarial-quick mutation-test
 
 # Run all tests (one command to rule them all)
 test:
@@ -57,3 +57,7 @@ test-adversarial:
 # Quick adversarial tests (fuzz + security only)
 adversarial-quick:
 	@./scripts/bug_scout.sh --quick
+
+# Mutation Testing - Kill Every Mutant!
+mutation-test:
+	@./scripts/mutation_test.sh
