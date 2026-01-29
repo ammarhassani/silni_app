@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cairo, poppins, amiri } from "@/lib/fonts";
+import SmoothScrollProvider from "@/components/providers/SmoothScrollProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -26,7 +27,9 @@ export default function RootLayout({
       dir="rtl"
       className={`${cairo.variable} ${poppins.variable} ${amiri.variable}`}
     >
-      <body className="font-cairo antialiased">{children}</body>
+      <body className="font-cairo antialiased">
+        <SmoothScrollProvider>{children}</SmoothScrollProvider>
+      </body>
     </html>
   );
 }
