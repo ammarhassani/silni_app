@@ -1,7 +1,17 @@
+import Hero from "@/components/sections/Hero";
+import ProblemCards from "@/components/sections/ProblemCards";
+import StickyFeatures from "@/components/sections/StickyFeatures";
+import SocialProof from "@/components/sections/SocialProof";
+import NewsletterSignup from "@/components/sections/NewsletterSignup";
+
 export default function Home() {
   return (
-    <main className="min-h-screen flex items-center justify-center">
-      <h1 className="text-hero font-cairo text-primary-deep">صِلني</h1>
-    </main>
+    <>
+      <Hero />
+      <ProblemCards />
+      <StickyFeatures />
+      <SocialProof />
+      <NewsletterSignup />
+    </>
   );
 }
