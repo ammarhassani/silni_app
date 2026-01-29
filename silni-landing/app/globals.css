@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-surface text-text-primary font-cairo;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    @apply bg-primary/20 text-primary-dark;
+  }
+}
+
+@layer components {
+  .gradient-primary {
+    background: linear-gradient(135deg, #2E7D32, #60AD5E, #81C784);
+  }
+
+  .gradient-golden {
+    background: linear-gradient(135deg, #FFD700, #FFA000, #FF6F00);
+  }
+
+  .gradient-deep {
+    background: linear-gradient(180deg, #1B5E20 0%, #2E7D32 50%, #388E3C 100%);
+  }
+
+  .gradient-hero {
+    background: linear-gradient(180deg, #1B5E20 0%, #2E7D32 40%, #388E3C 100%);
+  }
+
+  .text-gradient-golden {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #FFD700, #FFA000);
+  }
+
+  .glass {
+    @apply backdrop-blur-xl bg-white/10 border border-white/20;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
