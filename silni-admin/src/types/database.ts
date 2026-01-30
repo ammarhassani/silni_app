@@ -429,3 +429,115 @@ export interface AdminRouteCategory {
   is_active: boolean;
   created_at: string;
 }
+
+// ===== Social Media Suite =====
+
+export type SocialPlatform = 'twitter' | 'instagram';
+export type SocialPostStatus = 'draft' | 'queued' | 'approved' | 'scheduled' | 'published' | 'failed' | 'rejected';
+export type SocialContentType = 'hadith' | 'quran' | 'family_tip' | 'feature' | 'update' | 'cta' | 'occasion';
+export type SocialTone = 'inspirational' | 'educational' | 'conversational' | 'promotional';
+export type SocialAccountStatus = 'connected' | 'expired' | 'disconnected';
+export type ArabicDialect = 'msa' | 'colloquial' | 'mix';
+
+export interface SocialAccount {
+  id: string;
+  platform: SocialPlatform;
+  account_name: string;
+  account_handle: string;
+  access_token_encrypted: string;
+  refresh_token_encrypted: string | null;
+  token_expires_at: string | null;
+  scopes: string[];
+  platform_user_id: string | null;
+  status: SocialAccountStatus;
+  last_post_at: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SocialCampaign {
+  id: string;
+  name: string;
+  description: string | null;
+  utm_campaign: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SocialTemplate {
+  id: string;
+  name: string;
+  content_type: SocialContentType;
+  platform: SocialPlatform | 'both';
+  text_template: string;
+  default_hashtags: string[];
+  default_tone: SocialTone | null;
+  is_recurring: boolean;
+  recurring_schedule: Record<string, unknown> | null;
+  tags: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SocialBrandVoice {
+  id: string;
+  tone_guidelines: string;
+  arabic_dialect: ArabicDialect;
+  hashtag_sets: Record<string, string[]>;
+  banned_words: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SocialPost {
+  id: string;
+  platform: SocialPlatform;
+  content_type: SocialContentType;
+  text_ar: string;
+  text_en: string | null;
+  hashtags: string[];
+  image_prompt: string | null;
+  image_url: string | null;
+  utm_link: string | null;
+  tone: SocialTone | null;
+  status: SocialPostStatus;
+  scheduled_at: string | null;
+  published_at: string | null;
+  platform_post_id: string | null;
+  platform_post_url: string | null;
+  error_message: string | null;
+  campaign_id: string | null;
+  template_id: string | null;
+  account_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SocialAnalytics {
+  id: string;
+  post_id: string;
+  likes: number;
+  comments: number;
+  shares: number;
+  impressions: number;
+  link_clicks: number;
+  snapshot_at: string;
+  created_at: string;
+}
+
+export interface SocialClickLog {
+  id: string;
+  post_id: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_content: string | null;
+  user_agent: string | null;
+  ip_hash: string | null;
+  clicked_at: string;
+}
