@@ -1,7 +1,3 @@
-"use client";
-
-import { motion } from "framer-motion";
-
 interface TextRevealProps {
   text: string;
   className?: string;
@@ -23,19 +19,12 @@ export default function TextReveal({
     <Tag className={className}>
       {words.map((word, i) => (
         <span key={i} className="inline-block overflow-hidden">
-          <motion.span
-            className="inline-block"
-            initial={{ y: "100%", opacity: 0 }}
-            whileInView={{ y: 0, opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{
-              duration: 0.6,
-              delay: delay + i * staggerDelay,
-              ease: [0.25, 0.46, 0.45, 0.94],
-            }}
+          <span
+            className="inline-block animate-fade-up"
+            style={{ animationDelay: `${delay + i * staggerDelay}s` }}
           >
             {word}
-          </motion.span>
+          </span>
           {i < words.length - 1 && "\u00A0"}
         </span>
       ))}

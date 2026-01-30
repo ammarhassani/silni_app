@@ -35,6 +35,18 @@
     background: linear-gradient(180deg, #1B5E20 0%, #2E7D32 40%, #388E3C 100%);
   }
 
+  .gradient-soft {
+    background: linear-gradient(180deg, #E8F5E9 0%, #F1F8E9 50%, #F9FBE7 100%);
+  }
+
+  .gradient-warm {
+    background: linear-gradient(135deg, #FFFDE7 0%, #FFF8E1 50%, #FFF3E0 100%);
+  }
+
+  .gradient-cta {
+    background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 40%, #388E3C 70%, #43A047 100%);
+  }
+
   .text-gradient-golden {
     @apply bg-clip-text text-transparent;
     background-image: linear-gradient(135deg, #FFD700, #FFA000);
@@ -48,5 +60,30 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+/* CSS entrance animations (work without JS hydration) */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* Accessibility: reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

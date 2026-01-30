@@ -90,6 +90,38 @@ torture:
 torture-ultimate:
 	@./scripts/ultimate_torture.sh --full
 
+# ============================================================================
+# TEST WITH LOGGING - Output to files for review
+# ============================================================================
+
+# Run all tests with output logged to file
+test-log:
+	@echo "Running all tests with output logged to test_output.txt..."
+	@flutter test --coverage 2>&1 | tee test_output.txt
+	@echo ""
+	@echo "Test output saved to test_output.txt"
+
+# Run unit tests with logging
+test-unit-log:
+	@echo "Running unit tests with output logged to test_unit_output.txt..."
+	@flutter test test/unit/ --coverage 2>&1 | tee test_unit_output.txt
+	@echo ""
+	@echo "Unit test output saved to test_unit_output.txt"
+
+# Run widget tests with logging
+test-widget-log:
+	@echo "Running widget tests with output logged to test_widget_output.txt..."
+	@flutter test test/widget/ --coverage 2>&1 | tee test_widget_output.txt
+	@echo ""
+	@echo "Widget test output saved to test_widget_output.txt"
+
+# Run all tests with verbose output logged
+test-verbose-log:
+	@echo "Running all tests (verbose) with output logged to test_verbose_output.txt..."
+	@flutter test --coverage --reporter expanded 2>&1 | tee test_verbose_output.txt
+	@echo ""
+	@echo "Verbose test output saved to test_verbose_output.txt"
+
 # Nuclear option - when you want to be ABSOLUTELY sure
 nuclear:
 	@echo ""

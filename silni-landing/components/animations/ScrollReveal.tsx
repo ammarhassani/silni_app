@@ -1,7 +1,6 @@
 "use client";
 
-import { motion, type TargetAndTransition } from "framer-motion";
-import { type ReactNode } from "react";
+import { useRef, useEffect, useState, type ReactNode } from "react";
 
 type Direction = "up" | "down" | "right" | "left";
 
@@ -14,14 +13,13 @@ interface ScrollRevealProps {
   distance?: number;
 }
 
-const getInitial = (direction: Direction, distance: number): TargetAndTransition => {
-  const map: Record<Direction, TargetAndTransition> = {
-    up: { opacity: 0, y: distance },
-    down: { opacity: 0, y: -distance },
-    right: { opacity: 0, x: -distance },
-    left: { opacity: 0, x: distance },
-  };
-  return map[direction];
+const getTransform = (direction: Direction, distance: number): string => {
+  switch (direction) {
+    case "up": return `translateY(${distance}px)`;
+    case "down": return `translateY(-${distance}px)`;
+    case "right": return `translateX(-${distance}px)`;
+    case "left": return `translateX(${distance}px)`;
+  }
 };
 
 export default function ScrollReveal({
@@ -32,15 +30,43 @@ export default function ScrollReveal({
   className = "",
   distance = 60,
 }: ScrollRevealProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isRevealed, setIsRevealed] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsRevealed(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "-80px" }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Before hydration: no inline styles → content fully visible via CSS defaults
+  // After hydration, not yet in view: hidden + transformed
+  // After hydration, in view: animate to visible
+  const style: React.CSSProperties = hydrated
+    ? {
+        opacity: isRevealed ? 1 : 0,
+        transform: isRevealed ? "translate3d(0,0,0)" : getTransform(direction, distance),
+        transition: `opacity ${duration}s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}s, transform ${duration}s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}s`,
+      }
+    : {};
+
   return (
-    <motion.div
-      initial={getInitial(direction, distance)}
-      whileInView={{ opacity: 1, x: 0, y: 0 }}
-      viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration, delay, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className={className}
-    >
+    <div ref={ref} className={className} style={style}>
       {children}
-    </motion.div>
+    </div>
   );
 }

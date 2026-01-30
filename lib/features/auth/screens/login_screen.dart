@@ -956,29 +956,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Semantics(
-                                    label: 'إنشاء حساب جديد',
-                                    button: true,
-                                    child: TextButton(
-                                      onPressed: () => context.go(AppRoutes.signup),
-                                      child: Text(
-                                        'إنشاء حساب جديد',
-                                        style: AppTypography.labelMedium.copyWith(
-                                          color: themeColors.textOnGradient,
-                                          fontWeight: FontWeight.bold,
+                                  Flexible(
+                                    child: Semantics(
+                                      label: 'إنشاء حساب جديد',
+                                      button: true,
+                                      child: TextButton(
+                                        onPressed: () => context.go(AppRoutes.signup),
+                                        child: Text(
+                                          'إنشاء حساب جديد',
+                                          style: AppTypography.labelMedium.copyWith(
+                                            color: themeColors.textOnGradient,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                  Semantics(
-                                    label: 'نسيت كلمة المرور',
-                                    button: true,
-                                    child: TextButton(
-                                      onPressed: _showForgotPasswordDialog,
-                                      child: Text(
-                                        'نسيت كلمة المرور؟',
-                                        style: AppTypography.labelMedium.copyWith(
-                                          color: themeColors.textOnGradient.withValues(alpha: 0.8),
+                                  Flexible(
+                                    child: Semantics(
+                                      label: 'نسيت كلمة المرور',
+                                      button: true,
+                                      child: TextButton(
+                                        onPressed: _showForgotPasswordDialog,
+                                        child: Text(
+                                          'نسيت كلمة المرور؟',
+                                          style: AppTypography.labelMedium.copyWith(
+                                            color: themeColors.textOnGradient.withValues(alpha: 0.8),
+                                          ),
                                         ),
                                       ),
                                     ),

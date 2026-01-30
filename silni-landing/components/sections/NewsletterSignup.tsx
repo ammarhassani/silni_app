@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
 import ScrollReveal from "@/components/animations/ScrollReveal";
+import IslamicPattern from "@/components/animations/IslamicPattern";
 
 export default function NewsletterSignup() {
   const [email, setEmail] = useState("");
@@ -28,13 +28,15 @@ export default function NewsletterSignup() {
   };
 
   return (
-    <section className="py-3xl bg-surface">
-      <div className="max-w-2xl mx-auto px-md lg:px-xl text-center">
+    <section className="relative py-3xl gradient-cta overflow-hidden">
+      <IslamicPattern color="#81C784" opacity={0.06} />
+
+      <div className="max-w-2xl mx-auto px-md lg:px-xl text-center relative z-10">
         <ScrollReveal>
-          <h2 className="text-headline-lg text-primary-deep mb-md">
+          <h2 className="text-headline-lg text-white mb-md">
             كن أول من يعرف
           </h2>
-          <p className="text-body-lg text-text-secondary mb-xl">
+          <p className="text-body-lg text-white/80 mb-xl">
             سجّل بريدك وتوصلك آخر الأخبار والتحديثات
           </p>
         </ScrollReveal>
@@ -51,35 +53,25 @@ export default function NewsletterSignup() {
               placeholder="بريدك الإلكتروني"
               required
               dir="ltr"
-              className="flex-1 px-lg py-md rounded-button bg-white border border-text-hint/30 text-text-primary text-body-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-hint"
+              className="flex-1 px-lg py-md rounded-button bg-white/95 border border-white/20 text-text-primary text-body-lg focus:outline-none focus:ring-2 focus:ring-gold/40 transition-all placeholder:text-text-hint shadow-lg"
             />
-            <motion.button
+            <button
               type="submit"
-              className="gradient-golden text-primary-deep font-bold px-xl py-md rounded-button text-button-lg"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.97 }}
+              className="gradient-golden text-primary-deep font-bold px-xl py-md rounded-button text-button-lg shadow-lg hover:shadow-xl hover:scale-105 active:scale-[0.97] transition-all duration-200"
             >
               اشترك
-            </motion.button>
+            </button>
           </form>
 
           {status === "success" && (
-            <motion.p
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-primary mt-md text-body-lg"
-            >
+            <p className="text-gold mt-md text-body-lg animate-fade-up">
               تم التسجيل بنجاح!
-            </motion.p>
+            </p>
           )}
           {status === "error" && (
-            <motion.p
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-red-500 mt-md text-body-lg"
-            >
+            <p className="text-red-300 mt-md text-body-lg animate-fade-up">
               حدث خطأ، حاول مرة أخرى
-            </motion.p>
+            </p>
           )}
         </ScrollReveal>
       </div>

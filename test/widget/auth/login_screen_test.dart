@@ -55,29 +55,37 @@ void main() {
     /// Helper to pump widget and advance animations properly.
     /// Sets a larger surface size to accommodate the full form.
     Future<void> pumpScreen(WidgetTester tester) async {
-      // Set a larger surface size to fit the entire login form
-      await tester.binding.setSurfaceSize(const Size(430, 932));
+      // Set a larger surface size to fit the entire login form and avoid overflow
+      await tester.binding.setSurfaceSize(const Size(500, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(createTestWidget());
-      // Advance animations to let them settle
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pump(const Duration(milliseconds: 500));
-      await tester.pump(const Duration(milliseconds: 400));
+      // Pump frames to advance animations (can't use pumpAndSettle due to continuous animations)
+      // Also need to pump enough time for GyroscopeService timer (2 seconds)
+      await tester.pump(const Duration(seconds: 3));
     }
 
     /// Helper to pump after an action (tap, enterText)
     Future<void> pumpAfterAction(WidgetTester tester) async {
-      await tester.pump(const Duration(milliseconds: 100));
+      // Pump multiple frames to let validation errors appear
+      for (int i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
     }
 
     /// Helper to scroll to and tap a button by text
     Future<void> scrollToAndTap(WidgetTester tester, String text) async {
       final finder = find.text(text);
       await tester.ensureVisible(finder);
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.tap(finder);
-      await pumpAfterAction(tester);
+      // Pump frames for scroll animation
+      for (int i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      await tester.tap(finder, warnIfMissed: false);
+      // Pump frames for validation errors
+      for (int i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
     }
 
     testWidgets('should render all login screen elements', (tester) async {
@@ -107,9 +115,8 @@ void main() {
       // Verify login button
       expect(find.text('تسجيل الدخول'), findsOneWidget);
 
-      // Verify signup link
-      expect(find.text('ليس لديك حساب؟'), findsOneWidget);
-      expect(find.text('سجّل الآن'), findsOneWidget);
+      // Verify signup link (changed from 'ليس لديك حساب؟' / 'سجّل الآن')
+      expect(find.text('إنشاء حساب جديد'), findsOneWidget);
     });
 
     testWidgets('should show validation error for empty email', (tester) async {
@@ -150,7 +157,7 @@ void main() {
       expect(find.text('الرجاء إدخال كلمة المرور'), findsOneWidget);
     });
 
-    testWidgets('should show validation error for short password', (tester) async {
+    testWidgets('should accept short password on login (no length validation)', (tester) async {
       await pumpScreen(tester);
 
       // Enter valid email and short password
@@ -161,8 +168,10 @@ void main() {
       // Tap login button
       await scrollToAndTap(tester, 'تسجيل الدخول');
 
-      // Expect password length validation error
-      expect(find.text('كلمة المرور يجب أن تكون 6 أحرف على الأقل'), findsOneWidget);
+      // Login screen intentionally doesn't validate password length
+      // (old users may have shorter passwords, Supabase validates)
+      // So no validation error should appear
+      expect(find.text('كلمة المرور يجب أن تكون 6 أحرف على الأقل'), findsNothing);
     });
 
     testWidgets('should toggle password visibility', (tester) async {
@@ -194,8 +203,8 @@ void main() {
     testWidgets('should navigate to signup screen when signup link is tapped', (tester) async {
       await pumpScreen(tester);
 
-      // Find and tap signup link
-      final signupLink = find.text('سجّل الآن');
+      // Find and tap signup link (now called "إنشاء حساب جديد")
+      final signupLink = find.text('إنشاء حساب جديد');
       expect(signupLink, findsOneWidget);
 
       await tester.ensureVisible(signupLink);

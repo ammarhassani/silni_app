@@ -82,7 +82,11 @@ class _AnimatedIslamicPatternBackgroundState
   void _stopGyroscope() {
     _gyroscopeSubscription?.cancel();
     _gyroscopeSubscription = null;
-    GyroscopeService.instance.stopListening();
+    // Only access GyroscopeService if it was already initialized
+    // (avoids creating a new instance with its 2-second availability check timer)
+    if (GyroscopeService.hasInstance) {
+      GyroscopeService.instance.stopListening();
+    }
   }
 
   @override

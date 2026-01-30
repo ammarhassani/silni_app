@@ -334,12 +334,24 @@ void main() {
     // STREAK MILESTONE TESTS
     // =====================================================
     group('Streak Milestones', () {
+      test('should return true for 3-day milestone', () {
+        expect(GamificationEvent.isStreakMilestone(3), isTrue);
+      });
+
       test('should return true for 7-day milestone', () {
         expect(GamificationEvent.isStreakMilestone(7), isTrue);
       });
 
+      test('should return true for 10-day milestone', () {
+        expect(GamificationEvent.isStreakMilestone(10), isTrue);
+      });
+
       test('should return true for 14-day milestone', () {
         expect(GamificationEvent.isStreakMilestone(14), isTrue);
+      });
+
+      test('should return true for 21-day milestone', () {
+        expect(GamificationEvent.isStreakMilestone(21), isTrue);
       });
 
       test('should return true for 30-day milestone', () {
@@ -354,8 +366,20 @@ void main() {
         expect(GamificationEvent.isStreakMilestone(100), isTrue);
       });
 
+      test('should return true for 200-day milestone', () {
+        expect(GamificationEvent.isStreakMilestone(200), isTrue);
+      });
+
+      test('should return true for 365-day milestone', () {
+        expect(GamificationEvent.isStreakMilestone(365), isTrue);
+      });
+
+      test('should return true for 500-day milestone', () {
+        expect(GamificationEvent.isStreakMilestone(500), isTrue);
+      });
+
       test('should return false for non-milestone streaks', () {
-        final nonMilestones = [1, 2, 3, 5, 6, 8, 10, 15, 20, 25, 35, 45, 75, 99];
+        final nonMilestones = [1, 2, 4, 5, 6, 8, 9, 11, 15, 20, 25, 35, 45, 75, 99, 150, 250, 400];
         for (final streak in nonMilestones) {
           expect(GamificationEvent.isStreakMilestone(streak), isFalse,
               reason: 'Streak $streak should not be a milestone');

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:silni_app/shared/widgets/mood_selector.dart';
+
+import '../helpers/widget_test_helpers.dart';
 
 /// Widget integration tests for the MoodSelector and interaction logging
 ///
@@ -17,18 +20,21 @@ void main() {
     });
 
     Widget createTestWidget({bool compact = false, bool showLabel = true}) {
-      return MaterialApp(
-        home: Scaffold(
-          body: StatefulBuilder(
-            builder: (context, setState) => Container(
-              color: const Color(0xFF1A1A2E),
-              child: MoodSelector(
-                selectedMood: selectedMood,
-                onMoodChanged: (mood) {
-                  setState(() => selectedMood = mood);
-                },
-                compact: compact,
-                showLabel: showLabel,
+      return ProviderScope(
+        overrides: defaultThemeOverrides,
+        child: MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) => Container(
+                color: const Color(0xFF1A1A2E),
+                child: MoodSelector(
+                  selectedMood: selectedMood,
+                  onMoodChanged: (mood) {
+                    setState(() => selectedMood = mood);
+                  },
+                  compact: compact,
+                  showLabel: showLabel,
+                ),
               ),
             ),
           ),

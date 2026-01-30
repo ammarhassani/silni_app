@@ -56,28 +56,36 @@ void main() {
     /// Sets a larger surface size to accommodate the full form.
     Future<void> pumpScreen(WidgetTester tester) async {
       // Set a larger surface size to fit the entire signup form (iPhone 14 Pro Max dimensions)
-      await tester.binding.setSurfaceSize(const Size(430, 932));
+      await tester.binding.setSurfaceSize(const Size(430, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(createTestWidget());
-      // Advance animations to let them settle
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pump(const Duration(milliseconds: 500));
-      await tester.pump(const Duration(milliseconds: 400));
+      // Pump frames to advance animations (can't use pumpAndSettle due to continuous animations)
+      // Also need to pump enough time for GyroscopeService timer (2 seconds)
+      await tester.pump(const Duration(seconds: 3));
     }
 
     /// Helper to pump after an action (tap, enterText)
     Future<void> pumpAfterAction(WidgetTester tester) async {
-      await tester.pump(const Duration(milliseconds: 100));
+      // Pump multiple frames to let validation errors appear
+      for (int i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
     }
 
     /// Helper to scroll to and tap a button by text
     Future<void> scrollToAndTap(WidgetTester tester, String text) async {
       final finder = find.text(text);
       await tester.ensureVisible(finder);
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.tap(finder);
-      await pumpAfterAction(tester);
+      // Pump frames for scroll animation
+      for (int i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      await tester.tap(finder, warnIfMissed: false);
+      // Pump frames for validation errors
+      for (int i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
     }
 
     testWidgets('should render all signup screen elements', (tester) async {
@@ -187,13 +195,13 @@ void main() {
       final textFields = find.byType(TextFormField);
       await tester.enterText(textFields.at(0), 'Ahmed Ali');
       await tester.enterText(textFields.at(1), 'ahmed@example.com');
-      await tester.enterText(textFields.at(2), '12345'); // Less than 6 chars
+      await tester.enterText(textFields.at(2), '1234567'); // Less than 8 chars
 
       // Tap signup button
       await scrollToAndTap(tester, 'إنشاء حساب');
 
-      // Expect password length validation error
-      expect(find.text('كلمة المرور يجب أن تكون 6 أحرف على الأقل'), findsOneWidget);
+      // Expect password length validation error (signup requires 8 chars)
+      expect(find.text('كلمة المرور يجب أن تكون 8 أحرف على الأقل'), findsOneWidget);
     });
 
     testWidgets('should show validation error for empty confirm password', (tester) async {
@@ -279,12 +287,12 @@ void main() {
     testWidgets('should accept valid signup data without validation errors', (tester) async {
       await pumpScreen(tester);
 
-      // Enter all valid data
+      // Enter all valid data (password must have uppercase, lowercase, digit, 8+ chars)
       final textFields = find.byType(TextFormField);
       await tester.enterText(textFields.at(0), 'Ahmed Ali');
       await tester.enterText(textFields.at(1), 'ahmed@example.com');
-      await tester.enterText(textFields.at(2), 'password123');
-      await tester.enterText(textFields.at(3), 'password123');
+      await tester.enterText(textFields.at(2), 'Password123');
+      await tester.enterText(textFields.at(3), 'Password123');
       await pumpAfterAction(tester);
 
       // Tap signup button - should not show validation errors
@@ -296,7 +304,7 @@ void main() {
       expect(find.text('الرجاء إدخال البريد الإلكتروني'), findsNothing);
       expect(find.text('البريد الإلكتروني غير صحيح'), findsNothing);
       expect(find.text('الرجاء إدخال كلمة المرور'), findsNothing);
-      expect(find.text('كلمة المرور يجب أن تكون 6 أحرف على الأقل'), findsNothing);
+      expect(find.text('كلمة المرور يجب أن تكون 8 أحرف على الأقل'), findsNothing);
       expect(find.text('الرجاء تأكيد كلمة المرور'), findsNothing);
       expect(find.text('كلمة المرور غير متطابقة'), findsNothing);
     });

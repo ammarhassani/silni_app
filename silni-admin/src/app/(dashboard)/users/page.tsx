@@ -59,7 +59,16 @@ import {
   TrendingUp,
   Clock,
   RefreshCw,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Copy,
+  Check,
+  ExternalLink,
 } from "lucide-react";
+
+// RevenueCat project ID for customer links
+const REVENUECAT_PROJECT_ID = "f9479bbd";
 import { toast } from "sonner";
 
 export default function UsersPage() {
@@ -85,6 +94,14 @@ export default function UsersPage() {
   const { data: stats, isLoading: statsLoading } = useUserStats();
   const updateRole = useUpdateUserRole();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const copyToClipboard = async (id: string) => {
+    await navigator.clipboard.writeText(id);
+    setCopiedId(id);
+    toast.success("تم نسخ معرف المستخدم");
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -143,11 +160,24 @@ export default function UsersPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("ar-SA", {
+    const date = new Date(dateString);
+    const dateStr = date.toLocaleDateString("en-GB", {
       year: "numeric",
       month: "short",
       day: "numeric",
     });
+    const timeStr = date.toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    return `${dateStr} ${timeStr}`;
+  };
+
+  const getSortIcon = (column: UserFilters["sortBy"]) => {
+    if (filters.sortBy !== column) return <ArrowUpDown className="h-4 w-4 mr-1 opacity-50" />;
+    return filters.sortOrder === "asc"
+      ? <ArrowUp className="h-4 w-4 mr-1" />
+      : <ArrowDown className="h-4 w-4 mr-1" />;
   };
 
   const getRoleBadgeVariant = (role: UserRole) => {
@@ -388,10 +418,35 @@ export default function UsersPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-12">#</TableHead>
-                      <TableHead>المستخدم</TableHead>
-                      <TableHead>البريد الإلكتروني</TableHead>
+                      <TableHead>User ID (RevenueCat)</TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-muted/50 select-none"
+                        onClick={() => handleSort("display_name")}
+                      >
+                        <div className="flex items-center">
+                          {getSortIcon("display_name")}
+                          المستخدم
+                        </div>
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-muted/50 select-none"
+                        onClick={() => handleSort("email")}
+                      >
+                        <div className="flex items-center">
+                          {getSortIcon("email")}
+                          البريد الإلكتروني
+                        </div>
+                      </TableHead>
                       <TableHead>الصلاحية</TableHead>
-                      <TableHead>تاريخ التسجيل</TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-muted/50 select-none"
+                        onClick={() => handleSort("created_at")}
+                      >
+                        <div className="flex items-center">
+                          {getSortIcon("created_at")}
+                          تاريخ التسجيل
+                        </div>
+                      </TableHead>
                       <TableHead className="w-12"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -400,6 +455,35 @@ export default function UsersPage() {
                       <TableRow key={user.id}>
                         <TableCell className="text-muted-foreground">
                           {((filters.page || 1) - 1) * (filters.pageSize || 20) + index + 1}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <code className="text-xs bg-muted px-2 py-1 rounded font-mono max-w-[100px] truncate" title={user.id}>
+                              {user.id.slice(0, 8)}...
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => copyToClipboard(user.id)}
+                              title="Copy ID"
+                            >
+                              {copiedId === user.id ? (
+                                <Check className="h-3 w-3 text-green-500" />
+                              ) : (
+                                <Copy className="h-3 w-3" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => window.open(`https://app.revenuecat.com/projects/${REVENUECAT_PROJECT_ID}/customers/${user.id}`, '_blank')}
+                              title="Open in RevenueCat"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -460,7 +544,7 @@ export default function UsersPage() {
                     ))}
                     {usersData?.users.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                           لا يوجد مستخدمون
                         </TableCell>
                       </TableRow>

@@ -52,6 +52,9 @@ class GyroscopeService {
     return _instance!;
   }
 
+  /// Check if instance has been initialized (without creating one)
+  static bool get hasInstance => _instance != null;
+
   /// Stream of normalized gyroscope data
   Stream<GyroscopeData>? get stream => _isAvailable ? _controller.stream : null;
 

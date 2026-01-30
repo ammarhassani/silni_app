@@ -1,7 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { type ReactNode } from "react";
+import { useRef, useEffect, useState, type ReactNode, Children, isValidElement } from "react";
 
 interface StaggerChildrenProps {
   children: ReactNode;
@@ -9,37 +8,54 @@ interface StaggerChildrenProps {
   className?: string;
 }
 
-const container = (staggerDelay: number) => ({
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: staggerDelay, delayChildren: 0.1 },
-  },
-});
-
-export const staggerItem = {
-  hidden: { opacity: 0, y: 40 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] as const },
-  },
-};
-
 export default function StaggerChildren({
   children,
   staggerDelay = 0.15,
   className = "",
 }: StaggerChildrenProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "-60px" }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <motion.div
-      variants={container(staggerDelay)}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, margin: "-60px" }}
-      className={className}
-    >
-      {children}
-    </motion.div>
+    <div ref={ref} className={className}>
+      {Children.map(children, (child, index) => {
+        if (!isValidElement(child)) return child;
+
+        const delay = 0.1 + index * staggerDelay;
+        const style: React.CSSProperties = hydrated
+          ? {
+              opacity: isVisible ? 1 : 0,
+              transform: isVisible ? "translateY(0)" : "translateY(40px)",
+              transition: `opacity 0.6s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}s, transform 0.6s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}s`,
+            }
+          : {};
+
+        return (
+          <div style={style}>
+            {child}
+          </div>
+        );
+      })}
+    </div>
   );
 }

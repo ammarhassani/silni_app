@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useInView, motion } from "framer-motion";
 
 interface CountUpProps {
   end: number;
@@ -18,12 +17,30 @@ export default function CountUp({
   prefix = "",
   className = "",
 }: CountUpProps) {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true });
+  const ref = useRef<HTMLSpanElement>(null);
   const [count, setCount] = useState(0);
+  const [started, setStarted] = useState(false);
 
   useEffect(() => {
-    if (!isInView) return;
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setStarted(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "0px" }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!started) return;
 
     let startTime: number;
     const step = (timestamp: number) => {
@@ -35,20 +52,13 @@ export default function CountUp({
     };
 
     requestAnimationFrame(step);
-  }, [isInView, end, duration]);
+  }, [started, end, duration]);
 
   return (
-    <motion.span
-      ref={ref}
-      className={`font-poppins ${className}`}
-      initial={{ opacity: 0, scale: 0.5 }}
-      whileInView={{ opacity: 1, scale: 1 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5 }}
-    >
+    <span ref={ref} className={`font-poppins ${className}`}>
       {prefix}
       {count.toLocaleString("ar-SA")}
       {suffix}
-    </motion.span>
+    </span>
   );
 }

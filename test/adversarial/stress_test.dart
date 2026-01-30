@@ -607,6 +607,8 @@ void main() {
         expect(results.length, 100);
         // With retry logic, more should succeed
         expect(successCount, greaterThan(50));
+        // Verify attempt count is greater than success count (due to retries)
+        expect(attemptCount, greaterThanOrEqualTo(successCount));
       });
     });
 

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import TextReveal from "@/components/animations/TextReveal";
-import StaggerChildren, { staggerItem } from "@/components/animations/StaggerChildren";
 import IslamicPattern from "@/components/animations/IslamicPattern";
 import Button from "@/components/ui/Button";
 

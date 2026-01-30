@@ -93,18 +93,14 @@ export default function PricingCards() {
             </div>
 
             <ul className="space-y-md mb-xl">
-              {tier.features.map((feature, j) => (
-                <motion.li
+              {tier.features.map((feature) => (
+                <li
                   key={feature}
                   className="flex items-center gap-sm text-body-lg text-text-primary"
-                  initial={{ opacity: 0, x: 20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.2 + j * 0.05 }}
                 >
                   <span className="text-primary flex-shrink-0">✓</span>
                   {feature}
-                </motion.li>
+                </li>
               ))}
             </ul>
 
