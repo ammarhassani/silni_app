@@ -34,7 +34,7 @@ async function generatePKCEChallenge(verifier: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(verifier);
   const digest = await crypto.subtle.digest("SHA-256", data);
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(digest)));
+  const base64 = btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(digest))));
   // Base64url encode: replace +, /, and remove =
   return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }

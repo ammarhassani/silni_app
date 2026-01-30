@@ -175,13 +175,13 @@ export default function SocialAnalyticsPage() {
 
     let topPostId: string | null = null;
     let topPostEngagement = 0;
-    for (const [postId, a] of latestByPost) {
+    latestByPost.forEach((a, postId) => {
       const eng = a.likes + a.comments + a.shares;
       if (eng > topPostEngagement) {
         topPostEngagement = eng;
         topPostId = postId;
       }
-    }
+    });
 
     const topPost = topPostId
       ? analyticsWithPosts?.find((a) => a.post_id === topPostId)
