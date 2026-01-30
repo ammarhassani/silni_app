@@ -47,6 +47,8 @@ import {
   Flag,
   PartyPopper,
   Type,
+  Share2,
+  Globe,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -84,6 +86,19 @@ const navigation: NavItem[] = [
       { title: "الأحاديث", href: "/content/hadith", icon: BookOpen },
       { title: "الاقتباسات", href: "/content/quotes", icon: Quote },
       { title: "الرسائل", href: "/engagement/messages", icon: MessageSquare },
+    ],
+  },
+  {
+    title: "التواصل الاجتماعي",
+    href: "/social",
+    icon: Share2,
+    badge: "جديد",
+    children: [
+      { title: "إنشاء المحتوى", href: "/social/generate", icon: Sparkles },
+      { title: "التقويم", href: "/social/calendar", icon: CalendarDays },
+      { title: "الحسابات", href: "/social/accounts", icon: Globe },
+      { title: "التحليلات", href: "/social/analytics", icon: BarChart3 },
+      { title: "القوالب", href: "/social/templates", icon: FileText },
     ],
   },
   {
