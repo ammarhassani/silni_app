@@ -369,6 +369,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     DailyPriorityCard(userId: userId),
                     const SizedBox(height: AppSpacing.md),
 
+                    // Proactive insight (local, all users)
+                    ProactiveInsightCard(userId: userId),
+                    const SizedBox(height: AppSpacing.md),
+
                     // Quick Actions
                     const QuickActionsWidget(),
                     const SizedBox(height: AppSpacing.lg),
