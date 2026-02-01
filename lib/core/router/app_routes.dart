@@ -17,6 +17,7 @@ class AppRoutes {
     signup,
     emailVerification,
     resetPassword,
+    joinFamilyGroup,
   };
 
   /// Check if a route is public (doesn't require auth)
@@ -51,6 +52,12 @@ class AppRoutes {
 
   // Wrapped routes
   static const String monthlyWrapped = '/monthly-wrapped';
+
+  // Family group routes
+  static const String familyGroups = '/family-groups';
+  static const String familyGroupDetail = '/family-group';
+  static const String createFamilyGroup = '/create-family-group';
+  static const String joinFamilyGroup = '/join-family-group';
 
   // AI routes
   static const String aiHub = '/ai-hub';
