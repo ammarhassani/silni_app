@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 /// Data model for shareable celebration cards.
 ///
 /// Contains the text content and visual data needed to generate
@@ -17,15 +15,11 @@ class ShareableCardData {
   /// Natural-sounding share text sent alongside the image
   final String shareText;
 
-  /// Gradient for the card background
-  final LinearGradient? gradient;
-
   const ShareableCardData({
     required this.emoji,
     required this.title,
     required this.subtitle,
     required this.shareText,
-    this.gradient,
   });
 
   /// Create card data for a streak milestone celebration.

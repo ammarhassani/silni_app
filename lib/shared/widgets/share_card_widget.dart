@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../utils/ui_helpers.dart';
 import 'shareable_card_generator.dart';
 
 /// A branded card widget rendered off-screen for image capture and sharing.
@@ -49,6 +50,7 @@ class ShareCardWidget extends StatelessWidget {
     overlay.insert(entry);
     await Future.delayed(const Duration(milliseconds: 100));
 
+    File? tempFile;
     try {
       final renderObject =
           boundary.currentContext?.findRenderObject() as RenderRepaintBoundary?;
@@ -56,19 +58,41 @@ class ShareCardWidget extends StatelessWidget {
 
       final image = await renderObject.toImage(pixelRatio: 3.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
       if (byteData == null) return;
 
       final tempDir = await getTemporaryDirectory();
-      final file = File(
+      tempFile = File(
           '${tempDir.path}/silni_card_${DateTime.now().millisecondsSinceEpoch}.png');
-      await file.writeAsBytes(byteData.buffer.asUint8List());
+      await tempFile.writeAsBytes(byteData.buffer.asUint8List());
 
       await Share.shareXFiles(
-        [XFile(file.path)],
+        [XFile(tempFile.path)],
         text: cardData.shareText,
       );
+    } catch (e) {
+      if (context.mounted) {
+        UIHelpers.showSnackBar(
+          context,
+          'حدث خطأ أثناء المشاركة: $e',
+          isError: true,
+        );
+      }
     } finally {
       entry.remove();
+      // Clean up temporary file after a delay so the share sheet can read it.
+      if (tempFile != null) {
+        final fileToDelete = tempFile;
+        Future.delayed(const Duration(seconds: 5), () async {
+          try {
+            if (await fileToDelete.exists()) {
+              await fileToDelete.delete();
+            }
+          } catch (_) {
+            // Best-effort cleanup; ignore errors.
+          }
+        });
+      }
     }
   }
 
