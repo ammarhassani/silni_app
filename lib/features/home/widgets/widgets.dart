@@ -1,6 +1,7 @@
 export 'ai_insight_card.dart';
 export 'ai_priority_contacts_widget.dart';
 export 'daily_priority_card.dart';
+export 'occasion_card.dart';
 export 'proactive_insight_card.dart';
 export 'due_reminders_card.dart';
 export 'family_circles_widget.dart';

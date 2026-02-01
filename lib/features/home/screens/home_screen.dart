@@ -389,6 +389,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     DailyPriorityCard(userId: userId),
                     const SizedBox(height: AppSpacing.md),
 
+                    // Occasion messages card (shows before Eid/Ramadan/etc.)
+                    OccasionCard(userId: userId),
+                    const SizedBox(height: AppSpacing.md),
+
                     // Proactive insight (local, all users)
                     ProactiveInsightCard(userId: userId),
                     const SizedBox(height: AppSpacing.md),

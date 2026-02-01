@@ -42,7 +42,9 @@ import '../../features/ai_assistant/screens/memory_viewer_screen.dart';
 import '../../features/ai_assistant/screens/message_composer_screen.dart';
 import '../../features/ai_assistant/screens/relationship_analysis_screen.dart';
 import '../../features/ai_assistant/screens/communication_scripts_screen.dart';
+import '../../features/ai_assistant/screens/occasion_messages_screen.dart';
 import '../../features/ai_assistant/screens/weekly_report_screen.dart';
+import '../../features/ai_assistant/services/occasion_message_service.dart';
 import 'app_routes.dart';
 import 'navigation_service.dart';
 import '../services/analytics_service.dart';
@@ -440,6 +442,25 @@ final routerProvider = Provider<GoRouter>((ref) {
           state,
           const WeeklyReportScreen(),
         ),
+      ),
+
+      // Occasion Messages Route
+      GoRoute(
+        path: AppRoutes.occasionMessages,
+        name: 'occasionMessages',
+        pageBuilder: (context, state) {
+          final occasionKey =
+              state.uri.queryParameters['occasion'] ?? 'eid_al_fitr';
+          final occasion = OccasionType.values.firstWhere(
+            (o) => o.key == occasionKey,
+            orElse: () => OccasionType.eidAlFitr,
+          );
+          return _buildPageWithTransition(
+            context,
+            state,
+            OccasionMessagesScreen(occasion: occasion),
+          );
+        },
       ),
     ],
   );

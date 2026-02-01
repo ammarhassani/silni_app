@@ -68,4 +68,7 @@ class AppRoutes {
   static const String aiAnalysis = '/ai-analysis';
   static const String aiScripts = '/ai-scripts';
   static const String aiReport = '/ai-report';
+
+  // Occasion messages
+  static const String occasionMessages = '/occasion-messages';
 }
