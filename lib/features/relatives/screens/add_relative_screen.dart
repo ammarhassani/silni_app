@@ -27,7 +27,10 @@ import '../../../core/providers/cache_provider.dart';
 import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/widgets/health_status_picker.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../home/providers/home_providers.dart';
 import '../../../shared/utils/ui_helpers.dart';
+import '../services/relationship_inference_service.dart';
+import '../widgets/smart_relationship_picker.dart';
 
 class AddRelativeScreen extends ConsumerStatefulWidget {
   const AddRelativeScreen({super.key});
@@ -61,10 +64,30 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   void initState() {
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    _nameController.addListener(_onNameChanged);
+  }
+
+  /// When the name changes, try to infer gender from the Arabic name.
+  /// Only auto-fills gender if the relationship type doesn't already imply one
+  /// (i.e. for cousin/other where gender is null).
+  void _onNameChanged() {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) return;
+
+    // Only infer if the relationship doesn't already dictate gender
+    final genderFromRelationship =
+        _getGenderFromRelationship(_selectedRelationship);
+    if (genderFromRelationship != null) return;
+
+    final inferred = RelationshipInferenceService.inferGender(name);
+    if (inferred != null && inferred != _selectedGender) {
+      setState(() => _selectedGender = inferred);
+    }
   }
 
   @override
   void dispose() {
+    _nameController.removeListener(_onNameChanged);
     _nameController.dispose();
     _emailController.dispose();
     _notesController.dispose();
@@ -237,6 +260,16 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
 
+    // Watch existing relatives to compute smart suggestions
+    final user = ref.watch(currentUserProvider);
+    final relativesAsync = user != null
+        ? ref.watch(relativesStreamProvider(user.id))
+        : null;
+    final existingRelatives = relativesAsync?.valueOrNull ?? <Relative>[];
+    final suggestions = RelationshipInferenceService.suggestRelationships(
+      existingRelatives,
+    );
+
     return Stack(
       children: [
         Scaffold(
@@ -307,8 +340,21 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                         ),
                         const SizedBox(height: AppSpacing.md),
 
-                        // Relationship Type
-                        _buildRelationshipPicker(),
+                        // Relationship Type - Smart Picker
+                        SmartRelationshipPicker(
+                          selected: _selectedRelationship,
+                          suggestions: suggestions,
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedRelationship = value;
+                              // Auto-detect gender based on relationship
+                              _selectedGender =
+                                  _getGenderFromRelationship(value);
+                              // Auto-set priority based on relationship closeness
+                              _priority = AvatarType.suggestPriority(value);
+                            });
+                          },
+                        ),
                         const SizedBox(height: AppSpacing.md),
 
                         // Phone with international format
@@ -549,74 +595,6 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
           filled: true,
           fillColor: Colors.transparent,
         ),
-      ),
-    );
-  }
-
-  Widget _buildRelationshipPicker() {
-    return GlassCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.family_restroom, color: Colors.white.withValues(alpha: 0.7)),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'صلة القرابة',
-                style: AppTypography.titleMedium.copyWith(color: Colors.white),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          DropdownButtonFormField<RelationshipType>(
-            initialValue: _selectedRelationship,
-            dropdownColor: const Color(0xFF1A1A1A),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.1),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                borderSide: BorderSide(color: AppColors.islamicGreenPrimary, width: 2),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.md,
-              ),
-            ),
-            style: AppTypography.bodyMedium.copyWith(color: Colors.white),
-            icon: Icon(Icons.arrow_drop_down, color: Colors.white.withValues(alpha: 0.7)),
-            items: RelationshipType.values.map((type) {
-              return DropdownMenuItem(
-                value: type,
-                child: Text(
-                  type.arabicName,
-                  style: AppTypography.bodyMedium.copyWith(color: Colors.white),
-                ),
-              );
-            }).toList(),
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _selectedRelationship = value;
-                  // Auto-detect gender based on relationship
-                  _selectedGender = _getGenderFromRelationship(value);
-                  // Auto-set priority based on relationship closeness
-                  _priority = AvatarType.suggestPriority(value);
-                });
-              }
-            },
-          ),
-        ],
       ),
     );
   }
