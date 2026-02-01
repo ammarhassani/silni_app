@@ -73,6 +73,37 @@ final todayInteractionsStreamProvider =
   return repository.watchTodayInteractions(userId);
 });
 
+/// Stream provider for recent interactions (last 30 days) for insight generation.
+/// Uses autoDispose with timed cache to prevent memory leaks.
+final recentInteractionsStreamProvider =
+    StreamProvider.autoDispose.family<List<Interaction>, String>((ref, userId) {
+  // Keep alive for 5 minutes after last listener removed
+  final link = ref.keepAlive();
+  Timer? timer;
+
+  ref.onDispose(() {
+    timer?.cancel();
+  });
+
+  ref.onCancel(() {
+    timer = Timer(_cacheTimeout, () {
+      link.close();
+    });
+  });
+
+  ref.onResume(() {
+    timer?.cancel();
+  });
+
+  final repository = ref.watch(interactionsRepositoryProvider);
+  final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+  return repository.watchUserInteractions(userId).map(
+        (interactions) => interactions
+            .where((i) => i.date.isAfter(thirtyDaysAgo))
+            .toList(),
+      );
+});
+
 /// Stream provider for reminder schedules (cache-first via repository)
 /// Uses autoDispose with timed cache to prevent memory leaks
 final reminderSchedulesStreamProvider =

@@ -84,11 +84,11 @@ class _ProactiveInsightCardState extends ConsumerState<ProactiveInsightCard> {
     }
 
     final relativesAsync = ref.watch(relativesStreamProvider(widget.userId));
-    final todayInteractionsAsync =
-        ref.watch(todayInteractionsStreamProvider(widget.userId));
+    final recentInteractionsAsync =
+        ref.watch(recentInteractionsStreamProvider(widget.userId));
 
     return relativesAsync.when(
-      data: (relatives) => todayInteractionsAsync.when(
+      data: (relatives) => recentInteractionsAsync.when(
         data: (interactions) {
           final insight = ProactiveInsightService.generateInsight(
             relatives: relatives,

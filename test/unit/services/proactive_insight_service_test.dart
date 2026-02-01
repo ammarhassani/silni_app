@@ -165,6 +165,32 @@ void main() {
         expect(insight.message, contains('أبي'));
       });
 
+      test('should show correct Arabic count when less-contacted parent has 2 interactions', () {
+        final relatives = [
+          _makeRelative('dad', 'أبي', RelationshipType.father, 1, daysSince: 1),
+          _makeRelative('mom', 'أمي', RelationshipType.mother, 1, daysSince: 0),
+        ];
+
+        // 9 for mom, 2 for dad → 9 >= 3 * 2 = 6 → triggers imbalance
+        final interactions = [
+          ...List.generate(
+            9,
+            (i) => _makeInteraction('mom', InteractionType.call, daysAgo: i),
+          ),
+          _makeInteraction('dad', InteractionType.call, daysAgo: 1),
+          _makeInteraction('dad', InteractionType.call, daysAgo: 3),
+        ];
+
+        final insight = ProactiveInsightService.generateInsight(
+          relatives: relatives,
+          interactions: interactions,
+        );
+
+        expect(insight, isNotNull);
+        expect(insight!.type, 'pattern');
+        expect(insight.message, contains('2 مرات'));
+      });
+
       test('should NOT detect imbalance when both parents contacted equally', () {
         final relatives = [
           _makeRelative('dad', 'أبي', RelationshipType.father, 1, daysSince: 0),

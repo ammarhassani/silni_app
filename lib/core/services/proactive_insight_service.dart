@@ -150,7 +150,11 @@ class ProactiveInsightService {
 
     // Check 3x ratio: more >= 3 * less (and less must be > 0 or more >= 3)
     if (maxCount >= 3 && (minCount == 0 || maxCount >= 3 * minCount)) {
-      final lessCountText = minCount == 0 ? 'ولا مرة' : 'مرة واحدة';
+      final lessCountText = minCount == 0
+          ? 'ولا مرة'
+          : minCount == 1
+              ? 'مرة واحدة'
+              : '$minCount مرات';
       final moreCountText = '$maxCount مرات';
 
       return ProactiveInsight(
