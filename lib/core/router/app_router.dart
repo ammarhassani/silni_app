@@ -36,6 +36,7 @@ import '../../features/family_groups/screens/create_group_screen.dart';
 import '../../features/family_groups/screens/family_group_screen.dart';
 import '../../features/family_groups/screens/join_group_screen.dart';
 import '../../features/wrapped/screens/monthly_wrapped_screen.dart';
+import '../../features/wrapped/screens/yearly_wrapped_screen.dart';
 import '../../features/ai_assistant/screens/ai_chat_screen.dart';
 import '../../features/ai_assistant/screens/memory_viewer_screen.dart';
 import '../../features/ai_assistant/screens/message_composer_screen.dart';
@@ -314,6 +315,23 @@ final routerProvider = Provider<GoRouter>((ref) {
             context,
             state,
             MonthlyWrappedScreen(month: month),
+          );
+        },
+      ),
+
+      // Yearly Wrapped Route
+      GoRoute(
+        path: AppRoutes.yearlyWrapped,
+        name: 'yearlyWrapped',
+        pageBuilder: (context, state) {
+          final yearParam = state.uri.queryParameters['year'];
+          final year = yearParam != null
+              ? int.tryParse(yearParam) ?? DateTime.now().year
+              : DateTime.now().year;
+          return _buildPageWithTransition(
+            context,
+            state,
+            YearlyWrappedScreen(year: year),
           );
         },
       ),

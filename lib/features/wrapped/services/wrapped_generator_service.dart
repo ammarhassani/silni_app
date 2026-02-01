@@ -1,6 +1,7 @@
 import 'package:silni_app/shared/models/interaction_model.dart';
 import 'package:silni_app/shared/models/relative_model.dart';
 import 'package:silni_app/features/wrapped/models/monthly_wrapped_model.dart';
+import 'package:silni_app/features/wrapped/models/yearly_wrapped_model.dart';
 
 /// Pure static service that generates a [MonthlyWrapped] summary from raw data.
 ///
@@ -148,6 +149,99 @@ class WrappedGeneratorService {
 
     // 7. Default
     return ('وصّال الرحم', '\u{1F49A}');
+  }
+
+  /// Generate a yearly wrapped summary.
+  ///
+  /// [interactions] may contain data from any time range; the method filters
+  /// to the calendar year specified by [year].
+  /// [relatives] is the user's full relatives list (used for coverage).
+  static YearlyWrapped generateYearly({
+    required List<Interaction> interactions,
+    required List<Relative> relatives,
+    required int year,
+  }) {
+    final yearStart = DateTime(year, 1, 1);
+    final yearEnd = DateTime(year + 1, 1, 1);
+
+    // 1. Filter to target year
+    final yearInteractions = interactions.where((i) {
+      return !i.date.isBefore(yearStart) && i.date.isBefore(yearEnd);
+    }).toList();
+
+    final totalInteractions = yearInteractions.length;
+
+    // 2. Per-type breakdown
+    final breakdown = <InteractionType, int>{};
+    for (final i in yearInteractions) {
+      breakdown[i.type] = (breakdown[i.type] ?? 0) + 1;
+    }
+
+    // 3. Unique relatives contacted
+    final contactedRelativeIds =
+        yearInteractions.map((i) => i.relativeId).toSet();
+    final uniqueRelativesContacted = contactedRelativeIds.length;
+    final relativesCoverage =
+        relatives.isEmpty ? 0.0 : uniqueRelativesContacted / relatives.length;
+
+    // 4. Most contacted relative
+    String? mostContactedRelativeName;
+    int? mostContactedRelativeCount;
+    if (yearInteractions.isNotEmpty) {
+      final countByRelative = <String, int>{};
+      for (final i in yearInteractions) {
+        countByRelative[i.relativeId] =
+            (countByRelative[i.relativeId] ?? 0) + 1;
+      }
+
+      final topEntry = countByRelative.entries.reduce(
+        (a, b) => a.value >= b.value ? a : b,
+      );
+
+      final matchingRelative = relatives.where((r) => r.id == topEntry.key);
+      if (matchingRelative.isNotEmpty) {
+        mostContactedRelativeName = matchingRelative.first.fullName;
+      }
+      mostContactedRelativeCount = topEntry.value;
+    }
+
+    // 5. Personality label
+    final (label, emoji) = _determinePersonality(
+      monthInteractions: yearInteractions,
+      totalInteractions: totalInteractions,
+      breakdown: breakdown,
+      relativesCoverage: relativesCoverage,
+    );
+
+    // 6. Longest consecutive-day streak
+    final longestStreak = _calculateLongestStreak(yearInteractions);
+
+    // 7. Total active days (unique calendar days with interactions)
+    final uniqueDays = yearInteractions
+        .map((i) => DateTime(i.date.year, i.date.month, i.date.day))
+        .toSet();
+    final totalActiveDays = uniqueDays.length;
+
+    // 8. Monthly totals
+    final monthlyTotals = <int, int>{};
+    for (final i in yearInteractions) {
+      monthlyTotals[i.date.month] = (monthlyTotals[i.date.month] ?? 0) + 1;
+    }
+
+    return YearlyWrapped(
+      year: year,
+      totalInteractions: totalInteractions,
+      uniqueRelativesContacted: uniqueRelativesContacted,
+      relativesCoverage: relativesCoverage,
+      mostContactedRelativeName: mostContactedRelativeName,
+      mostContactedRelativeCount: mostContactedRelativeCount,
+      longestStreak: longestStreak,
+      personalityLabel: label,
+      personalityEmoji: emoji,
+      interactionBreakdown: breakdown,
+      totalActiveDays: totalActiveDays,
+      monthlyTotals: monthlyTotals,
+    );
   }
 
   /// Calculate the longest run of consecutive calendar days with at least

@@ -52,6 +52,7 @@ class AppRoutes {
 
   // Wrapped routes
   static const String monthlyWrapped = '/monthly-wrapped';
+  static const String yearlyWrapped = '/yearly-wrapped';
 
   // Family group routes
   static const String familyGroups = '/family-groups';
