@@ -60,7 +60,9 @@
 	<key>NSFaceIDUsageDescription</key>
 	<string>يستخدم التطبيق Face ID لتسجيل الدخول بشكل آمن وسريع</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>صِلني يستخدم الميكروفون لتسجيل الرسائل الصوتية لأقاربك</string>
+	<string>صِلني يستخدم الميكروفون لتسجيل الرسائل الصوتية وتحويل الكلام إلى نص عند إضافة ملاحظات التواصل</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>صِلني يستخدم التعرف على الكلام لتحويل صوتك إلى نص عند تسجيل ملاحظات التواصل مع أقاربك</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>صِلني يستخدم مكتبة الصور لاختيار صور أقاربك لإضافتها إلى ملفاتهم الشخصية</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

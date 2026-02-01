@@ -8,6 +8,7 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../core/utils/contact_launcher.dart';
 import '../../../core/providers/cache_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
+import '../../../shared/widgets/voice_note_button.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../../shared/services/auth_service.dart';
@@ -250,6 +251,11 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
               ),
               filled: true,
               fillColor: themeColors.surface.withValues(alpha: 0.3),
+              suffixIcon: VoiceNoteButton(
+                controller: notesController,
+                idleColor: themeColors.textOnGradient.withValues(alpha: 0.7),
+                listeningColor: themeColors.statusError,
+              ),
             ),
             style: TextStyle(color: themeColors.textOnGradient),
             maxLines: 3,
