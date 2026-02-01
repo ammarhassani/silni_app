@@ -145,7 +145,7 @@ export function useDeleteSocialPost() {
   });
 }
 
-// Bulk update status for multiple posts
+// Bulk update status (and optionally account_id) for multiple posts
 export function useBulkUpdatePostStatus() {
   const queryClient = useQueryClient();
 
@@ -156,10 +156,13 @@ export function useBulkUpdatePostStatus() {
   };
 
   return useMutation({
-    mutationFn: async ({ ids, status }: { ids: string[]; status: SocialPostStatus }) => {
+    mutationFn: async ({ ids, status, account_id }: { ids: string[]; status: SocialPostStatus; account_id?: string }) => {
+      const updates: Record<string, unknown> = { status };
+      if (account_id) updates.account_id = account_id;
+
       const { error } = await supabase
         .from("social_posts")
-        .update({ status })
+        .update(updates)
         .in("id", ids);
 
       if (error) throw error;

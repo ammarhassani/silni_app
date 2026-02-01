@@ -64,19 +64,19 @@ export async function GET(_request: NextRequest) {
     const state = generateRandomString(32);
 
     const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/auth/twitter/callback`;
-    const scope = "tweet.write tweet.read users.read offline.access";
+    const scopes = ["tweet.write", "tweet.read", "users.read", "offline.access"];
 
-    const params = new URLSearchParams({
-      response_type: "code",
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      scope,
-      state,
-      code_challenge: codeChallenge,
-      code_challenge_method: "S256",
-    });
+    const queryParts = [
+      `response_type=code`,
+      `client_id=${encodeURIComponent(clientId)}`,
+      `redirect_uri=${encodeURIComponent(redirectUri)}`,
+      `scope=${scopes.map(encodeURIComponent).join("%20")}`,
+      `state=${encodeURIComponent(state)}`,
+      `code_challenge=${encodeURIComponent(codeChallenge)}`,
+      `code_challenge_method=S256`,
+    ];
 
-    const twitterAuthUrl = `https://twitter.com/i/oauth2/authorize?${params.toString()}`;
+    const twitterAuthUrl = `https://x.com/i/oauth2/authorize?${queryParts.join("&")}`;
 
     const isProduction = process.env.NODE_ENV === "production";
 

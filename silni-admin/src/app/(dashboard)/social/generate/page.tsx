@@ -7,6 +7,8 @@ import {
   useUpdateSocialPost,
   useBulkUpdatePostStatus,
 } from "@/hooks/use-social-posts";
+import { useSocialAccounts } from "@/hooks/use-social-accounts";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -229,9 +231,19 @@ export default function SocialGeneratePage() {
   const [generateError, setGenerateError] = useState<string | null>(null);
 
   const { data: queuedPosts, isLoading: postsLoading } = useSocialPosts("queued");
+  const { data: accounts } = useSocialAccounts();
   const createBatch = useCreateSocialPostsBatch();
   const updatePost = useUpdateSocialPost();
   const bulkUpdate = useBulkUpdatePostStatus();
+
+  // Find connected account for a given platform
+  const getAccountForPlatform = (platform: string): string | null => {
+    if (!accounts) return null;
+    const account = accounts.find(
+      (a) => a.platform === platform && a.status === "connected",
+    );
+    return account?.id || null;
+  };
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -305,9 +317,15 @@ export default function SocialGeneratePage() {
   };
 
   const handleApprove = (post: SocialPost) => {
+    const accountId = getAccountForPlatform(post.platform);
+    if (!accountId) {
+      toast.error(`لا يوجد حساب ${post.platform === "twitter" ? "تويتر" : "إنستغرام"} متصل. اربط الحساب أولاً من صفحة الحسابات.`);
+      return;
+    }
     updatePost.mutate({
       id: post.id,
-      status: "approved",
+      status: "scheduled",
+      account_id: accountId,
       scheduled_at: post.scheduled_at,
     });
   };
@@ -325,8 +343,23 @@ export default function SocialGeneratePage() {
 
   const handleBulkApprove = () => {
     if (!queuedPosts || queuedPosts.length === 0) return;
-    const ids = queuedPosts.map((p) => p.id);
-    bulkUpdate.mutate({ ids, status: "approved" });
+
+    // Group posts by platform to assign the correct account_id
+    const byPlatform: Record<string, SocialPost[]> = {};
+    for (const post of queuedPosts) {
+      if (!byPlatform[post.platform]) byPlatform[post.platform] = [];
+      byPlatform[post.platform].push(post);
+    }
+
+    for (const [platform, posts] of Object.entries(byPlatform)) {
+      const accountId = getAccountForPlatform(platform);
+      if (!accountId) {
+        toast.error(`لا يوجد حساب ${platform === "twitter" ? "تويتر" : "إنستغرام"} متصل. اربط الحساب أولاً.`);
+        continue;
+      }
+      const ids = posts.map((p) => p.id);
+      bulkUpdate.mutate({ ids, status: "scheduled", account_id: accountId });
+    }
   };
 
   const handleBulkReject = () => {
