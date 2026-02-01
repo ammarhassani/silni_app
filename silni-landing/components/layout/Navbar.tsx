@@ -64,7 +64,7 @@ export default function Navbar() {
           </div>
 
           <div className="hidden lg:block">
-            <Button href="https://apps.apple.com/app/id_PLACEHOLDER" size="sm">
+            <Button href="https://apps.apple.com/sa/app/%D8%B5%D9%84%D9%86%D9%8A/id6756042988" size="sm">
               حمّل التطبيق
             </Button>
           </div>

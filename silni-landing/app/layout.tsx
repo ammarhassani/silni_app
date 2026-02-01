@@ -6,7 +6,7 @@ import Footer from "@/components/layout/Footer";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://silni.app"),
+  metadataBase: new URL("https://silniapp.com"),
   title: {
     default: "صِلني — حافظ على صلة الرحم",
     template: "%s | صِلني",
@@ -23,6 +23,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
+    creator: "@silniapp",
     title: "صِلني — حافظ على صلة الرحم",
     description: "صلة الرحم فريضة وصِلني يساعدك تحافظ عليها.",
   },

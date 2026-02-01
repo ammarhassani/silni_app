@@ -112,7 +112,7 @@ export default function FeaturesPage() {
           <h2 className="text-headline-lg text-primary-deep mb-lg">
             جاهز تبدأ؟
           </h2>
-          <Button href="https://apps.apple.com/app/id_PLACEHOLDER" size="lg">
+          <Button href="https://apps.apple.com/sa/app/%D8%B5%D9%84%D9%86%D9%8A/id6756042988" size="lg">
             حمّل التطبيق مجاناً
           </Button>
         </ScrollReveal>

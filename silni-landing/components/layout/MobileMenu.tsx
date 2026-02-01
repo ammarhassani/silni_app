@@ -70,7 +70,7 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
             </div>
 
             <div className="mt-auto">
-              <Button href="https://apps.apple.com/app/id_PLACEHOLDER" size="lg" className="w-full">
+              <Button href="https://apps.apple.com/sa/app/%D8%B5%D9%84%D9%86%D9%8A/id6756042988" size="lg" className="w-full">
                 حمّل التطبيق
               </Button>
             </div>

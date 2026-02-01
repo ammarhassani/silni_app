@@ -1,7 +1,7 @@
 export default function AppStoreBadge({ className = "" }: { className?: string }) {
   return (
     <a
-      href="https://apps.apple.com/app/id_PLACEHOLDER"
+      href="https://apps.apple.com/sa/app/%D8%B5%D9%84%D9%86%D9%8A/id6756042988"
       target="_blank"
       rel="noopener noreferrer"
       className={`inline-block transition-transform hover:scale-105 ${className}`}
