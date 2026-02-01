@@ -12,6 +12,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../models/family_group_model.dart';
 import '../providers/family_group_providers.dart';
 import '../services/family_group_service.dart';
+import '../widgets/family_leaderboard.dart';
 import '../widgets/invite_link_card.dart';
 
 /// Screen showing the detail view of a family group.
@@ -206,6 +207,10 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
 
           // Invite link card
           InviteLinkCard(inviteCode: group.inviteCode),
+          const SizedBox(height: AppSpacing.md),
+
+          // Weekly leaderboard
+          FamilyLeaderboard(groupId: widget.groupId),
           const SizedBox(height: AppSpacing.md),
 
           // Members section
