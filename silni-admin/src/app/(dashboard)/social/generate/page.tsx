@@ -495,7 +495,7 @@ export default function SocialGeneratePage() {
                           onClick={() => {
                             setForm((f) => ({
                               ...f,
-                              contentType: (event.suggestedContentTypes[0] || "occasion") as SocialContentType,
+                              contentType: event.suggestedContentTypes[0] || "occasion",
                               occasion: buildOccasionContext(event),
                               dateStart:
                                 event.gregorianDates[new Date().getFullYear()]?.start || f.dateStart,

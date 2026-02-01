@@ -1,3 +1,5 @@
+import type { SocialContentType } from '@/types/database';
+
 export interface CulturalEvent {
   key: string;
   nameAr: string;
@@ -15,7 +17,7 @@ export interface CulturalEvent {
   /** Emotional angles for posts */
   emotionalAngles: string[];
   /** Suggested content types that work well for this event */
-  suggestedContentTypes: string[];
+  suggestedContentTypes: SocialContentType[];
   /** Year-specific Gregorian dates (since Hijri shifts ~11 days/year) */
   gregorianDates: Record<number, { start: string; end: string }>;
 }
