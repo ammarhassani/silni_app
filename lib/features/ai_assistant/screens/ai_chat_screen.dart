@@ -12,6 +12,7 @@ import '../../../core/ai/ai_identity.dart';
 import '../../../core/ai/ai_models.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../providers/ai_chat_provider.dart';
+import '../services/ai_mode_detector.dart';
 import '../../../core/router/app_routes.dart';
 import '../widgets/chat_message_bubble.dart';
 import '../widgets/conversation_message.dart';
@@ -36,7 +37,6 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  bool _showModeSelector = true;
 
   @override
   void initState() {
@@ -72,20 +72,19 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
     _messageController.clear();
     _focusNode.unfocus();
 
-    final mode = ref.read(counselingModeProvider);
+    // Auto-detect mode from context
     final relativeContext = ref.read(chatRelativeContextProvider);
+    final detectedMode = AIModeDetector.detect(relativeContext: relativeContext);
+    ref.read(counselingModeProvider.notifier).state = detectedMode;
 
     // Use streaming for GPT-like animation
     ref.read(aiChatProvider.notifier).sendMessageStreaming(
           content,
-          mode: mode,
+          mode: detectedMode,
           relativeContext: relativeContext,
         );
 
     _scrollToBottom();
-    setState(() {
-      _showModeSelector = false;
-    });
   }
 
   void _selectSuggestedPrompt(String prompt) {
@@ -97,16 +96,10 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
   void _startNewChat() {
     // Just clear the state - conversation is created lazily on first message
     ref.read(aiChatProvider.notifier).clearConversation();
-    setState(() {
-      _showModeSelector = true;
-    });
   }
 
   void _loadConversation(String conversationId) {
     ref.read(aiChatProvider.notifier).loadConversation(conversationId);
-    setState(() {
-      _showModeSelector = false;
-    });
   }
 
   void _openHistoryDrawer() {
@@ -320,28 +313,9 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
 
           const SizedBox(height: AppSpacing.xl),
 
-          // Mode selector
-          if (_showModeSelector) ...[
-            Text(
-              'اختر نوع المحادثة',
-              style: AppTypography.titleSmall.copyWith(
-                color: themeColors.textOnGradient.withValues(alpha: 0.7),
-              ),
-            ).animate(delay: AppAnimations.fast).fadeIn(duration: AppAnimations.normal),
-
-            const SizedBox(height: AppSpacing.md),
-
-            _buildModeSelector(themeColors)
-                .animate(delay: AppAnimations.normal)
-                .fadeIn(duration: AppAnimations.normal)
-                .slideY(begin: 0.1, end: 0),
-
-            const SizedBox(height: AppSpacing.xl),
-          ],
-
           // Suggested prompts
           Text(
-            'أو جرب أحد هذه الأسئلة',
+            'جرب أحد هذه الأسئلة',
             style: AppTypography.titleSmall.copyWith(
               color: themeColors.textOnGradient.withValues(alpha: 0.7),
             ),
@@ -366,29 +340,6 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildModeSelector(dynamic themeColors) {
-    final currentMode = ref.watch(counselingModeProvider);
-
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: AppSpacing.sm,
-      crossAxisSpacing: AppSpacing.sm,
-      childAspectRatio: 1.5,
-      children: CounselingMode.values.map((mode) {
-        return CounselingModeCard(
-          mode: mode,
-          isSelected: mode == currentMode,
-          onTap: () {
-            // Only set the mode - conversation is created lazily on first message
-            ref.read(counselingModeProvider.notifier).state = mode;
-          },
-        );
-      }).toList(),
     );
   }
 
@@ -787,9 +738,6 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
                       onPressed: () {
                         Navigator.pop(context);
                         ref.read(aiChatProvider.notifier).clearConversation();
-                        setState(() {
-                          _showModeSelector = true;
-                        });
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: themeColors.primary,
