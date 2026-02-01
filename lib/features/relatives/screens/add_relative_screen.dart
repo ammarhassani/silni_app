@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -147,16 +149,16 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
       );
 
       final repository = ref.read(relativesRepositoryProvider);
-      await repository.createRelative(relative);
+      final createdRelativeId = await repository.createRelative(relative);
 
       // Fire-and-forget: auto-create a reminder based on relationship type.
       // This runs in the background and never blocks the UI or throws.
-      AutoReminderService.createAutoReminder(
+      unawaited(AutoReminderService.createAutoReminder(
         userId: user.id,
-        relativeId: relative.id,
+        relativeId: createdRelativeId,
         relationshipType: _selectedRelationship,
         remindersRepository: ref.read(reminderSchedulesRepositoryProvider),
-      );
+      ));
 
       if (!mounted) return;
 
