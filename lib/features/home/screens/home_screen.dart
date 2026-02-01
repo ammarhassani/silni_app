@@ -344,6 +344,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       displayName: displayName,
                       userId: userId,
                     ),
+                    const SizedBox(height: AppSpacing.sm),
+
+                    // Family pulse indicator (compact, top of screen)
+                    FamilyPulseIndicator(userId: userId),
                     const SizedBox(height: AppSpacing.md),
 
                     // Top banner (promotional/announcements)
@@ -361,6 +365,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ),
                     const SizedBox(height: AppSpacing.md),
 
+                    // Daily priority contact card
+                    DailyPriorityCard(userId: userId),
+                    const SizedBox(height: AppSpacing.md),
+
                     // Quick Actions
                     const QuickActionsWidget(),
                     const SizedBox(height: AppSpacing.lg),
@@ -374,6 +382,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         onRetry: () => ref.invalidate(relativesStreamProvider(userId)),
                       ),
                     ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Quick log faces (one-tap interaction logging)
+                    QuickLogFaces(userId: userId),
                     const SizedBox(height: AppSpacing.md),
 
                     // AI Priority Contacts (MAX only)
