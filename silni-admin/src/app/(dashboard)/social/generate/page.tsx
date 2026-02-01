@@ -30,7 +30,12 @@ import {
   CheckCheck,
   XCircle,
   Loader2,
+  Calendar,
 } from "lucide-react";
+import {
+  getUpcomingEvents,
+  buildOccasionContext,
+} from "@/lib/cultural-calendar";
 import type {
   SocialContentType,
   SocialTone,
@@ -471,6 +476,53 @@ export default function SocialGeneratePage() {
                 </div>
               </div>
 
+              {/* Cultural Calendar Suggestions */}
+              {(() => {
+                const upcomingEvents = getUpcomingEvents();
+                if (upcomingEvents.length === 0) return null;
+                return (
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5">
+                      <Calendar className="h-4 w-4" />
+                      مناسبات قادمة
+                    </Label>
+                    <div className="space-y-2">
+                      {upcomingEvents.map((event) => (
+                        <button
+                          key={event.key}
+                          type="button"
+                          className="w-full text-right border rounded-lg p-3 hover:bg-accent/50 transition-colors"
+                          onClick={() => {
+                            setForm((f) => ({
+                              ...f,
+                              contentType: (event.suggestedContentTypes[0] || "occasion") as SocialContentType,
+                              occasion: buildOccasionContext(event),
+                              dateStart:
+                                event.gregorianDates[new Date().getFullYear()]?.start || f.dateStart,
+                              dateEnd:
+                                event.gregorianDates[new Date().getFullYear()]?.end || f.dateEnd,
+                              batchSize: Math.min(event.durationDays, 14),
+                            }));
+                          }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <Badge variant="outline">
+                              {event.suggestedContentTypes[0]}
+                            </Badge>
+                            <span className="font-medium">
+                              {event.emoji} {event.nameAr}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {event.themes.slice(0, 2).join(" \u2022 ")}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Tone */}
               <div className="space-y-2">
                 <Label>النبرة</Label>
@@ -496,12 +548,14 @@ export default function SocialGeneratePage() {
               {/* Occasion (optional) */}
               <div className="space-y-2">
                 <Label>المناسبة (اختياري)</Label>
-                <Input
+                <Textarea
                   value={form.occasion}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, occasion: e.target.value }))
                   }
                   placeholder="مثال: رمضان، عيد الأضحى، يوم الأسرة..."
+                  rows={3}
+                  dir="rtl"
                 />
               </div>
 
