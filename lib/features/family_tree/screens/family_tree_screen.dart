@@ -26,6 +26,9 @@ import '../../../core/models/subscription_tier.dart';
 import '../../../core/providers/subscription_provider.dart';
 import '../../subscription/screens/paywall_screen.dart';
 import '../../../shared/utils/ui_helpers.dart';
+import '../../../shared/utils/relationship_label_helper.dart';
+import '../models/family_graph.dart';
+import '../providers/family_graph_providers.dart';
 
 // Note: relativesStreamProvider is now imported from features/home/screens/home_screen.dart
 
@@ -305,8 +308,14 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       return _buildEmptyState();
     }
 
+    // Watch family graph for perspective-shifting labels (null if no edges yet)
+    final graph = ref.watch(familyGraphProvider(userId));
+
+    // Build relatives map for label lookups
+    final relativesMap = {for (final r in relatives) r.id: r};
+
     // Build tree structure
-    final treeData = _buildTreeData(relatives, userName);
+    final treeData = _buildTreeData(relatives, userName, userId, graph, relativesMap);
 
     // Store for export
     _currentTreeData = treeData;
@@ -391,7 +400,13 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     );
   }
 
-  TreeNode _buildTreeData(List<Relative> relatives, String userName) {
+  TreeNode _buildTreeData(
+    List<Relative> relatives,
+    String userName,
+    String userId,
+    FamilyGraph? graph,
+    Map<String, Relative> relativesMap,
+  ) {
     // Root node (user)
     final root = TreeNode(
       id: 'me',
@@ -455,6 +470,14 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         )
         .toList();
 
+    // Helper to compute perspective-aware label with fallback
+    String labelFor(Relative r) => getRelationshipLabel(
+          relative: r,
+          viewerId: userId,
+          graph: graph,
+          relativesMap: relativesMap,
+        );
+
     // Add parents to root
     for (final parent in parents) {
       root.addChild(
@@ -462,7 +485,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
           id: parent.id,
           name: parent.fullName,
           emoji: parent.displayEmoji,
-          relationship: parent.relationshipType.arabicName,
+          relationship: labelFor(parent),
           level: -1,
           priority: parent.priority,
         ),
@@ -477,7 +500,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
             id: grandparent.id,
             name: grandparent.fullName,
             emoji: grandparent.displayEmoji,
-            relationship: grandparent.relationshipType.arabicName,
+            relationship: labelFor(grandparent),
             level: -2,
             priority: grandparent.priority,
           ),
@@ -492,7 +515,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
           id: s.id,
           name: s.fullName,
           emoji: s.displayEmoji,
-          relationship: s.relationshipType.arabicName,
+          relationship: labelFor(s),
           level: 0,
           priority: s.priority,
         ),
@@ -506,7 +529,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
           id: sibling.id,
           name: sibling.fullName,
           emoji: sibling.displayEmoji,
-          relationship: sibling.relationshipType.arabicName,
+          relationship: labelFor(sibling),
           level: 0,
           priority: sibling.priority,
         ),
@@ -520,7 +543,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
           id: child.id,
           name: child.fullName,
           emoji: child.displayEmoji,
-          relationship: child.relationshipType.arabicName,
+          relationship: labelFor(child),
           level: 1,
           priority: child.priority,
         ),
@@ -534,7 +557,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
           id: ext.id,
           name: ext.fullName,
           emoji: ext.displayEmoji,
-          relationship: ext.relationshipType.arabicName,
+          relationship: labelFor(ext),
           level: 1,
           priority: ext.priority,
           isExtended: true,

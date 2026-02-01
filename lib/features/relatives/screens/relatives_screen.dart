@@ -19,6 +19,8 @@ import '../../home/providers/home_providers.dart';
 import '../../../core/providers/realtime_provider.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
 import '../../../shared/widgets/message_widget.dart';
+import '../../../shared/utils/relationship_label_helper.dart';
+import '../../family_tree/providers/family_graph_providers.dart';
 
 class RelativesScreen extends ConsumerStatefulWidget {
   const RelativesScreen({super.key});
@@ -287,6 +289,24 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
     final user = ref.watch(currentUserProvider);
     final userId = user?.id ?? '';
 
+    // Watch family graph for perspective-shifting labels (null if no edges yet)
+    final graph = ref.watch(familyGraphProvider(userId));
+
+    // Build labels map once for the entire list
+    Map<String, String>? labelsMap;
+    if (graph != null) {
+      final relativesMap = {for (final r in relatives) r.id: r};
+      labelsMap = {
+        for (final r in relatives)
+          r.id: getRelationshipLabel(
+            relative: r,
+            viewerId: userId,
+            graph: graph,
+            relativesMap: relativesMap,
+          ),
+      };
+    }
+
     // Group relatives by relationship priority
     final Map<int, List<Relative>> grouped = {};
     for (final relative in relatives) {
@@ -301,16 +321,17 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
       ),
       itemCount: relatives.length,
       itemBuilder: (context, index) {
-        return _buildRelativeCard(relatives[index], index, userId);
+        return _buildRelativeCard(relatives[index], index, userId, labelsMap);
       },
     );
   }
 
-  Widget _buildRelativeCard(Relative relative, int index, String userId) {
+  Widget _buildRelativeCard(Relative relative, int index, String userId, Map<String, String>? labelsMap) {
     // userId is now passed from parent - no more O(n) rebuilds!
 
     return SwipeableRelativeCard(
           relative: relative,
+          relationshipLabel: labelsMap?[relative.id],
           onTap: () {
             context.push('${AppRoutes.relativeDetail}/${relative.id}');
           },

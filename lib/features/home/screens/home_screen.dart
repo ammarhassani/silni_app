@@ -24,6 +24,8 @@ import '../../premium_onboarding/screens/premium_onboarding_screen.dart';
 import '../providers/home_providers.dart';
 import '../widgets/widgets.dart';
 import '../../../shared/widgets/message_widget.dart';
+import '../../../shared/utils/relationship_label_helper.dart';
+import '../../family_tree/providers/family_graph_providers.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -299,6 +301,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final schedulesAsync = ref.watch(reminderSchedulesStreamProvider(userId));
     final todayContactedAsync = ref.watch(todayContactedRelativesProvider(userId));
 
+    // Watch family graph for perspective-shifting labels (null if no edges yet)
+    final graph = ref.watch(familyGraphProvider(userId));
+
+    // Build relationship labels map when graph data is available
+    final relationshipLabels = relativesAsync.whenData((relatives) {
+      if (graph == null) return <String, String>{};
+      final relativesMap = {for (final r in relatives) r.id: r};
+      return {
+        for (final r in relatives)
+          r.id: getRelationshipLabel(
+            relative: r,
+            viewerId: userId,
+            graph: graph,
+            relativesMap: relativesMap,
+          ),
+      };
+    }).valueOrNull;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
@@ -379,7 +399,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
                     // Family members circle avatars
                     relativesAsync.when(
-                      data: (relatives) => FamilyCirclesWidget(relatives: relatives),
+                      data: (relatives) => FamilyCirclesWidget(
+                        relatives: relatives,
+                        relationshipLabels: relationshipLabels,
+                      ),
                       loading: () => const FamilyCirclesSkeleton(),
                       error: (error, _) => InlineErrorWidget(
                         message: 'فشل في تحميل بيانات العائلة',
@@ -419,6 +442,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           relatives: relatives,
                           schedules: schedules,
                           contactedSet: todayContactedAsync.valueOrNull ?? <String>{},
+                          relationshipLabels: relationshipLabels,
                         ),
                         loading: () => const DueRemindersCardSkeleton(),
                         error: (_, _) => const SizedBox.shrink(),

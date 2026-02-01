@@ -18,11 +18,16 @@ class RelativeHeaderWidget extends ConsumerWidget {
     required this.relative,
     required this.themeColors,
     required this.onDelete,
+    this.relationshipLabel,
   });
 
   final Relative relative;
   final ThemeColors themeColors;
   final VoidCallback onDelete;
+
+  /// Optional perspective-shifted label computed by the parent screen.
+  /// Falls back to [relative.relationshipType.arabicName] when null.
+  final String? relationshipLabel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -98,7 +103,7 @@ class RelativeHeaderWidget extends ConsumerWidget {
               borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             ),
             child: Text(
-              relative.relationshipType.arabicName,
+              relationshipLabel ?? relative.relationshipType.arabicName,
               style: AppTypography.titleMedium.copyWith(color: themeColors.onPrimary),
             ),
           ),

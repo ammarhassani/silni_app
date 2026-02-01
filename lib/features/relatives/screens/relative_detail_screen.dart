@@ -16,6 +16,8 @@ import '../../../core/providers/subscription_provider.dart';
 import '../../home/providers/home_providers.dart';
 import '../widgets/detail/widgets.dart';
 import '../../../shared/utils/ui_helpers.dart';
+import '../../../shared/utils/relationship_label_helper.dart';
+import '../../family_tree/providers/family_graph_providers.dart';
 
 /// Provider for watching a single relative (cache-first)
 final relativeDetailProvider =
@@ -58,6 +60,16 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                 return _buildErrorState(context, themeColors);
               }
 
+              // Compute perspective-shifted label
+              final userId = relative.userId;
+              final graph = ref.watch(familyGraphProvider(userId));
+              final label = getRelationshipLabel(
+                relative: relative,
+                viewerId: userId,
+                graph: graph,
+                relativesMap: graph != null ? {relative.id: relative} : null,
+              );
+
               return CustomScrollView(
                 slivers: [
                   // Header with avatar and name
@@ -66,6 +78,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                       relative: relative,
                       themeColors: themeColors,
                       onDelete: () => _showDeleteConfirmation(relative),
+                      relationshipLabel: label,
                     ),
                   ),
 

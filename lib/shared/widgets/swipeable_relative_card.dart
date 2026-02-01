@@ -18,12 +18,17 @@ class SwipeableRelativeCard extends ConsumerWidget {
   final Future<void> Function()? onMarkContacted;
   final bool showContactActions;
 
+  /// Optional perspective-shifted label computed by the parent screen.
+  /// Falls back to [relative.relationshipType.arabicName] when null.
+  final String? relationshipLabel;
+
   const SwipeableRelativeCard({
     super.key,
     required this.relative,
     this.onTap,
     this.onMarkContacted,
     this.showContactActions = true,
+    this.relationshipLabel,
   });
 
   @override
@@ -94,8 +99,10 @@ class SwipeableRelativeCard extends ConsumerWidget {
   Widget _buildCard(BuildContext context, ThemeColors themeColors) {
     final needsAttention = relative.needsContact;
 
+    final displayLabel = relationshipLabel ?? relative.relationshipType.arabicName;
+
     return Semantics(
-      label: '${relative.fullName}، ${relative.relationshipType.arabicName}'
+      label: '${relative.fullName}، $displayLabel'
           '${needsAttention ? '، يحتاج تواصل' : ''}'
           '${relative.isFavorite ? '، مفضل' : ''}',
       button: true,
@@ -243,7 +250,7 @@ class SwipeableRelativeCard extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    relative.relationshipType.arabicName,
+                    displayLabel,
                     style: AppTypography.bodySmall.copyWith(
                       color: themeColors.textSecondary,
                     ),

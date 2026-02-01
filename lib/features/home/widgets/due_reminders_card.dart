@@ -21,12 +21,17 @@ class DueRemindersCard extends ConsumerWidget {
     required this.relatives,
     required this.schedules,
     required this.contactedSet,
+    this.relationshipLabels,
   });
 
   final String userId;
   final List<Relative> relatives;
   final List<ReminderSchedule> schedules;
   final Set<String> contactedSet;
+
+  /// Optional map of relative ID to perspective-shifted label.
+  /// Falls back to [relative.relationshipType.arabicName] for any missing entry.
+  final Map<String, String>? relationshipLabels;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -283,6 +288,7 @@ class DueRemindersCard extends ConsumerWidget {
                 dueRelative: dueRelative,
                 isContacted: isContacted,
                 themeColors: themeColors,
+                relationshipLabel: relationshipLabels?[dueRelative.relative.id],
               ),
             );
           }),
@@ -318,11 +324,13 @@ class _DueRelativeCard extends StatelessWidget {
     required this.dueRelative,
     required this.isContacted,
     required this.themeColors,
+    this.relationshipLabel,
   });
 
   final DueRelativeWithFrequencies dueRelative;
   final bool isContacted;
   final dynamic themeColors;
+  final String? relationshipLabel;
 
   static const _fridayGreen = Color(0xFF1B5E20);
   static const _fridayGreenLight = Color(0xFF4CAF50);
@@ -395,7 +403,7 @@ class _DueRelativeCard extends StatelessWidget {
                       children: [
                         Flexible(
                           child: Text(
-                            relative.relationshipType.arabicName,
+                            relationshipLabel ?? relative.relationshipType.arabicName,
                             style: AppTypography.bodySmall.copyWith(
                               color: themeColors.textSecondary,
                             ),

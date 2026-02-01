@@ -13,10 +13,15 @@ class AvatarCarousel extends StatefulWidget {
   final List<Relative> relatives;
   final VoidCallback? onAddRelative;
 
+  /// Optional map of relative ID to perspective-shifted label.
+  /// Falls back to [relative.relationshipType.arabicName] for any missing entry.
+  final Map<String, String>? relationshipLabels;
+
   const AvatarCarousel({
     super.key,
     required this.relatives,
     this.onAddRelative,
+    this.relationshipLabels,
   });
 
   @override
@@ -269,7 +274,8 @@ class _AvatarCarouselState extends State<AvatarCarousel> {
           SizedBox(
             width: 90,
             child: Text(
-              relative.relationshipType.arabicName,
+              widget.relationshipLabels?[relative.id] ??
+                  relative.relationshipType.arabicName,
               style: AppTypography.labelSmall.copyWith(
                 color: Colors.white.withValues(alpha: 0.7),
               ),

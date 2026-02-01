@@ -17,9 +17,13 @@ class FamilyCirclesWidget extends ConsumerWidget {
   const FamilyCirclesWidget({
     super.key,
     required this.relatives,
+    this.relationshipLabels,
   });
 
   final List<Relative> relatives;
+
+  /// Optional map of relative ID to perspective-shifted label.
+  final Map<String, String>? relationshipLabels;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -80,6 +84,7 @@ class FamilyCirclesWidget extends ConsumerWidget {
           AvatarCarousel(
             relatives: displayRelatives,
             onAddRelative: () => context.push(AppRoutes.addRelative),
+            relationshipLabels: relationshipLabels,
           ),
         ],
       ),
