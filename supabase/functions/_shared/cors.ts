@@ -4,7 +4,9 @@
 const allowedOrigins = [
   'https://silni-app.com',
   'https://www.silni-app.com',
+  'https://silni-admin.vercel.app',  // Admin dashboard
   'http://localhost:3000',  // Local development
+  'http://localhost:3001',  // Admin dashboard local development
   'http://localhost:8080',  // Flutter web
 ];
 

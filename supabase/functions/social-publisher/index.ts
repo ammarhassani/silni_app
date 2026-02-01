@@ -24,9 +24,10 @@ interface SocialPost {
   social_accounts: {
     id: string;
     platform: string;
-    is_connected: boolean;
+    status: string;
     access_token_encrypted: string;
-    platform_account_id: string | null;
+    refresh_token_encrypted: string | null;
+    platform_user_id: string | null;
   };
 }
 
@@ -48,17 +49,114 @@ function composePostText(post: SocialPost): string {
 }
 
 /**
- * Publish a post to Twitter (X) using the v2 API.
+ * RFC 3986 percent-encode a string (required for OAuth 1.0a signatures).
+ */
+function percentEncode(str: string): string {
+  return encodeURIComponent(str)
+    .replace(/!/g, "%21")
+    .replace(/\*/g, "%2A")
+    .replace(/'/g, "%27")
+    .replace(/\(/g, "%28")
+    .replace(/\)/g, "%29");
+}
+
+/**
+ * Generate OAuth 1.0a Authorization header for Twitter API.
+ */
+async function generateOAuth1Header(
+  method: string,
+  url: string,
+  consumerKey: string,
+  consumerSecret: string,
+  accessToken: string,
+  accessTokenSecret: string,
+): Promise<string> {
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const nonceArray = new Uint8Array(16);
+  crypto.getRandomValues(nonceArray);
+  const nonce = Array.from(nonceArray, (b) => b.toString(16).padStart(2, "0")).join("");
+
+  const oauthParams: Record<string, string> = {
+    oauth_consumer_key: consumerKey,
+    oauth_nonce: nonce,
+    oauth_signature_method: "HMAC-SHA1",
+    oauth_timestamp: timestamp,
+    oauth_token: accessToken,
+    oauth_version: "1.0",
+  };
+
+  // Sort parameters and create parameter string
+  const sortedParams = Object.entries(oauthParams)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${percentEncode(k)}=${percentEncode(v)}`)
+    .join("&");
+
+  // Create signature base string
+  const signatureBase = [
+    method.toUpperCase(),
+    percentEncode(url),
+    percentEncode(sortedParams),
+  ].join("&");
+
+  // Create signing key
+  const signingKey = `${percentEncode(consumerSecret)}&${percentEncode(accessTokenSecret)}`;
+
+  // HMAC-SHA1 sign
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(signingKey),
+    { name: "HMAC", hash: "SHA-1" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(signatureBase));
+  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signature)));
+
+  oauthParams.oauth_signature = signatureB64;
+
+  // Build header string
+  const headerString = Object.entries(oauthParams)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${percentEncode(k)}="${percentEncode(v)}"`)
+    .join(", ");
+
+  return `OAuth ${headerString}`;
+}
+
+/**
+ * Publish a post to Twitter (X) using the v2 API with OAuth 1.0a.
  */
 async function publishToTwitter(
   text: string,
   accessToken: string,
+  accessTokenSecret: string | null,
 ): Promise<PublishResult> {
   try {
-    const response = await fetch("https://api.twitter.com/2/tweets", {
+    const consumerKey = Deno.env.get("TWITTER_CONSUMER_KEY");
+    const consumerSecret = Deno.env.get("TWITTER_CONSUMER_SECRET");
+
+    if (!consumerKey || !consumerSecret || !accessTokenSecret) {
+      return {
+        success: false,
+        error_message: "Twitter OAuth 1.0a credentials not configured",
+      };
+    }
+
+    const twitterUrl = "https://api.twitter.com/2/tweets";
+    const authHeader = await generateOAuth1Header(
+      "POST",
+      twitterUrl,
+      consumerKey,
+      consumerSecret,
+      accessToken,
+      accessTokenSecret,
+    );
+
+    const response = await fetch(twitterUrl, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${accessToken}`,
+        "Authorization": authHeader,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ text }),
@@ -80,7 +178,7 @@ async function publishToTwitter(
       success: true,
       platform_post_id: tweetId,
       platform_post_url: tweetId
-        ? `https://twitter.com/i/web/status/${tweetId}`
+        ? `https://x.com/SilniApp/status/${tweetId}`
         : undefined,
     };
   } catch (error) {
@@ -230,9 +328,10 @@ serve(async (req) => {
         social_accounts!account_id (
           id,
           platform,
-          is_connected,
+          status,
           access_token_encrypted,
-          platform_account_id
+          refresh_token_encrypted,
+          platform_user_id
         )
       `,
       )
@@ -276,7 +375,7 @@ serve(async (req) => {
       );
 
       // Check if account is connected
-      if (!account || !account.is_connected) {
+      if (!account || account.status !== "connected") {
         console.error(
           `Post ${post.id}: No connected account found for account_id ${post.account_id}`,
         );
@@ -322,9 +421,9 @@ serve(async (req) => {
 
       // Publish based on platform
       if (post.platform === "twitter") {
-        result = await publishToTwitter(composedText, accessToken);
+        result = await publishToTwitter(composedText, accessToken, account.refresh_token_encrypted);
       } else if (post.platform === "instagram") {
-        const igAccountId = account.platform_account_id;
+        const igAccountId = account.platform_user_id;
         if (!igAccountId) {
           result = {
             success: false,

@@ -18,7 +18,6 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 
 interface SocialAccount {
   id: string;
-  user_id: string;
   platform: string;
   access_token_encrypted: string;
   refresh_token_encrypted: string | null;
@@ -67,7 +66,7 @@ serve(async (req) => {
     const { data: accounts, error: fetchError } = await supabase
       .from("social_accounts")
       .select(
-        "id, user_id, platform, access_token_encrypted, refresh_token_encrypted, token_expires_at"
+        "id, platform, access_token_encrypted, refresh_token_encrypted, token_expires_at"
       )
       .eq("status", "connected")
       .lte("token_expires_at", twentyFourHoursFromNow.toISOString())
@@ -194,7 +193,7 @@ async function refreshTwitterToken(
   clientId: string
 ): Promise<RefreshResult> {
   console.log(
-    `Refreshing Twitter token for account ${account.id} (user ${account.user_id})`
+    `Refreshing Twitter token for account ${account.id}`
   );
 
   if (!account.refresh_token_encrypted) {
@@ -302,7 +301,7 @@ async function refreshInstagramToken(
   appSecret: string
 ): Promise<RefreshResult> {
   console.log(
-    `Refreshing Instagram token for account ${account.id} (user ${account.user_id})`
+    `Refreshing Instagram token for account ${account.id}`
   );
 
   try {
