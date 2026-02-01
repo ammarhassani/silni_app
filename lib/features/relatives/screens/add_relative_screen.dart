@@ -15,6 +15,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/errors/app_errors.dart';
+import '../../../core/services/auto_reminder_service.dart';
 import '../../../core/services/error_handler_service.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -147,6 +148,15 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
 
       final repository = ref.read(relativesRepositoryProvider);
       await repository.createRelative(relative);
+
+      // Fire-and-forget: auto-create a reminder based on relationship type.
+      // This runs in the background and never blocks the UI or throws.
+      AutoReminderService.createAutoReminder(
+        userId: user.id,
+        relativeId: relative.id,
+        relationshipType: _selectedRelationship,
+        remindersRepository: ref.read(reminderSchedulesRepositoryProvider),
+      );
 
       if (!mounted) return;
 
