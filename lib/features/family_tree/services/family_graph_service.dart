@@ -115,7 +115,6 @@ class FamilyGraphService {
         final parentId = _findParentId(
           userId: userId,
           existingRelatives: existingRelatives,
-          existingEdges: existingEdges,
           side: side,
         );
         if (parentId != null) {
@@ -326,7 +325,6 @@ class FamilyGraphService {
   static String? _findParentId({
     required String userId,
     required List<Relative> existingRelatives,
-    required List<FamilyEdge> existingEdges,
     FamilySide? side,
   }) {
     // Try to find based on side

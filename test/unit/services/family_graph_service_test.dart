@@ -988,8 +988,8 @@ void main() {
       expect(EdgeType.fromString('spouse_of'), EdgeType.spouseOf);
     });
 
-    test('fromString returns siblingOf for unknown values', () {
-      expect(EdgeType.fromString('unknown'), EdgeType.siblingOf);
+    test('fromString throws ArgumentError for unknown values', () {
+      expect(() => EdgeType.fromString('unknown'), throwsArgumentError);
     });
 
     test('value matches expected string', () {
