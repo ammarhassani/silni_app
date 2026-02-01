@@ -199,6 +199,10 @@ class Relative {
   final int? supportLevel; // 1-5 scale
   final DateTime? lastMeaningfulInteraction;
 
+  // Shared Family Tree Fields
+  final String? familyGroupId; // FK to family_groups, null = personal
+  final String? addedBy; // FK to auth.users, who added this shared relative
+
   Relative({
     required this.id,
     required this.userId,
@@ -245,6 +249,9 @@ class Relative {
     this.conflictHistory,
     this.supportLevel,
     this.lastMeaningfulInteraction,
+    // Shared tree fields
+    this.familyGroupId,
+    this.addedBy,
   });
 
   /// Create from Supabase JSON
@@ -321,6 +328,9 @@ class Relative {
       lastMeaningfulInteraction: json['last_meaningful_interaction'] != null
           ? DateTime.parse(json['last_meaningful_interaction'] as String)
           : null,
+      // Shared tree fields
+      familyGroupId: json['family_group_id'] as String?,
+      addedBy: json['added_by'] as String?,
     );
   }
 
@@ -371,6 +381,9 @@ class Relative {
       'conflict_history': conflictHistory,
       'support_level': supportLevel,
       'last_meaningful_interaction': lastMeaningfulInteraction?.toUtc().toIso8601String(),
+      // Shared tree fields
+      if (familyGroupId != null) 'family_group_id': familyGroupId,
+      if (addedBy != null) 'added_by': addedBy,
       // Don't include id, created_at, updated_at - managed by database
     };
   }
@@ -422,6 +435,9 @@ class Relative {
     String? conflictHistory,
     int? supportLevel,
     DateTime? lastMeaningfulInteraction,
+    // Shared tree fields
+    String? familyGroupId,
+    String? addedBy,
   }) {
     return Relative(
       id: id ?? this.id,
@@ -469,6 +485,9 @@ class Relative {
       conflictHistory: conflictHistory ?? this.conflictHistory,
       supportLevel: supportLevel ?? this.supportLevel,
       lastMeaningfulInteraction: lastMeaningfulInteraction ?? this.lastMeaningfulInteraction,
+      // Shared tree fields
+      familyGroupId: familyGroupId ?? this.familyGroupId,
+      addedBy: addedBy ?? this.addedBy,
     );
   }
 

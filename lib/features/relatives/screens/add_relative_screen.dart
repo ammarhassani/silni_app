@@ -27,6 +27,9 @@ import '../../../core/providers/cache_provider.dart';
 import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/widgets/health_status_picker.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../family_groups/models/family_group_model.dart';
+import '../../family_groups/providers/family_group_providers.dart';
+import '../../family_groups/services/shared_tree_service.dart';
 import '../../home/providers/home_providers.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../services/relationship_inference_service.dart';
@@ -54,6 +57,8 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   String _phoneNumber = ''; // Store phone number separately
   AvatarType? _selectedAvatar; // User-selected avatar
   String? _healthStatus; // Health status of the relative
+  bool _addToSharedTree = false; // Whether to add to a shared family tree
+  FamilyGroup? _selectedGroup; // The selected family group (if shared)
 
   final SupabaseStorageService _storageService = SupabaseStorageService();
 
@@ -171,8 +176,19 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         createdAt: DateTime.now(),
       );
 
-      final repository = ref.read(relativesRepositoryProvider);
-      final createdRelativeId = await repository.createRelative(relative);
+      final String createdRelativeId;
+      if (_addToSharedTree && _selectedGroup != null) {
+        // Add to shared family tree
+        createdRelativeId = await SharedTreeService.addSharedRelative(
+          relative: relative,
+          familyGroupId: _selectedGroup!.id,
+          userId: user.id,
+        );
+      } else {
+        // Add as personal relative
+        final repository = ref.read(relativesRepositoryProvider);
+        createdRelativeId = await repository.createRelative(relative);
+      }
 
       // Fire-and-forget: auto-create a reminder based on relationship type.
       // This runs in the background and never blocks the UI or throws.
@@ -356,6 +372,9 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                           },
                         ),
                         const SizedBox(height: AppSpacing.md),
+
+                        // Shared family tree toggle
+                        _buildSharedTreeToggle(),
 
                         // Phone with international format
                         IntlPhoneField(
@@ -702,6 +721,121 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Builds the shared family tree toggle + group dropdown.
+  ///
+  /// Only renders content when the user belongs to at least one family group.
+  Widget _buildSharedTreeToggle() {
+    final user = ref.watch(currentUserProvider);
+    if (user == null) return const SizedBox.shrink();
+
+    final groupsAsync = ref.watch(userGroupsProvider(user.id));
+
+    return groupsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (groups) {
+        if (groups.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          children: [
+            GlassCard(
+              child: Column(
+                children: [
+                  // Toggle row
+                  Row(
+                    children: [
+                      Icon(Icons.group_rounded,
+                          color: Colors.white.withValues(alpha: 0.7)),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          'ضيفه للعائلة المشتركة؟',
+                          style: AppTypography.titleMedium
+                              .copyWith(color: Colors.white),
+                        ),
+                      ),
+                      Switch(
+                        value: _addToSharedTree,
+                        onChanged: (value) {
+                          setState(() {
+                            _addToSharedTree = value;
+                            if (!value) _selectedGroup = null;
+                            if (value && groups.length == 1) {
+                              _selectedGroup = groups.first;
+                            }
+                          });
+                        },
+                        activeTrackColor:
+                            AppColors.islamicGreenPrimary.withValues(alpha: 0.5),
+                        activeThumbColor: AppColors.islamicGreenPrimary,
+                      ),
+                    ],
+                  ),
+                  // Group dropdown (shown when toggle is on)
+                  if (_addToSharedTree) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    DropdownButtonFormField<FamilyGroup>(
+                      initialValue: _selectedGroup,
+                      decoration: InputDecoration(
+                        labelText: 'اختر المجموعة',
+                        labelStyle: AppTypography.bodyMedium.copyWith(
+                          color: Colors.white.withValues(alpha: 0.8),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white.withValues(alpha: 0.1),
+                        border: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusLg),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusLg),
+                          borderSide: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusLg),
+                          borderSide: const BorderSide(
+                            color: AppColors.islamicGreenPrimary,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      dropdownColor: const Color(0xFF1B3A2D),
+                      style: AppTypography.bodyMedium
+                          .copyWith(color: Colors.white),
+                      icon: const Icon(Icons.arrow_drop_down,
+                          color: Colors.white70),
+                      items: groups
+                          .map((group) => DropdownMenuItem<FamilyGroup>(
+                                value: group,
+                                child: Text(group.name),
+                              ))
+                          .toList(),
+                      onChanged: (group) {
+                        setState(() => _selectedGroup = group);
+                      },
+                      validator: (value) {
+                        if (_addToSharedTree && value == null) {
+                          return 'الرجاء اختيار مجموعة';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        );
+      },
     );
   }
 
