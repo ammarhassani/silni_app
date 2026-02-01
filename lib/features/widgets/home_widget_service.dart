@@ -18,18 +18,18 @@ class HomeWidgetService {
 
   /// Update the home screen widget with the user's top streak.
   ///
-  /// Queries relative_streaks to find the highest current_streak,
-  /// then looks up the relative's name. Sends data to the native widget.
+  /// Uses a single joined query to fetch the top streak and relative name
+  /// in one round-trip. Sends data to the native widget.
   static Future<void> updateWidget({
     required String userId,
   }) async {
     try {
       final client = SupabaseConfig.client;
 
-      // Get the top streak for this user
+      // Single query with FK join: relative_streaks -> relatives
       final streakData = await client
           .from('relative_streaks')
-          .select('current_streak, relative_id')
+          .select('current_streak, relatives(full_name)')
           .eq('user_id', userId)
           .order('current_streak', ascending: false)
           .limit(1)
@@ -40,17 +40,10 @@ class HomeWidgetService {
 
       if (streakData != null && streakData['current_streak'] > 0) {
         streakCount = streakData['current_streak'] as int;
-        final relativeId = streakData['relative_id'] as String;
 
-        // Look up relative name
-        final relativeData = await client
-            .from('relatives')
-            .select('full_name')
-            .eq('id', relativeId)
-            .maybeSingle();
-
-        if (relativeData != null) {
-          displayName = relativeData['full_name'] as String;
+        final relatives = streakData['relatives'] as Map<String, dynamic>?;
+        if (relatives != null && relatives['full_name'] != null) {
+          displayName = relatives['full_name'] as String;
         }
       }
 
@@ -77,6 +70,7 @@ class HomeWidgetService {
 
   /// Convert an integer to Arabic-Indic numerals (٠١٢٣٤٥٦٧٨٩).
   static String toArabicNumerals(int number) {
+    if (number < 0) return toArabicNumerals(-number);
     const arabicDigits = [
       '\u0660', // ٠
       '\u0661', // ١

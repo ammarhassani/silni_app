@@ -58,15 +58,12 @@ struct SilniStreakWidgetEntryView: View {
                 Text("\u{1F525}")
                     .font(.system(size: family == .systemSmall ? 28 : 36))
 
-                Text("\(entry.streakCount)")
-                    .font(.system(size: family == .systemSmall ? 24 : 32, weight: .bold, design: .rounded))
+                // Use pre-formatted streak text with Arabic-Indic numerals
+                Text(entry.streakText)
+                    .font(.system(size: family == .systemSmall ? 16 : 20, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
-                    .environment(\.locale, Locale(identifier: "ar"))
-
-                Text(entry.displayName)
-                    .font(.system(size: family == .systemSmall ? 12 : 14, weight: .medium))
-                    .foregroundColor(.white.opacity(0.9))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
             .padding(8)
         }

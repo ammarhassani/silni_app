@@ -46,6 +46,7 @@ import 'core/services/ui_strings_service.dart';
 import 'core/services/onboarding_config_service.dart';
 import 'shared/widgets/error_boundary.dart';
 import 'shared/widgets/premium_loading_indicator.dart';
+import 'features/widgets/home_widget_service.dart';
 
 // Background handler is now in fcm_notification_service.dart
 // It's imported and used via FirebaseMessaging.onBackgroundMessage()
@@ -169,6 +170,13 @@ void main() async {
       stackTrace: stackTrace,
     );
     // Don't rethrow - let app start so we can see logs
+  }
+
+  // Initialize home screen widget (app group for iOS shared UserDefaults)
+  try {
+    await HomeWidgetService.initialize();
+  } catch (_) {
+    // Non-critical — widget may not be available on all platforms
   }
 
   // Initialize Hive for local caching (offline support)

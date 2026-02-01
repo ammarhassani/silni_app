@@ -35,6 +35,11 @@ void main() {
         // High streak
         expect(HomeWidgetService.toArabicNumerals(365), '\u0663\u0666\u0665');
       });
+
+      test('handles negative numbers defensively', () {
+        expect(HomeWidgetService.toArabicNumerals(-1), '\u0661');
+        expect(HomeWidgetService.toArabicNumerals(-45), '\u0664\u0665');
+      });
     });
   });
 }
