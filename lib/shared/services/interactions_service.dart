@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:silni_app/features/widgets/home_widget_service.dart';
 import '../../core/config/supabase_config.dart';
 import '../../core/services/gamification_service.dart';
 import '../../core/services/relative_streak_service.dart';
@@ -80,6 +83,9 @@ class InteractionsService {
           );
         }
       }
+
+      // Fire-and-forget: update home screen widget with latest streak
+      unawaited(HomeWidgetService.updateWidget(userId: interaction.userId));
 
       return id;
     } catch (e) {

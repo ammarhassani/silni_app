@@ -17,5 +17,9 @@
 		<string>applinks:silni-app.com</string>
 		<string>applinks:www.silni-app.com</string>
 	</array>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.silni.app.widget</string>
+	</array>
 </dict>
 </plist>
