@@ -88,7 +88,7 @@ class QuickLogFaces extends ConsumerWidget {
   }
 }
 
-class _QuickLogFace extends ConsumerWidget {
+class _QuickLogFace extends ConsumerStatefulWidget {
   const _QuickLogFace({
     required this.relative,
     required this.userId,
@@ -100,46 +100,57 @@ class _QuickLogFace extends ConsumerWidget {
   final dynamic themeColors;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_QuickLogFace> createState() => _QuickLogFaceState();
+}
+
+class _QuickLogFaceState extends ConsumerState<_QuickLogFace> {
+  bool _isSubmitting = false;
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => _logInteraction(context, ref),
+      onTap: _isSubmitting ? null : () => _logInteraction(context),
       child: Semantics(
-        label: 'سجّل تواصل مع ${relative.fullName}',
+        label: 'سجّل تواصل مع ${widget.relative.fullName}',
         button: true,
-        child: Column(
-          children: [
-            RelativeAvatar(
-              relative: relative,
-              size: RelativeAvatar.sizeMedium,
-              showNeedsAttentionBadge: false,
-              showFavoriteBadge: false,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            SizedBox(
-              width: 70,
-              child: Text(
-                relative.fullName,
-                style: AppTypography.labelSmall.copyWith(
-                  color: themeColors.textSecondary,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+        child: Opacity(
+          opacity: _isSubmitting ? 0.5 : 1.0,
+          child: Column(
+            children: [
+              RelativeAvatar(
+                relative: widget.relative,
+                size: RelativeAvatar.sizeMedium,
+                showNeedsAttentionBadge: false,
+                showFavoriteBadge: false,
               ),
-            ),
-          ],
+              const SizedBox(height: AppSpacing.xs),
+              SizedBox(
+                width: 70,
+                child: Text(
+                  widget.relative.fullName,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: widget.themeColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Future<void> _logInteraction(BuildContext context, WidgetRef ref) async {
+  Future<void> _logInteraction(BuildContext context) async {
+    setState(() => _isSubmitting = true);
     try {
       final repository = ref.read(interactionsRepositoryProvider);
       await repository.createInteraction(Interaction(
         id: '',
-        userId: userId,
-        relativeId: relative.id,
+        userId: widget.userId,
+        relativeId: widget.relative.id,
         type: InteractionType.call,
         date: DateTime.now(),
         createdAt: DateTime.now(),
@@ -148,7 +159,7 @@ class _QuickLogFace extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('تم تسجيل تواصل مع ${relative.fullName} ✅'),
+            content: Text('تم تسجيل تواصل مع ${widget.relative.fullName} ✅'),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
@@ -163,6 +174,10 @@ class _QuickLogFace extends ConsumerWidget {
             behavior: SnackBarBehavior.floating,
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
       }
     }
   }
