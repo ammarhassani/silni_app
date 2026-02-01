@@ -8,6 +8,8 @@ import '../../core/constants/app_typography.dart';
 import '../../core/models/gamification_event.dart';
 import '../../core/theme/app_themes.dart';
 import '../../core/theme/theme_provider.dart';
+import 'share_card_widget.dart';
+import 'shareable_card_generator.dart';
 
 /// Milestone tier for visual customization
 enum MilestoneTier {
@@ -502,29 +504,69 @@ class _StreakMilestoneModalState extends ConsumerState<StreakMilestoneModal>
 
                 const SizedBox(height: 24),
 
-                // Close button with tier-specific color
-                ElevatedButton(
-                  onPressed: () {
-                    widget.onDismiss?.call();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colors.onPrimary,
-                    foregroundColor: primaryGradientColor,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 48,
-                      vertical: 16,
+                // Action buttons
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Share button
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        final cardData = ShareableCardData.streak(
+                          streak: widget.streak,
+                        );
+                        ShareCardWidget.captureAndShare(
+                          context,
+                          cardData,
+                          gradient: tierGradient,
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white, width: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 14,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      icon: const Icon(Icons.share, size: 18),
+                      label: Text(
+                        'شارك',
+                        style: AppTypography.buttonLarge.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+
+                    const SizedBox(width: 12),
+
+                    // Dismiss button
+                    ElevatedButton(
+                      onPressed: () {
+                        widget.onDismiss?.call();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colors.onPrimary,
+                        foregroundColor: primaryGradientColor,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        elevation: 8,
+                      ),
+                      child: Text(
+                        'رائع!',
+                        style: AppTypography.buttonLarge.copyWith(
+                          color: primaryGradientColor,
+                        ),
+                      ),
                     ),
-                    elevation: 8,
-                  ),
-                  child: Text(
-                    'رائع!',
-                    style: AppTypography.buttonLarge.copyWith(
-                      color: primaryGradientColor,
-                    ),
-                  ),
+                  ],
                 )
                     .animate()
                     .fadeIn(delay: 800.ms, duration: 400.ms)

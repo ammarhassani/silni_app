@@ -5,6 +5,8 @@ import 'package:confetti/confetti.dart';
 import '../../core/constants/app_animations.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
+import 'share_card_widget.dart';
+import 'shareable_card_generator.dart';
 
 /// Dramatic level up celebration modal
 /// Shows when user reaches a new level
@@ -281,29 +283,69 @@ class _LevelUpModalState extends State<LevelUpModal>
 
                 const SizedBox(height: 32),
 
-                // Close button
-                ElevatedButton(
-                  onPressed: () {
-                    widget.onDismiss?.call();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: AppColors.premiumGoldDark,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 48,
-                      vertical: 16,
+                // Action buttons
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Share button
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        final cardData = ShareableCardData.levelUp(
+                          newLevel: widget.newLevel,
+                        );
+                        ShareCardWidget.captureAndShare(
+                          context,
+                          cardData,
+                          gradient: AppColors.goldenGradient,
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white, width: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 14,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      icon: const Icon(Icons.share, size: 18),
+                      label: Text(
+                        'شارك',
+                        style: AppTypography.buttonLarge.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+
+                    const SizedBox(width: 12),
+
+                    // Dismiss button
+                    ElevatedButton(
+                      onPressed: () {
+                        widget.onDismiss?.call();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.premiumGoldDark,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        elevation: 8,
+                      ),
+                      child: Text(
+                        'رائع!',
+                        style: AppTypography.buttonLarge.copyWith(
+                          color: AppColors.premiumGoldDark,
+                        ),
+                      ),
                     ),
-                    elevation: 8,
-                  ),
-                  child: Text(
-                    'رائع!',
-                    style: AppTypography.buttonLarge.copyWith(
-                      color: AppColors.premiumGoldDark,
-                    ),
-                  ),
+                  ],
                 )
                     .animate()
                     .fadeIn(delay: 800.ms, duration: 400.ms)
