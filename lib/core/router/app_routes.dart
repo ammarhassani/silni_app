@@ -49,6 +49,9 @@ class AppRoutes {
   static const String leaderboard = '/leaderboard';
   static const String challenges = '/challenges';
 
+  // Wrapped routes
+  static const String monthlyWrapped = '/monthly-wrapped';
+
   // AI routes
   static const String aiHub = '/ai-hub';
   static const String aiChat = '/ai-chat';

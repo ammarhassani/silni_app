@@ -32,6 +32,7 @@ import '../../features/gamification/screens/badges_screen.dart';
 import '../../features/gamification/screens/detailed_stats_screen.dart';
 import '../../features/gamification/screens/leaderboard_screen.dart';
 import '../../features/gamification/screens/challenges_screen.dart';
+import '../../features/wrapped/screens/monthly_wrapped_screen.dart';
 import '../../features/ai_assistant/screens/ai_chat_screen.dart';
 import '../../features/ai_assistant/screens/memory_viewer_screen.dart';
 import '../../features/ai_assistant/screens/message_composer_screen.dart';
@@ -294,6 +295,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'challenges',
         pageBuilder: (context, state) =>
             _buildPageWithTransition(context, state, const ChallengesScreen()),
+      ),
+
+      // Wrapped Routes
+      GoRoute(
+        path: AppRoutes.monthlyWrapped,
+        name: 'monthlyWrapped',
+        pageBuilder: (context, state) {
+          final monthParam = state.uri.queryParameters['month'];
+          DateTime? month;
+          if (monthParam != null) {
+            month = DateTime.tryParse(monthParam);
+          }
+          return _buildPageWithTransition(
+            context,
+            state,
+            MonthlyWrappedScreen(month: month),
+          );
+        },
       ),
 
       // AI Routes
