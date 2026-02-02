@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:silni_app/features/family_tree/models/tree_layout.dart';
-import 'package:silni_app/features/family_tree/models/family_graph.dart';
 import 'package:silni_app/features/family_tree/painters/family_tree_painter.dart';
 
 void main() {
