@@ -1,12 +1,9 @@
-import 'dart:io';
+import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:screenshot/screenshot.dart';
 import 'package:screenshot_callback/screenshot_callback.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -16,19 +13,16 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../home/providers/home_providers.dart';
-import '../widgets/tree_node_widget.dart';
-import '../widgets/export_tree_node_widget.dart';
-import '../models/tree_node.dart';
 import '../../../core/providers/realtime_provider.dart';
 import '../../../core/theme/theme_provider.dart';
-import '../../../core/theme/app_themes.dart';
 import '../../../core/models/subscription_tier.dart';
 import '../../../core/providers/subscription_provider.dart';
 import '../../subscription/screens/paywall_screen.dart';
 import '../../../shared/utils/ui_helpers.dart';
-import '../../../shared/utils/relationship_label_helper.dart';
-import '../models/family_graph.dart';
 import '../providers/family_graph_providers.dart';
+import '../painters/family_tree_painter.dart';
+import '../models/tree_layout.dart';
+import '../services/family_tree_layout_service.dart';
 
 // Note: relativesStreamProvider is now imported from features/home/screens/home_screen.dart
 
@@ -39,24 +33,31 @@ class FamilyTreeScreen extends ConsumerStatefulWidget {
   ConsumerState<FamilyTreeScreen> createState() => _FamilyTreeScreenState();
 }
 
-class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
+class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen>
+    with TickerProviderStateMixin {
   final TransformationController _transformationController =
       TransformationController();
-  final ScreenshotController _screenshotController = ScreenshotController();
   final ScreenshotCallback _screenshotCallback = ScreenshotCallback();
   double _currentScale = 1.0;
-  String? _selectedNodeId;
-  bool _isExporting = false;
   bool _showWatermark = false;
 
-  // Store tree data for export
-  TreeNode? _currentTreeData;
-  List<Relative>? _currentRelatives;
+  late final AnimationController _breathingController;
+  late final AnimationController _entryController;
+  OverlayEntry? _nodeOverlay;
+  OverlayEntry? _overlayBarrier;
 
   @override
   void initState() {
     super.initState();
     _initScreenshotDetection();
+    _breathingController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
+    _entryController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
   }
 
   void _initScreenshotDetection() {
@@ -65,10 +66,9 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       if (mounted) {
         setState(() => _showWatermark = true);
         // Show snackbar with branding
-        // Show snackbar with branding
         // Hide previous snackbars
         ScaffoldMessenger.of(context).clearSnackBars();
-        
+
         // Show custom branded snackbar
         UIHelpers.showSnackBar(
           context,
@@ -88,40 +88,12 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
 
   @override
   void dispose() {
+    _breathingController.dispose();
+    _entryController.dispose();
+    _dismissOverlay();
     _transformationController.dispose();
     _screenshotCallback.dispose();
     super.dispose();
-  }
-
-  /// Calculate responsive node size based on screen width and tree complexity
-  double _calculateNodeSize(double screenWidth, TreeNode root) {
-    // Count total members at level 0 (siblings + user + spouse)
-    final level0Count = root.siblings.length + 1;
-
-    // Base size calculations
-    const double minNodeSize = 50.0;
-    const double maxNodeSize = 90.0;
-    const double defaultNodeSize = 80.0;
-
-    // For small screens (< 400px), use smaller nodes
-    if (screenWidth < 400) {
-      return minNodeSize;
-    }
-
-    // For medium screens (400-600px)
-    if (screenWidth < 600) {
-      // Scale based on number of siblings
-      if (level0Count > 4) return minNodeSize;
-      if (level0Count > 3) return 60.0;
-      return 70.0;
-    }
-
-    // For larger screens, adjust based on tree complexity
-    if (level0Count > 5) return 60.0;
-    if (level0Count > 3) return 70.0;
-
-    // Default size for normal trees
-    return defaultNodeSize.clamp(minNodeSize, maxNodeSize);
   }
 
   @override
@@ -215,25 +187,6 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          // Share button only
-          Semantics(
-            label: 'مشاركة الشجرة',
-            button: true,
-            child: IconButton(
-              onPressed: _isExporting ? null : _exportTree,
-              icon: _isExporting
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: themeColors.textOnGradient,
-                      ),
-                    )
-                  : Icon(Icons.share_rounded, color: themeColors.textOnGradient),
-              tooltip: 'مشاركة الشجرة',
-            ),
-          ),
         ],
       ),
     );
@@ -298,6 +251,10 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Canvas-based tree content
+  // ---------------------------------------------------------------------------
+
   Widget _buildTreeContent(
     BuildContext context,
     List<Relative> relatives,
@@ -308,459 +265,112 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       return _buildEmptyState();
     }
 
-    // Watch family graph for perspective-shifting labels (null if no edges yet)
+    // Watch family graph for perspective-shifting labels
     final graph = ref.watch(familyGraphProvider(userId));
-
-    // Build relatives map for label lookups
     final relativesMap = {for (final r in relatives) r.id: r};
-
-    // Build tree structure
-    final treeData = _buildTreeData(relatives, userName, userId, graph, relativesMap);
-
-    // Store for export
-    _currentTreeData = treeData;
-    _currentRelatives = relatives;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Calculate responsive node size based on screen width
-        final screenWidth = constraints.maxWidth;
-        final nodeSize = _calculateNodeSize(screenWidth, treeData);
+        final canvasSize = Size(
+          max(constraints.maxWidth, 400),
+          max(constraints.maxHeight, 600),
+        );
+
+        // Compute layout from graph
+        final layout = FamilyTreeLayoutService.computeLayout(
+          userId: userId,
+          userName: userName,
+          graph: graph,
+          relatives: relatives,
+          relativesMap: relativesMap,
+          canvasSize: canvasSize,
+        );
+
+        // Start entry animation on first build
+        if (!_entryController.isAnimating && _entryController.value == 0) {
+          _entryController.forward();
+        }
 
         return Stack(
           children: [
-            // Main tree view (NO branding - clean view)
-            InteractiveViewer(
-              transformationController: _transformationController,
-              boundaryMargin: const EdgeInsets.all(double.infinity),
-              constrained: false,
-              minScale: 0.1,
-              maxScale: 3.0,
-              onInteractionUpdate: (details) {
-                final matrixScale = _transformationController.value.entry(0, 0);
-                if (matrixScale != _currentScale) {
-                  setState(() {
-                    _currentScale = matrixScale;
-                  });
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                color: Colors.transparent,
-                child: _buildTreeLayout(treeData, relatives, nodeSize),
+            // Main tree canvas
+            GestureDetector(
+              onTapUp: (details) => _handleCanvasTap(
+                details, layout, relativesMap, userId,
               ),
-            ),
-            // Watermark overlay (shows when screenshot detected)
-            if (_showWatermark)
-              Positioned(
-                bottom: AppSpacing.xxl,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg,
-                      vertical: AppSpacing.md,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.islamicGreenDark.withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.3),
-                          blurRadius: 10,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Image.asset(
-                          'assets/images/silni_branding.png',
-                          width: 50,
-                          height: 50,
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Text(
-                          'شجرة عائلتي',
-                          style: AppTypography.headlineSmall.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+              child: InteractiveViewer(
+                transformationController: _transformationController,
+                boundaryMargin: const EdgeInsets.all(double.infinity),
+                constrained: false,
+                minScale: 0.1,
+                maxScale: 3.0,
+                onInteractionUpdate: (details) {
+                  final matrixScale = _transformationController.value.entry(0, 0);
+                  if (matrixScale != _currentScale) {
+                    setState(() => _currentScale = matrixScale);
+                  }
+                },
+                child: ListenableBuilder(
+                  listenable: Listenable.merge([
+                    _breathingController,
+                    _entryController,
+                  ]),
+                  builder: (context, _) {
+                    return CustomPaint(
+                      painter: FamilyTreePainter(
+                        layout: layout,
+                        animationValue: _breathingController.value,
+                        entryProgress: _entryController.value,
+                      ),
+                      size: layout.bounds.size,
+                    );
+                  },
                 ),
               ),
+            ),
+            // Watermark overlay
+            if (_showWatermark)
+              _buildWatermark(),
           ],
         );
       },
     );
   }
 
-  TreeNode _buildTreeData(
-    List<Relative> relatives,
-    String userName,
-    String userId,
-    FamilyGraph? graph,
+  // ---------------------------------------------------------------------------
+  // Canvas tap handling
+  // ---------------------------------------------------------------------------
+
+  void _handleCanvasTap(
+    TapUpDetails details,
+    FamilyTreeLayout layout,
     Map<String, Relative> relativesMap,
+    String userId,
   ) {
-    // Root node (user)
-    final root = TreeNode(
-      id: 'me',
-      name: userName,
-      emoji: '👤',
-      relationship: 'أنا',
-      level: 0,
-      isRoot: true,
+    _dismissOverlay();
+
+    // Convert screen coordinates to canvas coordinates
+    final matrix = _transformationController.value.clone()..invert();
+    final localPosition = MatrixUtils.transformPoint(
+      matrix,
+      details.localPosition,
     );
 
-    // Separate relatives by generation
-    final parents = relatives
-        .where(
-          (r) =>
-              r.relationshipType == RelationshipType.father ||
-              r.relationshipType == RelationshipType.mother,
-        )
-        .toList();
+    final node = layout.findNodeAtPosition(localPosition);
+    if (node == null) return;
 
-    final grandparents = relatives
-        .where(
-          (r) =>
-              r.relationshipType == RelationshipType.grandfather ||
-              r.relationshipType == RelationshipType.grandmother,
-        )
-        .toList();
-
-    final siblings = relatives
-        .where(
-          (r) =>
-              r.relationshipType == RelationshipType.brother ||
-              r.relationshipType == RelationshipType.sister,
-        )
-        .toList();
-
-    final children = relatives
-        .where(
-          (r) =>
-              r.relationshipType == RelationshipType.son ||
-              r.relationshipType == RelationshipType.daughter,
-        )
-        .toList();
-
-    final spouse = relatives
-        .where(
-          (r) =>
-              r.relationshipType == RelationshipType.husband ||
-              r.relationshipType == RelationshipType.wife,
-        )
-        .toList();
-
-    final extended = relatives
-        .where(
-          (r) =>
-              r.relationshipType == RelationshipType.uncle ||
-              r.relationshipType == RelationshipType.aunt ||
-              r.relationshipType == RelationshipType.cousin ||
-              r.relationshipType == RelationshipType.nephew ||
-              r.relationshipType == RelationshipType.niece ||
-              r.relationshipType == RelationshipType.other,
-        )
-        .toList();
-
-    // Helper to compute perspective-aware label with fallback
-    String labelFor(Relative r) => getRelationshipLabel(
-          relative: r,
-          viewerId: userId,
-          graph: graph,
-          relativesMap: relativesMap,
-        );
-
-    // Add parents to root
-    for (final parent in parents) {
-      root.addChild(
-        TreeNode(
-          id: parent.id,
-          name: parent.fullName,
-          emoji: parent.displayEmoji,
-          relationship: labelFor(parent),
-          level: -1,
-          priority: parent.priority,
-        ),
-      );
-    }
-
-    // Add grandparents to parents
-    for (final grandparent in grandparents) {
-      if (root.children.isNotEmpty) {
-        root.children.first.addChild(
-          TreeNode(
-            id: grandparent.id,
-            name: grandparent.fullName,
-            emoji: grandparent.displayEmoji,
-            relationship: labelFor(grandparent),
-            level: -2,
-            priority: grandparent.priority,
-          ),
-        );
+    if (node.isUser) {
+      // Show user info bottom sheet
+      _showUserDetails(node);
+    } else {
+      final relative = relativesMap[node.id];
+      if (relative != null) {
+        _showNodeOverlay(node, relative, details.globalPosition);
       }
     }
-
-    // Add spouse to root
-    for (final s in spouse) {
-      root.addSibling(
-        TreeNode(
-          id: s.id,
-          name: s.fullName,
-          emoji: s.displayEmoji,
-          relationship: labelFor(s),
-          level: 0,
-          priority: s.priority,
-        ),
-      );
-    }
-
-    // Add siblings to root
-    for (final sibling in siblings) {
-      root.addSibling(
-        TreeNode(
-          id: sibling.id,
-          name: sibling.fullName,
-          emoji: sibling.displayEmoji,
-          relationship: labelFor(sibling),
-          level: 0,
-          priority: sibling.priority,
-        ),
-      );
-    }
-
-    // Add children to root
-    for (final child in children) {
-      root.addChild(
-        TreeNode(
-          id: child.id,
-          name: child.fullName,
-          emoji: child.displayEmoji,
-          relationship: labelFor(child),
-          level: 1,
-          priority: child.priority,
-        ),
-      );
-    }
-
-    // Add extended family to root
-    for (final ext in extended) {
-      root.addChild(
-        TreeNode(
-          id: ext.id,
-          name: ext.fullName,
-          emoji: ext.displayEmoji,
-          relationship: labelFor(ext),
-          level: 1,
-          priority: ext.priority,
-          isExtended: true,
-        ),
-      );
-    }
-
-    return root;
   }
 
-  Widget _buildTreeLayout(TreeNode root, List<Relative> relatives, double nodeSize) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // Grandparents (Level -2)
-        if (root.children.isNotEmpty &&
-            root.children.first.children.isNotEmpty) ...[
-          _buildGeneration(root.children.first.children, relatives, -2, nodeSize),
-          const SizedBox(height: AppSpacing.sm), // Increased spacing
-          _buildConnectionLines(
-            root.children.first.children.length,
-            vertical: true,
-          ),
-          const SizedBox(height: AppSpacing.sm), // Increased spacing
-        ],
-
-        // Parents (Level -1)
-        if (root.children.where((n) => n.level == -1).isNotEmpty) ...[
-          _buildGeneration(
-            root.children.where((n) => n.level == -1).toList(),
-            relatives,
-            -1,
-            nodeSize,
-          ),
-          const SizedBox(height: AppSpacing.sm), // Increased spacing
-          _buildConnectionLines(
-            root.children.where((n) => n.level == -1).length,
-            vertical: true,
-          ),
-          const SizedBox(height: AppSpacing.sm), // Increased spacing
-        ],
-
-        // User + Siblings + Spouse (Level 0)
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-          child: _buildSiblingRow(root, relatives, nodeSize),
-        ),
-
-        // Children + Extended (Level 1+)
-        if (root.children.where((n) => n.level >= 1).isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.sm),
-          _buildConnectionLines(
-            root.children.where((n) => n.level >= 1).length,
-            vertical: true,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _buildGeneration(
-            root.children.where((n) => n.level >= 1).toList(),
-            relatives,
-            1,
-            nodeSize,
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildGeneration(
-    List<TreeNode> nodes,
-    List<Relative> relatives,
-    int level,
-    double nodeSize,
-  ) {
-    if (nodes.isEmpty) return const SizedBox.shrink();
-
-    return Wrap(
-      spacing: AppSpacing.md, // Increased spacing between nodes
-      runSpacing: AppSpacing.md,
-      alignment: WrapAlignment.center,
-      children: nodes.map((node) {
-        return TreeNodeWidget(
-          node: node,
-          isSelected: _selectedNodeId == node.id,
-          onTap: () => _onNodeTap(node, relatives),
-          nodeSize: nodeSize,
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildSiblingRow(TreeNode root, List<Relative> relatives, double nodeSize) {
-    // Combine all level 0 members: siblings + user + spouse
-    final allMembers = <TreeNode>[];
-
-    // Add siblings first
-    allMembers.addAll(root.siblings.where((s) =>
-      s.relationship == 'أخ' || s.relationship == 'أخت' ||
-      s.relationship.contains('أخ') || s.relationship.contains('أخت')));
-
-    // Add user (root) in the middle
-    allMembers.add(root);
-
-    // Add spouse after user
-    allMembers.addAll(root.siblings.where((s) =>
-      s.relationship == 'زوج' || s.relationship == 'زوجة' ||
-      s.relationship.contains('زوج') || s.relationship.contains('زوجة')));
-
-    if (allMembers.length == 1) {
-      // Just the user, no siblings
-      return TreeNodeWidget(
-        node: root,
-        isSelected: _selectedNodeId == root.id,
-        onTap: () => _onNodeTap(root, relatives),
-        nodeSize: nodeSize,
-      );
-    }
-
-    // Build row with horizontal connection lines between siblings
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        for (int i = 0; i < allMembers.length; i++) ...[
-          TreeNodeWidget(
-            node: allMembers[i],
-            isSelected: _selectedNodeId == allMembers[i].id,
-            onTap: () => _onNodeTap(allMembers[i], relatives),
-            nodeSize: nodeSize,
-          ),
-          // Add horizontal connection line between members (not after last one)
-          if (i < allMembers.length - 1) ...[
-            const SizedBox(width: AppSpacing.xs),
-            _buildHorizontalConnection(
-              isSpouseConnection: _isSpouseNode(allMembers[i]) || _isSpouseNode(allMembers[i + 1]),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-          ],
-        ],
-      ],
-    );
-  }
-
-  bool _isSpouseNode(TreeNode node) {
-    return node.relationship == 'زوج' ||
-           node.relationship == 'زوجة' ||
-           node.relationship.contains('زوج') ||
-           node.relationship.contains('زوجة');
-  }
-
-  Widget _buildHorizontalConnection({bool isSpouseConnection = false}) {
-    return Container(
-      width: 20,
-      height: 2,
-      decoration: BoxDecoration(
-        gradient: isSpouseConnection
-            ? AppColors.goldenGradient  // Golden for spouse connection (marriage)
-            : AppColors.primaryGradient, // Green for sibling connection
-        borderRadius: BorderRadius.circular(1),
-      ),
-    );
-  }
-
-  Widget _buildConnectionLines(int count, {required bool vertical}) {
-    if (count <= 0) return const SizedBox.shrink();
-
-    if (vertical) {
-      return Container(
-        height: 16,
-        width: 2,
-        decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient,
-          borderRadius: BorderRadius.circular(1),
-        ),
-      );
-    } else {
-      return Container(
-        width: 16,
-        height: 2,
-        decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient,
-          borderRadius: BorderRadius.circular(1),
-        ),
-      );
-    }
-  }
-
-  void _onNodeTap(TreeNode node, List<Relative> relatives) {
-    setState(() {
-      _selectedNodeId = node.id;
-    });
-
-    if (node.isRoot) {
-      // Show user info
-      _showNodeDetails(node, null);
-    } else {
-      // Find relative and show details
-      final relative = relatives.firstWhere((r) => r.id == node.id);
-      _showNodeDetails(node, relative);
-    }
-  }
-
-  void _showNodeDetails(TreeNode node, Relative? relative) {
+  void _showUserDetails(LayoutNode node) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -781,79 +391,30 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-
-              // Avatar
               Container(
                 width: 80,
                 height: 80,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: node.isRoot
-                      ? AppColors.goldenGradient
-                      : AppColors.primaryGradient,
+                  gradient: AppColors.goldenGradient,
                 ),
                 child: Center(
                   child: Text(node.emoji, style: const TextStyle(fontSize: 40)),
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
-
-              // Name
               Text(
                 node.name,
-                style: AppTypography.headlineMedium.copyWith(
-                  color: Colors.white,
-                ),
+                style: AppTypography.headlineMedium.copyWith(color: Colors.white),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.sm),
-
-              // Relationship
               Text(
-                node.relationship,
+                node.label,
                 style: AppTypography.bodyMedium.copyWith(
                   color: Colors.white.withValues(alpha: 0.7),
                 ),
               ),
-
-              if (relative != null) ...[
-                const SizedBox(height: AppSpacing.lg),
-                const Divider(color: Colors.white24),
-                const SizedBox(height: AppSpacing.md),
-
-                // Details
-                if (relative.phoneNumber != null)
-                  _buildDetailRow(Icons.phone_rounded, relative.phoneNumber!),
-                if (relative.email != null)
-                  _buildDetailRow(Icons.email_rounded, relative.email!),
-                if (relative.address != null)
-                  _buildDetailRow(Icons.location_on_rounded, relative.address!),
-
-                const SizedBox(height: AppSpacing.lg),
-
-                // Actions
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          context.push(
-                            '${AppRoutes.relativeDetail}/${relative.id}',
-                          );
-                        },
-                        icon: const Icon(Icons.visibility_rounded),
-                        label: const Text('عرض التفاصيل'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.islamicGreenPrimary,
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-
               const SizedBox(height: AppSpacing.lg),
             ],
           ),
@@ -862,23 +423,223 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.white.withValues(alpha: 0.7), size: 20),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              text,
-              style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+  void _showNodeOverlay(
+    LayoutNode node,
+    Relative relative,
+    Offset globalPosition,
+  ) {
+    _dismissOverlay();
+
+    // Create barrier
+    _overlayBarrier = OverlayEntry(
+      builder: (_) => GestureDetector(
+        onTap: _dismissOverlay,
+        behavior: HitTestBehavior.opaque,
+        child: const SizedBox.expand(),
+      ),
+    );
+
+    // Create overlay card
+    _nodeOverlay = OverlayEntry(
+      builder: (context) {
+        final screenSize = MediaQuery.of(context).size;
+        const cardWidth = 220.0;
+        const cardHeight = 200.0;
+
+        // Position card above or below the tap point
+        double top = globalPosition.dy - cardHeight - 20;
+        if (top < 60) {
+          top = globalPosition.dy + 20;
+        }
+        double left = (globalPosition.dx - cardWidth / 2)
+            .clamp(16.0, screenSize.width - cardWidth - 16.0);
+
+        return Positioned(
+          top: top,
+          left: left,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: cardWidth,
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.islamicGreenDark.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Emoji + Name
+                  Text(node.emoji, style: const TextStyle(fontSize: 32)),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    node.name,
+                    style: AppTypography.titleMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    node.label,
+                    style: AppTypography.bodySmall.copyWith(
+                      color: Colors.white.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  // Health indicator
+                  _buildHealthIndicator(node),
+                  const SizedBox(height: AppSpacing.sm),
+                  // Last contact
+                  if (relative.lastContactDate != null)
+                    Text(
+                      'آخر تواصل: ${_formatLastContact(relative)}',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: Colors.white.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  const SizedBox(height: AppSpacing.md),
+                  // Action button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _dismissOverlay();
+                        context.push(
+                          '${AppRoutes.relativeDetail}/${relative.id}',
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.islamicGreenPrimary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                      ),
+                      child: const Text('عرض التفاصيل'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ],
+        );
+      },
+    );
+
+    Overlay.of(context).insert(_overlayBarrier!);
+    Overlay.of(context).insert(_nodeOverlay!);
+  }
+
+  Widget _buildHealthIndicator(LayoutNode node) {
+    final color = switch (node.healthColor) {
+      HealthColor.green => const Color(0xFF4CAF50),
+      HealthColor.amber => const Color(0xFFFFCA28),
+      HealthColor.red => const Color(0xFFEF5350),
+    };
+    final label = switch (node.healthColor) {
+      HealthColor.green => 'تواصل ممتاز',
+      HealthColor.amber => 'يحتاج تواصل',
+      HealthColor.red => 'تواصل ضعيف',
+    };
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: color,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        Text(
+          label,
+          style: AppTypography.labelSmall.copyWith(color: color),
+        ),
+      ],
+    );
+  }
+
+  String _formatLastContact(Relative relative) {
+    if (relative.lastContactDate == null) return 'لم يتم التواصل';
+    final days = DateTime.now().difference(relative.lastContactDate!).inDays;
+    if (days == 0) return 'اليوم';
+    if (days == 1) return 'أمس';
+    if (days < 7) return 'منذ $days أيام';
+    if (days < 30) return 'منذ ${days ~/ 7} أسابيع';
+    return 'منذ ${days ~/ 30} أشهر';
+  }
+
+  void _dismissOverlay() {
+    _overlayBarrier?.remove();
+    _overlayBarrier = null;
+    _nodeOverlay?.remove();
+    _nodeOverlay = null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Watermark
+  // ---------------------------------------------------------------------------
+
+  Widget _buildWatermark() {
+    return Positioned(
+      bottom: AppSpacing.xxl,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.islamicGreenDark.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 10,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                'assets/images/silni_branding.png',
+                width: 50,
+                height: 50,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Text(
+                'شجرة عائلتي',
+                style: AppTypography.headlineSmall.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // Empty / Error states
+  // ---------------------------------------------------------------------------
 
   Widget _buildEmptyState() {
     return Center(
@@ -951,6 +712,10 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       ),
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // Locked / Premium gating state
+  // ---------------------------------------------------------------------------
 
   Widget _buildLockedState(BuildContext context, dynamic themeColors) {
     final user = ref.watch(currentUserProvider);
@@ -1193,6 +958,50 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     );
   }
 
+  /// Connection lines used by _buildPreviewTree in locked state
+  Widget _buildConnectionLines(int count, {required bool vertical}) {
+    if (count <= 0) return const SizedBox.shrink();
+
+    if (vertical) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            height: 20,
+            width: 3,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.islamicGreenLight.withValues(alpha: 0.8),
+                  AppColors.islamicGreenPrimary.withValues(alpha: 0.4),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(2),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.islamicGreenPrimary.withValues(alpha: 0.3),
+                  blurRadius: 4,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    } else {
+      return Container(
+        width: 20,
+        height: 3,
+        decoration: BoxDecoration(
+          gradient: AppColors.primaryGradient,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      );
+    }
+  }
+
   Widget _buildUpgradeCTA(BuildContext context, dynamic themeColors) {
     return Container(
       margin: const EdgeInsets.all(AppSpacing.md),
@@ -1309,6 +1118,10 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Zoom controls
+  // ---------------------------------------------------------------------------
+
   void _zoomIn() {
     final newScale = (_currentScale * 1.2).clamp(0.1, 3.0);
     _applyZoom(newScale);
@@ -1349,295 +1162,6 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     });
   }
 
-  Future<void> _exportTree() async {
-    if (_currentTreeData == null || _currentRelatives == null) {
-      final errorColor = ref.read(themeColorsProvider).statusError;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('لا توجد شجرة للتصدير'),
-          backgroundColor: errorColor,
-        ),
-      );
-      return;
-    }
-
-    // Get the render box before async operations (required for iOS share sheet)
-    final box = context.findRenderObject() as RenderBox?;
-    final sharePositionOrigin = box != null
-        ? Rect.fromLTWH(
-            box.size.width / 2,
-            0,
-            box.size.width / 2,
-            box.size.height / 2,
-          )
-        : null;
-
-    setState(() => _isExporting = true);
-
-    try {
-      // Capture the branded export widget
-      final image = await _screenshotController.captureFromWidget(
-        _buildBrandedExportWidget(),
-        delay: const Duration(milliseconds: 100),
-        pixelRatio: 2.0,
-      );
-
-      final directory = await getTemporaryDirectory();
-      final path = '${directory.path}/family_tree_${DateTime.now().millisecondsSinceEpoch}.png';
-      final file = File(path);
-      await file.writeAsBytes(image);
-
-      await Share.shareXFiles(
-        [XFile(path)],
-        sharePositionOrigin: sharePositionOrigin,
-      );
-    } catch (e) {
-      if (mounted) {
-        final errorColor = ref.read(themeColorsProvider).statusError;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('حدث خطأ: $e'),
-            backgroundColor: errorColor,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isExporting = false);
-      }
-    }
-  }
-
-  /// Calculate optimal node size for export based on tree complexity
-  double _calculateExportNodeSize(TreeNode root) {
-    // Count members at each level
-    final grandparentsCount = root.children.isNotEmpty
-        ? root.children.first.children.length
-        : 0;
-    final parentsCount = root.children.where((n) => n.level == -1).length;
-    final siblingsCount = root.siblings.length + 1; // +1 for user
-    final childrenCount = root.children.where((n) => n.level >= 1).length;
-
-    // Find the widest row (most members horizontally)
-    final maxRowCount = [grandparentsCount, parentsCount, siblingsCount, childrenCount]
-        .reduce((a, b) => a > b ? a : b);
-
-    // Total members for vertical consideration
-    final totalMembers = grandparentsCount + parentsCount + siblingsCount + childrenCount;
-
-    // Node size bounds - reduced minimum to ensure siblings fit in one row
-    const double minNodeSize = 35.0;
-    const double maxNodeSize = 70.0;
-
-    // Calculate based on widest row
-    // Each node needs: nodeSize + spacing + text width (~nodeSize * 2.0)
-    // Target export width ~350px (accounting for padding)
-    double nodeSize;
-    if (maxRowCount <= 2) {
-      nodeSize = maxNodeSize;
-    } else if (maxRowCount <= 3) {
-      nodeSize = 60.0;
-    } else if (maxRowCount <= 4) {
-      nodeSize = 50.0;
-    } else if (maxRowCount <= 5) {
-      nodeSize = 42.0;
-    } else if (maxRowCount <= 6) {
-      nodeSize = 38.0;
-    } else {
-      // For 7+ members in a row, use minimum
-      nodeSize = minNodeSize;
-    }
-
-    // Also consider total members (many members = smaller nodes)
-    if (totalMembers > 12) {
-      nodeSize = (nodeSize * 0.85).clamp(minNodeSize, maxNodeSize);
-    }
-
-    return nodeSize;
-  }
-
-  /// Build a branded widget specifically for export (with title and watermark)
-  Widget _buildBrandedExportWidget() {
-    // Calculate intelligent node size based on tree complexity
-    final exportNodeSize = _calculateExportNodeSize(_currentTreeData!);
-    // Get user's selected theme colors
-    final themeColors = ref.read(themeColorsProvider);
-
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        decoration: BoxDecoration(
-          gradient: themeColors.backgroundGradient,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Title header
-            Text(
-              'شجرة عائلتي 🌳',
-              style: AppTypography.headlineMedium.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                shadows: [
-                  Shadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            // Tree content with intelligent node sizing
-            _buildExportTreeLayout(_currentTreeData!, exportNodeSize, themeColors),
-            const SizedBox(height: AppSpacing.lg),
-            // App branding watermark
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset(
-                  'assets/images/silni_branding.png',
-                  width: 36,
-                  height: 36,
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Text(
-                  'صلني',
-                  style: AppTypography.titleMedium.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Build tree layout for export with intelligent sizing
-  Widget _buildExportTreeLayout(TreeNode root, double nodeSize, ThemeColors themeColors) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Grandparents (Level -2)
-        if (root.children.isNotEmpty &&
-            root.children.first.children.isNotEmpty) ...[
-          _buildExportGeneration(root.children.first.children, nodeSize, themeColors),
-          SizedBox(height: nodeSize * 0.15),
-          _buildExportConnectionLine(themeColors),
-          SizedBox(height: nodeSize * 0.15),
-        ],
-
-        // Parents (Level -1)
-        if (root.children.where((n) => n.level == -1).isNotEmpty) ...[
-          _buildExportGeneration(
-            root.children.where((n) => n.level == -1).toList(),
-            nodeSize,
-            themeColors,
-          ),
-          SizedBox(height: nodeSize * 0.15),
-          _buildExportConnectionLine(themeColors),
-          SizedBox(height: nodeSize * 0.15),
-        ],
-
-        // User + Siblings + Spouse (Level 0)
-        _buildExportSiblingRow(root, nodeSize, themeColors),
-
-        // Children + Extended (Level 1+)
-        if (root.children.where((n) => n.level >= 1).isNotEmpty) ...[
-          SizedBox(height: nodeSize * 0.15),
-          _buildExportConnectionLine(themeColors),
-          SizedBox(height: nodeSize * 0.15),
-          _buildExportGeneration(
-            root.children.where((n) => n.level >= 1).toList(),
-            nodeSize,
-            themeColors,
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildExportConnectionLine(ThemeColors themeColors) {
-    return Container(
-      height: 25,
-      width: 3,
-      decoration: BoxDecoration(
-        gradient: themeColors.primaryGradient,
-        borderRadius: BorderRadius.circular(2),
-      ),
-    );
-  }
-
-  Widget _buildExportGeneration(List<TreeNode> nodes, double nodeSize, ThemeColors themeColors) {
-    if (nodes.isEmpty) return const SizedBox.shrink();
-
-    return Wrap(
-      spacing: nodeSize * 0.2,
-      runSpacing: nodeSize * 0.2,
-      alignment: WrapAlignment.center,
-      children: nodes.map((node) {
-        return ExportTreeNodeWidget(
-          node: node,
-          nodeSize: nodeSize,
-          themeColors: themeColors,
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildExportSiblingRow(TreeNode root, double nodeSize, ThemeColors themeColors) {
-    // Combine all level 0 members: siblings + user + spouse
-    final allMembers = <TreeNode>[];
-
-    // Add siblings first (brothers/sisters)
-    allMembers.addAll(root.siblings.where((s) =>
-      s.relationship == 'أخ' || s.relationship == 'أخت' ||
-      s.relationship.contains('أخ') || s.relationship.contains('أخت')));
-
-    // Add user (root) in the middle
-    allMembers.add(root);
-
-    // Add spouse after user
-    allMembers.addAll(root.siblings.where((s) =>
-      s.relationship == 'زوج' || s.relationship == 'زوجة' ||
-      s.relationship.contains('زوج') || s.relationship.contains('زوجة')));
-
-    if (allMembers.length == 1) {
-      return ExportTreeNodeWidget(
-        node: root,
-        nodeSize: nodeSize,
-        themeColors: themeColors,
-      );
-    }
-
-    // Use Row wrapped in FittedBox to ensure ALL siblings stay on ONE line
-    // FittedBox will scale down if needed to prevent overflow
-    // This prevents siblings from looking like children/different generation
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: allMembers.map((member) {
-          return Padding(
-            padding: EdgeInsets.symmetric(horizontal: nodeSize * 0.1),
-            child: ExportTreeNodeWidget(
-              node: member,
-              nodeSize: nodeSize,
-              themeColors: themeColors,
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
 }
 
 /// Simple data class for preview tree nodes
