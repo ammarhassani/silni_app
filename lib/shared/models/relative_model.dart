@@ -1,3 +1,5 @@
+import '../../features/family_tree/models/family_graph.dart';
+
 /// Relationship types for relatives
 enum RelationshipType {
   father('father', 'أب', 1),
@@ -199,6 +201,12 @@ class Relative {
   final int? supportLevel; // 1-5 scale
   final DateTime? lastMeaningfulInteraction;
 
+  // Family side (paternal/maternal) for extended family disambiguation
+  final FamilySide? familySide;
+
+  // Self node flag — true when this relative represents the user themselves
+  final bool isSelf;
+
   // Shared Family Tree Fields
   final String? familyGroupId; // FK to family_groups, null = personal
   final String? addedBy; // FK to auth.users, who added this shared relative
@@ -249,6 +257,10 @@ class Relative {
     this.conflictHistory,
     this.supportLevel,
     this.lastMeaningfulInteraction,
+    // Family side
+    this.familySide,
+    // Self node flag
+    this.isSelf = false,
     // Shared tree fields
     this.familyGroupId,
     this.addedBy,
@@ -328,6 +340,15 @@ class Relative {
       lastMeaningfulInteraction: json['last_meaningful_interaction'] != null
           ? DateTime.parse(json['last_meaningful_interaction'] as String)
           : null,
+      // Family side
+      familySide: json['family_side'] != null
+          ? FamilySide.values.firstWhere(
+              (s) => s.value == json['family_side'],
+              orElse: () => FamilySide.paternal,
+            )
+          : null,
+      // Self node flag
+      isSelf: json['is_self'] as bool? ?? false,
       // Shared tree fields
       familyGroupId: json['family_group_id'] as String?,
       addedBy: json['added_by'] as String?,
@@ -381,6 +402,10 @@ class Relative {
       'conflict_history': conflictHistory,
       'support_level': supportLevel,
       'last_meaningful_interaction': lastMeaningfulInteraction?.toUtc().toIso8601String(),
+      // Family side
+      if (familySide != null) 'family_side': familySide!.value,
+      // Self node flag
+      if (isSelf) 'is_self': true,
       // Shared tree fields
       if (familyGroupId != null) 'family_group_id': familyGroupId,
       if (addedBy != null) 'added_by': addedBy,
@@ -435,6 +460,10 @@ class Relative {
     String? conflictHistory,
     int? supportLevel,
     DateTime? lastMeaningfulInteraction,
+    // Family side
+    FamilySide? familySide,
+    // Self node flag
+    bool? isSelf,
     // Shared tree fields
     String? familyGroupId,
     String? addedBy,
@@ -485,6 +514,10 @@ class Relative {
       conflictHistory: conflictHistory ?? this.conflictHistory,
       supportLevel: supportLevel ?? this.supportLevel,
       lastMeaningfulInteraction: lastMeaningfulInteraction ?? this.lastMeaningfulInteraction,
+      // Family side
+      familySide: familySide ?? this.familySide,
+      // Self node flag
+      isSelf: isSelf ?? this.isSelf,
       // Shared tree fields
       familyGroupId: familyGroupId ?? this.familyGroupId,
       addedBy: addedBy ?? this.addedBy,

@@ -49,6 +49,7 @@ class FamilyEdge {
   final String toId;
   final EdgeType type;
   final DateTime createdAt;
+  final String? familyGroupId;
 
   const FamilyEdge({
     required this.id,
@@ -57,6 +58,7 @@ class FamilyEdge {
     required this.toId,
     required this.type,
     required this.createdAt,
+    this.familyGroupId,
   });
 
   /// Create a new edge with a generated UUID.
@@ -65,6 +67,7 @@ class FamilyEdge {
     required String fromId,
     required String toId,
     required EdgeType type,
+    String? familyGroupId,
   }) {
     return FamilyEdge(
       id: const Uuid().v4(),
@@ -73,6 +76,7 @@ class FamilyEdge {
       toId: toId,
       type: type,
       createdAt: DateTime.now(),
+      familyGroupId: familyGroupId,
     );
   }
 
@@ -85,6 +89,7 @@ class FamilyEdge {
       toId: json['to_id'] as String,
       type: EdgeType.fromString(json['edge_type'] as String),
       createdAt: DateTime.parse(json['created_at'] as String),
+      familyGroupId: json['family_group_id'] as String?,
     );
   }
 
@@ -97,6 +102,7 @@ class FamilyEdge {
       'to_id': toId,
       'edge_type': type.value,
       'created_at': createdAt.toUtc().toIso8601String(),
+      if (familyGroupId != null) 'family_group_id': familyGroupId,
     };
   }
 
