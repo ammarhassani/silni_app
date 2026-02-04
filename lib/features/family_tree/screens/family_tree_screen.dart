@@ -1,30 +1,43 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show UserAttributes;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:screenshot_callback/screenshot_callback.dart';
+import '../../../core/config/supabase_config.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/providers/cache_provider.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/services/auto_reminder_service.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../contacts/screens/contact_import_screen.dart';
 import '../../home/providers/home_providers.dart';
 import '../../../core/providers/realtime_provider.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/models/subscription_tier.dart';
 import '../../../core/providers/subscription_provider.dart';
+import '../../relatives/services/relationship_inference_service.dart';
+import '../../relatives/widgets/smart_relationship_picker.dart';
 import '../../subscription/screens/paywall_screen.dart';
 import '../../../shared/utils/ui_helpers.dart';
+import '../models/placeholder_node.dart';
+import '../models/family_graph.dart';
 import '../providers/family_graph_providers.dart';
 import '../painters/family_tree_painter.dart';
 import '../models/tree_layout.dart';
+import '../services/family_graph_service.dart';
 import '../services/family_tree_layout_service.dart';
-
-// Note: relativesStreamProvider is now imported from features/home/screens/home_screen.dart
+import '../widgets/placeholder_node_widget.dart';
+import '../widgets/tree_node_widget.dart';
 
 class FamilyTreeScreen extends ConsumerStatefulWidget {
   const FamilyTreeScreen({super.key});
@@ -33,16 +46,23 @@ class FamilyTreeScreen extends ConsumerStatefulWidget {
   ConsumerState<FamilyTreeScreen> createState() => _FamilyTreeScreenState();
 }
 
-class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen>
-    with TickerProviderStateMixin {
+class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   final TransformationController _transformationController =
       TransformationController();
   final ScreenshotCallback _screenshotCallback = ScreenshotCallback();
   double _currentScale = 1.0;
   bool _showWatermark = false;
+  bool _showPlaceholders = true;
+  bool _hasCenteredOnUser = false;
 
-  late final AnimationController _breathingController;
-  late final AnimationController _entryController;
+  /// IDs of nodes that were just created (placeholder → filled).
+  /// Used to trigger a one-shot scale-spring entrance animation.
+  final Set<String> _newlyFilledIds = {};
+
+  String _familyName = 'شجرة العائلة';
+  bool _isEditingName = false;
+  final _nameController = TextEditingController();
+
   OverlayEntry? _nodeOverlay;
   OverlayEntry? _overlayBarrier;
 
@@ -50,36 +70,36 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen>
   void initState() {
     super.initState();
     _initScreenshotDetection();
-    _breathingController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 3),
-    )..repeat();
-    _entryController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    );
+
+    // Load persisted family name from user metadata
+    final user = SupabaseConfig.client.auth.currentUser;
+    final name = user?.userMetadata?['family_name'] as String?;
+    if (name != null && name.isNotEmpty) {
+      _familyName = name;
+    }
   }
 
   void _initScreenshotDetection() {
     _screenshotCallback.addListener(() {
-      // User took a screenshot - show watermark temporarily
+      // User took a screenshot — show watermark, hide placeholders
       if (mounted) {
-        setState(() => _showWatermark = true);
-        // Show snackbar with branding
-        // Hide previous snackbars
+        setState(() {
+          _showWatermark = true;
+          _showPlaceholders = false;
+        });
         ScaffoldMessenger.of(context).clearSnackBars();
-
-        // Show custom branded snackbar
         UIHelpers.showSnackBar(
           context,
           'شجرة عائلتي من صلني 🌳',
           backgroundColor: AppColors.islamicGreenDark,
           duration: const Duration(seconds: 3),
         );
-        // Hide watermark after delay
         Future.delayed(const Duration(seconds: 3), () {
           if (mounted) {
-            setState(() => _showWatermark = false);
+            setState(() {
+              _showWatermark = false;
+              _showPlaceholders = true;
+            });
           }
         });
       }
@@ -88,12 +108,26 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen>
 
   @override
   void dispose() {
-    _breathingController.dispose();
-    _entryController.dispose();
     _dismissOverlay();
+    _nameController.dispose();
     _transformationController.dispose();
     _screenshotCallback.dispose();
     super.dispose();
+  }
+
+  Future<void> _saveFamilyName(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      setState(() => _isEditingName = false);
+      return;
+    }
+    setState(() {
+      _familyName = trimmed;
+      _isEditingName = false;
+    });
+    await SupabaseConfig.client.auth.updateUser(
+      UserAttributes(data: {'family_name': trimmed}),
+    );
   }
 
   @override
@@ -153,6 +187,14 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen>
               child: _buildZoomControls(),
             ),
           ),
+          // FAB fallback — manual add button
+          Positioned(
+            bottom: AppSpacing.xl,
+            left: AppSpacing.md,
+            child: SafeArea(
+              child: _buildAddFab(userId),
+            ),
+          ),
         ],
       ),
       ),
@@ -177,15 +219,58 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen>
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Text(
-              'شجرة العائلة',
-              style: AppTypography.headlineMedium.copyWith(
-                color: themeColors.textOnGradient,
-                fontWeight: FontWeight.bold,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            child: _isEditingName
+                ? TextField(
+                    controller: _nameController,
+                    autofocus: true,
+                    style: AppTypography.headlineMedium.copyWith(
+                      color: themeColors.textOnGradient,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: 'شجرة العائلة',
+                      hintStyle: AppTypography.headlineMedium.copyWith(
+                        color: (themeColors.textOnGradient as Color)
+                            .withValues(alpha: 0.5),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: _saveFamilyName,
+                    onTapOutside: (_) =>
+                        _saveFamilyName(_nameController.text),
+                  )
+                : GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _nameController.text = _familyName;
+                        _isEditingName = true;
+                      });
+                    },
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            _familyName,
+                            style: AppTypography.headlineMedium.copyWith(
+                              color: themeColors.textOnGradient,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        Icon(
+                          Icons.edit_rounded,
+                          size: 16,
+                          color: (themeColors.textOnGradient as Color)
+                              .withValues(alpha: 0.5),
+                        ),
+                      ],
+                    ),
+                  ),
           ),
         ],
       ),
@@ -252,6 +337,168 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen>
   }
 
   // ---------------------------------------------------------------------------
+  // FAB fallback — manual add
+  // ---------------------------------------------------------------------------
+
+  Widget _buildAddFab(String userId) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            'لإضافة المزيد\nعم، خال، وغيرهم',
+            style: AppTypography.labelSmall.copyWith(
+              color: Colors.white.withValues(alpha: 0.7),
+              fontSize: 9,
+              height: 1.4,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+        const SizedBox(height: 6),
+        FloatingActionButton.small(
+          heroTag: 'tree_add_fab',
+          onPressed: () => _showFallbackAddSheet(userId),
+          backgroundColor: AppColors.islamicGreenDark.withValues(alpha: 0.9),
+          child: const Icon(Icons.person_add_alt_1_rounded, color: Colors.white, size: 20),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showFallbackAddSheet(String userId) async {
+    HapticFeedback.lightImpact();
+
+    final relatives =
+        ref.read(relativesStreamProvider(userId)).valueOrNull ?? <Relative>[];
+    final suggestions =
+        RelationshipInferenceService.suggestRelationships(relatives);
+
+    RelationshipType? selectedType;
+    FamilySide? selectedSide;
+
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Container(
+              margin: const EdgeInsets.all(AppSpacing.md),
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(ctx).size.height * 0.65,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Drag handle
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: SmartRelationshipPicker(
+                        selected: selectedType ?? suggestions.first,
+                        suggestions: suggestions,
+                        existingRelatives: relatives,
+                        selectedSide: selectedSide,
+                        onChanged: (type) {
+                          setSheetState(() => selectedType = type);
+                        },
+                        onSideChanged: (side) {
+                          setSheetState(() => selectedSide = side);
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  // Confirm button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.islamicGreenPrimary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'اختيار جهة اتصال',
+                        style: AppTypography.titleMedium.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final chosenType = selectedType ?? suggestions.first;
+    final chosenSide = selectedSide;
+
+    // Open contact picker
+    final dynamic result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const ContactImportScreen(singleSelect: true),
+      ),
+    );
+
+    if (!mounted || result == null) return;
+
+    final String fullName = (result.displayName as String?) ?? '';
+    final phones = result.phones as List<dynamic>?;
+    final String? phoneNumber =
+        (phones != null && phones.isNotEmpty) ? phones.first.number as String? : null;
+
+    if (fullName.trim().isEmpty) return;
+
+    // Build a synthetic PlaceholderNode to reuse existing creation logic
+    final gender = RelationshipInferenceService.inferGender(fullName.trim());
+    final placeholder = PlaceholderNode(
+      id: 'fab-manual',
+      type: chosenType,
+      side: chosenSide,
+      expectedGender: gender,
+      label: '',
+      generation: 0,
+      position: Offset.zero,
+      radius: 30.0,
+    );
+
+    await _createRelativeFromPlaceholder(
+      placeholder: placeholder,
+      userId: userId,
+      fullName: fullName.trim(),
+      phoneNumber: phoneNumber,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Canvas-based tree content
   // ---------------------------------------------------------------------------
 
@@ -261,13 +508,12 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen>
     String userName,
     String userId,
   ) {
-    if (relatives.isEmpty) {
-      return _buildEmptyState();
-    }
-
     // Watch family graph for perspective-shifting labels
     final graph = ref.watch(familyGraphProvider(userId));
     final relativesMap = {for (final r in relatives) r.id: r};
+
+    // Infer user gender from name for placeholder labels
+    final userGender = RelationshipInferenceService.inferGender(userName);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -276,7 +522,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen>
           max(constraints.maxHeight, 600),
         );
 
-        // Compute layout from graph
+        // Compute layout from graph (includes placeholder positions)
         final layout = FamilyTreeLayoutService.computeLayout(
           userId: userId,
           userName: userName,
@@ -284,53 +530,110 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen>
           relatives: relatives,
           relativesMap: relativesMap,
           canvasSize: canvasSize,
+          userGender: userGender,
         );
 
-        // Start entry animation on first build
-        if (!_entryController.isAnimating && _entryController.value == 0) {
-          _entryController.forward();
+        // The hybrid approach: painted edges + widget nodes + placeholder widgets
+        final boundsSize = layout.bounds.size;
+        final boundsOrigin = layout.bounds.topLeft;
+
+        // Center on user node on first render
+        if (!_hasCenteredOnUser) {
+          _hasCenteredOnUser = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            final userLocalX = layout.userPosition.dx - boundsOrigin.dx;
+            final userLocalY = layout.userPosition.dy - boundsOrigin.dy;
+            final viewW = constraints.maxWidth;
+            final viewH = constraints.maxHeight;
+            final tx = -(userLocalX - viewW / 2);
+            final ty = -(userLocalY - viewH / 2);
+            final matrix = Matrix4.identity();
+            matrix.setEntry(0, 3, tx);
+            matrix.setEntry(1, 3, ty);
+            _transformationController.value = matrix;
+          });
         }
 
         return Stack(
           children: [
-            // Main tree canvas
-            GestureDetector(
-              onTapUp: (details) => _handleCanvasTap(
-                details, layout, relativesMap, userId,
-              ),
-              child: InteractiveViewer(
-                transformationController: _transformationController,
-                boundaryMargin: const EdgeInsets.all(double.infinity),
-                constrained: false,
-                minScale: 0.1,
-                maxScale: 3.0,
-                onInteractionUpdate: (details) {
-                  final matrixScale = _transformationController.value.entry(0, 0);
-                  if (matrixScale != _currentScale) {
-                    setState(() => _currentScale = matrixScale);
-                  }
-                },
-                child: ListenableBuilder(
-                  listenable: Listenable.merge([
-                    _breathingController,
-                    _entryController,
-                  ]),
-                  builder: (context, _) {
-                    return CustomPaint(
-                      painter: FamilyTreePainter(
-                        layout: layout,
-                        animationValue: _breathingController.value,
-                        entryProgress: _entryController.value,
+            // Main tree with InteractiveViewer for pan/zoom
+            InteractiveViewer(
+              transformationController: _transformationController,
+              boundaryMargin: const EdgeInsets.all(double.infinity),
+              constrained: false,
+              minScale: 0.1,
+              maxScale: 3.0,
+              onInteractionUpdate: (details) {
+                final matrixScale =
+                    _transformationController.value.entry(0, 0);
+                if (matrixScale != _currentScale) {
+                  setState(() => _currentScale = matrixScale);
+                }
+              },
+              child: SizedBox(
+                width: boundsSize.width,
+                height: boundsSize.height,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Layer 1: Painted edges + placeholder connections
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: FamilyTreeEdgePainter(
+                          layout: layout,
+                          boundsOrigin: boundsOrigin,
+                          showPlaceholders: _showPlaceholders,
+                        ),
                       ),
-                      size: layout.bounds.size,
-                    );
-                  },
+                    ),
+                    // Layer 2: Placeholder widgets (below filled nodes)
+                    if (_showPlaceholders)
+                      for (var i = 0; i < layout.placeholders.length; i++)
+                        Builder(builder: (context) {
+                          final ph = layout.placeholders[i];
+                          return Positioned(
+                            left: ph.position.dx -
+                                boundsOrigin.dx -
+                                (ph.isCompact
+                                    ? PlaceholderNodeWidget.compactSize / 2
+                                    : PlaceholderNodeWidget.nodeSize / 2),
+                            top: ph.position.dy -
+                                boundsOrigin.dy -
+                                (ph.isCompact
+                                    ? PlaceholderNodeWidget.compactSize / 2
+                                    : PlaceholderNodeWidget.nodeSize / 2),
+                            child: PlaceholderNodeWidget(
+                              placeholder: ph,
+                              onTap: () => _handlePlaceholderTap(ph, userId),
+                            )
+                                .animate(delay: Duration(milliseconds: 60 * i))
+                                .fadeIn(duration: 400.ms, curve: Curves.easeOut)
+                                .scaleXY(
+                                  begin: 0.5,
+                                  end: 1.0,
+                                  duration: 400.ms,
+                                  curve: Curves.elasticOut,
+                                ),
+                          );
+                        }),
+                    // Layer 3: Widget-based filled nodes
+                    for (final node in layout.nodes)
+                      Positioned(
+                        left: node.position.dx -
+                            boundsOrigin.dx -
+                            TreeNodeWidget.nodeWidth / 2,
+                        top: node.position.dy -
+                            boundsOrigin.dy -
+                            TreeNodeWidget.nodeHeight / 2,
+                        child: _buildNodeWithAnimation(node, relativesMap, userId),
+                      ),
+                  ],
                 ),
               ),
             ),
             // Watermark overlay
-            if (_showWatermark)
-              _buildWatermark(),
+            if (_showWatermark) _buildWatermark(),
           ],
         );
       },
@@ -338,35 +641,194 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen>
   }
 
   // ---------------------------------------------------------------------------
-  // Canvas tap handling
+  // Node rendering with fill animation
   // ---------------------------------------------------------------------------
 
-  void _handleCanvasTap(
-    TapUpDetails details,
-    FamilyTreeLayout layout,
+  Widget _buildNodeWithAnimation(
+    LayoutNode node,
+    Map<String, Relative> relativesMap,
+    String userId,
+  ) {
+    Widget child = TreeNodeWidget(
+      node: node,
+      onTap: () => _handleNodeTap(node, relativesMap, userId),
+    );
+
+    // One-shot spring scale for newly filled nodes
+    if (_newlyFilledIds.contains(node.id)) {
+      child = child
+          .animate(onComplete: (_) {
+            // Remove from set after animation to avoid replaying
+            _newlyFilledIds.remove(node.id);
+          })
+          .scaleXY(
+            begin: 0.0,
+            end: 1.0,
+            duration: 500.ms,
+            curve: Curves.elasticOut,
+          );
+    }
+
+    return child;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Node tap handling
+  // ---------------------------------------------------------------------------
+
+  void _handleNodeTap(
+    LayoutNode node,
     Map<String, Relative> relativesMap,
     String userId,
   ) {
     _dismissOverlay();
 
-    // Convert screen coordinates to canvas coordinates
-    final matrix = _transformationController.value.clone()..invert();
-    final localPosition = MatrixUtils.transformPoint(
-      matrix,
-      details.localPosition,
-    );
-
-    final node = layout.findNodeAtPosition(localPosition);
-    if (node == null) return;
-
     if (node.isUser) {
-      // Show user info bottom sheet
       _showUserDetails(node);
     } else {
       final relative = relativesMap[node.id];
       if (relative != null) {
-        _showNodeOverlay(node, relative, details.globalPosition);
+        // Navigate directly to relative detail
+        context.push('${AppRoutes.relativeDetail}/${relative.id}');
       }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Placeholder tap → contact picker → create relative
+  // ---------------------------------------------------------------------------
+
+  Future<void> _handlePlaceholderTap(
+    PlaceholderNode placeholder,
+    String userId,
+  ) async {
+    HapticFeedback.lightImpact();
+
+    // Open contact picker in single-select mode.
+    // Returns a flutter_contacts Contact object (displayName + phones).
+    final dynamic result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const ContactImportScreen(singleSelect: true),
+      ),
+    );
+
+    if (!mounted || result == null) return;
+
+    // Extract name and phone from the Contact object
+    final String fullName = (result.displayName as String?) ?? '';
+    final phones = result.phones as List<dynamic>?;
+    final String? phoneNumber =
+        (phones != null && phones.isNotEmpty) ? phones.first.number as String? : null;
+
+    if (fullName.trim().isEmpty) return;
+
+    await _createRelativeFromPlaceholder(
+      placeholder: placeholder,
+      userId: userId,
+      fullName: fullName.trim(),
+      phoneNumber: phoneNumber,
+    );
+  }
+
+  Future<void> _createRelativeFromPlaceholder({
+    required PlaceholderNode placeholder,
+    required String userId,
+    required String fullName,
+    String? phoneNumber,
+  }) async {
+    try {
+      // Determine gender from placeholder or infer from name
+      final gender = placeholder.expectedGender ??
+          RelationshipInferenceService.inferGender(fullName);
+
+      final avatarType = AvatarType.suggestFromRelationship(
+        placeholder.type,
+        gender,
+      );
+      final priority = AvatarType.suggestPriority(placeholder.type);
+
+      final relative = Relative(
+        id: '',
+        userId: userId,
+        fullName: fullName,
+        relationshipType: placeholder.type,
+        gender: gender,
+        avatarType: avatarType,
+        phoneNumber: phoneNumber,
+        priority: priority,
+        familySide: placeholder.side,
+        createdAt: DateTime.now(),
+      );
+
+      // Save relative — this is the critical operation
+      final repository = ref.read(relativesRepositoryProvider);
+      final createdId = await repository.createRelative(relative);
+
+      // Track for fill animation (scale spring on next rebuild)
+      _newlyFilledIds.add(createdId);
+
+      // Edge inference + persistence is non-critical — don't let it
+      // block the success feedback if it fails.
+      try {
+        final edgesAsync = ref.read(familyEdgesStreamProvider(userId));
+        final existingEdges = edgesAsync.valueOrNull ?? <FamilyEdge>[];
+        final existingRelatives =
+            ref.read(relativesStreamProvider(userId)).valueOrNull ??
+                <Relative>[];
+
+        final inferredEdges = FamilyGraphService.inferEdges(
+          userId: userId,
+          newRelativeId: createdId,
+          relationshipType: placeholder.type,
+          side: placeholder.side,
+          existingEdges: existingEdges,
+          existingRelatives: existingRelatives,
+        );
+
+        if (inferredEdges.isNotEmpty) {
+          await SupabaseConfig.client.from('family_edges').upsert(
+            inferredEdges.map((e) => e.toJson()).toList(),
+            onConflict: 'user_id,from_id,to_id,edge_type',
+          );
+        }
+      } catch (edgeError) {
+        debugPrint('Non-critical: edge persistence failed: $edgeError');
+      }
+
+      // Auto-create reminder (fire-and-forget)
+      unawaited(AutoReminderService.createAutoReminder(
+        userId: userId,
+        relativeId: createdId,
+        relationshipType: placeholder.type,
+        remindersRepository: ref.read(reminderSchedulesRepositoryProvider),
+      ));
+
+      // Invalidate providers to refresh tree immediately after creation.
+      // The Supabase .stream() realtime also picks up changes, but
+      // explicit invalidation gives instant visual feedback.
+      ref.invalidate(relativesStreamProvider(userId));
+      ref.invalidate(familyEdgesStreamProvider(userId));
+
+      // Re-center viewport on user after tree rebuilds with new node
+      _hasCenteredOnUser = false;
+
+      if (!mounted) return;
+
+      HapticFeedback.mediumImpact();
+      UIHelpers.showSnackBar(
+        context,
+        'تم إضافة $fullName بنجاح',
+        backgroundColor: AppColors.islamicGreenPrimary,
+      );
+    } catch (e) {
+      debugPrint('Failed to create relative from placeholder: $e');
+      if (!mounted) return;
+      UIHelpers.showSnackBar(
+        context,
+        'حدث خطأ أثناء الإضافة',
+        backgroundColor: Colors.red.shade700,
+      );
     }
   }
 
@@ -421,164 +883,6 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen>
         );
       },
     );
-  }
-
-  void _showNodeOverlay(
-    LayoutNode node,
-    Relative relative,
-    Offset globalPosition,
-  ) {
-    _dismissOverlay();
-
-    // Create barrier
-    _overlayBarrier = OverlayEntry(
-      builder: (_) => GestureDetector(
-        onTap: _dismissOverlay,
-        behavior: HitTestBehavior.opaque,
-        child: const SizedBox.expand(),
-      ),
-    );
-
-    // Create overlay card
-    _nodeOverlay = OverlayEntry(
-      builder: (context) {
-        final screenSize = MediaQuery.of(context).size;
-        const cardWidth = 220.0;
-        const cardHeight = 200.0;
-
-        // Position card above or below the tap point
-        double top = globalPosition.dy - cardHeight - 20;
-        if (top < 60) {
-          top = globalPosition.dy + 20;
-        }
-        double left = (globalPosition.dx - cardWidth / 2)
-            .clamp(16.0, screenSize.width - cardWidth - 16.0);
-
-        return Positioned(
-          top: top,
-          left: left,
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              width: cardWidth,
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: AppColors.islamicGreenDark.withValues(alpha: 0.95),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.4),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Emoji + Name
-                  Text(node.emoji, style: const TextStyle(fontSize: 32)),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    node.name,
-                    style: AppTypography.titleMedium.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    node.label,
-                    style: AppTypography.bodySmall.copyWith(
-                      color: Colors.white.withValues(alpha: 0.7),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  // Health indicator
-                  _buildHealthIndicator(node),
-                  const SizedBox(height: AppSpacing.sm),
-                  // Last contact
-                  if (relative.lastContactDate != null)
-                    Text(
-                      'آخر تواصل: ${_formatLastContact(relative)}',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: Colors.white.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  const SizedBox(height: AppSpacing.md),
-                  // Action button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        _dismissOverlay();
-                        context.push(
-                          '${AppRoutes.relativeDetail}/${relative.id}',
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.islamicGreenPrimary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                      ),
-                      child: const Text('عرض التفاصيل'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-
-    Overlay.of(context).insert(_overlayBarrier!);
-    Overlay.of(context).insert(_nodeOverlay!);
-  }
-
-  Widget _buildHealthIndicator(LayoutNode node) {
-    final color = switch (node.healthColor) {
-      HealthColor.green => const Color(0xFF4CAF50),
-      HealthColor.amber => const Color(0xFFFFCA28),
-      HealthColor.red => const Color(0xFFEF5350),
-    };
-    final label = switch (node.healthColor) {
-      HealthColor.green => 'تواصل ممتاز',
-      HealthColor.amber => 'يحتاج تواصل',
-      HealthColor.red => 'تواصل ضعيف',
-    };
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color,
-          ),
-        ),
-        const SizedBox(width: AppSpacing.xs),
-        Text(
-          label,
-          style: AppTypography.labelSmall.copyWith(color: color),
-        ),
-      ],
-    );
-  }
-
-  String _formatLastContact(Relative relative) {
-    if (relative.lastContactDate == null) return 'لم يتم التواصل';
-    final days = DateTime.now().difference(relative.lastContactDate!).inDays;
-    if (days == 0) return 'اليوم';
-    if (days == 1) return 'أمس';
-    if (days < 7) return 'منذ $days أيام';
-    if (days < 30) return 'منذ ${days ~/ 7} أسابيع';
-    return 'منذ ${days ~/ 30} أشهر';
   }
 
   void _dismissOverlay() {
@@ -640,53 +944,6 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen>
   // ---------------------------------------------------------------------------
   // Empty / Error states
   // ---------------------------------------------------------------------------
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: GlassCard(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('🌳', style: TextStyle(fontSize: 64)),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                'شجرة عائلتك فارغة',
-                style: AppTypography.headlineMedium.copyWith(
-                  color: Colors.white,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'ابدأ بإضافة أقاربك لرؤية شجرة العائلة',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: Colors.white.withValues(alpha: 0.7),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              ElevatedButton.icon(
-                onPressed: () => context.push(AppRoutes.addRelative),
-                icon: const Icon(Icons.person_add_rounded),
-                label: const Text('إضافة قريب'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.islamicGreenPrimary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                    vertical: AppSpacing.md,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildError() {
     return Center(
@@ -1156,9 +1413,10 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen>
   }
 
   void _resetZoom() {
+    // Re-trigger centering on next build
     setState(() {
       _currentScale = 1.0;
-      _transformationController.value = Matrix4.identity();
+      _hasCenteredOnUser = false;
     });
   }
 
