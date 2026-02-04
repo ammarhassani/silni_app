@@ -127,29 +127,41 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                        child: OutlinedButton.icon(
-                          onPressed: _isInviting ? null : () => _inviteRelative(relative),
-                          icon: _isInviting
-                              ? SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: themeColors.primary,
-                                  ),
-                                )
-                              : Icon(Icons.share_rounded, color: themeColors.primary),
-                          label: Text(
-                            relative.gender == Gender.female ? 'ادعيها لصِلني' : 'ادعيه لصِلني',
-                            style: AppTypography.labelLarge.copyWith(
-                              color: themeColors.primary,
-                            ),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 48),
-                            side: BorderSide(color: themeColors.primary),
-                            shape: RoundedRectangleBorder(
+                        child: GestureDetector(
+                          onTap: _isInviting ? null : () => _inviteRelative(relative),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                if (_isInviting)
+                                  const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                else
+                                  const Icon(Icons.share_rounded, color: Colors.white, size: 20),
+                                const SizedBox(width: AppSpacing.sm),
+                                Text(
+                                  relative.gender == Gender.female ? 'ادعيها لصِلني' : 'ادعيه لصِلني',
+                                  style: AppTypography.labelLarge.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
