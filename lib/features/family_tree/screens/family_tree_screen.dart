@@ -508,8 +508,19 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     String userName,
     String userId,
   ) {
-    // Watch family graph for perspective-shifting labels
-    final graph = ref.watch(familyGraphProvider(userId));
+    // Check for shared tree context — if user is in a family group
+    // with a linked node, use that node as the perspective anchor.
+    final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+    final graph = groupInfo != null
+        ? ref.watch(sharedFamilyGraphProvider((
+            groupId: groupInfo.groupId,
+            viewerNodeId: groupInfo.nodeId,
+          )))
+        : ref.watch(familyGraphProvider(userId));
+
+    // For shared trees, use the viewer's node ID as the layout anchor
+    final effectiveUserId = groupInfo?.nodeId ?? userId;
+
     final relativesMap = {for (final r in relatives) r.id: r};
 
     // Infer user gender from name for placeholder labels
@@ -524,7 +535,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
 
         // Compute layout from graph (includes placeholder positions)
         final layout = FamilyTreeLayoutService.computeLayout(
-          userId: userId,
+          userId: effectiveUserId,
           userName: userName,
           graph: graph,
           relatives: relatives,
