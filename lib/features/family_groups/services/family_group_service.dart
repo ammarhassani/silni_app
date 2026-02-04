@@ -83,9 +83,62 @@ class FamilyGroupService {
         'role': 'member',
         if (relativeIdInTree != null) 'relative_id_in_tree': relativeIdInTree,
       });
+
+      // Fire-and-forget join notification to existing members
+      _sendJoinNotification(
+        groupId: group.id,
+        newUserId: userId,
+        familyName: group.name,
+      );
     }
 
     return group;
+  }
+
+  /// Fire-and-forget join notification to group members.
+  static Future<void> _sendJoinNotification({
+    required String groupId,
+    required String newUserId,
+    required String familyName,
+  }) async {
+    try {
+      final client = SupabaseConfig.client;
+
+      // Get all OTHER members to notify
+      final members = await client
+          .from('family_group_members')
+          .select('user_id')
+          .eq('group_id', groupId)
+          .neq('user_id', newUserId);
+
+      // Fetch the join notification template from admin panel
+      final template = await client
+          .from('admin_notification_templates')
+          .select()
+          .eq('template_key', 'family_join_1')
+          .eq('is_active', true)
+          .maybeSingle();
+
+      if (template == null) return;
+
+      final body = (template['body_ar'] as String)
+          .replaceAll('{{member_name}}', 'عضو جديد')
+          .replaceAll('{{family_name}}', familyName);
+      final title = template['title_ar'] as String;
+
+      // Send to each member via the existing push function
+      for (final member in members) {
+        await client.functions.invoke('send-push-notification', body: {
+          'userId': member['user_id'],
+          'notificationType': 'system',
+          'title': title,
+          'body': body,
+          'data': {'type': 'family_join', 'group_id': groupId},
+        });
+      }
+    } catch (_) {
+      // Fire-and-forget — don't block join flow on notification failure
+    }
   }
 
   // ---------------------------------------------------------------------------
