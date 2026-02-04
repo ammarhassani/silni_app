@@ -18,7 +18,10 @@ import '../../home/providers/home_providers.dart';
 import '../widgets/detail/widgets.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/utils/relationship_label_helper.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../family_groups/services/family_sharing_service.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
+import 'package:share_plus/share_plus.dart';
 
 /// Provider for watching a single relative (cache-first)
 final relativeDetailProvider =
@@ -41,6 +44,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
   final AuthService _authService = AuthService();
 
   bool _isLoggingInteraction = false;
+  bool _isInviting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -117,6 +121,40 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                       ),
                     ),
                   ),
+
+                  // Invite to family tree
+                  if (!relative.isSelf)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                        child: OutlinedButton.icon(
+                          onPressed: _isInviting ? null : () => _inviteRelative(relative),
+                          icon: _isInviting
+                              ? SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: themeColors.primary,
+                                  ),
+                                )
+                              : Icon(Icons.share_rounded, color: themeColors.primary),
+                          label: Text(
+                            relative.gender == Gender.female ? 'ادعيها لصِلني' : 'ادعيه لصِلني',
+                            style: AppTypography.labelLarge.copyWith(
+                              color: themeColors.primary,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 48),
+                            side: BorderSide(color: themeColors.primary),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
 
                   // Stats card
                   SliverToBoxAdapter(
@@ -198,6 +236,55 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
 
   void _scrollToDetails() {
     HapticFeedback.lightImpact();
+  }
+
+  Future<void> _inviteRelative(Relative relative) async {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+
+    setState(() => _isInviting = true);
+
+    try {
+      // Check if user already has a group
+      var group = await FamilySharingService.getUserGroup(user.id);
+
+      if (group == null) {
+        // Auto-create group from personal tree
+        final familyName =
+            user.userMetadata?['family_name'] as String? ?? 'عائلتي';
+        final userGender =
+            Gender.fromString(user.userMetadata?['gender'] as String?);
+
+        group = await FamilySharingService.initializeSharedTree(
+          userId: user.id,
+          familyName: familyName,
+          userDisplayName:
+              user.userMetadata?['display_name'] as String? ?? 'أنا',
+          userGender: userGender,
+        );
+      }
+
+      // Generate invite link with relative ID
+      final link = FamilySharingService.generateInviteLink(
+        inviteCode: group.inviteCode,
+        relativeId: relative.id,
+      );
+
+      // Share via system sheet (WhatsApp preferred)
+      await Share.share(
+        'انضم/ي لعائلتنا في صِلني 🌳\n$link',
+      );
+    } catch (e) {
+      if (mounted) {
+        UIHelpers.showSnackBar(
+          context,
+          'حدث خطأ أثناء إنشاء الدعوة',
+          isError: true,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isInviting = false);
+    }
   }
 
   /// Show dialog to log a visit, gift, or event interaction
