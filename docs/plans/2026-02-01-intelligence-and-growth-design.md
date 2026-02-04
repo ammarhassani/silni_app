@@ -106,7 +106,15 @@ The goal: people say "التطبيق ذكي" (the app is smart) — and that alo
 
 ---
 
-## Part 2: Notification Language — Saudi Dialect, Not App-Speak
+## Part 2: Notification Language — Saudi Dialect, Not App-Speak ✅ DONE (2026-02-04)
+
+> **Implemented as Smart Nudges** — a fully admin-panelized, gender-aware, gap-tiered push notification system.
+> - 24 Saudi dialect templates seeded (4 tiers × 2 genders × 3 variations)
+> - Admin panel UI for managing all nudge templates (gap range, gender, cooldown)
+> - `send-smart-nudges` edge function with cooldown, daily cap, template rotation
+> - `nudge_history` table for rotation tracking
+> - Hourly cron via cron-job.org
+> - See: `docs/plans/2026-02-04-smart-nudges-design.md`
 
 ### 2.1 Tone Shift
 
@@ -129,7 +137,7 @@ The app must sound like a friend who knows your family, not a productivity tool.
 ### 2.3 Pipeline Integration
 
 - Content generator produces hundreds of notification copy variations per relationship type and time gap.
-- Stored in `admin_ui_strings` table and rotated so users never see the same wording twice.
+- Stored in `admin_notification_templates` table (category='nudge') and rotated so users never see the same wording twice.
 - The app feels alive because it always says something slightly different.
 
 ---
@@ -179,10 +187,6 @@ End of Ramadan or end of year — a full shareable story sequence:
 ### 3.5 Family Leaderboard
 
 In shared families — who has the most interactions this week? Not toxic competition, but "طلال كلم جدته ٥ مرات هالأسبوع" — the kind of thing a mom screenshots and sends to the family WhatsApp group saying "شوفوا طلال."
-
-### 3.6 App Icon Badge
-
-Badge count = days since last interaction with closest relative. Not notification count — relationship count. The red "٧" on the app icon isn't "7 notifications," it's "7 days since you called your mom." Subtle, personal, constant.
 
 ---
 
@@ -296,7 +300,7 @@ The content pipeline runs in parallel:
 
 | Priority | Item | Impact | Effort |
 |----------|------|--------|--------|
-| 1 | Notification copy overhaul to Saudi dialect | High | Low |
+| 1 | ~~Notification copy overhaul to Saudi dialect~~ ✅ DONE (2026-02-04) | High | Low |
 | 2 | Shareable celebration cards on modals | High | Low-Med |
 | 3 | Intelligent home screen (daily priority + one-tap logging) | High | Med |
 | 4 | Auto-generated reminders (no manual setup) | High | Med |
