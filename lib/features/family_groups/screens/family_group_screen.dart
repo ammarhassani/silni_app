@@ -12,6 +12,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../models/family_group_model.dart';
 import '../providers/family_group_providers.dart';
 import '../services/family_group_service.dart';
+import '../widgets/family_activity_card.dart';
 import '../widgets/family_leaderboard.dart';
 import '../widgets/invite_link_card.dart';
 
@@ -202,6 +203,13 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Family activity stats
+          FamilyActivityCard(
+            groupId: widget.groupId,
+            familyName: group.name,
           ),
           const SizedBox(height: AppSpacing.md),
 
