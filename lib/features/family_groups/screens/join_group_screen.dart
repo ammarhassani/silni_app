@@ -22,8 +22,9 @@ import '../services/family_group_service.dart';
 /// and unauthenticated states.
 class JoinGroupScreen extends ConsumerStatefulWidget {
   final String inviteCode;
+  final String? targetRelativeId;
 
-  const JoinGroupScreen({super.key, required this.inviteCode});
+  const JoinGroupScreen({super.key, required this.inviteCode, this.targetRelativeId});
 
   @override
   ConsumerState<JoinGroupScreen> createState() => _JoinGroupScreenState();
@@ -93,9 +94,10 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
   Future<void> _joinGroup() async {
     final user = ref.read(currentUserProvider);
     if (user == null) {
-      // Redirect to login with redirect back to this page
+      // Redirect to login with redirect back to this page (preserve rid param)
+      final ridParam = widget.targetRelativeId != null ? '?rid=${widget.targetRelativeId}' : '';
       final redirectPath = Uri.encodeComponent(
-        '${AppRoutes.joinFamilyGroup}/${widget.inviteCode}',
+        '${AppRoutes.joinFamilyGroup}/${widget.inviteCode}$ridParam',
       );
       context.go('${AppRoutes.login}?redirect=$redirectPath');
       return;
@@ -104,14 +106,15 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
     setState(() => _isJoining = true);
 
     try {
-      final group = await FamilyGroupService.joinGroup(
+      await FamilyGroupService.joinGroup(
         inviteCode: widget.inviteCode,
         userId: user.id,
+        relativeIdInTree: widget.targetRelativeId,
       );
 
       if (mounted) {
         HapticFeedback.heavyImpact();
-        context.go('${AppRoutes.familyGroupDetail}/${group.id}');
+        context.go(AppRoutes.familyTree);
       }
     } catch (e) {
       if (mounted) {
@@ -299,8 +302,9 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
           GradientButton(
             text: 'تسجيل الدخول',
             onPressed: () {
+              final ridParam = widget.targetRelativeId != null ? '?rid=${widget.targetRelativeId}' : '';
               final redirectPath = Uri.encodeComponent(
-                '${AppRoutes.joinFamilyGroup}/${widget.inviteCode}',
+                '${AppRoutes.joinFamilyGroup}/${widget.inviteCode}$ridParam',
               );
               context.go('${AppRoutes.login}?redirect=$redirectPath');
             },

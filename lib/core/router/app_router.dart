@@ -365,10 +365,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'joinFamilyGroup',
         pageBuilder: (context, state) {
           final code = state.pathParameters['code']!;
+          final relativeId = state.uri.queryParameters['rid'];
           return _buildPageWithTransition(
             context,
             state,
-            JoinGroupScreen(inviteCode: code),
+            JoinGroupScreen(inviteCode: code, targetRelativeId: relativeId),
           );
         },
       ),
@@ -561,7 +562,6 @@ class _NavigationWrapperState extends ConsumerState<_NavigationWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    final isNavVisible = ref.watch(bottomNavVisibilityProvider);
     final isOnline = ref.watch(isOnlineProvider);
 
     // Enable stream recovery when connectivity changes
@@ -581,42 +581,34 @@ class _NavigationWrapperState extends ConsumerState<_NavigationWrapper> {
         animated: true,
         child: Stack(
           children: [
-            // Main content - nav bar floats on top
             Positioned.fill(
               child: Column(
                 children: [
-                  // Offline banner at top
                   AnimatedOfflineBanner(
                     isOffline: !isOnline,
                     onTap: () => ref.read(connectivityServiceProvider).refresh(),
                   ),
-                  // Main content with bottom padding for floating nav
                   Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        bottom: isNavVisible ? 110 : 0,
-                      ),
-                      child: KeyedSubtree(key: _childKey, child: widget.child),
-                    ),
+                    child: KeyedSubtree(
+                        key: _childKey, child: widget.child),
                   ),
                 ],
               ),
             ),
-
-            // Navigation bar at bottom (floats on content)
-            if (isNavVisible)
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: SafeArea(
-                  child: PersistentBottomNav(
-                    onNavTapped: (route) {
-                      context.push(route);
-                    },
-                  ),
+            // Navigation bar at bottom
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                top: false,
+                child: PersistentBottomNav(
+                  onNavTapped: (route) {
+                    context.push(route);
+                  },
                 ),
               ),
+            ),
           ],
         ),
       ),

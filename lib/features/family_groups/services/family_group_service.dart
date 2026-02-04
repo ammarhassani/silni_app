@@ -56,6 +56,7 @@ class FamilyGroupService {
   static Future<FamilyGroup> joinGroup({
     required String inviteCode,
     required String userId,
+    String? relativeIdInTree,
   }) async {
     final client = SupabaseConfig.client;
 
@@ -80,6 +81,7 @@ class FamilyGroupService {
         'group_id': group.id,
         'user_id': userId,
         'role': 'member',
+        if (relativeIdInTree != null) 'relative_id_in_tree': relativeIdInTree,
       });
     }
 
