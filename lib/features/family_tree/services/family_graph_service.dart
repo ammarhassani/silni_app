@@ -36,6 +36,63 @@ class FamilyGraphService {
   }
 
   // ---------------------------------------------------------------------------
+  // Global sibling edge enrichment
+  // ---------------------------------------------------------------------------
+
+  /// For every siblingOf edge (A↔B), propagate parentOf from A's parents to B
+  /// and vice versa. This ensures the graph is complete for perspective labeling.
+  ///
+  /// Example: If Grandpa→Dad (parentOf) and Uncle↔Dad (siblingOf),
+  /// this adds Grandpa→Uncle (parentOf).
+  static FamilyGraph enrichAllSiblingEdges(FamilyGraph graph) {
+    final extra = <FamilyEdge>[];
+    final existingParentEdges = <String>{};
+
+    // Index existing parentOf edges for fast duplicate checking
+    for (final edge in graph.edges) {
+      if (edge.type == EdgeType.parentOf) {
+        existingParentEdges.add('${edge.fromId}->${edge.toId}');
+      }
+    }
+
+    // Also track what we add so we don't add duplicates within this pass
+    final added = <String>{};
+
+    for (final edge in graph.edges) {
+      if (edge.type != EdgeType.siblingOf) continue;
+
+      // siblingOf is bidirectional: process both directions
+      final pairs = [
+        (edge.fromId, edge.toId),
+        (edge.toId, edge.fromId),
+      ];
+
+      for (final (sibA, sibB) in pairs) {
+        // For each parent of sibA, add parentOf→sibB if missing
+        for (final parentId in graph.getParents(sibA)) {
+          final key = '$parentId->$sibB';
+          if (!existingParentEdges.contains(key) && !added.contains(key)) {
+            extra.add(FamilyEdge.create(
+              userId: graph.userId,
+              fromId: parentId,
+              toId: sibB,
+              type: EdgeType.parentOf,
+            ));
+            added.add(key);
+          }
+        }
+      }
+    }
+
+    if (extra.isEmpty) return graph;
+
+    return FamilyGraphService.buildGraph(
+      userId: graph.userId,
+      edges: [...graph.edges, ...extra],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Edge inference
   // ---------------------------------------------------------------------------
 
@@ -65,7 +122,7 @@ class FamilyGraphService {
     final inferred = <FamilyEdge>[];
 
     switch (relationshipType) {
-      // Parents: parentOf edge from parent to user
+      // Parents: parentOf edge from parent to user + spouse edge to other parent
       case RelationshipType.father:
       case RelationshipType.mother:
         inferred.add(FamilyEdge.create(
@@ -74,9 +131,30 @@ class FamilyGraphService {
           toId: userId,
           type: EdgeType.parentOf,
         ));
+        // Auto-link parents as spouses so they're treated as a couple
+        final otherParentType = relationshipType == RelationshipType.father
+            ? RelationshipType.mother
+            : RelationshipType.father;
+        final otherParent = existingRelatives.firstWhereOrNull(
+          (r) => r.relationshipType == otherParentType,
+        );
+        if (otherParent != null) {
+          final alreadyLinked = existingEdges.any((e) =>
+              e.type == EdgeType.spouseOf &&
+              ((e.fromId == newRelativeId && e.toId == otherParent.id) ||
+                  (e.fromId == otherParent.id && e.toId == newRelativeId)));
+          if (!alreadyLinked) {
+            inferred.add(FamilyEdge.create(
+              userId: userId,
+              fromId: newRelativeId,
+              toId: otherParent.id,
+              type: EdgeType.spouseOf,
+            ));
+          }
+        }
         break;
 
-      // Siblings: siblingOf edge between sibling and user
+      // Siblings: siblingOf edge between sibling and user, plus shared parent edges
       case RelationshipType.brother:
       case RelationshipType.sister:
         inferred.add(FamilyEdge.create(
@@ -85,6 +163,30 @@ class FamilyGraphService {
           toId: userId,
           type: EdgeType.siblingOf,
         ));
+        // Siblings share parents — add parent edges for the sibling too
+        // This allows the graph to work from either sibling's perspective
+        final father = existingRelatives.firstWhereOrNull(
+          (r) => r.relationshipType == RelationshipType.father,
+        );
+        final mother = existingRelatives.firstWhereOrNull(
+          (r) => r.relationshipType == RelationshipType.mother,
+        );
+        if (father != null) {
+          inferred.add(FamilyEdge.create(
+            userId: userId,
+            fromId: father.id,
+            toId: newRelativeId,
+            type: EdgeType.parentOf,
+          ));
+        }
+        if (mother != null) {
+          inferred.add(FamilyEdge.create(
+            userId: userId,
+            fromId: mother.id,
+            toId: newRelativeId,
+            type: EdgeType.parentOf,
+          ));
+        }
         break;
 
       // Children: parentOf edge from user to child
@@ -116,6 +218,7 @@ class FamilyGraphService {
           userId: userId,
           existingRelatives: existingRelatives,
           side: side,
+          existingEdges: existingEdges,
         );
         if (parentId != null) {
           inferred.add(FamilyEdge.create(
@@ -134,6 +237,7 @@ class FamilyGraphService {
           userId: userId,
           existingRelatives: existingRelatives,
           side: side,
+          existingEdges: existingEdges,
         );
         if (parentId != null) {
           inferred.add(FamilyEdge.create(
@@ -274,6 +378,10 @@ class FamilyGraphService {
             if (targetGender == Gender.female) return 'خالتي';
           }
         }
+        // Parent archived/deleted — use target's stored familySide.
+        if (target != null && target.familySide != null) {
+          return _labelFromFamilySide(target.familySide!, target.gender);
+        }
         return 'عمي'; // fallback
       }
     }
@@ -306,12 +414,25 @@ class FamilyGraphService {
       }
     }
 
-    // Fallback: use the relative's own label
+    // Fallback: use the relative's own label, with familySide disambiguation.
     final target = relativesMap[targetId];
     if (target != null) {
+      if ((target.relationshipType == RelationshipType.uncle ||
+              target.relationshipType == RelationshipType.aunt) &&
+          target.familySide != null) {
+        return _labelFromFamilySide(target.familySide!, target.gender);
+      }
       return target.relationshipType.arabicName;
     }
     return '';
+  }
+
+  /// Resolve uncle/aunt label from stored [FamilySide] and gender.
+  static String _labelFromFamilySide(FamilySide side, Gender? gender) {
+    if (side == FamilySide.paternal) {
+      return gender == Gender.female ? 'عمتي' : 'عمي';
+    }
+    return gender == Gender.female ? 'خالتي' : 'خالي';
   }
 
   // ---------------------------------------------------------------------------
@@ -320,38 +441,61 @@ class FamilyGraphService {
 
   /// Find the parent (father or mother) that a grandparent should link to.
   ///
-  /// If [side] is provided, looks for the matching gendered parent.
-  /// Otherwise, falls back to the first available parent.
+  /// If [side] is provided, returns ONLY the matching gendered parent.
+  /// When a specific side is given but that parent doesn't exist, returns
+  /// `null` rather than incorrectly falling back to the other parent
+  /// (e.g. linking a maternal grandmother to the father).
+  ///
+  /// Only when [side] is `null` does it fall back to the first available
+  /// parent.
   static String? _findParentId({
     required String userId,
     required List<Relative> existingRelatives,
     FamilySide? side,
+    List<FamilyEdge> existingEdges = const [],
   }) {
-    // Try to find based on side
+    // When side is specified, return only the matching parent (or null).
     if (side == FamilySide.paternal) {
-      final father = existingRelatives.firstWhereOrNull(
-        (r) => r.relationshipType == RelationshipType.father,
-      );
-      if (father != null) return father.id;
-    } else if (side == FamilySide.maternal) {
-      final mother = existingRelatives.firstWhereOrNull(
-        (r) => r.relationshipType == RelationshipType.mother,
-      );
-      if (mother != null) return mother.id;
+      return existingRelatives
+          .firstWhereOrNull(
+            (r) => r.relationshipType == RelationshipType.father,
+          )
+          ?.id;
+    }
+    if (side == FamilySide.maternal) {
+      return existingRelatives
+          .firstWhereOrNull(
+            (r) => r.relationshipType == RelationshipType.mother,
+          )
+          ?.id;
     }
 
-    // Fallback: find any parent
+    // No side specified — be smart about which parent to pick.
     final father = existingRelatives.firstWhereOrNull(
       (r) => r.relationshipType == RelationshipType.father,
     );
-    if (father != null) return father.id;
-
     final mother = existingRelatives.firstWhereOrNull(
       (r) => r.relationshipType == RelationshipType.mother,
     );
-    if (mother != null) return mother.id;
 
-    return null;
+    if (father == null && mother == null) return null;
+    if (father != null && mother == null) return father.id;
+    if (mother != null && father == null) return mother.id;
+
+    // Both parents exist. Check if a grandparent is already linked to one
+    // parent — if so, prefer the other to distribute evenly.
+    final fatherHasParent = existingEdges.any(
+      (e) => e.type == EdgeType.parentOf && e.toId == father!.id,
+    );
+    final motherHasParent = existingEdges.any(
+      (e) => e.type == EdgeType.parentOf && e.toId == mother!.id,
+    );
+
+    if (fatherHasParent && !motherHasParent) return mother!.id;
+    if (motherHasParent && !fatherHasParent) return father!.id;
+
+    // Both or neither have grandparents — default to father.
+    return father!.id;
   }
 
   /// Find the parent matching a given [FamilySide].
@@ -359,6 +503,7 @@ class FamilyGraphService {
     required String userId,
     required List<Relative> existingRelatives,
     FamilySide? side,
+    List<FamilyEdge> existingEdges = const [],
   }) {
     if (side == FamilySide.paternal) {
       return existingRelatives
@@ -374,17 +519,21 @@ class FamilyGraphService {
           ?.id;
     }
 
-    // No side specified — try father first, then mother
+    // No side specified — check if one parent already has siblings linked.
     final father = existingRelatives.firstWhereOrNull(
       (r) => r.relationshipType == RelationshipType.father,
     );
-    if (father != null) return father.id;
+    final mother = existingRelatives.firstWhereOrNull(
+      (r) => r.relationshipType == RelationshipType.mother,
+    );
 
-    return existingRelatives
-        .firstWhereOrNull(
-          (r) => r.relationshipType == RelationshipType.mother,
-        )
-        ?.id;
+    if (father == null && mother == null) return null;
+    if (father != null && mother == null) return father.id;
+    if (mother != null && father == null) return mother.id;
+
+    // Both exist, no side specified — default to father (paternal).
+    // Don't alternate between parents; the caller should specify a side.
+    return father!.id;
   }
 
   /// Find the first sibling of the user.

@@ -355,6 +355,45 @@ void main() {
       expect(edges.first.type, EdgeType.parentOf);
     });
 
+    test('should NOT link maternal grandmother to father when mother is missing', () {
+      // Regression: maternal grandmother used to fall back to father
+      // when the mother hadn't been added yet.
+      final father = makeRelative(
+        id: fatherId,
+        type: RelationshipType.father,
+      );
+
+      final edges = FamilyGraphService.inferEdges(
+        userId: userId,
+        newRelativeId: grandmotherId,
+        relationshipType: RelationshipType.grandmother,
+        side: FamilySide.maternal,
+        existingEdges: [],
+        existingRelatives: [father], // only father, no mother
+      );
+
+      // Should return empty — not incorrectly link to father.
+      expect(edges, isEmpty);
+    });
+
+    test('should NOT link paternal grandfather to mother when father is missing', () {
+      final mother = makeRelative(
+        id: motherId,
+        type: RelationshipType.mother,
+      );
+
+      final edges = FamilyGraphService.inferEdges(
+        userId: userId,
+        newRelativeId: grandfatherId,
+        relationshipType: RelationshipType.grandfather,
+        side: FamilySide.paternal,
+        existingEdges: [],
+        existingRelatives: [mother], // only mother, no father
+      );
+
+      expect(edges, isEmpty);
+    });
+
     test('should return empty edges for grandfather when no parent exists', () {
       final edges = FamilyGraphService.inferEdges(
         userId: userId,
@@ -988,8 +1027,8 @@ void main() {
       expect(EdgeType.fromString('spouse_of'), EdgeType.spouseOf);
     });
 
-    test('fromString throws ArgumentError for unknown values', () {
-      expect(() => EdgeType.fromString('unknown'), throwsArgumentError);
+    test('fromString returns parentOf as fallback for unknown values', () {
+      expect(EdgeType.fromString('unknown'), EdgeType.parentOf);
     });
 
     test('value matches expected string', () {
@@ -1024,6 +1063,88 @@ void main() {
       );
 
       expect(graph.containsNode('stranger'), isFalse);
+    });
+  });
+
+  // =========================================================================
+  // 8. enrichAllSiblingEdges tests
+  // =========================================================================
+  group('FamilyGraphService.enrichAllSiblingEdges', () {
+    test('propagates parentOf from sibling A\'s parents to sibling B', () {
+      // Setup: Grandpa→Dad (parentOf), Uncle↔Dad (siblingOf)
+      // Expected: Grandpa→Uncle (parentOf) is added
+      final edges = [
+        makeEdge(fromId: grandfatherId, toId: fatherId, type: EdgeType.parentOf),
+        makeEdge(fromId: uncleId, toId: fatherId, type: EdgeType.siblingOf),
+      ];
+      final graph = FamilyGraphService.buildGraph(userId: userId, edges: edges);
+
+      final enriched = FamilyGraphService.enrichAllSiblingEdges(graph);
+
+      // Grandpa should now be parent of Uncle
+      expect(enriched.getParents(uncleId), contains(grandfatherId));
+      // Original edges still present
+      expect(enriched.getParents(fatherId), contains(grandfatherId));
+      expect(enriched.getSiblings(fatherId), contains(uncleId));
+    });
+
+    test('propagates in both directions for sibling pairs', () {
+      // Setup: Grandpa→Uncle (parentOf), Uncle↔Dad (siblingOf)
+      // Expected: Grandpa→Dad (parentOf) is added
+      final edges = [
+        makeEdge(fromId: grandfatherId, toId: uncleId, type: EdgeType.parentOf),
+        makeEdge(fromId: uncleId, toId: fatherId, type: EdgeType.siblingOf),
+      ];
+      final graph = FamilyGraphService.buildGraph(userId: userId, edges: edges);
+
+      final enriched = FamilyGraphService.enrichAllSiblingEdges(graph);
+
+      expect(enriched.getParents(fatherId), contains(grandfatherId));
+    });
+
+    test('does not duplicate existing parentOf edges', () {
+      final edges = [
+        makeEdge(fromId: grandfatherId, toId: fatherId, type: EdgeType.parentOf),
+        makeEdge(fromId: grandfatherId, toId: uncleId, type: EdgeType.parentOf),
+        makeEdge(fromId: uncleId, toId: fatherId, type: EdgeType.siblingOf),
+      ];
+      final graph = FamilyGraphService.buildGraph(userId: userId, edges: edges);
+
+      final enriched = FamilyGraphService.enrichAllSiblingEdges(graph);
+
+      // Count parentOf edges from grandfather
+      final gpEdges = enriched.edges.where(
+        (e) => e.fromId == grandfatherId && e.type == EdgeType.parentOf,
+      );
+      expect(gpEdges.length, 2); // exactly 2, no duplicates
+    });
+
+    test('returns same graph when no sibling edges exist', () {
+      final edges = [
+        makeEdge(fromId: fatherId, toId: userId, type: EdgeType.parentOf),
+      ];
+      final graph = FamilyGraphService.buildGraph(userId: userId, edges: edges);
+
+      final enriched = FamilyGraphService.enrichAllSiblingEdges(graph);
+
+      expect(enriched.edges.length, graph.edges.length);
+    });
+
+    test('propagates spouse parents to sibling too', () {
+      // Grandpa→Dad, Grandma→Dad (both parents), Grandpa↔Grandma (spouse), Uncle↔Dad (sibling)
+      // Expected: Grandpa→Uncle AND Grandma→Uncle
+      final edges = [
+        makeEdge(fromId: grandfatherId, toId: fatherId, type: EdgeType.parentOf),
+        makeEdge(fromId: grandmotherId, toId: fatherId, type: EdgeType.parentOf),
+        makeEdge(fromId: grandfatherId, toId: grandmotherId, type: EdgeType.spouseOf),
+        makeEdge(fromId: uncleId, toId: fatherId, type: EdgeType.siblingOf),
+      ];
+      final graph = FamilyGraphService.buildGraph(userId: userId, edges: edges);
+
+      final enriched = FamilyGraphService.enrichAllSiblingEdges(graph);
+
+      expect(enriched.getParents(uncleId), contains(grandfatherId));
+      expect(enriched.getParents(uncleId), contains(grandmotherId));
     });
   });
 }
