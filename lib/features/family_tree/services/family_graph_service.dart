@@ -384,8 +384,8 @@ class FamilyGraphService {
   /// Compute the Arabic relationship label for [targetId] from
   /// [viewerId]'s perspective.
   ///
-  /// Falls back to the relative's own [RelationshipType.arabicName] if
-  /// the graph path cannot determine a more specific label.
+  /// Falls back to the relative's [fullName] if the graph path cannot
+  /// determine a more specific label.
   static String getLabelForViewer({
     required FamilyGraph graph,
     required String viewerId,
@@ -394,124 +394,142 @@ class FamilyGraphService {
   }) {
     if (viewerId == targetId) return 'أنا';
 
-    // Check direct relationships first
+    final target = relativesMap[targetId];
+    final targetGender = target?.gender;
 
     // Is target a parent of viewer?
     final viewerParents = graph.getParents(viewerId);
     if (viewerParents.contains(targetId)) {
-      final target = relativesMap[targetId];
-      if (target != null) {
-        final gender = target.gender;
-        if (gender == Gender.male) return 'أبي';
-        if (gender == Gender.female) return 'أمي';
-      }
+      if (targetGender == Gender.male) return 'أبي';
+      if (targetGender == Gender.female) return 'أمي';
       return 'والدي';
     }
 
     // Is target a child of viewer?
     final viewerChildren = graph.getChildren(viewerId);
     if (viewerChildren.contains(targetId)) {
-      final target = relativesMap[targetId];
-      if (target != null) {
-        final gender = target.gender;
-        if (gender == Gender.male) return 'ابني';
-        if (gender == Gender.female) return 'ابنتي';
-      }
+      if (targetGender == Gender.male) return 'ابني';
+      if (targetGender == Gender.female) return 'ابنتي';
       return 'ابني';
     }
 
     // Is target a sibling of viewer?
     final viewerSiblings = graph.getSiblings(viewerId);
     if (viewerSiblings.contains(targetId)) {
-      final target = relativesMap[targetId];
-      if (target != null) {
-        final gender = target.gender;
-        if (gender == Gender.male) return 'أخوي';
-        if (gender == Gender.female) return 'أختي';
-      }
+      if (targetGender == Gender.male) return 'أخوي';
+      if (targetGender == Gender.female) return 'أختي';
       return 'أخوي';
     }
 
     // Is target the spouse of viewer?
     final viewerSpouse = graph.getSpouse(viewerId);
     if (viewerSpouse == targetId) {
-      final target = relativesMap[targetId];
-      if (target != null) {
-        final gender = target.gender;
-        if (gender == Gender.male) return 'زوجي';
-        if (gender == Gender.female) return 'زوجتي';
-      }
+      if (targetGender == Gender.male) return 'زوجي';
+      if (targetGender == Gender.female) return 'زوجتي';
       return 'زوجي';
     }
 
-    // Is target a parent's sibling? (uncle/aunt from viewer's perspective)
+    // Is target a parent's sibling? (uncle/aunt)
     for (final parentId in viewerParents) {
       final parentSiblings = graph.getSiblings(parentId);
       if (parentSiblings.contains(targetId)) {
-        final target = relativesMap[targetId];
         final parent = relativesMap[parentId];
         if (target != null && parent != null) {
-          final targetGender = target.gender;
           final parentGender = parent.gender;
-
-          // Father's side (paternal)
           if (parentGender == Gender.male) {
             if (targetGender == Gender.male) return 'عمي';
             if (targetGender == Gender.female) return 'عمتي';
           }
-          // Mother's side (maternal)
           if (parentGender == Gender.female) {
             if (targetGender == Gender.male) return 'خالي';
             if (targetGender == Gender.female) return 'خالتي';
           }
         }
-        // Parent archived/deleted — use target's stored familySide.
         if (target != null && target.familySide != null) {
           return _labelFromFamilySide(target.familySide!, target.gender);
         }
-        return 'عمي'; // fallback
+        return 'عمي';
       }
     }
 
-    // Is target a grandparent of viewer? (parent's parent)
+    // Is target a sibling's child? (nephew/niece)
+    for (final siblingId in viewerSiblings) {
+      final siblingChildren = graph.getChildren(siblingId);
+      if (siblingChildren.contains(targetId)) {
+        final sibling = relativesMap[siblingId];
+        final siblingGender = sibling?.gender;
+        if (siblingGender == Gender.male) {
+          return targetGender == Gender.female ? 'بنت أخوي' : 'ابن أخوي';
+        }
+        if (siblingGender == Gender.female) {
+          return targetGender == Gender.female ? 'بنت أختي' : 'ابن أختي';
+        }
+        return targetGender == Gender.female ? 'بنت أخوي' : 'ابن أخوي';
+      }
+    }
+
+    // Is target a grandparent? (parent's parent)
     for (final parentId in viewerParents) {
       final grandparents = graph.getParents(parentId);
       if (grandparents.contains(targetId)) {
-        final target = relativesMap[targetId];
-        if (target != null) {
-          final gender = target.gender;
-          if (gender == Gender.male) return 'جدي';
-          if (gender == Gender.female) return 'جدتي';
-        }
+        if (targetGender == Gender.male) return 'جدي';
+        if (targetGender == Gender.female) return 'جدتي';
         return 'جدي';
       }
     }
 
-    // Is target a grandchild of viewer? (child's child)
+    // Is target a grandchild? (child's child)
     for (final childId in viewerChildren) {
       final grandchildren = graph.getChildren(childId);
       if (grandchildren.contains(targetId)) {
-        final target = relativesMap[targetId];
-        if (target != null) {
-          final gender = target.gender;
-          if (gender == Gender.male) return 'حفيدي';
-          if (gender == Gender.female) return 'حفيدتي';
-        }
+        if (targetGender == Gender.male) return 'حفيدي';
+        if (targetGender == Gender.female) return 'حفيدتي';
         return 'حفيدي';
       }
     }
 
-    // Fallback: use the relative's own label, with familySide disambiguation.
-    final target = relativesMap[targetId];
-    if (target != null) {
-      if ((target.relationshipType == RelationshipType.uncle ||
-              target.relationshipType == RelationshipType.aunt) &&
-          target.familySide != null) {
-        return _labelFromFamilySide(target.familySide!, target.gender);
+    // Is target a cousin? parent→sibling→child (4-way distinction)
+    for (final parentId in viewerParents) {
+      final parent = relativesMap[parentId];
+      final parentGender = parent?.gender;
+
+      for (final parentSibId in graph.getSiblings(parentId)) {
+        final parentSib = relativesMap[parentSibId];
+        final parentSibGender = parentSib?.gender;
+
+        final cousinCandidates = graph.getChildren(parentSibId);
+        if (cousinCandidates.contains(targetId)) {
+          if (parentGender == Gender.male && parentSibGender == Gender.male) {
+            return targetGender == Gender.female ? 'بنت عمي' : 'ابن عمي';
+          }
+          if (parentGender == Gender.male && parentSibGender == Gender.female) {
+            return targetGender == Gender.female ? 'بنت عمتي' : 'ابن عمتي';
+          }
+          if (parentGender == Gender.female && parentSibGender == Gender.male) {
+            return targetGender == Gender.female ? 'بنت خالي' : 'ابن خالي';
+          }
+          if (parentGender == Gender.female && parentSibGender == Gender.female) {
+            return targetGender == Gender.female ? 'بنت خالتي' : 'ابن خالتي';
+          }
+          return targetGender == Gender.female ? 'بنت عمي' : 'ابن عمي';
+        }
       }
-      return target.relationshipType.arabicName;
     }
-    return '';
+
+    // Is target a great-grandparent? (parent→parent→parent)
+    for (final parentId in viewerParents) {
+      for (final grandparentId in graph.getParents(parentId)) {
+        final greatGrandparents = graph.getParents(grandparentId);
+        if (greatGrandparents.contains(targetId)) {
+          if (targetGender == Gender.male) return 'جدي الأكبر';
+          if (targetGender == Gender.female) return 'جدتي الكبرى';
+          return 'جدي الأكبر';
+        }
+      }
+    }
+
+    // Fallback: use person's full name (not arabicName which is generic)
+    return target?.fullName ?? 'قريب';
   }
 
   /// Resolve uncle/aunt label from stored [FamilySide] and gender.

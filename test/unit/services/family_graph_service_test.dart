@@ -925,15 +925,14 @@ void main() {
       expect(label, 'عمي');
     });
 
-    test('fallback: returns arabicName for unknown graph path', () {
+    test('fallback: returns fullName for unknown graph path', () {
       final label = FamilyGraphService.getLabelForViewer(
         graph: graph,
         viewerId: 'stranger',
         targetId: fatherId,
         relativesMap: relativesMap,
       );
-      // stranger has no edges, so falls back to father's relationshipType.arabicName
-      expect(label, 'أب');
+      expect(label, 'الأب');
     });
 
     test('fallback: returns empty string for unknown target', () {
@@ -943,7 +942,261 @@ void main() {
         targetId: 'unknown',
         relativesMap: relativesMap,
       );
-      expect(label, '');
+      expect(label, 'قريب');
+    });
+
+    // --- Extended perspective labels ---
+
+    test('sibling\'s child: uncle→nephew = "ابن أخوي"', () {
+      const nephewId = 'nephew-1';
+      final extraEdges = [
+        ...graph.edges,
+        makeEdge(fromId: brotherId, toId: nephewId, type: EdgeType.parentOf),
+      ];
+      final extGraph = FamilyGraphService.buildGraph(userId: userId, edges: extraEdges);
+      final nephewRelative = makeRelative(
+        id: nephewId,
+        type: RelationshipType.nephew,
+        gender: Gender.male,
+        fullName: 'ابن الأخ',
+      );
+      final mapWithNephew = {...relativesMap, nephewId: nephewRelative};
+
+      final label = FamilyGraphService.getLabelForViewer(
+        graph: extGraph,
+        viewerId: userId,
+        targetId: nephewId,
+        relativesMap: mapWithNephew,
+      );
+      expect(label, 'ابن أخوي');
+    });
+
+    test('sibling\'s child: sister\'s daughter = "بنت أختي"', () {
+      const nieceId = 'niece-1';
+      final extraEdges = [
+        ...graph.edges,
+        makeEdge(fromId: sisterId, toId: nieceId, type: EdgeType.parentOf),
+      ];
+      final extGraph = FamilyGraphService.buildGraph(userId: userId, edges: extraEdges);
+      final nieceRelative = makeRelative(
+        id: nieceId,
+        type: RelationshipType.niece,
+        gender: Gender.female,
+        fullName: 'بنت الأخت',
+      );
+      final mapWithNiece = {...relativesMap, nieceId: nieceRelative};
+
+      final label = FamilyGraphService.getLabelForViewer(
+        graph: extGraph,
+        viewerId: userId,
+        targetId: nieceId,
+        relativesMap: mapWithNiece,
+      );
+      expect(label, 'بنت أختي');
+    });
+
+    test('grandchild: son\'s son = "حفيدي"', () {
+      const grandsonId = 'grandson-1';
+      final extraEdges = [
+        ...graph.edges,
+        makeEdge(fromId: sonId, toId: grandsonId, type: EdgeType.parentOf),
+      ];
+      final extGraph = FamilyGraphService.buildGraph(userId: userId, edges: extraEdges);
+      final grandsonRelative = makeRelative(
+        id: grandsonId,
+        type: RelationshipType.son,
+        gender: Gender.male,
+        fullName: 'الحفيد',
+      );
+      final mapWithGrandson = {...relativesMap, grandsonId: grandsonRelative};
+
+      final label = FamilyGraphService.getLabelForViewer(
+        graph: extGraph,
+        viewerId: userId,
+        targetId: grandsonId,
+        relativesMap: mapWithGrandson,
+      );
+      expect(label, 'حفيدي');
+    });
+
+    test('great-grandparent: parent→parent→parent (male) = "جدي الأكبر"', () {
+      const greatGpId = 'great-gp-1';
+      final extraEdges = [
+        ...graph.edges,
+        makeEdge(fromId: greatGpId, toId: grandfatherId, type: EdgeType.parentOf),
+      ];
+      final extGraph = FamilyGraphService.buildGraph(userId: userId, edges: extraEdges);
+      final greatGpRelative = makeRelative(
+        id: greatGpId,
+        type: RelationshipType.grandfather,
+        gender: Gender.male,
+        fullName: 'الجد الأكبر',
+      );
+      final mapWithGreatGp = {...relativesMap, greatGpId: greatGpRelative};
+
+      final label = FamilyGraphService.getLabelForViewer(
+        graph: extGraph,
+        viewerId: userId,
+        targetId: greatGpId,
+        relativesMap: mapWithGreatGp,
+      );
+      expect(label, 'جدي الأكبر');
+    });
+
+    test('great-grandparent: parent→parent→parent (female) = "جدتي الكبرى"', () {
+      const greatGmId = 'great-gm-1';
+      final extraEdges = [
+        ...graph.edges,
+        makeEdge(fromId: greatGmId, toId: grandfatherId, type: EdgeType.parentOf),
+      ];
+      final extGraph = FamilyGraphService.buildGraph(userId: userId, edges: extraEdges);
+      final greatGmRelative = makeRelative(
+        id: greatGmId,
+        type: RelationshipType.grandmother,
+        gender: Gender.female,
+        fullName: 'الجدة الكبرى',
+      );
+      final mapWithGreatGm = {...relativesMap, greatGmId: greatGmRelative};
+
+      final label = FamilyGraphService.getLabelForViewer(
+        graph: extGraph,
+        viewerId: userId,
+        targetId: greatGmId,
+        relativesMap: mapWithGreatGm,
+      );
+      expect(label, 'جدتي الكبرى');
+    });
+
+    test('paternal cousin: parent(♂)→sibling(♂)→child(♂) = "ابن عمي"', () {
+      const cousinMId = 'pat-cousin-m';
+      final extraEdges = [
+        ...graph.edges,
+        makeEdge(fromId: uncleId, toId: cousinMId, type: EdgeType.parentOf),
+      ];
+      final extGraph = FamilyGraphService.buildGraph(userId: userId, edges: extraEdges);
+      final cousinM = makeRelative(
+        id: cousinMId,
+        type: RelationshipType.cousin,
+        gender: Gender.male,
+        fullName: 'ابن العم',
+      );
+      final mapWithCousin = {...relativesMap, cousinMId: cousinM};
+
+      final label = FamilyGraphService.getLabelForViewer(
+        graph: extGraph,
+        viewerId: userId,
+        targetId: cousinMId,
+        relativesMap: mapWithCousin,
+      );
+      expect(label, 'ابن عمي');
+    });
+
+    test('maternal cousin: parent(♀)→sibling(♀)→child(♀) = "بنت خالتي"', () {
+      const cousinFId = 'mat-cousin-f';
+      final extraEdges = [
+        ...graph.edges,
+        makeEdge(fromId: auntId, toId: cousinFId, type: EdgeType.parentOf),
+      ];
+      final extGraph = FamilyGraphService.buildGraph(userId: userId, edges: extraEdges);
+      final cousinF = makeRelative(
+        id: cousinFId,
+        type: RelationshipType.cousin,
+        gender: Gender.female,
+        fullName: 'بنت الخالة',
+      );
+      final mapWithCousin = {...relativesMap, cousinFId: cousinF};
+
+      final label = FamilyGraphService.getLabelForViewer(
+        graph: extGraph,
+        viewerId: userId,
+        targetId: cousinFId,
+        relativesMap: mapWithCousin,
+      );
+      expect(label, 'بنت خالتي');
+    });
+
+    test('paternal aunt\'s son: parent(♂)→sibling(♀)→child(♂) = "ابن عمتي"', () {
+      const patAuntId = 'pat-aunt-1';
+      const patAuntSonId = 'pat-aunt-son';
+      final extraEdges = [
+        ...graph.edges,
+        makeEdge(fromId: patAuntId, toId: fatherId, type: EdgeType.siblingOf),
+        makeEdge(fromId: patAuntId, toId: patAuntSonId, type: EdgeType.parentOf),
+      ];
+      final extGraph = FamilyGraphService.buildGraph(userId: userId, edges: extraEdges);
+      final patAunt = makeRelative(
+        id: patAuntId,
+        type: RelationshipType.aunt,
+        gender: Gender.female,
+        fullName: 'العمة',
+      );
+      final patAuntSon = makeRelative(
+        id: patAuntSonId,
+        type: RelationshipType.cousin,
+        gender: Gender.male,
+        fullName: 'ابن العمة',
+      );
+      final mapExt = {...relativesMap, patAuntId: patAunt, patAuntSonId: patAuntSon};
+
+      final label = FamilyGraphService.getLabelForViewer(
+        graph: extGraph,
+        viewerId: userId,
+        targetId: patAuntSonId,
+        relativesMap: mapExt,
+      );
+      expect(label, 'ابن عمتي');
+    });
+
+    test('maternal uncle\'s daughter: parent(♀)→sibling(♂)→child(♀) = "بنت خالي"', () {
+      const matUncleId = 'mat-uncle-1';
+      const matUncleDauId = 'mat-uncle-dau';
+      final extraEdges = [
+        ...graph.edges,
+        makeEdge(fromId: matUncleId, toId: motherId, type: EdgeType.siblingOf),
+        makeEdge(fromId: matUncleId, toId: matUncleDauId, type: EdgeType.parentOf),
+      ];
+      final extGraph = FamilyGraphService.buildGraph(userId: userId, edges: extraEdges);
+      final matUncle = makeRelative(
+        id: matUncleId,
+        type: RelationshipType.uncle,
+        gender: Gender.male,
+        fullName: 'الخال',
+      );
+      final matUncleDau = makeRelative(
+        id: matUncleDauId,
+        type: RelationshipType.cousin,
+        gender: Gender.female,
+        fullName: 'بنت الخال',
+      );
+      final mapExt = {...relativesMap, matUncleId: matUncle, matUncleDauId: matUncleDau};
+
+      final label = FamilyGraphService.getLabelForViewer(
+        graph: extGraph,
+        viewerId: userId,
+        targetId: matUncleDauId,
+        relativesMap: mapExt,
+      );
+      expect(label, 'بنت خالي');
+    });
+
+    test('fallback returns fullName instead of arabicName', () {
+      final strangerRelative = Relative(
+        id: 'stranger-1',
+        userId: userId,
+        fullName: 'أحمد',
+        relationshipType: RelationshipType.other,
+        gender: Gender.male,
+        createdAt: DateTime(2025, 1, 1),
+      );
+      final mapWithStranger = {...relativesMap, 'stranger-1': strangerRelative};
+
+      final label = FamilyGraphService.getLabelForViewer(
+        graph: graph,
+        viewerId: userId,
+        targetId: 'stranger-1',
+        relativesMap: mapWithStranger,
+      );
+      expect(label, 'أحمد');
     });
   });
 
