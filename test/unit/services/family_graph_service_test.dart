@@ -1147,4 +1147,180 @@ void main() {
       expect(enriched.getParents(uncleId), contains(grandmotherId));
     });
   });
+
+  // =========================================================================
+  // 9. computeRahimScope tests
+  // =========================================================================
+  group('FamilyGraphService.computeRahimScope', () {
+    // Build the canonical family tree from the bible
+    const patGrandpaId = 'pat-grandpa';
+    const patGrandmaId = 'pat-grandma';
+    const matGrandpaId = 'mat-grandpa';
+    const matGrandmaId = 'mat-grandma';
+    const patUncleId = 'pat-uncle';
+    const patAuntId = 'pat-aunt';
+    const matUncleId = 'mat-uncle';
+    const matAuntId = 'mat-aunt';
+    const dadId = 'dad';
+    const momId = 'mom';
+    const userAId = 'user-a';
+    const bro = 'brother';
+    const sis = 'sister';
+    const son = 'son';
+    const dau = 'daughter';
+    const spouse = 'spouse';
+    const nephew = 'nephew';
+    const niece = 'niece';
+    const patCousM = 'pat-cous-m';
+    const matCousF = 'mat-cous-f';
+
+    late FamilyGraph fullGraph;
+
+    setUp(() {
+      final edges = [
+        // Grandparents → Parents
+        makeEdge(fromId: patGrandpaId, toId: dadId, type: EdgeType.parentOf),
+        makeEdge(fromId: patGrandmaId, toId: dadId, type: EdgeType.parentOf),
+        makeEdge(fromId: matGrandpaId, toId: momId, type: EdgeType.parentOf),
+        makeEdge(fromId: matGrandmaId, toId: momId, type: EdgeType.parentOf),
+        // Grandparent spouses
+        makeEdge(fromId: patGrandpaId, toId: patGrandmaId, type: EdgeType.spouseOf),
+        makeEdge(fromId: matGrandpaId, toId: matGrandmaId, type: EdgeType.spouseOf),
+        // Parents → User
+        makeEdge(fromId: dadId, toId: userAId, type: EdgeType.parentOf),
+        makeEdge(fromId: momId, toId: userAId, type: EdgeType.parentOf),
+        // Parent spouse
+        makeEdge(fromId: dadId, toId: momId, type: EdgeType.spouseOf),
+        // Siblings
+        makeEdge(fromId: bro, toId: userAId, type: EdgeType.siblingOf),
+        makeEdge(fromId: sis, toId: userAId, type: EdgeType.siblingOf),
+        // Uncle/aunt siblings
+        makeEdge(fromId: patUncleId, toId: dadId, type: EdgeType.siblingOf),
+        makeEdge(fromId: patAuntId, toId: dadId, type: EdgeType.siblingOf),
+        makeEdge(fromId: matUncleId, toId: momId, type: EdgeType.siblingOf),
+        makeEdge(fromId: matAuntId, toId: momId, type: EdgeType.siblingOf),
+        // User → Children
+        makeEdge(fromId: userAId, toId: son, type: EdgeType.parentOf),
+        makeEdge(fromId: userAId, toId: dau, type: EdgeType.parentOf),
+        // Spouse
+        makeEdge(fromId: userAId, toId: spouse, type: EdgeType.spouseOf),
+        // Sibling → children
+        makeEdge(fromId: bro, toId: nephew, type: EdgeType.parentOf),
+        makeEdge(fromId: sis, toId: niece, type: EdgeType.parentOf),
+        // Cousin children
+        makeEdge(fromId: patUncleId, toId: patCousM, type: EdgeType.parentOf),
+        makeEdge(fromId: matAuntId, toId: matCousF, type: EdgeType.parentOf),
+      ];
+
+      // Enrich first (propagates parentOf across all sibling pairs)
+      final raw = FamilyGraphService.buildGraph(userId: userAId, edges: edges);
+      fullGraph = FamilyGraphService.enrichAllSiblingEdges(raw);
+    });
+
+    test('User A sees everyone (center of tree)', () {
+      final scope = FamilyGraphService.computeRahimScope(
+        viewerId: userAId,
+        graph: fullGraph,
+      );
+
+      expect(scope, contains(dadId));
+      expect(scope, contains(momId));
+      expect(scope, contains(bro));
+      expect(scope, contains(sis));
+      expect(scope, contains(son));
+      expect(scope, contains(dau));
+      expect(scope, contains(patGrandpaId));
+      expect(scope, contains(matGrandpaId));
+      expect(scope, contains(patUncleId));
+      expect(scope, contains(matUncleId));
+      expect(scope, contains(nephew));
+      expect(scope, contains(niece));
+      expect(scope, contains(patCousM));
+      expect(scope, contains(matCousF));
+      expect(scope, contains(spouse));
+    });
+
+    test('Pat.Uncle does NOT see Mom or maternal side', () {
+      final scope = FamilyGraphService.computeRahimScope(
+        viewerId: patUncleId,
+        graph: fullGraph,
+      );
+
+      expect(scope, contains(patGrandpaId));
+      expect(scope, contains(patGrandmaId));
+      expect(scope, contains(dadId));
+      expect(scope, contains(patAuntId));
+      expect(scope, contains(userAId));
+      expect(scope, contains(bro));
+      expect(scope, contains(sis));
+      expect(scope, contains(patCousM));
+
+      expect(scope, isNot(contains(momId)));
+      expect(scope, isNot(contains(matGrandpaId)));
+      expect(scope, isNot(contains(matGrandmaId)));
+      expect(scope, isNot(contains(matUncleId)));
+      expect(scope, isNot(contains(matAuntId)));
+      expect(scope, isNot(contains(matCousF)));
+    });
+
+    test('Dad does NOT see maternal side', () {
+      final scope = FamilyGraphService.computeRahimScope(
+        viewerId: dadId,
+        graph: fullGraph,
+      );
+
+      expect(scope, contains(patGrandpaId));
+      expect(scope, contains(patGrandmaId));
+      expect(scope, contains(patUncleId));
+      expect(scope, contains(patAuntId));
+      expect(scope, contains(userAId));
+      expect(scope, contains(bro));
+      expect(scope, contains(sis));
+      expect(scope, contains(son));
+      expect(scope, contains(nephew));
+      expect(scope, contains(momId)); // spouse
+
+      expect(scope, isNot(contains(matGrandpaId)));
+      expect(scope, isNot(contains(matGrandmaId)));
+      expect(scope, isNot(contains(matUncleId)));
+      expect(scope, isNot(contains(matAuntId)));
+      expect(scope, isNot(contains(matCousF)));
+    });
+
+    test('Spouse sees only User A (no blood connections)', () {
+      final scope = FamilyGraphService.computeRahimScope(
+        viewerId: spouse,
+        graph: fullGraph,
+      );
+
+      expect(scope, contains(userAId));
+      expect(scope, isNot(contains(dadId)));
+      expect(scope, isNot(contains(momId)));
+      expect(scope, isNot(contains(son)));
+    });
+
+    test('Son sees User A\'s siblings as uncles but not User A\'s spouse', () {
+      final scope = FamilyGraphService.computeRahimScope(
+        viewerId: son,
+        graph: fullGraph,
+      );
+
+      expect(scope, contains(userAId));
+      expect(scope, contains(dau));
+      expect(scope, contains(dadId));
+      expect(scope, contains(momId));
+      expect(scope, contains(bro));
+      expect(scope, contains(sis));
+      expect(scope, contains(patGrandpaId));
+      expect(scope, isNot(contains(spouse)));
+    });
+
+    test('scope always includes the viewer', () {
+      final scope = FamilyGraphService.computeRahimScope(
+        viewerId: nephew,
+        graph: fullGraph,
+      );
+      expect(scope, contains(nephew));
+    });
+  });
 }

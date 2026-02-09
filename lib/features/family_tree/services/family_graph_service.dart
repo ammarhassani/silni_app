@@ -93,6 +93,93 @@ class FamilyGraphService {
   }
 
   // ---------------------------------------------------------------------------
+  // Rahim scope (directional BFS)
+  // ---------------------------------------------------------------------------
+
+  /// Compute the set of node IDs visible from [viewerId]'s perspective.
+  ///
+  /// Uses directional BFS where the direction a node was reached from
+  /// determines which edges can be traversed next:
+  /// - **START** (viewer): UP + SIDEWAYS + DOWN
+  /// - **VIA UP** (ancestor): UP + SIDEWAYS (not DOWN — prevents leaking)
+  ///   SIDEWAYS here includes both explicit sibling edges AND the ancestor's
+  ///   other children (who are the viewer's uncles/aunts/siblings by blood).
+  /// - **VIA SIDEWAYS** (sibling of ancestor): DOWN only
+  /// - **VIA DOWN** (descendant): DOWN only
+  ///
+  /// Additionally, the viewer's direct spouse is added (1-hop, not traversed from).
+  static Set<String> computeRahimScope({
+    required String viewerId,
+    required FamilyGraph graph,
+  }) {
+    final scope = <String>{viewerId};
+
+    final queue = <(String, _BfsDirection)>[(viewerId, _BfsDirection.start)];
+    final visited = <String>{viewerId};
+
+    while (queue.isNotEmpty) {
+      final (nodeId, direction) = queue.removeAt(0);
+
+      final canGoUp = direction == _BfsDirection.start ||
+          direction == _BfsDirection.up;
+      final canGoSideways = direction == _BfsDirection.start ||
+          direction == _BfsDirection.up;
+      final canGoDown = direction == _BfsDirection.start ||
+          direction == _BfsDirection.sideways ||
+          direction == _BfsDirection.down;
+
+      if (canGoUp) {
+        for (final parentId in graph.getParents(nodeId)) {
+          if (visited.add(parentId)) {
+            scope.add(parentId);
+            queue.add((parentId, _BfsDirection.up));
+          }
+        }
+      }
+
+      if (canGoSideways) {
+        // Explicit sibling edges
+        for (final siblingId in graph.getSiblings(nodeId)) {
+          if (visited.add(siblingId)) {
+            scope.add(siblingId);
+            queue.add((siblingId, _BfsDirection.sideways));
+          }
+        }
+
+        // When at an ancestor (reached via UP), also discover the ancestor's
+        // other children as SIDEWAYS — they are blood-related siblings/uncles
+        // of the original viewer. This handles cases where siblings share
+        // parents but lack explicit siblingOf edges between each other.
+        if (direction == _BfsDirection.up) {
+          for (final childId in graph.getChildren(nodeId)) {
+            if (visited.add(childId)) {
+              scope.add(childId);
+              queue.add((childId, _BfsDirection.sideways));
+            }
+          }
+        }
+      }
+
+      if (canGoDown) {
+        for (final childId in graph.getChildren(nodeId)) {
+          if (visited.add(childId)) {
+            scope.add(childId);
+            queue.add((childId, _BfsDirection.down));
+          }
+        }
+      }
+    }
+
+    // Add direct spouse (1-hop, not traversed from)
+    final spouseId = graph.getSpouse(viewerId);
+    if (spouseId != null) {
+      scope.add(spouseId);
+    }
+
+    return scope;
+  }
+
+  // ---------------------------------------------------------------------------
   // Edge inference
   // ---------------------------------------------------------------------------
 
@@ -563,6 +650,9 @@ class FamilyGraphService {
         ?.id;
   }
 }
+
+/// BFS direction for Rahim scope traversal.
+enum _BfsDirection { start, up, sideways, down }
 
 /// Extension to add `firstWhereOrNull` without requiring collection package.
 extension _IterableExtension<E> on Iterable<E> {
