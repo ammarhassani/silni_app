@@ -28,6 +28,8 @@ import '../../../core/providers/subscription_provider.dart';
 import '../../relatives/services/relationship_inference_service.dart';
 import '../../relatives/widgets/smart_relationship_picker.dart';
 import '../../subscription/screens/paywall_screen.dart';
+import '../../family_groups/services/family_group_service.dart';
+import '../../family_groups/services/family_sharing_service.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../models/placeholder_node.dart';
 import '../models/family_graph.dart';
@@ -59,6 +61,9 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   /// Used to trigger a one-shot scale-spring entrance animation.
   final Set<String> _newlyFilledIds = {};
 
+  /// Flag to track if we've attempted migration for this session.
+  bool _hasMigratedRelatives = false;
+
   String _familyName = 'شجرة العائلة';
   bool _isEditingName = false;
   final _nameController = TextEditingController();
@@ -76,6 +81,49 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     final name = user?.userMetadata?['family_name'] as String?;
     if (name != null && name.isNotEmpty) {
       _familyName = name;
+    } else {
+      // Joiner may not have family_name in metadata — load from group
+      _loadGroupName();
+    }
+  }
+
+  Future<void> _loadGroupName() async {
+    final userId = SupabaseConfig.client.auth.currentUser?.id;
+    if (userId == null) return;
+    final group = await FamilySharingService.getUserGroup(userId);
+    if (group != null && mounted) {
+      setState(() => _familyName = group.name);
+    }
+  }
+
+  /// Ensure user's relatives are migrated to their group.
+  ///
+  /// Called once per session when we detect the user is in a group.
+  /// Handles the case where a user created a group but their relatives
+  /// weren't migrated (e.g., due to earlier bugs or race conditions).
+  Future<void> _ensureRelativesMigrated(String groupId) async {
+    if (_hasMigratedRelatives) return;
+    _hasMigratedRelatives = true;
+
+    final userId = SupabaseConfig.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      await FamilySharingService.ensureRelativesInGroup(
+        userId: userId,
+        groupId: groupId,
+      );
+      // Verify and fill any missing shared edges
+      await FamilySharingService.verifySharedEdges(groupId: groupId);
+      // Invalidate providers to refresh with migrated data
+      if (mounted) {
+        ref.invalidate(groupRelativesStreamProvider(groupId));
+        ref.invalidate(sharedFamilyEdgesStreamProvider(groupId));
+      }
+    } catch (e, st) {
+      debugPrint('ensureRelativesInGroup failed: $e\n$st');
+      // Allow retry on next screen mount by resetting the flag
+      _hasMigratedRelatives = false;
     }
   }
 
@@ -128,6 +176,18 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     await SupabaseConfig.client.auth.updateUser(
       UserAttributes(data: {'family_name': trimmed}),
     );
+
+    // Also update the family group name if user has one
+    final userId = SupabaseConfig.client.auth.currentUser?.id;
+    if (userId != null) {
+      final group = await FamilySharingService.getUserGroup(userId);
+      if (group != null) {
+        await FamilyGroupService.updateGroupName(
+          groupId: group.id,
+          name: trimmed,
+        );
+      }
+    }
   }
 
   @override
@@ -143,7 +203,9 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     // Initialize real-time subscriptions for this user
     ref.watch(autoRealtimeSubscriptionsProvider);
 
-    final relativesAsync = ref.watch(relativesStreamProvider(userId));
+    // Check if user is in a family group — wait for this to resolve before
+    // deciding which tree to show (prevents flicker from personal→shared)
+    final groupInfoAsync = ref.watch(userFamilyGroupProvider);
 
     final themeColors = ref.watch(themeColorsProvider);
 
@@ -161,19 +223,49 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
             SafeArea(
               child: Column(
                 children: [
-                  _buildHeader(context, themeColors),
+                  groupInfoAsync.when(
+                    loading: () => _buildHeader(context, themeColors, null),
+                    error: (_, __) => _buildHeader(context, themeColors, null),
+                    data: (groupInfo) => _buildHeader(context, themeColors, groupInfo),
+                  ),
                 Expanded(
-                  child: relativesAsync.when(
-                    data: (relatives) => _buildTreeContent(
-                      context,
-                      relatives,
-                      displayName,
-                      userId,
-                    ),
+                  // Wait for group info to resolve before deciding which tree
+                  // to show. This prevents the flicker from personal→shared.
+                  child: groupInfoAsync.when(
                     loading: () => const Center(
                       child: CircularProgressIndicator(color: Colors.white),
                     ),
-                    error: (_,_) => _buildError(),
+                    error: (_, __) => _buildError(),
+                    data: (groupInfo) {
+                      final relativesAsync = groupInfo != null
+                          ? ref.watch(groupRelativesStreamProvider(groupInfo.groupId))
+                          : ref.watch(relativesStreamProvider(userId));
+
+                      return relativesAsync.when(
+                        data: (relatives) {
+                          // If user is in a group, ensure their personal relatives
+                          // are migrated to the group (handles older data or failed migrations).
+                          // Schedule via post-frame callback to avoid setState during build.
+                          if (groupInfo != null && !_hasMigratedRelatives) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) {
+                                _ensureRelativesMigrated(groupInfo.groupId);
+                              }
+                            });
+                          }
+                          return _buildTreeContent(
+                            context,
+                            relatives,
+                            displayName,
+                            userId,
+                          );
+                        },
+                        loading: () => const Center(
+                          child: CircularProgressIndicator(color: Colors.white),
+                        ),
+                        error: (_, __) => _buildError(),
+                      );
+                    },
                   ),
                 ),
               ],
@@ -201,11 +293,26 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, dynamic themeColors) {
+  Widget _buildHeader(
+    BuildContext context,
+    dynamic themeColors,
+    ({String groupId, String? nodeId})? groupInfo,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        // Semi-transparent dark scrim for WCAG2 contrast on all themes
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.black.withValues(alpha: 0.3),
+            Colors.black.withValues(alpha: 0.0),
+          ],
+        ),
       ),
       child: Row(
         children: [
@@ -213,7 +320,13 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
             label: 'رجوع',
             button: true,
             child: IconButton(
-              onPressed: () => context.pop(),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go(AppRoutes.home);
+                }
+              },
               icon: Icon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
             ),
           ),
@@ -223,16 +336,18 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                 ? TextField(
                     controller: _nameController,
                     autofocus: true,
+                    cursorColor: themeColors.textOnGradient,
                     style: AppTypography.headlineMedium.copyWith(
                       color: themeColors.textOnGradient,
                       fontWeight: FontWeight.bold,
                     ),
                     decoration: InputDecoration(
+                      filled: false,
                       border: InputBorder.none,
                       hintText: 'شجرة العائلة',
                       hintStyle: AppTypography.headlineMedium.copyWith(
                         color: (themeColors.textOnGradient as Color)
-                            .withValues(alpha: 0.5),
+                            .withValues(alpha: 0.6),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -243,10 +358,16 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                   )
                 : GestureDetector(
                     onTap: () {
-                      setState(() {
-                        _nameController.text = _familyName;
-                        _isEditingName = true;
-                      });
+                      if (groupInfo != null) {
+                        // Navigate to group details (like WhatsApp)
+                        context.push('${AppRoutes.familyGroupDetail}/${groupInfo.groupId}');
+                      } else {
+                        // Enable editing for personal tree
+                        setState(() {
+                          _nameController.text = _familyName;
+                          _isEditingName = true;
+                        });
+                      }
                     },
                     child: Row(
                       children: [
@@ -263,10 +384,11 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                         ),
                         const SizedBox(width: AppSpacing.xs),
                         Icon(
-                          Icons.edit_rounded,
-                          size: 16,
-                          color: (themeColors.textOnGradient as Color)
-                              .withValues(alpha: 0.5),
+                          groupInfo != null
+                              ? Icons.chevron_right_rounded
+                              : Icons.edit_rounded,
+                          size: groupInfo != null ? 24 : 16,
+                          color: themeColors.textOnGradient,
                         ),
                       ],
                     ),
@@ -410,7 +532,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                   Flexible(
                     child: SingleChildScrollView(
                       child: SmartRelationshipPicker(
-                        selected: selectedType ?? suggestions.first,
+                        selected: selectedType ?? (suggestions.isNotEmpty ? suggestions.first : RelationshipType.other),
                         suggestions: suggestions,
                         existingRelatives: relatives,
                         selectedSide: selectedSide,
@@ -457,7 +579,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
 
     if (confirmed != true || !mounted) return;
 
-    final chosenType = selectedType ?? suggestions.first;
+    final chosenType = selectedType ?? (suggestions.isNotEmpty ? suggestions.first : RelationshipType.other);
     final chosenSide = selectedSide;
 
     // Open contact picker
@@ -508,8 +630,8 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     String userName,
     String userId,
   ) {
-    // Check for shared tree context — if user is in a family group
-    // with a linked node, use that node as the perspective anchor.
+    // Check for shared tree context — if user is in a family group,
+    // use the group's relatives and edges for the tree.
     final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
     final graph = groupInfo != null
         ? ref.watch(sharedFamilyGraphProvider((
@@ -518,10 +640,31 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
           )))
         : ref.watch(familyGraphProvider(userId));
 
-    // For shared trees, use the viewer's node ID as the layout anchor
+    // For shared trees, use the viewer's node ID as the layout anchor.
+    // If user isn't linked to a node yet, use their auth userId as fallback
+    // (won't match any node, but layout will still work).
     final effectiveUserId = groupInfo?.nodeId ?? userId;
 
-    final relativesMap = {for (final r in relatives) r.id: r};
+    // For shared trees, apply rahim scope filter so each viewer only
+    // sees their blood relatives (plus direct spouse).
+    final List<Relative> visibleRelatives;
+    if (groupInfo != null && graph != null) {
+      final enrichedGraph = FamilyGraphService.enrichAllSiblingEdges(graph);
+      final rahimScope = FamilyGraphService.computeRahimScope(
+        viewerId: effectiveUserId,
+        graph: enrichedGraph,
+      );
+      visibleRelatives = relatives.where((r) => rahimScope.contains(r.id)).toList();
+    } else {
+      visibleRelatives = relatives;
+    }
+
+    final relativesMap = {for (final r in visibleRelatives) r.id: r};
+
+    // Fetch linked member node IDs for badge rendering
+    final linkedMemberNodeIds = groupInfo != null
+        ? ref.watch(groupMemberNodeIdsProvider(groupInfo.groupId)).valueOrNull ?? <String>{}
+        : <String>{};
 
     // Infer user gender from name for placeholder labels
     final userGender = RelationshipInferenceService.inferGender(userName);
@@ -538,10 +681,11 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
           userId: effectiveUserId,
           userName: userName,
           graph: graph,
-          relatives: relatives,
+          relatives: visibleRelatives,
           relativesMap: relativesMap,
           canvasSize: canvasSize,
           userGender: userGender,
+          linkedMemberNodeIds: linkedMemberNodeIds,
         );
 
         // The hybrid approach: painted edges + widget nodes + placeholder widgets
@@ -759,6 +903,10 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       );
       final priority = AvatarType.suggestPriority(placeholder.type);
 
+      // Check if we're in a family group context
+      final groupInfo = ref.read(userFamilyGroupProvider).valueOrNull;
+      final isGroupMode = groupInfo != null;
+
       final relative = Relative(
         id: '',
         userId: userId,
@@ -769,6 +917,8 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         phoneNumber: phoneNumber,
         priority: priority,
         familySide: placeholder.side,
+        familyGroupId: isGroupMode ? groupInfo.groupId : null,
+        addedBy: isGroupMode ? userId : null,
         createdAt: DateTime.now(),
       );
 
@@ -782,14 +932,32 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       // Edge inference + persistence is non-critical — don't let it
       // block the success feedback if it fails.
       try {
-        final edgesAsync = ref.read(familyEdgesStreamProvider(userId));
-        final existingEdges = edgesAsync.valueOrNull ?? <FamilyEdge>[];
-        final existingRelatives =
-            ref.read(relativesStreamProvider(userId)).valueOrNull ??
-                <Relative>[];
+        final List<FamilyEdge> existingEdges;
+        final List<Relative> existingRelatives;
+        final String edgeAnchorId;
+
+        if (isGroupMode) {
+          existingEdges = ref
+                  .read(sharedFamilyEdgesStreamProvider(groupInfo.groupId))
+                  .valueOrNull ??
+              <FamilyEdge>[];
+          existingRelatives = ref
+                  .read(groupRelativesStreamProvider(groupInfo.groupId))
+                  .valueOrNull ??
+              <Relative>[];
+          edgeAnchorId = groupInfo.nodeId ?? userId;
+        } else {
+          existingEdges =
+              ref.read(familyEdgesStreamProvider(userId)).valueOrNull ??
+                  <FamilyEdge>[];
+          existingRelatives =
+              ref.read(relativesStreamProvider(userId)).valueOrNull ??
+                  <Relative>[];
+          edgeAnchorId = userId;
+        }
 
         final inferredEdges = FamilyGraphService.inferEdges(
-          userId: userId,
+          userId: edgeAnchorId,
           newRelativeId: createdId,
           relationshipType: placeholder.type,
           side: placeholder.side,
@@ -798,8 +966,23 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         );
 
         if (inferredEdges.isNotEmpty) {
+          // For shared edges, set the family_group_id
+          final edgesToPersist = isGroupMode
+              ? inferredEdges
+                  .map((e) => FamilyEdge(
+                        id: e.id,
+                        userId: e.userId,
+                        fromId: e.fromId,
+                        toId: e.toId,
+                        type: e.type,
+                        createdAt: e.createdAt,
+                        familyGroupId: groupInfo.groupId,
+                      ))
+                  .toList()
+              : inferredEdges;
+
           await SupabaseConfig.client.from('family_edges').upsert(
-            inferredEdges.map((e) => e.toJson()).toList(),
+            edgesToPersist.map((e) => e.toJson()).toList(),
             onConflict: 'user_id,from_id,to_id,edge_type',
           );
         }
@@ -818,8 +1001,13 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       // Invalidate providers to refresh tree immediately after creation.
       // The Supabase .stream() realtime also picks up changes, but
       // explicit invalidation gives instant visual feedback.
-      ref.invalidate(relativesStreamProvider(userId));
-      ref.invalidate(familyEdgesStreamProvider(userId));
+      if (isGroupMode) {
+        ref.invalidate(groupRelativesStreamProvider(groupInfo.groupId));
+        ref.invalidate(sharedFamilyEdgesStreamProvider(groupInfo.groupId));
+      } else {
+        ref.invalidate(relativesStreamProvider(userId));
+        ref.invalidate(familyEdgesStreamProvider(userId));
+      }
 
       // Re-center viewport on user after tree rebuilds with new node
       _hasCenteredOnUser = false;
@@ -1007,7 +1195,13 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                   child: Row(
                     children: [
                       IconButton(
-                        onPressed: () => context.pop(),
+                        onPressed: () {
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go(AppRoutes.home);
+                          }
+                        },
                         icon: Icon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
                       ),
                       const SizedBox(width: AppSpacing.sm),

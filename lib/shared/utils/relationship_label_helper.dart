@@ -10,7 +10,6 @@ import '../models/relative_model.dart';
 /// Falls back to [Relative.relationshipType.arabicName] when:
 /// - [graph] is null (no edges table data yet)
 /// - [relativesMap] is null
-/// - The graph returns an empty string for the target
 String getRelationshipLabel({
   required Relative relative,
   required String viewerId,

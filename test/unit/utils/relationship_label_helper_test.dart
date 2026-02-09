@@ -142,7 +142,7 @@ void main() {
       expect(result, equals('أبي'));
     });
 
-    test('falls back to arabicName when graph returns empty string', () {
+    test('falls back to قريب when target is not in relativesMap', () {
       // Create a relative that is NOT in the graph at all
       final other = makeRelative(
         id: unknownId,
@@ -163,7 +163,7 @@ void main() {
       );
 
       // relativesMap does NOT contain unknownId, so getLabelForViewer
-      // will return '' for a target not found in the map
+      // will return 'قريب' for a target not found in the map
       final relativesMap = <String, Relative>{fatherId: makeRelative(
         id: fatherId,
         type: RelationshipType.father,
@@ -176,8 +176,8 @@ void main() {
         relativesMap: relativesMap,
       );
 
-      // Should fall back to the canonical arabicName
-      expect(result, equals(RelationshipType.other.arabicName));
+      // getLabelForViewer returns 'قريب' for unknown targets
+      expect(result, equals('قريب'));
     });
 
     test('returns graph label for mother (female parent)', () {
