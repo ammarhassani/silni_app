@@ -96,11 +96,11 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     }
   }
 
-  /// Ensure user's relatives are migrated to their group.
+  /// Ensure the group admin's relatives are migrated to their group.
   ///
   /// Called once per session when we detect the user is in a group.
-  /// Handles the case where a user created a group but their relatives
-  /// weren't migrated (e.g., due to earlier bugs or race conditions).
+  /// Only the admin's personal relatives are migrated — joiners keep
+  /// their personal data separate (they mapped to an existing node).
   Future<void> _ensureRelativesMigrated(String groupId) async {
     if (_hasMigratedRelatives) return;
     _hasMigratedRelatives = true;
@@ -109,11 +109,26 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     if (userId == null) return;
 
     try {
-      await FamilySharingService.ensureRelativesInGroup(
-        userId: userId,
-        groupId: groupId,
-      );
-      // Verify and fill any missing shared edges
+      // Only the admin should migrate personal relatives into the group.
+      // Joiners already have a tree node and their personal relatives are
+      // a separate, independent dataset that shouldn't pollute the group.
+      final memberRow = await SupabaseConfig.client
+          .from('family_group_members')
+          .select('role')
+          .eq('group_id', groupId)
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      final isAdmin = memberRow?['role'] == 'admin';
+
+      if (isAdmin) {
+        await FamilySharingService.ensureRelativesInGroup(
+          userId: userId,
+          groupId: groupId,
+        );
+      }
+
+      // Verify and fill any missing shared edges (for all members)
       await FamilySharingService.verifySharedEdges(groupId: groupId);
       // Invalidate providers to refresh with migrated data
       if (mounted) {
@@ -121,7 +136,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         ref.invalidate(sharedFamilyEdgesStreamProvider(groupId));
       }
     } catch (e, st) {
-      debugPrint('ensureRelativesInGroup failed: $e\n$st');
+      debugPrint('ensureRelativesMigrated failed: $e\n$st');
       // Allow retry on next screen mount by resetting the flag
       _hasMigratedRelatives = false;
     }
