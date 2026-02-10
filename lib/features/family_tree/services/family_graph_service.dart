@@ -180,6 +180,152 @@ class FamilyGraphService {
   }
 
   // ---------------------------------------------------------------------------
+  // Perspective remapping
+  // ---------------------------------------------------------------------------
+
+  /// Remap each relative's [relationshipType] and [familySide] to the
+  /// viewer's perspective using the graph.
+  ///
+  /// In a shared tree every relative is stored with the *original adder's*
+  /// relationship type.  When a different member views the tree the
+  /// placeholder service and layout need types from *their* perspective
+  /// (e.g. the adder's "mother" is the viewer-uncle's "sister").
+  ///
+  /// Requires an **enriched** graph (run [enrichAllSiblingEdges] first).
+  static List<Relative> remapForViewer({
+    required String viewerId,
+    required FamilyGraph graph,
+    required List<Relative> relatives,
+    required Map<String, Relative> relativesMap,
+  }) {
+    final parents = graph.getParents(viewerId);
+    final siblings = graph.getSiblings(viewerId);
+    final children = graph.getChildren(viewerId);
+    final spouseId = graph.getSpouse(viewerId);
+
+    // Identify which parent is male / female for familySide
+    String? fatherId, motherId;
+    for (final pid in parents) {
+      final p = relativesMap[pid];
+      if (p == null) continue;
+      if (p.gender == Gender.male) {
+        fatherId = pid;
+      } else {
+        motherId = pid;
+      }
+    }
+
+    final result = <Relative>[];
+
+    for (final relative in relatives) {
+      final rid = relative.id;
+
+      // Self — mark with isSelf, keep original type
+      if (rid == viewerId) {
+        result.add(relative);
+        continue;
+      }
+
+      RelationshipType? newType;
+      FamilySide? newSide;
+      final gender = relative.gender;
+
+      // --- Direct relationships (1 hop) ---
+
+      if (parents.contains(rid)) {
+        newType = gender == Gender.female
+            ? RelationshipType.mother
+            : RelationshipType.father;
+      } else if (siblings.contains(rid)) {
+        newType = gender == Gender.female
+            ? RelationshipType.sister
+            : RelationshipType.brother;
+      } else if (children.contains(rid)) {
+        newType = gender == Gender.female
+            ? RelationshipType.daughter
+            : RelationshipType.son;
+      } else if (spouseId == rid) {
+        newType = gender == Gender.female
+            ? RelationshipType.wife
+            : RelationshipType.husband;
+      }
+
+      // --- 2-hop relationships ---
+
+      if (newType == null) {
+        // Grandparent (parent of parent)
+        if (fatherId != null && graph.getParents(fatherId).contains(rid)) {
+          newType = gender == Gender.female
+              ? RelationshipType.grandmother
+              : RelationshipType.grandfather;
+          newSide = FamilySide.paternal;
+        } else if (motherId != null &&
+            graph.getParents(motherId).contains(rid)) {
+          newType = gender == Gender.female
+              ? RelationshipType.grandmother
+              : RelationshipType.grandfather;
+          newSide = FamilySide.maternal;
+        }
+        // Uncle/aunt (sibling of parent)
+        else if (fatherId != null &&
+            graph.getSiblings(fatherId).contains(rid)) {
+          newType = gender == Gender.female
+              ? RelationshipType.aunt
+              : RelationshipType.uncle;
+          newSide = FamilySide.paternal;
+        } else if (motherId != null &&
+            graph.getSiblings(motherId).contains(rid)) {
+          newType = gender == Gender.female
+              ? RelationshipType.aunt
+              : RelationshipType.uncle;
+          newSide = FamilySide.maternal;
+        }
+        // Nephew/niece (child of sibling)
+        else {
+          for (final sibId in siblings) {
+            if (graph.getChildren(sibId).contains(rid)) {
+              newType = gender == Gender.female
+                  ? RelationshipType.niece
+                  : RelationshipType.nephew;
+              break;
+            }
+          }
+        }
+      }
+
+      // --- 3-hop: cousins (child of parent's sibling) ---
+
+      if (newType == null) {
+        if (fatherId != null) {
+          for (final uncleId in graph.getSiblings(fatherId)) {
+            if (graph.getChildren(uncleId).contains(rid)) {
+              newType = RelationshipType.cousin;
+              newSide = FamilySide.paternal;
+              break;
+            }
+          }
+        }
+        if (newType == null && motherId != null) {
+          for (final auntId in graph.getSiblings(motherId)) {
+            if (graph.getChildren(auntId).contains(rid)) {
+              newType = RelationshipType.cousin;
+              newSide = FamilySide.maternal;
+              break;
+            }
+          }
+        }
+      }
+
+      result.add(relative.copyWith(
+        relationshipType: newType ?? relative.relationshipType,
+        familySide: newSide ?? relative.familySide,
+      ));
+    }
+
+    return result;
+  }
+
+  // ---------------------------------------------------------------------------
   // Edge inference
   // ---------------------------------------------------------------------------
 

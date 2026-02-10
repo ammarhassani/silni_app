@@ -646,7 +646,8 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     final effectiveUserId = groupInfo?.nodeId ?? userId;
 
     // For shared trees, apply rahim scope filter so each viewer only
-    // sees their blood relatives (plus direct spouse).
+    // sees their blood relatives (plus direct spouse), then remap
+    // relationship types to the viewer's perspective.
     final List<Relative> visibleRelatives;
     if (groupInfo != null && graph != null) {
       final enrichedGraph = FamilyGraphService.enrichAllSiblingEdges(graph);
@@ -654,7 +655,14 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         viewerId: effectiveUserId,
         graph: enrichedGraph,
       );
-      visibleRelatives = relatives.where((r) => rahimScope.contains(r.id)).toList();
+      final scoped = relatives.where((r) => rahimScope.contains(r.id)).toList();
+      final scopedMap = {for (final r in scoped) r.id: r};
+      visibleRelatives = FamilyGraphService.remapForViewer(
+        viewerId: effectiveUserId,
+        graph: enrichedGraph,
+        relatives: scoped,
+        relativesMap: scopedMap,
+      );
     } else {
       visibleRelatives = relatives;
     }
@@ -966,12 +974,13 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         );
 
         if (inferredEdges.isNotEmpty) {
-          // For shared edges, set the family_group_id
+          // For shared edges, set family_group_id and ensure user_id is the
+          // auth user ID (not the node ID used as edge anchor for inference).
           final edgesToPersist = isGroupMode
               ? inferredEdges
                   .map((e) => FamilyEdge(
                         id: e.id,
-                        userId: e.userId,
+                        userId: userId,
                         fromId: e.fromId,
                         toId: e.toId,
                         type: e.type,
@@ -1222,7 +1231,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                       // Blurred tree preview
                       ClipRRect(
                         child: ImageFiltered(
-                          imageFilter: ui.ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
+                          imageFilter: ui.ImageFilter.blur(sigmaX: 4.0, sigmaY: 4.0),
                           child: relativesAsync.when(
                             data: (relatives) => _buildPreviewTree(
                               relatives.isNotEmpty ? relatives : null,
@@ -1241,21 +1250,20 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                Colors.transparent,
-                                themeColors.background1.withValues(alpha: 0.2),
-                                themeColors.background1.withValues(alpha: 0.65),
+                                themeColors.background1.withValues(alpha: 0.1),
+                                themeColors.background1.withValues(alpha: 0.4),
+                                themeColors.background1.withValues(alpha: 0.7),
                               ],
-                              stops: const [0.0, 0.5, 1.0],
+                              stops: const [0.0, 0.4, 1.0],
                             ),
                           ),
                         ),
                       ),
-                      // Upgrade CTA at bottom
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        child: _buildUpgradeCTA(context, themeColors),
+                      // Upgrade CTA centered
+                      Positioned.fill(
+                        child: Center(
+                          child: _buildUpgradeCTA(context, themeColors),
+                        ),
                       ),
                     ],
                   ),
@@ -1466,43 +1474,35 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
 
   Widget _buildUpgradeCTA(BuildContext context, dynamic themeColors) {
     return Container(
-      margin: const EdgeInsets.all(AppSpacing.md),
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      constraints: const BoxConstraints(maxWidth: 300),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xl),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.premiumGold.withValues(alpha: 0.25),
-            AppColors.premiumGoldDark.withValues(alpha: 0.2),
-          ],
-        ),
+        color: themeColors.background1.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         border: Border.all(
-          color: AppColors.premiumGold.withValues(alpha: 0.6),
-          width: 2,
+          color: AppColors.premiumGold.withValues(alpha: 0.5),
+          width: 1.5,
         ),
         boxShadow: [
-          // Gold outer glow
           BoxShadow(
-            color: AppColors.premiumGold.withValues(alpha: 0.3),
-            blurRadius: 24,
-            spreadRadius: 2,
-          ),
-          // Depth shadow
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: AppColors.premiumGold.withValues(alpha: 0.15),
             blurRadius: 20,
-            offset: const Offset(0, 8),
+            spreadRadius: 1,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Lock icon with gradient + glow
+          // Lock icon
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: const LinearGradient(
@@ -1512,33 +1512,33 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.premiumGold.withValues(alpha: 0.5),
-                  blurRadius: 16,
-                  spreadRadius: 2,
+                  color: AppColors.premiumGold.withValues(alpha: 0.4),
+                  blurRadius: 12,
                 ),
               ],
             ),
-            child: const Icon(Icons.lock_rounded, size: 32, color: Colors.black87),
+            child: const Icon(Icons.lock_rounded, size: 24, color: Colors.black87),
           ),
           const SizedBox(height: AppSpacing.md),
           // Title
           Text(
             'اكتشف شجرة عائلتك',
-            style: AppTypography.titleLarge.copyWith(
+            style: AppTypography.titleMedium.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.xs),
           // Description
           Text(
-            'اعرض شجرة عائلتك بشكل تفاعلي وشاركها مع أفراد عائلتك',
-            style: AppTypography.bodyMedium.copyWith(
-              color: Colors.white70,
+            'اعرض شجرة عائلتك بشكل تفاعلي\nوشاركها مع أفراد عائلتك',
+            style: AppTypography.bodySmall.copyWith(
+              color: Colors.white60,
+              height: 1.5,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.md),
           // Upgrade button
           SizedBox(
             width: double.infinity,
@@ -1555,19 +1555,20 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.premiumGold,
                 foregroundColor: Colors.black87,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                elevation: 0,
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.workspace_premium, size: 22),
-                  const SizedBox(width: 8),
+                  const Icon(Icons.workspace_premium, size: 20),
+                  const SizedBox(width: 6),
                   Text(
                     'ترقية للاشتراك المميز',
-                    style: AppTypography.titleMedium.copyWith(
+                    style: AppTypography.labelLarge.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),

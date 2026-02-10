@@ -1576,4 +1576,136 @@ void main() {
       expect(scope, contains(nephew));
     });
   });
+
+  // =========================================================================
+  // 10. remapForViewer tests
+  // =========================================================================
+  group('FamilyGraphService.remapForViewer', () {
+    // Reuse the canonical family from computeRahimScope tests.
+    const patGrandpaId = 'pat-grandpa';
+    const patGrandmaId = 'pat-grandma';
+    const matGrandpaId = 'mat-grandpa';
+    const matGrandmaId = 'mat-grandma';
+    const patUncleId = 'pat-uncle';
+    const matUncleId = 'mat-uncle';
+    const dadId = 'dad';
+    const momId = 'mom';
+    const userAId = 'user-a';
+    const bro = 'brother';
+    const sis = 'sister';
+    const sonNode = 'son';
+    const spouse = 'spouse';
+
+    late FamilyGraph enrichedGraph;
+    late Map<String, Relative> rMap;
+
+    Relative mr(String id, RelationshipType type, {Gender? gender}) =>
+        makeRelative(id: id, type: type, gender: gender);
+
+    setUp(() {
+      final edges = [
+        makeEdge(fromId: patGrandpaId, toId: dadId, type: EdgeType.parentOf),
+        makeEdge(fromId: patGrandmaId, toId: dadId, type: EdgeType.parentOf),
+        makeEdge(fromId: matGrandpaId, toId: momId, type: EdgeType.parentOf),
+        makeEdge(fromId: matGrandmaId, toId: momId, type: EdgeType.parentOf),
+        makeEdge(fromId: patGrandpaId, toId: patGrandmaId, type: EdgeType.spouseOf),
+        makeEdge(fromId: matGrandpaId, toId: matGrandmaId, type: EdgeType.spouseOf),
+        makeEdge(fromId: dadId, toId: userAId, type: EdgeType.parentOf),
+        makeEdge(fromId: momId, toId: userAId, type: EdgeType.parentOf),
+        makeEdge(fromId: dadId, toId: momId, type: EdgeType.spouseOf),
+        makeEdge(fromId: bro, toId: userAId, type: EdgeType.siblingOf),
+        makeEdge(fromId: sis, toId: userAId, type: EdgeType.siblingOf),
+        makeEdge(fromId: patUncleId, toId: dadId, type: EdgeType.siblingOf),
+        makeEdge(fromId: matUncleId, toId: momId, type: EdgeType.siblingOf),
+        makeEdge(fromId: userAId, toId: sonNode, type: EdgeType.parentOf),
+        makeEdge(fromId: userAId, toId: spouse, type: EdgeType.spouseOf),
+      ];
+      final raw = FamilyGraphService.buildGraph(userId: userAId, edges: edges);
+      enrichedGraph = FamilyGraphService.enrichAllSiblingEdges(raw);
+
+      // Relatives stored from userA's perspective (original adder)
+      rMap = {
+        patGrandpaId: mr(patGrandpaId, RelationshipType.grandfather),
+        patGrandmaId: mr(patGrandmaId, RelationshipType.grandmother),
+        matGrandpaId: mr(matGrandpaId, RelationshipType.grandfather, gender: Gender.male),
+        matGrandmaId: mr(matGrandmaId, RelationshipType.grandmother),
+        dadId: mr(dadId, RelationshipType.father),
+        momId: mr(momId, RelationshipType.mother),
+        userAId: mr(userAId, RelationshipType.other, gender: Gender.male),
+        bro: mr(bro, RelationshipType.brother),
+        sis: mr(sis, RelationshipType.sister),
+        patUncleId: mr(patUncleId, RelationshipType.uncle),
+        matUncleId: mr(matUncleId, RelationshipType.uncle, gender: Gender.male),
+        sonNode: mr(sonNode, RelationshipType.son),
+        spouse: mr(spouse, RelationshipType.wife),
+      };
+    });
+
+    List<Relative> remap(String viewerId) {
+      return FamilyGraphService.remapForViewer(
+        viewerId: viewerId,
+        graph: enrichedGraph,
+        relatives: rMap.values.toList(),
+        relativesMap: rMap,
+      );
+    }
+
+    Relative findR(List<Relative> list, String id) =>
+        list.firstWhere((r) => r.id == id);
+
+    test('from userA: types stay the same (center of tree)', () {
+      final remapped = remap(userAId);
+      expect(findR(remapped, dadId).relationshipType, RelationshipType.father);
+      expect(findR(remapped, momId).relationshipType, RelationshipType.mother);
+      expect(findR(remapped, bro).relationshipType, RelationshipType.brother);
+      expect(findR(remapped, patGrandpaId).relationshipType, RelationshipType.grandfather);
+      expect(findR(remapped, sonNode).relationshipType, RelationshipType.son);
+      expect(findR(remapped, spouse).relationshipType, RelationshipType.wife);
+    });
+
+    test('from mat.uncle: mom becomes sister, grandparents become parents', () {
+      final remapped = remap(matUncleId);
+      // Mom is mat.uncle's sibling
+      expect(findR(remapped, momId).relationshipType, RelationshipType.sister);
+      // Mat.grandparents are mat.uncle's parents
+      expect(findR(remapped, matGrandpaId).relationshipType, RelationshipType.father);
+      expect(findR(remapped, matGrandmaId).relationshipType, RelationshipType.mother);
+      // UserA is mat.uncle's sibling's child → nephew
+      expect(findR(remapped, userAId).relationshipType, RelationshipType.nephew);
+    });
+
+    test('from dad: mom becomes wife, pat.grandparents become parents', () {
+      final remapped = remap(dadId);
+      expect(findR(remapped, momId).relationshipType, RelationshipType.wife);
+      expect(findR(remapped, patGrandpaId).relationshipType, RelationshipType.father);
+      expect(findR(remapped, patGrandmaId).relationshipType, RelationshipType.mother);
+      expect(findR(remapped, patUncleId).relationshipType, RelationshipType.brother);
+      expect(findR(remapped, userAId).relationshipType, RelationshipType.son);
+      expect(findR(remapped, sonNode).relationshipType, RelationshipType.son);
+    });
+
+    test('from son: userA becomes father, dad becomes grandfather', () {
+      final remapped = remap(sonNode);
+      expect(findR(remapped, userAId).relationshipType, RelationshipType.father);
+      expect(findR(remapped, dadId).relationshipType, RelationshipType.grandfather);
+      expect(findR(remapped, dadId).familySide, FamilySide.paternal);
+      expect(findR(remapped, momId).relationshipType, RelationshipType.grandmother);
+      // Mom is reached through son's father (userA), so paternal side
+      expect(findR(remapped, momId).familySide, FamilySide.paternal);
+      expect(findR(remapped, bro).relationshipType, RelationshipType.uncle);
+      expect(findR(remapped, bro).familySide, FamilySide.paternal);
+    });
+
+    test('familySide is set correctly for pat.uncle viewed from userA', () {
+      final remapped = remap(userAId);
+      expect(findR(remapped, patUncleId).familySide, FamilySide.paternal);
+      expect(findR(remapped, matUncleId).familySide, FamilySide.maternal);
+    });
+
+    test('preserves original type when node has no graph path to viewer', () {
+      final remapped = remap(userAId);
+      // spouse has a direct path, so it should be remapped
+      expect(findR(remapped, spouse).relationshipType, RelationshipType.wife);
+    });
+  });
 }
