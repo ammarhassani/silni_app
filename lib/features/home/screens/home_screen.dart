@@ -26,6 +26,8 @@ import '../widgets/widgets.dart';
 import '../../../shared/widgets/message_widget.dart';
 import '../../../shared/utils/relationship_label_helper.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
+import '../../family_tree/services/family_graph_service.dart';
+import '../../../shared/widgets/persistent_bottom_nav.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -296,13 +298,54 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // Preload AI data in background for faster AI feature access
     ref.watch(aiAutoPreloadProvider);
 
-    final relativesAsync = ref.watch(relativesStreamProvider(userId));
-    final todayInteractionsAsync = ref.watch(todayInteractionsStreamProvider(userId));
-    final schedulesAsync = ref.watch(reminderSchedulesStreamProvider(userId));
-    final todayContactedAsync = ref.watch(todayContactedRelativesProvider(userId));
+    // Check if user is in a family group for shared relatives
+    final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
 
-    // Watch family graph for perspective-shifting labels (null if no edges yet)
-    final graph = ref.watch(familyGraphProvider(userId));
+    // Watch family graph for perspective-shifting labels
+    // Use shared graph when in a group, personal graph otherwise
+    final graph = groupInfo != null
+        ? ref.watch(sharedFamilyGraphProvider((
+            groupId: groupInfo.groupId,
+            viewerNodeId: groupInfo.nodeId,
+          )))
+        : ref.watch(familyGraphProvider(userId));
+
+    // For label computation, use the viewer's node ID when in a group
+    final effectiveViewerId = groupInfo?.nodeId ?? userId;
+
+    // Use shared relatives when in a group, personal relatives otherwise.
+    // Filter out the viewer's own node and apply rahim scope in group mode.
+    final rawRelativesAsync = groupInfo != null
+        ? ref.watch(groupRelativesStreamProvider(groupInfo.groupId))
+        : ref.watch(relativesStreamProvider(userId));
+    final viewerNodeId = groupInfo?.nodeId;
+    final relativesAsync = rawRelativesAsync.whenData((relatives) {
+      var visible = relatives;
+      // In group mode, apply rahim scope so viewer only sees blood relatives
+      if (groupInfo != null && viewerNodeId != null && graph != null) {
+        final enriched = FamilyGraphService.enrichAllSiblingEdges(graph);
+        final scope = FamilyGraphService.computeRahimScope(
+          viewerId: viewerNodeId,
+          graph: enriched,
+        );
+        visible = visible.where((r) => scope.contains(r.id)).toList();
+      }
+      // Filter out viewer's own node
+      if (viewerNodeId != null) {
+        visible = visible.where((r) => r.id != viewerNodeId).toList();
+      }
+      return visible;
+    });
+
+    // Use shared interactions when in a group, personal otherwise
+    final todayInteractionsAsync = groupInfo != null
+        ? ref.watch(groupTodayInteractionsStreamProvider(groupInfo.groupId))
+        : ref.watch(todayInteractionsStreamProvider(userId));
+    final schedulesAsync = ref.watch(reminderSchedulesStreamProvider(userId));
+    // Use shared contacted status when in a group
+    final todayContactedAsync = groupInfo != null
+        ? ref.watch(groupTodayContactedRelativesProvider(groupInfo.groupId))
+        : ref.watch(todayContactedRelativesProvider(userId));
 
     // Build relationship labels map when graph data is available
     final relationshipLabels = relativesAsync.whenData((relatives) {
@@ -312,7 +355,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         for (final r in relatives)
           r.id: getRelationshipLabel(
             relative: r,
-            viewerId: userId,
+            viewerId: effectiveViewerId,
             graph: graph,
             relativesMap: relativesMap,
           ),
@@ -366,10 +409,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ),
                     const SizedBox(height: AppSpacing.sm),
 
-                    // Family pulse indicator (compact, top of screen)
-                    FamilyPulseIndicator(userId: userId),
-                    const SizedBox(height: AppSpacing.md),
-
                     // Top banner (promotional/announcements)
                     const MessageWidget(position: 'home_top'),
                     const SizedBox(height: AppSpacing.sm),
@@ -385,9 +424,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ),
                     const SizedBox(height: AppSpacing.md),
 
-                    // Daily priority contact card
-                    DailyPriorityCard(userId: userId),
-                    const SizedBox(height: AppSpacing.md),
+                    // Daily priority contact card (muted for now)
+                    // DailyPriorityCard(userId: userId),
+                    // const SizedBox(height: AppSpacing.md),
 
                     // Occasion messages card (shows before Eid/Ramadan/etc.)
                     OccasionCard(userId: userId),
@@ -413,10 +452,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         onRetry: () => ref.invalidate(relativesStreamProvider(userId)),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    // Quick log faces (one-tap interaction logging)
-                    QuickLogFaces(userId: userId),
                     const SizedBox(height: AppSpacing.md),
 
                     // AI Priority Contacts (MAX only)
@@ -466,7 +501,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         loading: () => const TodaysActivitySkeleton(),
                         error: (error, _) => InlineErrorWidget(
                           message: 'فشل في تحميل نشاط اليوم',
-                          onRetry: () => ref.invalidate(todayInteractionsStreamProvider(userId)),
+                          onRetry: () {
+                            if (groupInfo != null) {
+                              ref.invalidate(groupTodayInteractionsStreamProvider(groupInfo.groupId));
+                            } else {
+                              ref.invalidate(todayInteractionsStreamProvider(userId));
+                            }
+                          },
                           compact: true,
                         ),
                       ),
@@ -491,7 +532,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
                     // Bottom banner (tips/promotions)
                     const MessageWidget(position: 'home_bottom'),
-                    const SizedBox(height: AppSpacing.lg),
+                    SizedBox(height: PersistentBottomNav.totalHeight),
                   ],
                 ),
               ),
