@@ -276,4 +276,234 @@ void main() {
       });
     });
   });
+
+  group('genderFromRelationship', () {
+    test('returns male for male-only relationships', () {
+      expect(
+          RelationshipInferenceService.genderFromRelationship(
+              RelationshipType.father),
+          Gender.male);
+      expect(
+          RelationshipInferenceService.genderFromRelationship(
+              RelationshipType.brother),
+          Gender.male);
+      expect(
+          RelationshipInferenceService.genderFromRelationship(
+              RelationshipType.son),
+          Gender.male);
+      expect(
+          RelationshipInferenceService.genderFromRelationship(
+              RelationshipType.grandfather),
+          Gender.male);
+      expect(
+          RelationshipInferenceService.genderFromRelationship(
+              RelationshipType.uncle),
+          Gender.male);
+      expect(
+          RelationshipInferenceService.genderFromRelationship(
+              RelationshipType.nephew),
+          Gender.male);
+      expect(
+          RelationshipInferenceService.genderFromRelationship(
+              RelationshipType.husband),
+          Gender.male);
+    });
+
+    test('returns female for female-only relationships', () {
+      expect(
+          RelationshipInferenceService.genderFromRelationship(
+              RelationshipType.mother),
+          Gender.female);
+      expect(
+          RelationshipInferenceService.genderFromRelationship(
+              RelationshipType.sister),
+          Gender.female);
+      expect(
+          RelationshipInferenceService.genderFromRelationship(
+              RelationshipType.daughter),
+          Gender.female);
+      expect(
+          RelationshipInferenceService.genderFromRelationship(
+              RelationshipType.grandmother),
+          Gender.female);
+      expect(
+          RelationshipInferenceService.genderFromRelationship(
+              RelationshipType.aunt),
+          Gender.female);
+      expect(
+          RelationshipInferenceService.genderFromRelationship(
+              RelationshipType.niece),
+          Gender.female);
+      expect(
+          RelationshipInferenceService.genderFromRelationship(
+              RelationshipType.wife),
+          Gender.female);
+    });
+
+    test('returns null for gender-neutral relationships', () {
+      expect(
+          RelationshipInferenceService.genderFromRelationship(
+              RelationshipType.cousin),
+          isNull);
+      expect(
+          RelationshipInferenceService.genderFromRelationship(
+              RelationshipType.other),
+          isNull);
+    });
+  });
+
+  group('resolveGender', () {
+    test('relationship type wins over everything', () {
+      expect(
+        RelationshipInferenceService.resolveGender(
+          relationshipType: RelationshipType.father,
+          storedGender: Gender.female,
+          fullName: 'فاطمة',
+        ),
+        Gender.male,
+      );
+    });
+
+    test('stored gender wins over name inference', () {
+      expect(
+        RelationshipInferenceService.resolveGender(
+          relationshipType: RelationshipType.cousin,
+          storedGender: Gender.female,
+          fullName: 'محمد',
+        ),
+        Gender.female,
+      );
+    });
+
+    test('name inference used for gender-neutral types without stored gender',
+        () {
+      expect(
+        RelationshipInferenceService.resolveGender(
+          relationshipType: RelationshipType.cousin,
+          fullName: 'محمد',
+        ),
+        Gender.male,
+      );
+      expect(
+        RelationshipInferenceService.resolveGender(
+          relationshipType: RelationshipType.other,
+          fullName: 'فاطمة',
+        ),
+        Gender.female,
+      );
+    });
+
+    test('returns null when nothing can determine gender', () {
+      expect(
+        RelationshipInferenceService.resolveGender(
+          relationshipType: RelationshipType.cousin,
+          fullName: 'John',
+        ),
+        isNull,
+      );
+      expect(
+        RelationshipInferenceService.resolveGender(
+          relationshipType: RelationshipType.cousin,
+        ),
+        isNull,
+      );
+    });
+  });
+
+  group('adjustRelationshipForGender', () {
+    test('flips brother to sister for female', () {
+      expect(
+        RelationshipInferenceService.adjustRelationshipForGender(
+          RelationshipType.brother,
+          Gender.female,
+        ),
+        RelationshipType.sister,
+      );
+    });
+
+    test('flips sister to brother for male', () {
+      expect(
+        RelationshipInferenceService.adjustRelationshipForGender(
+          RelationshipType.sister,
+          Gender.male,
+        ),
+        RelationshipType.brother,
+      );
+    });
+
+    test('flips son to daughter for female', () {
+      expect(
+        RelationshipInferenceService.adjustRelationshipForGender(
+          RelationshipType.son,
+          Gender.female,
+        ),
+        RelationshipType.daughter,
+      );
+    });
+
+    test('flips uncle to aunt for female', () {
+      expect(
+        RelationshipInferenceService.adjustRelationshipForGender(
+          RelationshipType.uncle,
+          Gender.female,
+        ),
+        RelationshipType.aunt,
+      );
+    });
+
+    test('flips husband to wife for female', () {
+      expect(
+        RelationshipInferenceService.adjustRelationshipForGender(
+          RelationshipType.husband,
+          Gender.female,
+        ),
+        RelationshipType.wife,
+      );
+    });
+
+    test('keeps gender-neutral types unchanged', () {
+      expect(
+        RelationshipInferenceService.adjustRelationshipForGender(
+          RelationshipType.cousin,
+          Gender.male,
+        ),
+        RelationshipType.cousin,
+      );
+      expect(
+        RelationshipInferenceService.adjustRelationshipForGender(
+          RelationshipType.other,
+          Gender.female,
+        ),
+        RelationshipType.other,
+      );
+    });
+
+    test('keeps type unchanged when gender is null', () {
+      expect(
+        RelationshipInferenceService.adjustRelationshipForGender(
+          RelationshipType.brother,
+          null,
+        ),
+        RelationshipType.brother,
+      );
+    });
+
+    test('keeps matching type-gender pairs unchanged', () {
+      expect(
+        RelationshipInferenceService.adjustRelationshipForGender(
+          RelationshipType.father,
+          Gender.male,
+        ),
+        RelationshipType.father,
+      );
+      expect(
+        RelationshipInferenceService.adjustRelationshipForGender(
+          RelationshipType.mother,
+          Gender.female,
+        ),
+        RelationshipType.mother,
+      );
+    });
+  });
+
 }

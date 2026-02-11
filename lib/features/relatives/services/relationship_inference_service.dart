@@ -1,4 +1,6 @@
 import '../../../shared/models/relative_model.dart';
+import '../../../core/ai/ai_models.dart';
+import '../../../core/ai/deepseek_ai_service.dart';
 
 /// Service that analyzes the existing family tree and provides intelligent
 /// suggestions for new relationship types and gender inference from Arabic names.
@@ -147,6 +149,115 @@ class RelationshipInferenceService {
     // Cannot determine with confidence
     return null;
   }
+
+  /// Maps a [RelationshipType] to its inherent [Gender].
+  ///
+  /// Returns `null` for gender-neutral types like cousin and other.
+  static Gender? genderFromRelationship(RelationshipType type) {
+    switch (type) {
+      case RelationshipType.father:
+      case RelationshipType.brother:
+      case RelationshipType.son:
+      case RelationshipType.grandfather:
+      case RelationshipType.uncle:
+      case RelationshipType.nephew:
+      case RelationshipType.husband:
+        return Gender.male;
+      case RelationshipType.mother:
+      case RelationshipType.sister:
+      case RelationshipType.daughter:
+      case RelationshipType.grandmother:
+      case RelationshipType.aunt:
+      case RelationshipType.niece:
+      case RelationshipType.wife:
+        return Gender.female;
+      case RelationshipType.cousin:
+      case RelationshipType.other:
+        return null;
+    }
+  }
+
+  /// Resolves gender using a priority chain:
+  /// 1. Relationship type (if gendered)
+  /// 2. Stored gender field
+  /// 3. Local Arabic name inference
+  /// 4. null (caller decides fallback)
+  static Gender? resolveGender({
+    required RelationshipType relationshipType,
+    Gender? storedGender,
+    String? fullName,
+  }) {
+    final fromType = genderFromRelationship(relationshipType);
+    if (fromType != null) return fromType;
+    if (storedGender != null) return storedGender;
+    if (fullName != null && fullName.isNotEmpty) {
+      return inferGender(fullName);
+    }
+    return null;
+  }
+
+  /// Adjusts a relationship type to match the given gender.
+  ///
+  /// For example, brother + female => sister, son + female => daughter.
+  /// Returns the original type if gender is null or the type is gender-neutral.
+  static RelationshipType adjustRelationshipForGender(
+    RelationshipType type,
+    Gender? gender,
+  ) {
+    if (gender == null) return type;
+    return switch ((type, gender)) {
+      (RelationshipType.brother, Gender.female) => RelationshipType.sister,
+      (RelationshipType.sister, Gender.male) => RelationshipType.brother,
+      (RelationshipType.son, Gender.female) => RelationshipType.daughter,
+      (RelationshipType.daughter, Gender.male) => RelationshipType.son,
+      (RelationshipType.nephew, Gender.female) => RelationshipType.niece,
+      (RelationshipType.niece, Gender.male) => RelationshipType.nephew,
+      (RelationshipType.grandfather, Gender.female) =>
+        RelationshipType.grandmother,
+      (RelationshipType.grandmother, Gender.male) =>
+        RelationshipType.grandfather,
+      (RelationshipType.uncle, Gender.female) => RelationshipType.aunt,
+      (RelationshipType.aunt, Gender.male) => RelationshipType.uncle,
+      (RelationshipType.husband, Gender.female) => RelationshipType.wife,
+      (RelationshipType.wife, Gender.male) => RelationshipType.husband,
+      _ => type,
+    };
+  }
+
+  /// Last-resort gender inference using AI (DeepSeek).
+  ///
+  /// Only call this at creation time when [resolveGender] returns null.
+  /// Returns null on any error or timeout.
+  static Future<Gender?> inferGenderWithAI(String fullName) async {
+    try {
+      final aiService = DeepSeekAIService();
+      final response = await aiService.getChatCompletion(
+        systemPrompt:
+            'Given a person name, respond ONLY "male" or "female". '
+            'If truly ambiguous respond "unknown".',
+        messages: [
+          ChatMessage(
+            id: 'gender-infer',
+            conversationId: '',
+            userId: '',
+            role: MessageRole.user,
+            content: fullName,
+            createdAt: DateTime.now(),
+          ),
+        ],
+        temperature: 0.0,
+        maxTokens: 5,
+        timeoutSeconds: 3,
+      );
+      final text = response.trim().toLowerCase();
+      if (text.contains('female')) return Gender.female;
+      if (text.contains('male')) return Gender.male;
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
 
   // Common Arabic male names
   static const _commonMaleNames = <String>{
