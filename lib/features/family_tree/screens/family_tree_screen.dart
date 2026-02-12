@@ -660,6 +660,15 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     // (won't match any node, but layout will still work).
     final effectiveUserId = groupInfo?.nodeId ?? userId;
 
+    // In group mode, wait for the shared graph before rendering.
+    // Without the graph, _inferGraph creates wrong edges from the adder's
+    // relationship types (e.g. uncle's wife appears as viewer's wife).
+    if (groupInfo != null && graph == null) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
+    }
+
     // For shared trees, apply rahim scope filter so each viewer only
     // sees their blood relatives (plus direct spouse), then remap
     // relationship types to the viewer's perspective.
@@ -689,8 +698,12 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         ? ref.watch(groupMemberNodeIdsProvider(groupInfo.groupId)).valueOrNull ?? <String>{}
         : <String>{};
 
-    // Infer user gender from name for placeholder labels
-    final userGender = RelationshipInferenceService.inferGender(userName);
+    // Prefer stored gender from self-node, fall back to name inference
+    final selfNode = relatives.where((r) => r.isSelf).firstOrNull;
+    final userGender = selfNode?.gender ??
+        RelationshipInferenceService.inferGender(userName);
+
+
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -916,15 +929,30 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     String? phoneNumber,
   }) async {
     try {
-      // Determine gender from placeholder or infer from name
-      final gender = placeholder.expectedGender ??
+      // 1. Try local resolution first (covers ~95% of cases)
+      var nameGender = placeholder.expectedGender ??
           RelationshipInferenceService.inferGender(fullName);
 
+      // 2. LAST RESORT: AI only if local returned null
+      nameGender ??= await RelationshipInferenceService.inferGenderWithAI(fullName);
+
+      // 3. Adjust relationship type to match gender (brother → sister if female)
+      final adjustedType = RelationshipInferenceService.adjustRelationshipForGender(
+        placeholder.type, nameGender,
+      );
+
+      // 4. Final gender from adjusted type
+      final gender = RelationshipInferenceService.resolveGender(
+        relationshipType: adjustedType,
+        storedGender: placeholder.expectedGender,
+        fullName: fullName,
+      );
+
       final avatarType = AvatarType.suggestFromRelationship(
-        placeholder.type,
+        adjustedType,
         gender,
       );
-      final priority = AvatarType.suggestPriority(placeholder.type);
+      final priority = AvatarType.suggestPriority(adjustedType);
 
       // Check if we're in a family group context
       final groupInfo = ref.read(userFamilyGroupProvider).valueOrNull;
@@ -934,7 +962,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         id: '',
         userId: userId,
         fullName: fullName,
-        relationshipType: placeholder.type,
+        relationshipType: adjustedType,
         gender: gender,
         avatarType: avatarType,
         phoneNumber: phoneNumber,
@@ -1209,6 +1237,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
           const GradientBackground(animated: true, child: SizedBox.expand()),
           SafeArea(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Header
                 Container(

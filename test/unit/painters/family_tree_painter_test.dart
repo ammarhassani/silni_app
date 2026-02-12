@@ -1,11 +1,10 @@
 import 'dart:ui';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:silni_app/features/family_tree/models/tree_layout.dart';
 import 'package:silni_app/features/family_tree/painters/family_tree_painter.dart';
 
 void main() {
-  group('FamilyTreePainter', () {
+  group('FamilyTreeEdgePainter', () {
     test('shouldRepaint returns true when layout changes', () {
       final layout1 = FamilyTreeLayout(
         nodes: [],
@@ -33,21 +32,13 @@ void main() {
         userPosition: Offset.zero,
       );
 
-      final painter1 = FamilyTreePainter(
-        layout: layout1,
-        animationValue: 0.0,
-        entryProgress: 1.0,
-      );
-      final painter2 = FamilyTreePainter(
-        layout: layout2,
-        animationValue: 0.0,
-        entryProgress: 1.0,
-      );
+      final painter1 = FamilyTreeEdgePainter(layout: layout1);
+      final painter2 = FamilyTreeEdgePainter(layout: layout2);
 
       expect(painter1.shouldRepaint(painter2), isTrue);
     });
 
-    test('shouldRepaint returns true when animation value changes', () {
+    test('shouldRepaint returns false when layout is the same', () {
       final layout = FamilyTreeLayout(
         nodes: [],
         edges: [],
@@ -55,40 +46,27 @@ void main() {
         userPosition: Offset.zero,
       );
 
-      final painter1 = FamilyTreePainter(
-        layout: layout,
-        animationValue: 0.0,
-        entryProgress: 1.0,
-      );
-      final painter2 = FamilyTreePainter(
-        layout: layout,
-        animationValue: 0.5,
-        entryProgress: 1.0,
-      );
-
-      expect(painter1.shouldRepaint(painter2), isTrue);
-    });
-
-    test('shouldRepaint returns false when nothing changes', () {
-      final layout = FamilyTreeLayout(
-        nodes: [],
-        edges: [],
-        bounds: Rect.zero,
-        userPosition: Offset.zero,
-      );
-
-      final painter1 = FamilyTreePainter(
-        layout: layout,
-        animationValue: 0.0,
-        entryProgress: 1.0,
-      );
-      final painter2 = FamilyTreePainter(
-        layout: layout,
-        animationValue: 0.0,
-        entryProgress: 1.0,
-      );
+      final painter1 = FamilyTreeEdgePainter(layout: layout);
+      final painter2 = FamilyTreeEdgePainter(layout: layout);
 
       expect(painter1.shouldRepaint(painter2), isFalse);
+    });
+
+    test('shouldRepaint returns true when boundsOrigin changes', () {
+      final layout = FamilyTreeLayout(
+        nodes: [],
+        edges: [],
+        bounds: Rect.zero,
+        userPosition: Offset.zero,
+      );
+
+      final painter1 = FamilyTreeEdgePainter(layout: layout);
+      final painter2 = FamilyTreeEdgePainter(
+        layout: layout,
+        boundsOrigin: const Offset(10, 20),
+      );
+
+      expect(painter1.shouldRepaint(painter2), isTrue);
     });
 
     test('constructor accepts required parameters', () {
@@ -99,13 +77,10 @@ void main() {
         userPosition: Offset.zero,
       );
 
-      final painter = FamilyTreePainter(
-        layout: layout,
-        animationValue: 0.5,
-        entryProgress: 1.0,
-      );
+      final painter = FamilyTreeEdgePainter(layout: layout);
 
       expect(painter, isNotNull);
+      expect(painter.boundsOrigin, Offset.zero);
     });
   });
 }

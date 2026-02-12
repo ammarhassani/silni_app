@@ -1,57 +1,41 @@
 import 'dart:math';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../models/family_graph.dart';
 import '../models/tree_layout.dart';
 
-/// CustomPainter that renders the family tree on a canvas.
+/// CustomPainter that renders organic connections between family tree cards.
 ///
-/// Consumes a [FamilyTreeLayout] (positioned nodes and edges) and draws:
-/// - Bezier connection lines (color-coded by edge type and health)
-/// - Circular nodes with health gradient fills
-/// - Emoji, name, and label text per node
-/// - Breathing animation (subtle scale pulse)
-/// - Attention pulse ring for neglected relatives
-/// - Staggered entry animation by generation
-class FamilyTreePainter extends CustomPainter {
+/// Edge types:
+/// - [EdgeType.parentOf]: Organic branch from parent midpoint, curving
+///   outward to each child.
+/// - [EdgeType.spouseOf]: Gentle arc with a "+" connector circle.
+///
+/// Junction bars replace sibling edges: parent → labeled bar → uncle/aunt nodes.
+class FamilyTreeEdgePainter extends CustomPainter {
   final FamilyTreeLayout layout;
 
-  /// Continuous 0.0-1.0 value driving breathing and pulse animations.
-  final double animationValue;
+  /// Offset to translate edge coordinates into the local coordinate system
+  /// of the containing widget (typically [FamilyTreeLayout.bounds.topLeft]).
+  final Offset boundsOrigin;
 
-  /// 0.0-1.0 progress for staggered entry animation.
-  final double entryProgress;
+  /// Whether to draw dashed connection lines to placeholder nodes.
+  final bool showPlaceholders;
 
-  FamilyTreePainter({
+  FamilyTreeEdgePainter({
     required this.layout,
-    required this.animationValue,
-    required this.entryProgress,
+    this.boundsOrigin = Offset.zero,
+    this.showPlaceholders = true,
   });
 
   // ---------------------------------------------------------------------------
-  // Colors
+  // Colors — clean, subtle palette
   // ---------------------------------------------------------------------------
 
-  static const _healthyEdgeColor = Color(0xFF81C784); // light green
-  static const _unhealthyEdgeColor = Color(0xFFE57373); // light red
-  static const _spouseEdgeColor = Color(0xFFD4AF37); // gold
-  static const _siblingEdgeColor = Color(0xFFA5D6A7); // very light green
-
-  static final _greenGradient = [
-    const Color(0xFF2D7A3E),
-    const Color(0xFF4CAF50),
-  ];
-  static final _amberGradient = [
-    const Color(0xFFF57F17),
-    const Color(0xFFFFCA28),
-  ];
-  static final _redGradient = [
-    const Color(0xFFC62828),
-    const Color(0xFFEF5350),
-  ];
+  static const _lineColor = Color(0xFFB0BEC5); // soft blue-gray
+  static const _unhealthyColor = Color(0xFFE57373); // soft red
+  static const _spouseColor = Color(0xFFB0BEC5); // matching lines
 
   // ---------------------------------------------------------------------------
   // Paint
@@ -59,307 +43,328 @@ class FamilyTreePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Draw edges first (below nodes)
+    canvas.save();
+    canvas.translate(-boundsOrigin.dx, -boundsOrigin.dy);
+
+    // Draw organic parent→children branches.
+    _paintParentConnectors(canvas);
+
+    // Draw spouse edges.
     for (final edge in layout.edges) {
-      _drawEdge(canvas, edge);
-    }
-
-    // Draw nodes on top
-    for (final node in layout.nodes) {
-      _drawNode(canvas, node);
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Edge drawing
-  // ---------------------------------------------------------------------------
-
-  void _drawEdge(Canvas canvas, LayoutEdge edge) {
-    switch (edge.type) {
-      case EdgeType.parentOf:
-        _drawParentEdge(canvas, edge);
-      case EdgeType.spouseOf:
+      if (edge.type == EdgeType.spouseOf) {
         _drawSpouseEdge(canvas, edge);
-      case EdgeType.siblingOf:
-        _drawSiblingEdge(canvas, edge);
-    }
-  }
-
-  void _drawParentEdge(Canvas canvas, LayoutEdge edge) {
-    final paint = Paint()
-      ..color = edge.isHealthy ? _healthyEdgeColor : _unhealthyEdgeColor
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
-
-    final dy = (edge.to.dy - edge.from.dy).abs();
-    final controlOffset = dy * 0.4;
-
-    final path = Path()
-      ..moveTo(edge.from.dx, edge.from.dy)
-      ..cubicTo(
-        edge.from.dx,
-        edge.from.dy + controlOffset,
-        edge.to.dx,
-        edge.to.dy - controlOffset,
-        edge.to.dx,
-        edge.to.dy,
-      );
-
-    if (edge.isHealthy) {
-      canvas.drawPath(path, paint);
-    } else {
-      _drawDashedPath(canvas, path, paint);
-    }
-  }
-
-  void _drawSpouseEdge(Canvas canvas, LayoutEdge edge) {
-    final paint = Paint()
-      ..color = _spouseEdgeColor
-      ..strokeWidth = 2.5
-      ..style = PaintingStyle.stroke;
-
-    canvas.drawLine(edge.from, edge.to, paint);
-
-    // Draw small ring at midpoint
-    final mid = Offset(
-      (edge.from.dx + edge.to.dx) / 2,
-      (edge.from.dy + edge.to.dy) / 2,
-    );
-    final ringPaint = Paint()
-      ..color = _spouseEdgeColor
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-    canvas.drawCircle(mid, 5, ringPaint);
-  }
-
-  void _drawSiblingEdge(Canvas canvas, LayoutEdge edge) {
-    final paint = Paint()
-      ..color = _siblingEdgeColor
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-
-    // Horizontal bracket: up from both, then across
-    final bracketY = min(edge.from.dy, edge.to.dy) - 20;
-    final path = Path()
-      ..moveTo(edge.from.dx, edge.from.dy)
-      ..lineTo(edge.from.dx, bracketY)
-      ..lineTo(edge.to.dx, bracketY)
-      ..lineTo(edge.to.dx, edge.to.dy);
-
-    canvas.drawPath(path, paint);
-  }
-
-  void _drawDashedPath(Canvas canvas, Path path, Paint paint) {
-    final metrics = path.computeMetrics();
-    const dashLength = 6.0;
-    const gapLength = 4.0;
-
-    for (final metric in metrics) {
-      double distance = 0;
-      bool draw = true;
-      while (distance < metric.length) {
-        final len = draw ? dashLength : gapLength;
-        final end = min(distance + len, metric.length);
-        if (draw) {
-          final extracted = metric.extractPath(distance, end);
-          canvas.drawPath(extracted, paint);
-        }
-        distance = end;
-        draw = !draw;
       }
     }
-  }
 
-  // ---------------------------------------------------------------------------
-  // Node drawing
-  // ---------------------------------------------------------------------------
+    // Draw junction bars for parent-sibling groups.
+    _paintJunctionBars(canvas);
 
-  void _drawNode(Canvas canvas, LayoutNode node) {
-    // Entry animation: stagger by generation
-    final genDelay = node.generation.abs() * 0.2;
-    if (entryProgress < genDelay) return; // not visible yet
-
-    final entryOpacity = ((entryProgress - genDelay) / 0.2).clamp(0.0, 1.0);
-
-    // Breathing animation
-    final phase = (animationValue + node.generation * 0.1) % 1.0;
-    final breathScale = 0.98 + 0.04 * sin(phase * 2 * pi);
-    final animatedRadius = node.radius * breathScale;
-
-    canvas.save();
-    canvas.translate(node.position.dx, node.position.dy);
-
-    // 1. Draw attention pulse ring (for neglected relatives)
-    if (node.needsAttention) {
-      _drawAttentionPulse(canvas, animatedRadius, entryOpacity);
-    }
-
-    // 2. Draw node circle with health gradient
-    _drawNodeCircle(canvas, node, animatedRadius, entryOpacity);
-
-    // 3. Draw user ring
-    if (node.isUser) {
-      _drawUserRing(canvas, animatedRadius, entryOpacity);
-    }
-
-    // 4. Draw emoji
-    _drawEmoji(canvas, node.emoji, animatedRadius, entryOpacity);
-
-    // 5. Draw name below circle
-    _drawName(canvas, node.name, animatedRadius, entryOpacity);
-
-    // 6. Draw label below name
-    _drawLabel(canvas, node.label, animatedRadius, entryOpacity);
-
-    // 7. Draw streak badge
-    if (node.streakDays > 0) {
-      _drawStreakBadge(canvas, node.streakDays, animatedRadius, entryOpacity);
+    // Draw dashed connections to placeholder nodes.
+    if (showPlaceholders) {
+      _paintPlaceholderConnections(canvas);
     }
 
     canvas.restore();
   }
 
-  void _drawAttentionPulse(Canvas canvas, double radius, double opacity) {
-    final pulsePhase = (animationValue * 2) % 1.0;
-    final pulseRadius = radius + 10 + pulsePhase * 15;
-    final pulseOpacity = (1.0 - pulsePhase) * 0.4 * opacity;
+  // ---------------------------------------------------------------------------
+  // Parent branches
+  // ---------------------------------------------------------------------------
 
-    final pulsePaint = Paint()
-      ..color = const Color(0xFFE57373).withValues(alpha: pulseOpacity)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
+  void _paintParentConnectors(Canvas canvas) {
+    final parentEdges =
+        layout.edges.where((e) => e.type == EdgeType.parentOf).toList();
+    if (parentEdges.isEmpty) return;
 
-    canvas.drawCircle(Offset.zero, pulseRadius, pulsePaint);
+    final childEdges = <String, List<LayoutEdge>>{};
+    for (final e in parentEdges) {
+      childEdges.putIfAbsent(e.toId, () => []).add(e);
+    }
+
+    final groups = <String, List<String>>{};
+    final parentPosMap = <String, List<Offset>>{};
+
+    for (final entry in childEdges.entries) {
+      final childId = entry.key;
+      final edges = entry.value;
+      final key = (edges.map((e) => e.fromId).toList()..sort()).join(',');
+      groups.putIfAbsent(key, () => []).add(childId);
+      parentPosMap.putIfAbsent(
+          key, () => edges.map((e) => e.from).toSet().toList());
+    }
+
+    for (final key in groups.keys) {
+      final childIds = groups[key]!;
+      final parentPositions = parentPosMap[key]!;
+      final children = childIds.map((id) {
+        final edges = childEdges[id]!;
+        return (pos: edges.first.to, healthy: edges.every((e) => e.isHealthy));
+      }).toList();
+
+      _drawBranch(canvas, parentPositions, children);
+    }
   }
 
-  void _drawNodeCircle(
+  /// Draws a single continuous curve from parent midpoint to each child.
+  /// Each connection is one bezier path — no intermediate junction point.
+  /// A wider, low-alpha glow stroke is drawn first behind the main line.
+  void _drawBranch(
     Canvas canvas,
-    LayoutNode node,
-    double radius,
-    double opacity,
+    List<Offset> parentPositions,
+    List<({Offset pos, bool healthy})> children,
   ) {
-    final gradientColors = switch (node.healthColor) {
-      HealthColor.green => _greenGradient,
-      HealthColor.amber => _amberGradient,
-      HealthColor.red => _redGradient,
-    };
+    // Parent midpoint.
+    double px = 0, py = 0;
+    for (final p in parentPositions) {
+      px += p.dx;
+      py += p.dy;
+    }
+    final midX = px / parentPositions.length;
+    final parentY = py / parentPositions.length;
 
-    final gradient = ui.Gradient.radial(
-      Offset.zero,
-      radius,
-      [
-        gradientColors[0].withValues(alpha: opacity),
-        gradientColors[1].withValues(alpha: opacity),
-      ],
-    );
+    final sorted = children.toList()
+      ..sort((a, b) => a.pos.dx.compareTo(b.pos.dx));
 
-    final paint = Paint()
-      ..shader = gradient
-      ..style = PaintingStyle.fill;
+    for (final child in sorted) {
+      final color = child.healthy ? _lineColor : _unhealthyColor;
 
-    canvas.drawCircle(Offset.zero, radius, paint);
+      final dx = child.pos.dx - midX;
+      final dy = child.pos.dy - parentY;
+
+      // Build a single continuous curve from parent to child.
+      final path = Path()..moveTo(midX, parentY);
+
+      if (dx.abs() < 3) {
+        // Nearly vertical: gentle S-wobble.
+        path.cubicTo(
+          midX + 6, parentY + dy * 0.3,
+          midX - 5, parentY + dy * 0.65,
+          child.pos.dx, child.pos.dy,
+        );
+      } else {
+        // Lateral: sweep outward then drop into child.
+        path.cubicTo(
+          midX + dx * 0.15, parentY + dy * 0.35,
+          child.pos.dx - dx * 0.1, parentY + dy * 0.6,
+          child.pos.dx, child.pos.dy,
+        );
+      }
+
+      // Glow layer (wider, softer).
+      _drawGlowPath(canvas, path, color);
+    }
   }
 
-  void _drawUserRing(Canvas canvas, double radius, double opacity) {
-    final ringPaint = Paint()
-      ..color = AppColors.calmBlue.withValues(alpha: opacity)
+  /// Draws a path with a two-layer glow effect: a wide soft halo behind
+  /// a crisp foreground stroke, both the same hue.
+  void _drawGlowPath(Canvas canvas, Path path, Color color) {
+    // Glow: wide, very soft.
+    final glowPaint = Paint()
+      ..color = color.withValues(alpha: 0.12)
+      ..strokeWidth = 6.0
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0;
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    canvas.drawPath(path, glowPaint);
 
-    canvas.drawCircle(Offset.zero, radius + 2, ringPaint);
-  }
-
-  void _drawEmoji(Canvas canvas, String emoji, double radius, double opacity) {
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: emoji,
-        style: TextStyle(
-          fontSize: radius * 0.8,
-          color: Colors.white.withValues(alpha: opacity),
-        ),
-      ),
-      textAlign: TextAlign.center,
-      textDirection: TextDirection.ltr,
-    );
-    textPainter.layout();
-    textPainter.paint(
-      canvas,
-      Offset(-textPainter.width / 2, -textPainter.height / 2),
-    );
-  }
-
-  void _drawName(Canvas canvas, String name, double radius, double opacity) {
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: name,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: Colors.white.withValues(alpha: opacity),
-        ),
-      ),
-      textAlign: TextAlign.center,
-      textDirection: TextDirection.rtl,
-      maxLines: 1,
-      ellipsis: '...',
-    );
-    textPainter.layout(maxWidth: radius * 3);
-    textPainter.paint(
-      canvas,
-      Offset(-textPainter.width / 2, radius + 6),
-    );
-  }
-
-  void _drawLabel(Canvas canvas, String label, double radius, double opacity) {
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: label,
-        style: TextStyle(
-          fontSize: 10,
-          color: Colors.white.withValues(alpha: opacity * 0.7),
-        ),
-      ),
-      textAlign: TextAlign.center,
-      textDirection: TextDirection.rtl,
-      maxLines: 1,
-    );
-    textPainter.layout(maxWidth: radius * 3);
-    textPainter.paint(
-      canvas,
-      Offset(-textPainter.width / 2, radius + 22),
-    );
-  }
-
-  void _drawStreakBadge(
-    Canvas canvas,
-    int streakDays,
-    double radius,
-    double opacity,
-  ) {
-    final badgeOffset = Offset(radius * 0.6, -radius * 0.6);
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: '\u{1F525}$streakDays',
-        style: TextStyle(
-          fontSize: 10,
-          color: Colors.white.withValues(alpha: opacity),
-        ),
-      ),
-      textAlign: TextAlign.center,
-      textDirection: TextDirection.ltr,
-    );
-    textPainter.layout();
-    textPainter.paint(canvas, badgeOffset);
+    // Foreground: crisp line.
+    final linePaint = Paint()
+      ..color = color.withValues(alpha: 0.55)
+      ..strokeWidth = 1.6
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    canvas.drawPath(path, linePaint);
   }
 
   // ---------------------------------------------------------------------------
-  // Repaint logic
+  // Spouse edge — arc with "+" connector
+  // ---------------------------------------------------------------------------
+
+  void _drawSpouseEdge(Canvas canvas, LayoutEdge edge) {
+    // Gentle arc above the connection.
+    final arcPeakY = min(edge.from.dy, edge.to.dy) - 8;
+    final path = Path()
+      ..moveTo(edge.from.dx, edge.from.dy)
+      ..quadraticBezierTo(
+        (edge.from.dx + edge.to.dx) / 2,
+        arcPeakY,
+        edge.to.dx,
+        edge.to.dy,
+      );
+    _drawGlowPath(canvas, path, _spouseColor);
+
+    // "+" connector circle at midpoint.
+    final plusX = (edge.from.dx + edge.to.dx) / 2;
+    final plusY = arcPeakY + (min(edge.from.dy, edge.to.dy) - arcPeakY) * 0.4;
+
+    // Filled circle background.
+    final bgPaint = Paint()
+      ..color = const Color(0xFF37474F) // dark slate
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(plusX, plusY), 7, bgPaint);
+
+    // Circle border.
+    final borderPaint = Paint()
+      ..color = _spouseColor.withValues(alpha: 0.5)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+    canvas.drawCircle(Offset(plusX, plusY), 7, borderPaint);
+
+    // "+" sign — horizontal and vertical lines.
+    final plusPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.8)
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(
+      Offset(plusX - 3.5, plusY), Offset(plusX + 3.5, plusY), plusPaint);
+    canvas.drawLine(
+      Offset(plusX, plusY - 3.5), Offset(plusX, plusY + 3.5), plusPaint);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Junction bars — parent → [label] → uncle/aunt nodes
+  // ---------------------------------------------------------------------------
+
+  void _paintJunctionBars(Canvas canvas) {
+    if (layout.junctions.isEmpty) return;
+
+    // Build a position lookup from layout nodes.
+    final nodePos = <String, Offset>{};
+    for (final node in layout.nodes) {
+      nodePos[node.id] = node.position;
+    }
+
+    for (final junction in layout.junctions) {
+      final anchorPos = nodePos[junction.anchorId];
+      if (anchorPos == null) continue;
+
+      for (final sibId in junction.siblingIds) {
+        final sibPos = nodePos[sibId];
+        if (sibPos == null) continue;
+
+        final dx = sibPos.dx - anchorPos.dx;
+        final dy = sibPos.dy - anchorPos.dy;
+
+        final path = Path()..moveTo(anchorPos.dx, anchorPos.dy);
+
+        if (dy.abs() < 5) {
+          // Same row — wavy horizontal curve.
+          const wavePeak = -8.0;
+          path.cubicTo(
+            anchorPos.dx + dx * 0.3, anchorPos.dy + wavePeak,
+            anchorPos.dx + dx * 0.7, anchorPos.dy - wavePeak * 0.6,
+            sibPos.dx, sibPos.dy,
+          );
+        } else {
+          // Different row — bezier curve.
+          path.cubicTo(
+            anchorPos.dx + dx * 0.5, anchorPos.dy,
+            sibPos.dx, anchorPos.dy + dy * 0.4,
+            sibPos.dx, sibPos.dy,
+          );
+        }
+
+        _drawGlowPath(canvas, path, _lineColor);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Placeholder connections — dashed lines to parent nodes
+  // ---------------------------------------------------------------------------
+
+  void _paintPlaceholderConnections(Canvas canvas) {
+    if (layout.placeholders.isEmpty) return;
+
+    final dashPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.18)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    // Build position lookup from layout nodes.
+    final nodePos = <String, Offset>{};
+    for (final node in layout.nodes) {
+      nodePos[node.id] = node.position;
+    }
+    // Also include user position for parent-less placeholders.
+    final userNode = layout.nodes.where((n) => n.isUser).firstOrNull;
+    final userPos = userNode?.position ?? layout.userPosition;
+
+    for (final ph in layout.placeholders) {
+      // Determine anchor point: parentNodeId's position, or user.
+      final Offset anchor;
+      if (ph.parentNodeId != null && nodePos.containsKey(ph.parentNodeId)) {
+        anchor = nodePos[ph.parentNodeId]!;
+      } else {
+        anchor = userPos;
+      }
+
+      // Draw curved dashed line from anchor to placeholder.
+      _drawDashedCurve(canvas, anchor, ph.position, dashPaint);
+    }
+  }
+
+  /// Draw a dashed bezier curve between two points.
+  /// Uses a slight lateral offset so lines don't pass straight through nodes.
+  void _drawDashedCurve(Canvas canvas, Offset from, Offset to, Paint paint) {
+    final delta = to - from;
+    final distance = delta.distance;
+    if (distance < 5) return;
+
+    // Control point: offset perpendicular to the line to create a gentle curve
+    final midX = (from.dx + to.dx) / 2;
+    final midY = (from.dy + to.dy) / 2;
+    // Perpendicular offset (swap dx/dy, negate one) scaled to ~12% of distance
+    final perpScale = distance * 0.12;
+    final nx = -delta.dy / distance;
+    final controlPt = Offset(midX + nx * perpScale, midY);
+
+    // Sample the quadratic bezier and draw dashed segments
+    const dashLength = 5.0;
+    const gapLength = 4.0;
+    const step = 0.01; // parameter step for sampling
+    double drawnDist = 0;
+    bool drawing = true;
+    Offset prev = from;
+
+    for (double t = step; t <= 1.0; t += step) {
+      final oneMinusT = 1.0 - t;
+      final pt = Offset(
+        oneMinusT * oneMinusT * from.dx +
+            2 * oneMinusT * t * controlPt.dx +
+            t * t * to.dx,
+        oneMinusT * oneMinusT * from.dy +
+            2 * oneMinusT * t * controlPt.dy +
+            t * t * to.dy,
+      );
+      final seg = (pt - prev).distance;
+      drawnDist += seg;
+
+      if (drawing) {
+        canvas.drawLine(prev, pt, paint);
+        if (drawnDist >= dashLength) {
+          drawnDist = 0;
+          drawing = false;
+        }
+      } else {
+        if (drawnDist >= gapLength) {
+          drawnDist = 0;
+          drawing = true;
+        }
+      }
+      prev = pt;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Repaint
   // ---------------------------------------------------------------------------
 
   @override
-  bool shouldRepaint(covariant FamilyTreePainter oldDelegate) {
+  bool shouldRepaint(covariant FamilyTreeEdgePainter oldDelegate) {
     return layout != oldDelegate.layout ||
-        animationValue != oldDelegate.animationValue ||
-        entryProgress != oldDelegate.entryProgress;
+        boundsOrigin != oldDelegate.boundsOrigin ||
+        showPlaceholders != oldDelegate.showPlaceholders;
   }
 }

@@ -17,7 +17,7 @@ enum EdgeType {
   static EdgeType fromString(String value) {
     return EdgeType.values.firstWhere(
       (e) => e.value == value,
-      orElse: () => throw ArgumentError('Unknown EdgeType value: $value'),
+      orElse: () => EdgeType.parentOf, // Graceful fallback for unknown edge types
     );
   }
 }

@@ -44,8 +44,9 @@ class FamilyTreeLayoutService {
     // persisted edges which are correct for multi-perspective viewing.
     // For personal trees (no graph or user not in graph), infer from
     // RelationshipType metadata for backwards compatibility.
+    final isSharedTree = graph != null && graph.containsNode(userId);
     FamilyGraph effectiveGraph;
-    if (graph != null && graph.containsNode(userId)) {
+    if (isSharedTree) {
       // Shared tree: use persisted edges
       effectiveGraph = graph;
     } else {
@@ -226,8 +227,25 @@ class FamilyTreeLayoutService {
     userSiblingIds.removeWhere((id) => positions.containsKey(id));
 
     if (userSiblingIds.isNotEmpty) {
-      // All children in one group: user first, then siblings.
-      final allChildren = <String>[userId, ...userSiblingIds];
+      // Build group: couple (male LEFT, female RIGHT) then siblings.
+      // When no spouse exists, reserve a grid slot for the placeholder
+      // so siblings don't crowd the user's spouse position.
+      final hasSpouseOnSpine =
+          userSpouse != null && spine.contains(userSpouse);
+      const spouseSlot = '__spouse_slot__';
+      final allEntries = <String>[];
+      if (hasSpouseOnSpine) {
+        final isUserMale = userGender == Gender.male || userGender == null;
+        if (isUserMale) {
+          allEntries.addAll([userId, userSpouse]);
+        } else {
+          allEntries.addAll([userSpouse, userId]);
+        }
+      } else {
+        allEntries.add(userId);
+        allEntries.add(spouseSlot); // reserve grid slot for placeholder
+      }
+      allEntries.addAll(userSiblingIds);
 
       // Center under parents.
       double parentCenterX = positions[userId]!.dx;
@@ -241,17 +259,18 @@ class FamilyTreeLayoutService {
             parentPositions.reduce((a, b) => a + b) / parentPositions.length;
       }
 
-      // Grid: user + siblings centered under parents.
-      final cols = min(allChildren.length, 3);
+      // Grid: user + (spouse or gap) + siblings centered under parents.
+      final cols = min(allEntries.length, 3);
       final tightH = horizontalSpacing * 0.95;
       final tightV = verticalSpacing * 0.85;
       final totalW = (cols - 1) * tightH;
       final startX = parentCenterX - totalW / 2;
 
-      for (int i = 0; i < allChildren.length; i++) {
+      for (int i = 0; i < allEntries.length; i++) {
+        if (allEntries[i] == spouseSlot) continue; // skip dummy
         final col = i % cols;
         final row = i ~/ cols;
-        positions[allChildren[i]] = Offset(
+        positions[allEntries[i]] = Offset(
           startX + col * tightH,
           userGenY + row * tightV,
         );
@@ -296,6 +315,13 @@ class FamilyTreeLayoutService {
             }
           }
         }
+        // Also try spouse as anchor.
+        if (anchor == null) {
+          final spouseId = effectiveGraph.getSpouse(nodeId);
+          if (spouseId != null && positions.containsKey(spouseId)) {
+            anchor = spouseId;
+          }
+        }
 
         if (anchor != null) {
           anchorGroups.putIfAbsent(anchor, () => []).add(nodeId);
@@ -303,6 +329,23 @@ class FamilyTreeLayoutService {
           unanchored.add(nodeId);
         }
       }
+
+      // Pull unanchored spouses into their partner's anchor group.
+      final unanchoredSet = unanchored.toSet();
+      for (final entry in anchorGroups.entries) {
+        final spousesToAdd = <String>[];
+        for (final nodeId in entry.value) {
+          final spouseId = effectiveGraph.getSpouse(nodeId);
+          if (spouseId != null && unanchoredSet.contains(spouseId)) {
+            spousesToAdd.add(spouseId);
+            unanchoredSet.remove(spouseId);
+          }
+        }
+        entry.value.addAll(spousesToAdd);
+      }
+      unanchored
+        ..clear()
+        ..addAll(unanchoredSet);
 
       final genY = userGenY + gen * verticalSpacing;
 
@@ -334,6 +377,7 @@ class FamilyTreeLayoutService {
             ? edgeX + horizontalSpacing
             : edgeX - horizontalSpacing;
 
+        _orderSideBranchNodes(nodes, effectiveGraph, relativesMap, goRight: goRight);
         _positionAsGrid(
           nodeIds: nodes,
           anchor: Offset(gridX, genY),
@@ -402,6 +446,7 @@ class FamilyTreeLayoutService {
         final childGen = generations[children.first] ?? 0;
         final childY = userGenY + childGen * verticalSpacing;
 
+        _orderSideBranchNodes(children, effectiveGraph, relativesMap, goRight: goRight);
         _positionAsGrid(
           nodeIds: children,
           anchor: Offset(parentPos.dx, childY),
@@ -588,10 +633,36 @@ class FamilyTreeLayoutService {
       ));
     }
 
+    // Add synthetic parentOf edges from spouse so child lines originate
+    // from the couple midpoint (the "+" connector) rather than one parent.
+    final syntheticEdges = <LayoutEdge>[];
+    for (final edge in edges) {
+      if (edge.type != EdgeType.parentOf) continue;
+      final spouseId = effectiveGraph.getSpouse(edge.fromId);
+      if (spouseId == null) continue;
+      final spousePos = positions[spouseId];
+      if (spousePos == null) continue;
+      final alreadyExists = edges.any((e) =>
+          e.type == EdgeType.parentOf &&
+          e.fromId == spouseId &&
+          e.toId == edge.toId);
+      if (alreadyExists) continue;
+      syntheticEdges.add(LayoutEdge(
+        fromId: spouseId,
+        toId: edge.toId,
+        from: spousePos,
+        to: edge.to,
+        type: EdgeType.parentOf,
+        isHealthy: edge.isHealthy,
+      ));
+    }
+    edges.addAll(syntheticEdges);
+
     // ── 12. Generate and position placeholders ──
     final rawPlaceholders = PlaceholderSpawnService.computePlaceholders(
       relatives: relatives,
       userGender: userGender,
+      isSharedTree: isSharedTree,
     );
 
     final positionedPlaceholders = _positionPlaceholders(
@@ -752,21 +823,22 @@ class FamilyTreeLayoutService {
             );
           }
 
+        // ── Spouse ──
+        // Convention: male LEFT, female RIGHT (wife RIGHT of user).
+        // Offset matches the grid slot reserved in step 4b (tightH).
+        case RelationshipType.wife:
+          pos = Offset(userPos.dx + horizontalSpacing * 0.95, genY);
+          nudgeDir = 1.0;
+        case RelationshipType.husband:
+          pos = Offset(userPos.dx - horizontalSpacing * 0.95, genY);
+          nudgeDir = -1.0;
+
         // ── Siblings ──
-        // Per wireframe: siblings go directly next to user, under parents.
+        // Same direction as spouse (RIGHT) so order is ME > SPOUSE > SIBS.
         case RelationshipType.brother:
         case RelationshipType.sister:
           nudgeDir = 1.0;
           pos = Offset(userPos.dx + horizontalSpacing * 0.9, genY);
-
-        // ── Spouse ──
-        // Convention: male LEFT, female RIGHT.
-        case RelationshipType.wife:
-          pos = Offset(userPos.dx + horizontalSpacing * 0.55, genY);
-          nudgeDir = 1.0;
-        case RelationshipType.husband:
-          pos = Offset(userPos.dx - horizontalSpacing * 0.55, genY);
-          nudgeDir = -1.0;
 
         // ── Children ──
         case RelationshipType.son:
@@ -779,7 +851,6 @@ class FamilyTreeLayoutService {
           pos = Offset(centerX, genY);
       }
 
-      // Smart overlap guardian: nudge in the placeholder's natural direction
       pos = _resolveOverlap(pos, occupied, nudgeDir);
       occupied.add(pos);
       positioned.add(ph.copyWithPosition(pos));
@@ -1018,6 +1089,55 @@ class FamilyTreeLayoutService {
       ordered.addAll([bId, aId]);
       placed.addAll({bId, aId});
     }
+  }
+
+  /// Order side-branch nodes so spouses are adjacent.
+  ///
+  /// Convention: male LEFT, female RIGHT.
+  /// In right-going grids (col 0 = leftmost), order is [male, female].
+  /// In left-going grids (col 0 = rightmost), order is [female, male].
+  static void _orderSideBranchNodes(
+    List<String> group,
+    FamilyGraph graph,
+    Map<String, Relative> relativesMap, {
+    required bool goRight,
+  }) {
+    final ordered = <String>[];
+    final placed = <String>{};
+
+    for (final nodeId in List.of(group)) {
+      if (placed.contains(nodeId)) continue;
+
+      final spouseId = graph.getSpouse(nodeId);
+      final hasSpouse = spouseId != null &&
+          group.contains(spouseId) &&
+          !placed.contains(spouseId);
+
+      if (hasSpouse) {
+        final aGender = relativesMap[nodeId]?.gender;
+        final bGender = relativesMap[spouseId]?.gender;
+        final aIsMale = aGender == Gender.male ||
+            (aGender == null && bGender == Gender.female);
+
+        final maleId = aIsMale ? nodeId : spouseId;
+        final femaleId = aIsMale ? spouseId : nodeId;
+
+        // goRight → col 0 is left → [male, female]
+        // goLeft  → col 0 is right → [female, male]
+        if (goRight) {
+          ordered.addAll([maleId, femaleId]);
+        } else {
+          ordered.addAll([femaleId, maleId]);
+        }
+        placed.addAll({nodeId, spouseId});
+      } else {
+        ordered.add(nodeId);
+        placed.add(nodeId);
+      }
+    }
+
+    group.clear();
+    group.addAll(ordered);
   }
 
   // ---------------------------------------------------------------------------
