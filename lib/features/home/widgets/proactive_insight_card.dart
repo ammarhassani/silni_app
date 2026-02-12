@@ -83,7 +83,7 @@ class _ProactiveInsightCardState extends ConsumerState<ProactiveInsightCard> {
       return const SizedBox.shrink();
     }
 
-    final relativesAsync = ref.watch(relativesStreamProvider(widget.userId));
+    final relativesAsync = ref.watch(viewerFilteredRelativesProvider);
     final recentInteractionsAsync =
         ref.watch(recentInteractionsStreamProvider(widget.userId));
 

@@ -54,7 +54,7 @@ class _AIPriorityContactsContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeColors = ref.watch(themeColorsProvider);
-    final relativesAsync = ref.watch(relativesStreamProvider(userId));
+    final relativesAsync = ref.watch(viewerFilteredRelativesProvider);
 
     return relativesAsync.when(
       data: (relatives) {

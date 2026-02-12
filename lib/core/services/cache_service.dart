@@ -68,6 +68,41 @@ class CacheService {
     }
   }
 
+  /// Replace all cached relatives for a user (removes entries not in the new list).
+  /// Unlike putRelatives(), this reconciles deletions by removing cache entries
+  /// that no longer exist on the server.
+  Future<void> replaceRelativesForUser(String userId, List<Relative> relatives) async {
+    try {
+      // Get current cached IDs for this user
+      final currentIds = HiveInitializer.relativesBox.values
+          .where((r) => r.userId == userId)
+          .map((r) => r.id)
+          .toSet();
+
+      // Get new IDs from server
+      final newIds = relatives.map((r) => r.id).toSet();
+
+      // Delete entries that are no longer on the server
+      final toRemove = currentIds.difference(newIds);
+      for (final id in toRemove) {
+        await HiveInitializer.relativesBox.delete(id);
+      }
+
+      // Add/update entries from server
+      final Map<String, Relative> entries = {
+        for (final r in relatives) r.id: r,
+      };
+      await HiveInitializer.relativesBox.putAll(entries);
+    } catch (e) {
+      _logger.warning(
+        'Cache replace failed for relatives',
+        category: LogCategory.database,
+        tag: 'Cache',
+        metadata: {'count': relatives.length, 'error': e.toString()},
+      );
+    }
+  }
+
   /// Delete a relative from cache.
   Future<void> deleteRelative(String relativeId) async {
     try {

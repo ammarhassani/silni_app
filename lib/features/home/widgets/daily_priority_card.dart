@@ -28,7 +28,7 @@ class DailyPriorityCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeColors = ref.watch(themeColorsProvider);
-    final relativesAsync = ref.watch(relativesStreamProvider(userId));
+    final relativesAsync = ref.watch(viewerFilteredRelativesProvider);
 
     return relativesAsync.when(
       data: (relatives) {
@@ -75,7 +75,7 @@ class DailyPriorityCard extends ConsumerWidget {
     dynamic themeColors,
   ) {
     final daysSince = relative.daysSinceLastContact;
-    final daysText = daysSince != null ? '$daysSince' : '∞';
+    final daysText = daysSince != null ? _arabicDays(daysSince) : '∞';
 
     return GlassCard(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -100,7 +100,7 @@ class DailyPriorityCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'كلم ${relative.fullName}، لهم $daysText يوم',
+                  'كلم ${relative.fullName}، لهم $daysText',
                   style: AppTypography.titleSmall.copyWith(
                     color: themeColors.textPrimary,
                   ),
@@ -128,6 +128,14 @@ class DailyPriorityCard extends ConsumerWidget {
         ],
       ),
     ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0);
+  }
+
+  /// Arabic day pluralization: 1 → يوم واحد, 2 → يومين, 3-10 → أيام, 11+ → يوم
+  String _arabicDays(int days) {
+    if (days == 1) return 'يوم واحد';
+    if (days == 2) return 'يومين';
+    if (days >= 3 && days <= 10) return '$days أيام';
+    return '$days يوم';
   }
 
   Future<void> _onCallTap(BuildContext context, Relative relative) async {

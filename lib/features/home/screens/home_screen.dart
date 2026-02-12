@@ -26,7 +26,6 @@ import '../widgets/widgets.dart';
 import '../../../shared/widgets/message_widget.dart';
 import '../../../shared/utils/relationship_label_helper.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
-import '../../family_tree/services/family_graph_service.dart';
 import '../../../shared/widgets/persistent_bottom_nav.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -313,29 +312,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // For label computation, use the viewer's node ID when in a group
     final effectiveViewerId = groupInfo?.nodeId ?? userId;
 
-    // Use shared relatives when in a group, personal relatives otherwise.
-    // Filter out the viewer's own node and apply rahim scope in group mode.
-    final rawRelativesAsync = groupInfo != null
-        ? ref.watch(groupRelativesStreamProvider(groupInfo.groupId))
-        : ref.watch(relativesStreamProvider(userId));
-    final viewerNodeId = groupInfo?.nodeId;
-    final relativesAsync = rawRelativesAsync.whenData((relatives) {
-      var visible = relatives;
-      // In group mode, apply rahim scope so viewer only sees blood relatives
-      if (groupInfo != null && viewerNodeId != null && graph != null) {
-        final enriched = FamilyGraphService.enrichAllSiblingEdges(graph);
-        final scope = FamilyGraphService.computeRahimScope(
-          viewerId: viewerNodeId,
-          graph: enriched,
-        );
-        visible = visible.where((r) => scope.contains(r.id)).toList();
-      }
-      // Filter out viewer's own node
-      if (viewerNodeId != null) {
-        visible = visible.where((r) => r.id != viewerNodeId).toList();
-      }
-      return visible;
-    });
+    // Rahim-scoped + self-node-filtered relatives via central provider
+    final relativesAsync = ref.watch(viewerFilteredRelativesProvider);
 
     // Use shared interactions when in a group, personal otherwise
     final todayInteractionsAsync = groupInfo != null
@@ -449,7 +427,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       loading: () => const FamilyCirclesSkeleton(),
                       error: (error, _) => InlineErrorWidget(
                         message: 'فشل في تحميل بيانات العائلة',
-                        onRetry: () => ref.invalidate(relativesStreamProvider(userId)),
+                        onRetry: () => ref.invalidate(viewerFilteredRelativesProvider),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),

@@ -6,6 +6,7 @@ import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/services/hadith_service.dart';
 import '../../../core/providers/cache_provider.dart';
 import '../../../core/config/supabase_config.dart';
+import '../../family_tree/providers/family_graph_providers.dart';
 
 /// Provider for HadithService
 final hadithServiceProvider = Provider((ref) {
@@ -45,6 +46,43 @@ final relativesStreamProvider =
 
   final repository = ref.watch(relativesRepositoryProvider);
   return repository.watchRelatives(userId);
+});
+
+/// Provider that returns relatives appropriate for the current user context.
+///
+/// - **Group mode**: shared group relatives filtered by rahim scope
+///   (only blood-connected relatives visible) with viewer's self-node excluded.
+/// - **Personal mode**: all personal relatives (no rahim filtering needed).
+///
+/// This is the **single gateway** for relatives display across the app.
+/// Every screen / widget that shows a list of relatives should consume this
+/// provider rather than watching [groupRelativesStreamProvider] directly.
+final viewerFilteredRelativesProvider =
+    Provider.autoDispose<AsyncValue<List<Relative>>>((ref) {
+  final user = SupabaseConfig.client.auth.currentUser;
+  if (user == null) return const AsyncValue.data([]);
+
+  final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+
+  final rawAsync = groupInfo != null
+      ? ref.watch(groupRelativesStreamProvider(groupInfo.groupId))
+      : ref.watch(relativesStreamProvider(user.id));
+
+  final viewerNodeId = groupInfo?.nodeId;
+  final rahimScope = ref.watch(rahimVisibleRelativeIdsProvider);
+
+  return rawAsync.whenData((relatives) {
+    var visible = relatives;
+    // In group mode, apply rahim scope when available
+    if (rahimScope != null) {
+      visible = visible.where((r) => rahimScope.contains(r.id)).toList();
+    }
+    // Exclude viewer's own self-node
+    if (viewerNodeId != null) {
+      visible = visible.where((r) => r.id != viewerNodeId).toList();
+    }
+    return visible;
+  });
 });
 
 /// Stream provider for today's interactions (cache-first via repository)

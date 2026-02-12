@@ -68,8 +68,8 @@ class RelativesRepository {
     // This ensures data loads even when connectivity is still initializing
     try {
       await for (final serverData in _service.getRelativesStream(userId)) {
-        // Update cache with server data
-        await _cache.putRelatives(serverData);
+        // Replace cache (reconciles deletions from other devices)
+        await _cache.replaceRelativesForUser(userId, serverData);
         yield _sortRelatives(serverData);
       }
     } catch (e) {

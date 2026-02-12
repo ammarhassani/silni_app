@@ -10,6 +10,8 @@ import '../../../core/services/ai_config_service.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/services/chat_history_service.dart';
 import '../../../shared/services/relatives_service.dart';
+import '../../family_tree/providers/family_graph_providers.dart';
+import '../../family_tree/services/family_graph_service.dart';
 
 /// Provider for AI service instance
 final aiServiceProvider = Provider<AIService>((ref) {
@@ -21,10 +23,39 @@ final chatHistoryServiceProvider = Provider<ChatHistoryService>((ref) {
   return ChatHistoryService();
 });
 
-/// Provider for all user's relatives (for AI context)
+/// Provider for all user's relatives (for AI context).
+///
+/// Uses its own persistent Supabase stream so data is ready when
+/// [aiChatProvider] does `ref.read()` (one-shot). Applies rahim scope
+/// via [rahimVisibleRelativeIdsProvider] so the AI only sees relatives
+/// the viewer is connected to by blood.
 final aiRelativesProvider = StreamProvider<List<Relative>>((ref) {
   final userId = SupabaseConfig.currentUser?.id;
   if (userId == null) return Stream.value([]);
+
+  final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+
+  if (groupInfo != null) {
+    final viewerNodeId = groupInfo.nodeId;
+    final rahimScope = ref.watch(rahimVisibleRelativeIdsProvider);
+    return SupabaseConfig.client
+        .from('relatives')
+        .stream(primaryKey: ['id'])
+        .eq('family_group_id', groupInfo.groupId)
+        .order('full_name')
+        .map((data) {
+          var list = data
+              .where((r) => r['is_archived'] != true)
+              .where((r) => r['id'] != viewerNodeId)
+              .map((json) => Relative.fromJson(json))
+              .toList();
+          if (rahimScope != null) {
+            list = list.where((r) => rahimScope.contains(r.id)).toList();
+          }
+          return list;
+        });
+  }
+
   final relativesService = RelativesService();
   return relativesService.getRelativesStream(userId);
 });
@@ -55,11 +86,38 @@ final aiChatProvider =
   final relatives = ref.read(aiRelativesProvider).valueOrNull ?? [];
   final memories = ref.read(aiMemoriesProvider).valueOrNull ?? [];
 
+  // Compute perspective-shifted labels for group mode
+  // In personal mode, raw arabicName is already correct (user added relatives themselves)
+  Map<String, String> relationshipLabels = {};
+  final groupInfo = ref.read(userFamilyGroupProvider).valueOrNull;
+  if (groupInfo != null && groupInfo.nodeId != null && relatives.isNotEmpty) {
+    final graph = ref.read(sharedFamilyGraphProvider((
+      groupId: groupInfo.groupId,
+      viewerNodeId: groupInfo.nodeId,
+    )));
+    if (graph != null) {
+      final enriched = FamilyGraphService.enrichAllSiblingEdges(graph);
+      final relativesMap = {for (final r in relatives) r.id: r};
+      for (final r in relatives) {
+        final label = FamilyGraphService.getLabelForViewer(
+          graph: enriched,
+          viewerId: groupInfo.nodeId!,
+          targetId: r.id,
+          relativesMap: relativesMap,
+        );
+        if (label.isNotEmpty) {
+          relationshipLabels[r.id] = label;
+        }
+      }
+    }
+  }
+
   return AIChatNotifier(
     aiService: aiService,
     chatHistoryService: chatHistoryService,
     allRelatives: relatives,
     memories: memories,
+    relationshipLabels: relationshipLabels,
     onHistoryChanged: () {
       ref.invalidate(chatHistoryProvider);
       ref.invalidate(aiMemoriesProvider);
@@ -138,6 +196,7 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
   final ChatHistoryService _chatHistoryService;
   final List<Relative> _allRelatives;
   final List<AIMemory> _memories;
+  final Map<String, String> _relationshipLabels;
   final RefreshHistoryCallback? _onHistoryChanged;
   final _uuid = const Uuid();
 
@@ -146,11 +205,13 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
     required ChatHistoryService chatHistoryService,
     required List<Relative> allRelatives,
     required List<AIMemory> memories,
+    Map<String, String> relationshipLabels = const {},
     RefreshHistoryCallback? onHistoryChanged,
   })  : _aiService = aiService,
         _chatHistoryService = chatHistoryService,
         _allRelatives = allRelatives,
         _memories = memories,
+        _relationshipLabels = relationshipLabels,
         _onHistoryChanged = onHistoryChanged,
         super(const AIChatState());
 
@@ -288,6 +349,7 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
         relative: relativeContext,
         allRelatives: _allRelatives,
         memories: _memories,
+        relationshipLabels: _relationshipLabels.isNotEmpty ? _relationshipLabels : null,
       );
 
       // Get AI parameters from admin config
@@ -390,6 +452,7 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
         relative: relativeContext,
         allRelatives: _allRelatives,
         memories: _memories,
+        relationshipLabels: _relationshipLabels.isNotEmpty ? _relationshipLabels : null,
       );
 
       // Get AI parameters from admin config

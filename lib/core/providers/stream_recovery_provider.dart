@@ -8,6 +8,8 @@ import 'connectivity_provider.dart';
 import 'realtime_provider.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/home/providers/home_providers.dart';
+import '../../features/family_groups/providers/family_group_providers.dart';
+import '../../features/family_tree/providers/family_graph_providers.dart';
 
 /// Provider that monitors connectivity and triggers stream recovery
 /// when the device comes back online after being offline.
@@ -78,10 +80,25 @@ void _recoverStreams(Ref ref, AppLoggerService logger) {
       final syncService = SyncService.instance;
       await syncService.fullSync(userId);
 
-      // Invalidate stream providers to force reconnection
+      // Invalidate all user-scoped stream providers
       ref.invalidate(relativesStreamProvider(userId));
       ref.invalidate(todayInteractionsStreamProvider(userId));
       ref.invalidate(reminderSchedulesStreamProvider(userId));
+      ref.invalidate(recentInteractionsStreamProvider(userId));
+      ref.invalidate(familyEdgesStreamProvider(userId));
+
+      // Recover group providers
+      final groupInfo = ref.read(userFamilyGroupProvider).valueOrNull;
+      if (groupInfo != null) {
+        ref.invalidate(userFamilyGroupProvider);
+        ref.invalidate(groupMembersProvider(groupInfo.groupId));
+        ref.invalidate(groupRelativesStreamProvider(groupInfo.groupId));
+        ref.invalidate(sharedFamilyEdgesStreamProvider(groupInfo.groupId));
+        ref.invalidate(groupMemberNodeIdsProvider(groupInfo.groupId));
+        ref.invalidate(groupTodayInteractionsStreamProvider(groupInfo.groupId));
+        ref.invalidate(groupTodayContactedRelativesProvider(groupInfo.groupId));
+        ref.invalidate(familyLeaderboardProvider(groupInfo.groupId));
+      }
 
       // Re-establish realtime subscriptions
       final subscriptionsNotifier = ref.read(
@@ -135,10 +152,25 @@ extension StreamRecoveryExtension on WidgetRef {
         metadata: {'userId': user.id},
       );
 
-      // Invalidate stream providers
+      // Invalidate all user-scoped stream providers
       invalidate(relativesStreamProvider(user.id));
       invalidate(todayInteractionsStreamProvider(user.id));
       invalidate(reminderSchedulesStreamProvider(user.id));
+      invalidate(recentInteractionsStreamProvider(user.id));
+      invalidate(familyEdgesStreamProvider(user.id));
+
+      // Recover group providers
+      final groupInfo = read(userFamilyGroupProvider).valueOrNull;
+      if (groupInfo != null) {
+        invalidate(userFamilyGroupProvider);
+        invalidate(groupMembersProvider(groupInfo.groupId));
+        invalidate(groupRelativesStreamProvider(groupInfo.groupId));
+        invalidate(sharedFamilyEdgesStreamProvider(groupInfo.groupId));
+        invalidate(groupMemberNodeIdsProvider(groupInfo.groupId));
+        invalidate(groupTodayInteractionsStreamProvider(groupInfo.groupId));
+        invalidate(groupTodayContactedRelativesProvider(groupInfo.groupId));
+        invalidate(familyLeaderboardProvider(groupInfo.groupId));
+      }
     }
   }
 }

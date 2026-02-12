@@ -21,7 +21,6 @@ import '../../../shared/widgets/premium_loading_indicator.dart';
 import '../../../shared/widgets/message_widget.dart';
 import '../../../shared/utils/relationship_label_helper.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
-import '../../family_tree/services/family_graph_service.dart';
 import '../../../shared/widgets/persistent_bottom_nav.dart';
 
 class RelativesScreen extends ConsumerStatefulWidget {
@@ -72,18 +71,14 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserProvider);
-    final userId = user?.id ?? '';
     final themeColors = ref.watch(themeColorsProvider);
 
     // Initialize real-time subscriptions for this user
     ref.watch(autoRealtimeSubscriptionsProvider);
 
-    // Check if user is in a family group — if so, show group relatives
+    // Rahim-scoped + self-node-filtered relatives via central provider
     final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
-    final relativesAsync = groupInfo != null
-        ? ref.watch(groupRelativesStreamProvider(groupInfo.groupId))
-        : ref.watch(relativesStreamProvider(userId));
+    final relativesAsync = ref.watch(viewerFilteredRelativesProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -119,31 +114,9 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
                     Expanded(
                       child: relativesAsync.when(
                         data: (relatives) {
-                          // In group mode, apply rahim scope so each viewer
-                          // only sees relatives connected to them by blood.
-                          var visibleRelatives = relatives;
-                          if (groupInfo != null && groupInfo.nodeId != null) {
-                            final graph = ref.watch(sharedFamilyGraphProvider((
-                              groupId: groupInfo.groupId,
-                              viewerNodeId: groupInfo.nodeId,
-                            )));
-                            if (graph != null) {
-                              final enriched =
-                                  FamilyGraphService.enrichAllSiblingEdges(graph);
-                              final scope =
-                                  FamilyGraphService.computeRahimScope(
-                                viewerId: groupInfo.nodeId!,
-                                graph: enriched,
-                              );
-                              visibleRelatives = relatives
-                                  .where((r) => scope.contains(r.id))
-                                  .toList();
-                            }
-                          }
+                          final filteredRelatives = _filterRelatives(relatives, viewerNodeId: groupInfo?.nodeId);
 
-                          final filteredRelatives = _filterRelatives(visibleRelatives, viewerNodeId: groupInfo?.nodeId);
-
-                          if (visibleRelatives.isEmpty) {
+                          if (relatives.isEmpty) {
                             return _buildEmptyState(context, themeColors);
                           }
 

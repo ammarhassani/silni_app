@@ -267,16 +267,29 @@ class SyncService {
       );
 
       // Fetch all relatives from server with timeout to prevent hanging
+      bool didTimeout = false;
       final relatives = await _relativesService
           .getRelativesStream(userId)
           .first
           .timeout(
             const Duration(seconds: 15),
-            onTimeout: () => <Relative>[],
+            onTimeout: () {
+              didTimeout = true;
+              return <Relative>[];
+            },
           );
 
-      // Update cache
-      await _cache.putRelatives(relatives);
+      // Only replace cache if we got a real server response.
+      // On timeout, fall back to additive put to avoid wiping valid cache.
+      if (didTimeout) {
+        _logger.warning(
+          'Sync timed out, keeping existing cache',
+          category: LogCategory.service,
+          tag: 'Sync',
+        );
+      } else {
+        await _cache.replaceRelativesForUser(userId, relatives);
+      }
 
       // Update sync metadata
       await _cache.updateLastSyncTime(

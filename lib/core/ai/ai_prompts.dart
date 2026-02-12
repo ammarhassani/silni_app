@@ -138,13 +138,14 @@ ${mode.modeInstructions}
   }
 
   /// Build context for a specific relative
-  static String buildRelativeContext(Relative relative) {
+  static String buildRelativeContext(Relative relative, {Map<String, String>? relationshipLabels}) {
+    final label = relationshipLabels?[relative.id] ?? relative.relationshipType.arabicName;
     final buffer = StringBuffer();
     buffer.writeln('''
 
 ## معلومات القريب الحالي:
 - الاسم: ${relative.fullName}
-- العلاقة: ${relative.relationshipType.arabicName}
+- العلاقة: $label
 - الأولوية: ${_getPriorityArabic(relative.priority)}
 ''');
 
@@ -234,6 +235,7 @@ ${mode.modeInstructions}
     Relative? relative,
     List<Relative>? allRelatives,
     List<AIMemory>? memories,
+    Map<String, String>? relationshipLabels,
   }) {
     // Use dynamic personality from admin config (falls back to hardcoded if not loaded)
     final buffer = StringBuffer(dynamicPersonality);
@@ -243,13 +245,13 @@ ${mode.modeInstructions}
 
     // Add all relatives context if available
     if (allRelatives != null && allRelatives.isNotEmpty) {
-      buffer.writeln(buildAllRelativesContext(allRelatives));
+      buffer.writeln(buildAllRelativesContext(allRelatives, relationshipLabels: relationshipLabels));
     }
 
     // Add specific relative context if talking about one
     if (relative != null) {
       buffer.writeln('\n## القريب المحدد في هذه المحادثة:');
-      buffer.writeln(buildRelativeContext(relative));
+      buffer.writeln(buildRelativeContext(relative, relationshipLabels: relationshipLabels));
     }
 
     // Add memories context (prioritize memories about the specific relative if any)
@@ -327,8 +329,11 @@ ${mode.modeInstructions}
   }
 
   /// Build context for all user's relatives
-  static String buildAllRelativesContext(List<Relative> relatives) {
+  static String buildAllRelativesContext(List<Relative> relatives, {Map<String, String>? relationshipLabels}) {
     final buffer = StringBuffer();
+
+    // Helper to get perspective-aware label
+    String label(Relative r) => relationshipLabels?[r.id] ?? r.relationshipType.arabicName;
 
     // Calculate health summary
     final healthyCount = relatives.where((r) => r.healthStatus2 == RelationshipHealthStatus.healthy).length;
@@ -348,35 +353,36 @@ ${mode.modeInstructions}
 ### تفاصيل الأقارب:
 ''');
 
-    // Group by relationship type for clarity
-    final parents = relatives.where((r) =>
-        r.relationshipType.arabicName.contains('أب') ||
-        r.relationshipType.arabicName.contains('أم') ||
-        r.relationshipType.arabicName.contains('والد'));
-    final siblings = relatives.where((r) =>
-        r.relationshipType.arabicName.contains('أخ') ||
-        r.relationshipType.arabicName.contains('أخت'));
+    // Group by perspective label for clarity
+    final parents = relatives.where((r) {
+      final l = label(r);
+      return l.startsWith('أب') || l.startsWith('أم') || l.contains('والد');
+    });
+    final siblings = relatives.where((r) {
+      final l = label(r);
+      return l.startsWith('أخ') || l.startsWith('أخت');
+    });
     final extended = relatives.where((r) =>
         !parents.contains(r) && !siblings.contains(r));
 
     if (parents.isNotEmpty) {
       buffer.writeln('#### الوالدين:');
       for (final relative in parents) {
-        buffer.writeln(_buildBriefRelativeInfo(relative));
+        buffer.writeln(_buildBriefRelativeInfo(relative, label: label(relative)));
       }
     }
 
     if (siblings.isNotEmpty) {
       buffer.writeln('\n#### الإخوة والأخوات:');
       for (final relative in siblings) {
-        buffer.writeln(_buildBriefRelativeInfo(relative));
+        buffer.writeln(_buildBriefRelativeInfo(relative, label: label(relative)));
       }
     }
 
     if (extended.isNotEmpty) {
       buffer.writeln('\n#### الأقارب الآخرون:');
       for (final relative in extended) {
-        buffer.writeln(_buildBriefRelativeInfo(relative));
+        buffer.writeln(_buildBriefRelativeInfo(relative, label: label(relative)));
       }
     }
 
@@ -390,7 +396,7 @@ ${mode.modeInstructions}
       buffer.writeln('\n### ⚠️ أقارب يحتاجون اهتماماً عاجلاً:');
       for (final relative in needingAttention) {
         final days = relative.daysSinceLastContact ?? 0;
-        buffer.writeln('- **${relative.fullName}** (${relative.relationshipType.arabicName}) - لم يتواصل منذ $days يوم');
+        buffer.writeln('- **${relative.fullName}** (${label(relative)}) - لم يتواصل منذ $days يوم');
       }
     }
 
@@ -404,7 +410,8 @@ ${mode.modeInstructions}
   }
 
   /// Brief info for a relative in the list
-  static String _buildBriefRelativeInfo(Relative relative) {
+  static String _buildBriefRelativeInfo(Relative relative, {String? label}) {
+    final displayLabel = label ?? relative.relationshipType.arabicName;
     final buffer = StringBuffer();
 
     // Add health status indicator
@@ -420,7 +427,7 @@ ${mode.modeInstructions}
         healthIcon = '⚪';
     }
 
-    buffer.write('- $healthIcon **${relative.fullName}** (${relative.relationshipType.arabicName})');
+    buffer.write('- $healthIcon **${relative.fullName}** ($displayLabel)');
 
     final days = relative.daysSinceLastContact;
     if (days != null) {
