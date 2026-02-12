@@ -242,19 +242,19 @@ void main() {
   // FamilyGroupService static utility tests
   // ---------------------------------------------------------------------------
   group('FamilyGroupService.generateInviteLink', () {
-    test('returns correct URL format', () {
+    test('returns correct HTTPS URL format', () {
       final link = FamilyGroupService.generateInviteLink('abc123def456');
-      expect(link, 'https://silni.app/join/abc123def456');
+      expect(link, 'https://silni-31811.web.app/join/abc123def456');
     });
 
     test('handles empty invite code', () {
       final link = FamilyGroupService.generateInviteLink('');
-      expect(link, 'https://silni.app/join/');
+      expect(link, 'https://silni-31811.web.app/join/');
     });
 
     test('handles invite code with special characters', () {
       final link = FamilyGroupService.generateInviteLink('a1b2c3');
-      expect(link, startsWith('https://silni.app/join/'));
+      expect(link, startsWith('https://silni-31811.web.app/join/'));
       expect(link, endsWith('a1b2c3'));
     });
 

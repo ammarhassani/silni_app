@@ -47,6 +47,7 @@ import 'core/services/onboarding_config_service.dart';
 import 'shared/widgets/error_boundary.dart';
 import 'shared/widgets/premium_loading_indicator.dart';
 import 'features/widgets/home_widget_service.dart';
+import 'core/services/session_cleanup_service.dart';
 
 // Background handler is now in fcm_notification_service.dart
 // It's imported and used via FirebaseMessaging.onBackgroundMessage()
@@ -762,10 +763,14 @@ class SilniApp extends ConsumerStatefulWidget {
 
 class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver {
   late final AppLinks _appLinks;
+  String? _previousUserId;
 
   @override
   void initState() {
     super.initState();
+    _previousUserId = SupabaseConfig.isInitialized
+        ? SupabaseConfig.client.auth.currentUser?.id
+        : null;
     WidgetsBinding.instance.addObserver(this);
     _appLinks = AppLinks();
     _setupDeepLinkHandling();
@@ -801,9 +806,27 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
     });
   }
 
-  /// Process the deep link URL for Supabase auth
+  /// Process the deep link URL for Supabase auth or in-app navigation
   void _handleDeepLink(Uri uri) {
     final logger = AppLoggerService();
+
+    // Handle family group join links: com.silni.app://join/<code>?rid=<id>
+    // URI parses as: host="join", path="/<code>"
+    if (uri.scheme == 'com.silni.app' && uri.host == 'join') {
+      final code = uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
+      if (code != null) {
+        final rid = uri.queryParameters['rid'];
+        final path = rid != null ? '/join/$code?rid=$rid' : '/join/$code';
+        logger.info(
+          'Family join deep link detected',
+          category: LogCategory.auth,
+          tag: 'main',
+          metadata: {'code': code, 'rid': rid},
+        );
+        NavigationService.navigateTo(path);
+        return;
+      }
+    }
 
     // Check if this is a Supabase auth callback (has access_token in fragment)
     final fragment = uri.fragment;
@@ -851,6 +874,7 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
       final event = data.event;
       final session = data.session;
       final logger = AppLoggerService();
+      final currentUserId = session?.user.id;
 
       logger.debug(
         'Auth state change detected',
@@ -859,9 +883,25 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
         metadata: {
           'event': event.toString(),
           'hasSession': session != null,
-          'userId': session?.user.id,
+          'userId': currentUserId,
+          'previousUserId': _previousUserId,
         },
       );
+
+      // Clear stale data when user signs out or switches accounts
+      if (_previousUserId != null && _previousUserId != currentUserId) {
+        logger.info(
+          'User changed — clearing previous session data',
+          category: LogCategory.auth,
+          tag: 'main',
+          metadata: {
+            'from': _previousUserId,
+            'to': currentUserId,
+          },
+        );
+        clearUserSessionFromWidget(ref, previousUserId: _previousUserId);
+      }
+      _previousUserId = currentUserId;
 
       if (event == AuthChangeEvent.passwordRecovery) {
         logger.info(

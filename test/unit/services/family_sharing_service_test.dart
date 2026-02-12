@@ -50,6 +50,7 @@ void main() {
       ];
 
       final edges = FamilySharingService.generateSharedEdges(
+        authUserId: 'user-1',
         selfNodeId: selfNodeId,
         relatives: relatives,
         groupId: groupId,
@@ -81,6 +82,7 @@ void main() {
       ];
 
       final edges = FamilySharingService.generateSharedEdges(
+        authUserId: 'user-1',
         selfNodeId: selfNodeId,
         relatives: relatives,
         groupId: groupId,
@@ -108,6 +110,7 @@ void main() {
       ];
 
       final edges = FamilySharingService.generateSharedEdges(
+        authUserId: 'user-1',
         selfNodeId: selfNodeId,
         relatives: relatives,
         groupId: groupId,
@@ -145,6 +148,7 @@ void main() {
       ];
 
       final edges = FamilySharingService.generateSharedEdges(
+        authUserId: 'user-1',
         selfNodeId: selfNodeId,
         relatives: relatives,
         groupId: groupId,
@@ -176,6 +180,7 @@ void main() {
       ];
 
       final edges = FamilySharingService.generateSharedEdges(
+        authUserId: 'user-1',
         selfNodeId: selfNodeId,
         relatives: relatives,
         groupId: groupId,
@@ -190,6 +195,7 @@ void main() {
 
     test('returns empty list when no relatives provided', () {
       final edges = FamilySharingService.generateSharedEdges(
+        authUserId: 'user-1',
         selfNodeId: selfNodeId,
         relatives: [],
         groupId: groupId,
@@ -204,7 +210,77 @@ void main() {
         relativeId: 'rel-456',
       );
 
-      expect(link, 'https://silni.app/join/ABC123?rid=rel-456');
+      expect(link, 'https://silni-31811.web.app/join/ABC123?rid=rel-456');
+    });
+
+    test('generateSharedEdges is idempotent (same input = same output)', () {
+      final relatives = [
+        makeRelative('dad-1', 'Dad', RelationshipType.father, Gender.male),
+        makeRelative('mom-1', 'Mom', RelationshipType.mother, Gender.female),
+        makeRelative('bro-1', 'Brother', RelationshipType.brother, Gender.male),
+      ];
+
+      final edges1 = FamilySharingService.generateSharedEdges(
+        authUserId: 'user-1',
+        selfNodeId: selfNodeId,
+        relatives: relatives,
+        groupId: groupId,
+      );
+
+      final edges2 = FamilySharingService.generateSharedEdges(
+        authUserId: 'user-1',
+        selfNodeId: selfNodeId,
+        relatives: relatives,
+        groupId: groupId,
+      );
+
+      // Same number of edges
+      expect(edges1.length, edges2.length);
+
+      // Same edge keys (fromId|toId|type)
+      final keys1 = edges1
+          .map((e) => '${e.fromId}|${e.toId}|${e.type.name}')
+          .toSet();
+      final keys2 = edges2
+          .map((e) => '${e.fromId}|${e.toId}|${e.type.name}')
+          .toSet();
+      expect(keys1, keys2);
+    });
+
+    test('sibling edges include shared parent edges when parents exist', () {
+      // When a brother is added AND parents exist, the brother should get
+      // parentOf edges from both parents (not just a siblingOf to self).
+      final relatives = [
+        makeRelative('dad-1', 'Dad', RelationshipType.father, Gender.male),
+        makeRelative('mom-1', 'Mom', RelationshipType.mother, Gender.female),
+        makeRelative('bro-1', 'Brother', RelationshipType.brother, Gender.male),
+      ];
+
+      final edges = FamilySharingService.generateSharedEdges(
+        authUserId: 'user-1',
+        selfNodeId: selfNodeId,
+        relatives: relatives,
+        groupId: groupId,
+      );
+
+      // Brother should have parentOf edges from both parents
+      final dadToBro = edges.where(
+        (e) =>
+            e.fromId == 'dad-1' &&
+            e.toId == 'bro-1' &&
+            e.type == EdgeType.parentOf,
+      );
+      expect(dadToBro, hasLength(1),
+          reason: 'Father should have parentOf edge to brother');
+
+      final momToBro = edges.where(
+        (e) =>
+            e.fromId == 'mom-1' &&
+            e.toId == 'bro-1' &&
+            e.type == EdgeType.parentOf,
+      );
+      expect(momToBro, hasLength(1),
+          reason: 'Mother should have parentOf edge to brother');
     });
   });
 }

@@ -12,7 +12,10 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../home/providers/home_providers.dart';
 import '../models/family_group_model.dart';
+import '../../family_tree/providers/family_graph_providers.dart';
+import '../providers/family_group_providers.dart';
 import '../services/family_group_service.dart';
 
 /// Screen for joining a family group via invite code.
@@ -45,8 +48,22 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
 
   Future<void> _lookupGroup() async {
     try {
+      // Validate invite code format
+      if (widget.inviteCode.isEmpty || widget.inviteCode.length > 100) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'رمز الدعوة غير صالح';
+            _isLoadingGroup = false;
+          });
+        }
+        return;
+      }
+
       final group = await FamilyGroupService.lookupGroupByInviteCode(
         widget.inviteCode,
+      ).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => null,
       );
 
       if (group == null) {
@@ -92,6 +109,7 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
   }
 
   Future<void> _joinGroup() async {
+    if (_isJoining) return;
     final user = ref.read(currentUserProvider);
     if (user == null) {
       // Redirect to login with redirect back to this page (preserve rid param)
@@ -106,13 +124,28 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
     setState(() => _isJoining = true);
 
     try {
-      await FamilyGroupService.joinGroup(
+      // Validate targetRelativeId format — pass null if invalid UUID
+      final validRid = widget.targetRelativeId != null &&
+              RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+                      caseSensitive: false)
+                  .hasMatch(widget.targetRelativeId!)
+          ? widget.targetRelativeId
+          : null;
+
+      final joinedGroup = await FamilyGroupService.joinGroup(
         inviteCode: widget.inviteCode,
         userId: user.id,
-        relativeIdInTree: widget.targetRelativeId,
+        relativeIdInTree: validRid,
       );
 
       if (mounted) {
+        ref.invalidate(userFamilyGroupProvider);
+        ref.invalidate(groupRelativesStreamProvider(joinedGroup.id));
+        ref.invalidate(sharedFamilyEdgesStreamProvider(joinedGroup.id));
+        ref.invalidate(groupMemberNodeIdsProvider(joinedGroup.id));
+        ref.invalidate(userGroupsProvider(user.id));
+        ref.invalidate(relativesStreamProvider(user.id));
+        ref.invalidate(todayInteractionsStreamProvider(user.id));
         HapticFeedback.heavyImpact();
         context.go(AppRoutes.familyTree);
       }
@@ -120,7 +153,9 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
       if (mounted) {
         setState(() {
           _isJoining = false;
-          _errorMessage = 'حدث خطأ أثناء الانضمام للمجموعة';
+          _errorMessage = e.toString().contains('invite') || e.toString().contains('دعوة')
+              ? 'رمز الدعوة غير صالح أو منتهي الصلاحية'
+              : 'حدث خطأ أثناء الانضمام للمجموعة. يرجى المحاولة مرة أخرى';
         });
       }
     }
@@ -155,6 +190,7 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
                             context.go(AppRoutes.home);
                           }
                         },
+                        tooltip: 'العودة',
                         icon: Icon(
                           Icons.arrow_back_ios_rounded,
                           color: themeColors.onSurface,
@@ -202,10 +238,11 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
           Icons.error_outline_rounded,
           size: AppSpacing.iconXxl,
           color: themeColors.statusError,
+          semanticLabel: 'خطأ',
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
-          _errorMessage!,
+          _errorMessage ?? 'حدث خطأ غير معروف',
           style: AppTypography.bodyLarge.copyWith(
             color: themeColors.onSurface,
           ),
@@ -222,7 +259,8 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
   }
 
   Widget _buildGroupPreview(ThemeColors themeColors, bool isAuthenticated) {
-    final group = _group!;
+    final group = _group;
+    if (group == null) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -233,7 +271,7 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
         Icon(
           Icons.family_restroom_rounded,
           size: AppSpacing.iconXxl,
-          color: themeColors.primary,
+          color: themeColors.onSurface,
         ),
         const SizedBox(height: AppSpacing.md),
 
@@ -253,7 +291,8 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
           child: Text(
             group.name,
             style: AppTypography.headlineSmall.copyWith(
-              color: themeColors.primary,
+              color: themeColors.onSurface,
+              fontWeight: FontWeight.w600,
             ),
             textAlign: TextAlign.center,
           ),
@@ -269,8 +308,9 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
               children: [
                 Icon(
                   Icons.check_circle_rounded,
-                  color: themeColors.statusSuccess,
+                  color: themeColors.onSurface,
                   size: AppSpacing.iconMd,
+                  semanticLabel: 'عضو بالفعل',
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Text(

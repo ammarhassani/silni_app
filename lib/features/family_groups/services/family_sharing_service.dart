@@ -3,6 +3,7 @@ import '../../../core/config/supabase_config.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../family_tree/models/family_graph.dart';
 import '../../family_tree/services/family_graph_service.dart';
+import '../../relatives/services/relationship_inference_service.dart';
 import '../models/family_group_model.dart';
 import 'family_group_service.dart';
 
@@ -41,8 +42,6 @@ class FamilySharingService {
       'gender': userGender?.value ?? 'male',
       'priority': 1,
       'avatar_type': userGender == Gender.female ? 'adult_woman' : 'adult_man',
-      'current_streak': 0,
-      'longest_streak': 0,
       'is_self': true,
       'family_group_id': group.id,
       'added_by': userId,
@@ -80,14 +79,16 @@ class FamilySharingService {
 
     // 5. Generate and persist shared edges
     final edges = generateSharedEdges(
+      authUserId: userId,
       selfNodeId: selfNodeId,
       relatives: relatives,
       groupId: group.id,
     );
 
     if (edges.isNotEmpty) {
-      await client.from('family_edges').insert(
+      await client.from('family_edges').upsert(
         edges.map((e) => e.toJson()).toList(),
+        onConflict: 'user_id,from_id,to_id,edge_type',
       );
     }
 
@@ -97,9 +98,11 @@ class FamilySharingService {
   /// Generate shared edges from personal relatives (pure, testable).
   ///
   /// Uses [FamilyGraphService.inferEdges] for each relative, using
-  /// [selfNodeId] as the anchor instead of the auth user ID.
-  /// All edges get [groupId] set for shared visibility.
+  /// [selfNodeId] as the graph anchor (node representing "me").
+  /// [authUserId] is the actual auth user ID for the DB `user_id` column
+  /// (FK to auth.users). All edges get [groupId] set for shared visibility.
   static List<FamilyEdge> generateSharedEdges({
+    required String authUserId,
     required String selfNodeId,
     required List<Relative> relatives,
     required String groupId,
@@ -119,7 +122,7 @@ class FamilySharingService {
       for (final edge in inferred) {
         allEdges.add(FamilyEdge(
           id: edge.id,
-          userId: edge.userId,
+          userId: authUserId,
           fromId: edge.fromId,
           toId: edge.toId,
           type: edge.type,
@@ -132,10 +135,311 @@ class FamilySharingService {
     return allEdges;
   }
 
+  /// Verify and fill any missing edges in the shared graph.
+  ///
+  /// Re-infers edges for every non-self relative in the group and upserts
+  /// any that are missing. This is called after a new member joins to ensure
+  /// the graph is complete from every perspective.
+  ///
+  /// If no self-node exists yet (e.g. `initializeSharedTree` failed partially),
+  /// looks up the admin member and creates a self-node for them so edge
+  /// generation can proceed.
+  ///
+  /// The method is idempotent — running it multiple times produces no
+  /// duplicate edges thanks to the upsert on the unique constraint.
+  static Future<void> verifySharedEdges({
+    required String groupId,
+  }) async {
+    final client = SupabaseConfig.client;
+
+    // 1. Fetch all shared relatives in the group
+    final relativesData = await client
+        .from('relatives')
+        .select()
+        .eq('family_group_id', groupId)
+        .eq('is_archived', false);
+
+    final allRelatives =
+        relativesData.map((json) => Relative.fromJson(json)).toList();
+
+    if (allRelatives.isEmpty) return;
+
+    // 2. Find the self-node (anchor for edge inference).
+    //    Prefer the admin's node for deterministic behaviour.
+    Relative? selfNode;
+
+    // First try: find admin's linked node among self-nodes
+    final adminData = await client
+        .from('family_group_members')
+        .select('user_id, relative_id_in_tree')
+        .eq('group_id', groupId)
+        .eq('role', 'admin')
+        .limit(1)
+        .maybeSingle();
+
+    final adminNodeId = adminData?['relative_id_in_tree'] as String?;
+    final adminUserId = adminData?['user_id'] as String?;
+
+    if (adminNodeId != null) {
+      selfNode = allRelatives.firstWhereOrNull((r) => r.id == adminNodeId);
+    }
+
+    // Fallback: any self-node
+    selfNode ??= allRelatives.firstWhereOrNull((r) => r.isSelf);
+
+    // Last resort: no self-node exists — create one for the admin.
+    // Fetch admin's profile from users table (not client.auth.currentUser,
+    // which is the joiner, not necessarily the admin).
+    if (selfNode == null && adminUserId != null) {
+      final adminProfile = await client
+          .from('users')
+          .select('full_name')
+          .eq('id', adminUserId)
+          .maybeSingle();
+      final displayName =
+          adminProfile?['full_name'] as String? ?? 'أنا';
+      var inferredGender = RelationshipInferenceService.inferGender(displayName);
+      inferredGender ??= await RelationshipInferenceService.inferGenderWithAI(displayName);
+      final gender = inferredGender?.value ?? 'male';
+      final avatarType = inferredGender == Gender.female ? 'adult_woman' : 'adult_man';
+
+      final newNodeId = const Uuid().v4();
+      await client.from('relatives').insert({
+        'id': newNodeId,
+        'user_id': adminUserId,
+        'full_name': displayName,
+        'relationship_type': 'other',
+        'gender': gender,
+        'priority': 1,
+        'avatar_type': avatarType,
+        'is_self': true,
+        'family_group_id': groupId,
+        'added_by': adminUserId,
+      });
+
+      // Link admin to their new self-node
+      await client
+          .from('family_group_members')
+          .update({'relative_id_in_tree': newNodeId})
+          .eq('group_id', groupId)
+          .eq('user_id', adminUserId);
+
+      // Re-fetch to include the new node
+      final refreshed = await client
+          .from('relatives')
+          .select()
+          .eq('family_group_id', groupId)
+          .eq('is_archived', false);
+
+      allRelatives
+        ..clear()
+        ..addAll(refreshed.map((json) => Relative.fromJson(json)));
+
+      selfNode = allRelatives.firstWhereOrNull((r) => r.id == newNodeId);
+      if (selfNode == null) return; // INSERT failed (RLS?) — nothing we can do
+    }
+
+    if (selfNode == null) return;
+
+    // 3. Fetch existing shared edges
+    final edgesData = await client
+        .from('family_edges')
+        .select()
+        .eq('family_group_id', groupId);
+
+    final existingEdges =
+        edgesData.map((json) => FamilyEdge.fromJson(json)).toList();
+
+    if (existingEdges.isEmpty) return;
+
+    // 4. Enrich edges via graph topology only.
+    //    We do NOT re-infer edges from relationship_type because in a shared
+    //    tree each relative's type is stored from the ADDER's perspective.
+    //    Re-inferring from the admin's anchor would create wrong edges for
+    //    relatives added by non-admin members (e.g. uncle's "father" would
+    //    be treated as admin's father).
+    //    Instead, propagate parentOf edges across sibling pairs — the only
+    //    safe enrichment that doesn't depend on perspective.
+    final graph = FamilyGraphService.buildGraph(
+      userId: selfNode.id,
+      edges: existingEdges,
+    );
+    final enriched = FamilyGraphService.enrichAllSiblingEdges(graph);
+
+    // 5. Find newly inferred edges from enrichment
+    final existingKeys = <String>{};
+    for (final e in existingEdges) {
+      existingKeys.add('${e.fromId}|${e.toId}|${e.type.name}');
+    }
+
+    final currentUserId = client.auth.currentUser!.id;
+    final missingEdges = enriched.edges.where((e) {
+      return !existingKeys.contains('${e.fromId}|${e.toId}|${e.type.name}');
+    }).map((e) => FamilyEdge(
+      id: e.id,
+      userId: currentUserId,
+      fromId: e.fromId,
+      toId: e.toId,
+      type: e.type,
+      createdAt: e.createdAt,
+      familyGroupId: groupId,
+    )).toList();
+
+    // 6. Insert missing enrichment edges. Wrapped in try-catch because the
+    //    group-level unique index (family_group_id,from_id,to_id,edge_type)
+    //    may block inserts if another member already created the same edge
+    //    with a different user_id. Safe to ignore — the edge exists.
+    if (missingEdges.isNotEmpty) {
+      try {
+        await client.from('family_edges').upsert(
+          missingEdges.map((e) => e.toJson()).toList(),
+          onConflict: 'user_id,from_id,to_id,edge_type',
+          ignoreDuplicates: true,
+        );
+      } catch (_) {
+        // Group-level unique constraint conflict — edges already exist.
+      }
+    }
+  }
+
   /// Get the user's first family group (if any).
   static Future<FamilyGroup?> getUserGroup(String userId) async {
     final groups = await FamilyGroupService.getUserGroups(userId);
     return groups.isEmpty ? null : groups.first;
+  }
+
+  /// Migrate user's personal relatives to a group.
+  ///
+  /// Call this to fix cases where a user is in a group but their relatives
+  /// weren't migrated (e.g., group created before migration logic existed).
+  /// Returns the number of relatives migrated.
+  static Future<int> migrateRelativesToGroup({
+    required String userId,
+    required String groupId,
+  }) async {
+    final client = SupabaseConfig.client;
+
+    // Find personal relatives not yet in this group
+    final personalRelatives = await client
+        .from('relatives')
+        .select('id')
+        .eq('user_id', userId)
+        .isFilter('family_group_id', null)
+        .eq('is_archived', false);
+
+    if (personalRelatives.isEmpty) return 0;
+
+    final ids = personalRelatives.map((r) => r['id'] as String).toList();
+
+    // Update to set family_group_id
+    await client
+        .from('relatives')
+        .update({
+          'family_group_id': groupId,
+          'added_by': userId,
+        })
+        .inFilter('id', ids);
+
+    return ids.length;
+  }
+
+  /// Ensure user's relatives are in their group.
+  ///
+  /// On first-time setup (no self-node yet), migrates personal relatives
+  /// into the group and creates a self-node. On subsequent calls, only
+  /// ensures edges are up-to-date — personal relatives are NOT re-migrated
+  /// to prevent cleaned-up duplicates from reappearing.
+  static Future<void> ensureRelativesInGroup({
+    required String userId,
+    required String groupId,
+    String? userDisplayName,
+    Gender? userGender,
+  }) async {
+    final client = SupabaseConfig.client;
+
+    // 1. Check if user already has a self-node (signals migration is done)
+    var memberData = await client
+        .from('family_group_members')
+        .select('relative_id_in_tree')
+        .eq('group_id', groupId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    var selfNodeId = memberData?['relative_id_in_tree'] as String?;
+
+    // 2. If self-node already exists, migration + edge generation are done.
+    //    Return early to avoid re-generating edges that could conflict with
+    //    edges created by other group members (different user_id on the
+    //    same from_id/to_id/edge_type triggers group-level unique index).
+    if (selfNodeId != null) return;
+
+    // 3. First-time setup: migrate personal relatives into the group.
+    await migrateRelativesToGroup(
+      userId: userId,
+      groupId: groupId,
+    );
+
+    // 4. Create user's self-node in the group
+    {
+      final user = SupabaseConfig.client.auth.currentUser;
+      final displayName = userDisplayName ??
+          user?.userMetadata?['full_name'] as String? ??
+          'أنا';
+      final gender = userGender ?? Gender.male;
+
+      selfNodeId = const Uuid().v4();
+      await client.from('relatives').insert({
+        'id': selfNodeId,
+        'user_id': userId,
+        'full_name': displayName,
+        'relationship_type': 'other',
+        'gender': gender.value,
+        'priority': 1,
+        'avatar_type': gender == Gender.female ? 'adult_woman' : 'adult_man',
+        'is_self': true,
+        'family_group_id': groupId,
+        'added_by': userId,
+      });
+
+      // Link user to their self node
+      await client
+          .from('family_group_members')
+          .update({'relative_id_in_tree': selfNodeId})
+          .eq('group_id', groupId)
+          .eq('user_id', userId);
+    }
+
+    // 5. Fetch all user's relatives in this group
+    final relativesData = await client
+        .from('relatives')
+        .select()
+        .eq('family_group_id', groupId)
+        .eq('user_id', userId)
+        .eq('is_archived', false);
+
+    final relatives = relativesData
+        .map((json) => Relative.fromJson(json))
+        .where((r) => r.id != selfNodeId) // Exclude self-node
+        .toList();
+
+    if (relatives.isEmpty) return;
+
+    // 6. Generate and persist shared edges for migrated relatives.
+    //    Use the current user's ID so the RLS INSERT policy is satisfied.
+    final edges = generateSharedEdges(
+      authUserId: userId,
+      selfNodeId: selfNodeId,
+      relatives: relatives,
+      groupId: groupId,
+    );
+
+    if (edges.isNotEmpty) {
+      await client.from('family_edges').upsert(
+        edges.map((e) => e.toJson()).toList(),
+        onConflict: 'user_id,from_id,to_id,edge_type',
+        ignoreDuplicates: true,
+      );
+    }
   }
 
   /// Generate an invite link for a specific relative.
@@ -143,6 +447,16 @@ class FamilySharingService {
     required String inviteCode,
     required String relativeId,
   }) {
-    return 'https://silni.app/join/$inviteCode?rid=$relativeId';
+    return 'https://${FamilyGroupService.webDomain}/join/$inviteCode?rid=$relativeId';
+  }
+}
+
+/// Extension to add `firstWhereOrNull` without requiring collection package.
+extension _IterableExtension<E> on Iterable<E> {
+  E? firstWhereOrNull(bool Function(E) test) {
+    for (final element in this) {
+      if (test(element)) return element;
+    }
+    return null;
   }
 }

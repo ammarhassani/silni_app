@@ -18,6 +18,7 @@ class AppRoutes {
     emailVerification,
     resetPassword,
     joinFamilyGroup,
+    joinShortLink,
   };
 
   /// Check if a route is public (doesn't require auth)
@@ -59,6 +60,7 @@ class AppRoutes {
   static const String familyGroupDetail = '/family-group';
   static const String createFamilyGroup = '/create-family-group';
   static const String joinFamilyGroup = '/join-family-group';
+  static const String joinShortLink = '/join';
 
   // AI routes
   static const String aiHub = '/ai-hub';

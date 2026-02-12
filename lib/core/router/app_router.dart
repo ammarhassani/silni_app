@@ -61,6 +61,23 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
     // Comprehensive auth middleware for all routes
     redirect: (context, state) {
+      // Strip deep link schemes so GoRouter can match paths.
+      // Custom scheme: com.silni.app://join/CODE?rid=ID → /join/CODE?rid=ID
+      // HTTPS link: https://silni-31811.web.app/join/CODE?rid=ID → /join/CODE?rid=ID
+      final fullLocation = state.uri.toString();
+      if (fullLocation.startsWith('com.silni.app://')) {
+        final uri = Uri.parse(fullLocation);
+        final hostPart = uri.host; // e.g. "join"
+        final pathPart = uri.path; // e.g. "/CODE"
+        final cleanPath = '/$hostPart$pathPart';
+        return uri.query.isNotEmpty ? '$cleanPath?${uri.query}' : cleanPath;
+      }
+      if (fullLocation.startsWith('https://silni-31811.web.app/')) {
+        final uri = Uri.parse(fullLocation);
+        final cleanPath = uri.path; // e.g. "/join/CODE"
+        return uri.query.isNotEmpty ? '$cleanPath?${uri.query}' : cleanPath;
+      }
+
       final isAuthenticated =
           SupabaseConfig.isInitialized && SupabaseConfig.currentUser != null;
       final currentPath = state.matchedLocation;
@@ -80,8 +97,12 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Case 3: Unauthenticated user on protected route - redirect to login
       if (!isAuthenticated && !isPublicRoute) {
-        // Save intended destination for post-login redirect
-        final redirectPath = Uri.encodeComponent(currentPath);
+        // Save intended destination for post-login redirect.
+        // Include query parameters (e.g. ?rid=...) so they survive the redirect.
+        final fullPath = state.uri.query.isNotEmpty
+            ? '${state.matchedLocation}?${state.uri.query}'
+            : state.matchedLocation;
+        final redirectPath = Uri.encodeComponent(fullPath);
         return '${AppRoutes.login}?redirect=$redirectPath';
       }
 
@@ -363,6 +384,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '${AppRoutes.joinFamilyGroup}/:code',
         name: 'joinFamilyGroup',
+        pageBuilder: (context, state) {
+          final code = state.pathParameters['code']!;
+          final relativeId = state.uri.queryParameters['rid'];
+          return _buildPageWithTransition(
+            context,
+            state,
+            JoinGroupScreen(inviteCode: code, targetRelativeId: relativeId),
+          );
+        },
+      ),
+      // Short alias for deep link: silni.app/join/<code>?rid=<id>
+      GoRoute(
+        path: '/join/:code',
         pageBuilder: (context, state) {
           final code = state.pathParameters['code']!;
           final relativeId = state.uri.queryParameters['rid'];

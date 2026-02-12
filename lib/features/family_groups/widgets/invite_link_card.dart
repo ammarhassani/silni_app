@@ -15,10 +15,14 @@ import '../services/family_group_service.dart';
 /// All text is in Arabic following the RTL UI convention.
 class InviteLinkCard extends ConsumerWidget {
   final String inviteCode;
+  final bool isAdmin;
+  final VoidCallback? onRotate;
 
   const InviteLinkCard({
     super.key,
     required this.inviteCode,
+    this.isAdmin = false,
+    this.onRotate,
   });
 
   @override
@@ -64,7 +68,7 @@ class InviteLinkCard extends ConsumerWidget {
                 Icon(
                   Icons.copy_rounded,
                   size: AppSpacing.iconSm,
-                  color: themeColors.primary,
+                  color: themeColors.onSurface,
                 ),
               ],
             ),
@@ -79,7 +83,7 @@ class InviteLinkCard extends ConsumerWidget {
                 child: _ShareButton(
                   icon: Icons.chat_rounded,
                   label: 'واتساب',
-                  color: const Color(0xFF25D366),
+                  color: themeColors.onSurface,
                   onTap: () => _shareViaWhatsApp(context, inviteLink),
                 ),
               ),
@@ -89,15 +93,87 @@ class InviteLinkCard extends ConsumerWidget {
                 child: _ShareButton(
                   icon: Icons.share_rounded,
                   label: 'مشاركة',
-                  color: themeColors.primary,
+                  color: themeColors.onSurface,
                   onTap: () => _shareGeneric(context, inviteLink),
                 ),
               ),
             ],
           ),
+
+          // Rotate invite code button (admin only)
+          if (isAdmin && onRotate != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            GlassCard(
+              onTap: () => _confirmRotate(context, themeColors),
+              semanticsLabel: 'تجديد رابط الدعوة',
+              padding: const EdgeInsets.symmetric(
+                vertical: AppSpacing.sm,
+                horizontal: AppSpacing.md,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.refresh_rounded,
+                    size: AppSpacing.iconSm,
+                    color: themeColors.onSurface,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text(
+                    'تجديد الرابط',
+                    style: AppTypography.labelMedium.copyWith(
+                      color: themeColors.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  void _confirmRotate(BuildContext context, dynamic themeColors) {
+    showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: themeColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        ),
+        title: Text(
+          'تجديد رابط الدعوة',
+          style: AppTypography.titleMedium.copyWith(
+            color: themeColors.onSurface,
+          ),
+        ),
+        content: Text(
+          'سيتم إلغاء الرابط القديم ولن يعمل بعد الآن. هل تريد المتابعة؟',
+          style: AppTypography.bodyMedium.copyWith(
+            color: themeColors.onSurface,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'إلغاء',
+              style: TextStyle(color: themeColors.textSecondary),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'تجديد',
+              style: TextStyle(color: themeColors.onSurface),
+            ),
+          ),
+        ],
+      ),
+    ).then((confirmed) {
+      if (confirmed == true) onRotate?.call();
+    });
   }
 
   void _copyToClipboard(BuildContext context, String link) {
@@ -126,7 +202,9 @@ class InviteLinkCard extends ConsumerWidget {
   }
 
   Future<void> _shareGeneric(BuildContext context, String link) async {
-    await Share.share('انضم لعائلتنا في صِلني 🌳 $link');
+    final box = context.findRenderObject() as RenderBox?;
+    final origin = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
+    await Share.share('انضم لعائلتنا في صِلني 🌳 $link', sharePositionOrigin: origin);
   }
 }
 

@@ -11,8 +11,12 @@ import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../family_tree/providers/family_graph_providers.dart';
+import '../../home/providers/home_providers.dart';
+import '../../relatives/services/relationship_inference_service.dart';
 import '../models/family_group_model.dart';
-import '../services/family_group_service.dart';
+import '../providers/family_group_providers.dart';
+import '../services/family_sharing_service.dart';
 import '../widgets/invite_link_card.dart';
 
 /// Screen for creating a new family group.
@@ -39,7 +43,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
   }
 
   Future<void> _createGroup() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final user = ref.read(currentUserProvider);
     if (user == null) return;
@@ -47,13 +51,22 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final group = await FamilyGroupService.createGroup(
-        name: _nameController.text.trim(),
+      // Use initializeSharedTree to create group + migrate relatives + generate edges
+      final displayName = user.userMetadata?['full_name'] as String? ?? 'أنا';
+      final userGender = RelationshipInferenceService.inferGender(displayName);
+
+      final group = await FamilySharingService.initializeSharedTree(
         userId: user.id,
+        familyName: _nameController.text.trim(),
+        userDisplayName: displayName,
+        userGender: userGender,
       );
 
       if (mounted) {
         HapticFeedback.heavyImpact();
+        ref.invalidate(userFamilyGroupProvider);
+        ref.invalidate(userGroupsProvider(user.id));
+        ref.invalidate(relativesStreamProvider(user.id));
         setState(() {
           _createdGroup = group;
           _isLoading = false;
@@ -92,7 +105,14 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                   child: Row(
                     children: [
                       IconButton(
-                        onPressed: () => context.pop(),
+                        onPressed: () {
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go(AppRoutes.home);
+                          }
+                        },
+                        tooltip: 'العودة',
                         icon: Icon(
                           Icons.arrow_back_ios_rounded,
                           color: themeColors.onSurface,
@@ -141,7 +161,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           Icon(
             Icons.family_restroom_rounded,
             size: AppSpacing.iconXxl,
-            color: themeColors.primary,
+            color: themeColors.onSurface,
           ),
           const SizedBox(height: AppSpacing.md),
 
@@ -178,7 +198,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                 border: InputBorder.none,
                 prefixIcon: Icon(
                   Icons.group_rounded,
-                  color: themeColors.primary,
+                  color: themeColors.onSurface,
                 ),
               ),
               validator: (value) {
@@ -188,8 +208,12 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                 if (value.trim().length < 2) {
                   return 'اسم المجموعة يجب أن يكون حرفين على الأقل';
                 }
+                if (value.trim().length > 50) {
+                  return 'اسم المجموعة يجب أن لا يتجاوز 50 حرف';
+                }
                 return null;
               },
+              inputFormatters: [LengthLimitingTextInputFormatter(50)],
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _createGroup(),
             ),
@@ -209,7 +233,8 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
   }
 
   Widget _buildSuccessView(ThemeColors themeColors) {
-    final group = _createdGroup!;
+    final group = _createdGroup;
+    if (group == null) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -220,7 +245,8 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         Icon(
           Icons.check_circle_rounded,
           size: AppSpacing.iconXxl,
-          color: themeColors.primary,
+          color: themeColors.onSurface,
+          semanticLabel: 'تم بنجاح',
         ),
         const SizedBox(height: AppSpacing.md),
 
@@ -236,7 +262,8 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         Text(
           group.name,
           style: AppTypography.titleLarge.copyWith(
-            color: themeColors.primary,
+            color: themeColors.onSurface,
+            fontWeight: FontWeight.w600,
           ),
           textAlign: TextAlign.center,
         ),
