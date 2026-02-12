@@ -9,6 +9,7 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/gamification_stats_card.dart';
 import '../../../shared/services/supabase_storage_service.dart';
+import '../../../shared/services/session_persistence_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/services/error_handler_service.dart';
 import '../widgets/widgets.dart';
@@ -208,6 +209,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             await SupabaseConfig.client.auth.updateUser(
               UserAttributes(data: {'profile_picture_url': imageUrl}),
             );
+
+            // Cache for login screen
+            SessionPersistenceService().saveProfilePictureUrl(imageUrl);
 
             if (mounted) {
               setState(() {});

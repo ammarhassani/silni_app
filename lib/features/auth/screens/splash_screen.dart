@@ -57,6 +57,22 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     super.dispose();
   }
 
+  /// Navigate honoring any stored redirect from pre-OAuth flow.
+  void _navigateWithStoredRedirect() {
+    final storedRedirect = html.window.sessionStorage['post_oauth_redirect'];
+    html.window.sessionStorage.remove('post_oauth_redirect');
+
+    if (storedRedirect != null && storedRedirect.isNotEmpty) {
+      final decodedPath = Uri.decodeComponent(storedRedirect);
+      if (decodedPath.startsWith('/join') ||
+          decodedPath.startsWith('/join-family-group')) {
+        context.go(decodedPath);
+        return;
+      }
+    }
+    context.go(AppRoutes.home);
+  }
+
   Future<void> _navigateToNextScreen() async {
     if (!mounted) return;
 
@@ -75,7 +91,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           // User is already logged in from OAuth callback
           // Clear the URL params to prevent re-processing on refresh
           html.window.history.replaceState(null, '', '/');
-          if (mounted) context.go(AppRoutes.home);
+          if (mounted) {
+            _navigateWithStoredRedirect();
+          }
           return;
         }
 
@@ -88,7 +106,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         final userAfterWait = SupabaseConfig.currentUser;
         if (userAfterWait != null) {
           html.window.history.replaceState(null, '', '/');
-          context.go(AppRoutes.home);
+          _navigateWithStoredRedirect();
           return;
         }
       }

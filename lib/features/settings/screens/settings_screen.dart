@@ -20,6 +20,7 @@ import '../../../core/theme/dynamic_theme.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../subscription/screens/paywall_screen.dart';
+import '../../../core/services/session_cleanup_service.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/message_widget.dart';
 import '../../../core/config/env/env.dart';
@@ -41,6 +42,7 @@ class SettingsScreen extends ConsumerWidget {
       body: Semantics(
         label: 'شاشة الإعدادات',
         child: SafeArea(
+          bottom: false,
           child: Column(
             children: [
               // Header
@@ -193,8 +195,10 @@ class SettingsScreen extends ConsumerWidget {
                         ),
                       ),
                       onTap: () async {
+                        final userId = Supabase.instance.client.auth.currentUser?.id;
                         final authService = ref.read(authServiceProvider);
                         await authService.signOut();
+                        clearUserSessionFromWidget(ref, previousUserId: userId);
                         if (context.mounted) {
                           context.go(AppRoutes.login);
                         }

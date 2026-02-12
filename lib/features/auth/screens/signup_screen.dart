@@ -131,15 +131,27 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           tag: 'SignUpScreen',
           metadata: {'targetRoute': AppRoutes.emailVerification},
         );
-        context.go(AppRoutes.emailVerification);
+        // Forward redirect param to email verification screen
+        final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
+        if (redirect != null && redirect.isNotEmpty) {
+          context.go('${AppRoutes.emailVerification}?redirect=${Uri.encodeComponent(redirect)}');
+        } else {
+          context.go(AppRoutes.emailVerification);
+        }
       } else {
-        logger.info(
-          'Email already verified, navigating to home screen',
-          category: LogCategory.auth,
-          tag: 'SignUpScreen',
-          metadata: {'targetRoute': AppRoutes.home},
-        );
-        context.go(AppRoutes.home);
+        // Honor redirect param (e.g. from join link)
+        final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
+        if (redirect != null && redirect.isNotEmpty) {
+          final decodedPath = Uri.decodeComponent(redirect);
+          if (decodedPath.startsWith('/join') ||
+              decodedPath.startsWith('/join-family-group')) {
+            context.go(decodedPath);
+          } else {
+            context.go(AppRoutes.home);
+          }
+        } else {
+          context.go(AppRoutes.home);
+        }
       }
 
       logger.info('Navigation executed successfully - Signup flow completed', category: LogCategory.auth, tag: 'SignUpScreen');
@@ -157,7 +169,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         );
 
         setState(() => _isLoading = false);
-        context.go(AppRoutes.emailVerification);
+        // Forward redirect param to email verification screen
+        final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
+        if (redirect != null && redirect.isNotEmpty) {
+          context.go('${AppRoutes.emailVerification}?redirect=${Uri.encodeComponent(redirect)}');
+        } else {
+          context.go(AppRoutes.emailVerification);
+        }
         return;
       }
       // Handle Supabase auth errors specifically
@@ -460,7 +478,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                           button: true,
                           child: TextButton(
                             onPressed: () {
-                              context.go(AppRoutes.login);
+                              final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
+                              if (redirect != null && redirect.isNotEmpty) {
+                                context.go('${AppRoutes.login}?redirect=${Uri.encodeComponent(redirect)}');
+                              } else {
+                                context.go(AppRoutes.login);
+                              }
                             },
                             child: Text(
                               'سجّل الدخول',

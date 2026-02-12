@@ -26,6 +26,7 @@ import '../widgets/social_login_button.dart';
 import '../widgets/name_prompt_dialog.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/theme_aware_dialog.dart';
+import 'package:universal_html/html.dart' as html;
 import 'dart:io' show Platform;
 
 
@@ -46,6 +47,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _hasSavedCredentials = false;
   bool _isGoogleLoading = false;
   bool _isAppleLoading = false;
+  String? _cachedProfilePictureUrl;
 
   @override
   void dispose() {
@@ -58,6 +60,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void initState() {
     super.initState();
     _checkBiometricAvailability();
+    _loadCachedProfilePicture();
+  }
+
+  Future<void> _loadCachedProfilePicture() async {
+    final url = await SessionPersistenceService().getSavedProfilePictureUrl();
+    if (mounted && url != null) {
+      setState(() => _cachedProfilePictureUrl = url);
+    }
+  }
+
+  /// Cache the current user's profile picture URL for next login screen visit.
+  void _cacheProfilePicture(User? user) {
+    final url = user?.userMetadata?['profile_picture_url'] as String?;
+    SessionPersistenceService().saveProfilePictureUrl(url);
+  }
+
+  /// Navigate after successful login, honoring ?redirect= query param.
+  void _navigateAfterLogin() {
+    final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
+    if (redirect != null && redirect.isNotEmpty) {
+      final decodedPath = Uri.decodeComponent(redirect);
+      // Only allow redirects to known safe internal paths
+      if (decodedPath.startsWith('/join') ||
+          decodedPath.startsWith('/join-family-group')) {
+        context.go(decodedPath);
+        return;
+      }
+    }
+    context.go(AppRoutes.home);
   }
 
   Future<void> _checkBiometricAvailability() async {
@@ -105,6 +136,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             metadata: {'userId': response!.user!.id},
           );
 
+          // Cache profile picture for next login screen visit
+          _cacheProfilePicture(response.user);
+
           // Track login and set user ID
           final analytics = ref.read(analyticsServiceProvider);
           analytics.logLogin('biometric').catchError((e) {
@@ -115,7 +149,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           });
 
           if (!mounted) return;
-          context.go(AppRoutes.home);
+          _navigateAfterLogin();
         } else {
           // No saved credentials available
           if (mounted) {
@@ -305,6 +339,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       // Note: We no longer store passwords - biometric unlocks the existing Supabase session
       SessionPersistenceService().enableBiometricLogin();
 
+      // Cache profile picture for next login screen visit
+      _cacheProfilePicture(credential.user);
+
       // Track login event and set user ID (fire and forget - don't block auth flow)
       logger.debug(
         'Triggering analytics (fire-and-forget)...',
@@ -342,8 +379,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         metadata: {'targetRoute': AppRoutes.home},
       );
 
-      // Navigate to home - use go instead of pushReplacement
-      context.go(AppRoutes.home);
+      // Navigate — honor ?redirect= param (e.g. from join link)
+      _navigateAfterLogin();
 
       logger.info(
         'Navigation executed successfully - Login flow completed',
@@ -583,10 +620,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         tag: 'LoginScreen',
       );
 
+      // Preserve redirect param across OAuth page redirect (web only)
+      if (kIsWeb) {
+        final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
+        if (redirect != null && redirect.isNotEmpty) {
+          // ignore: avoid_web_libraries_in_flutter
+          html.window.sessionStorage['post_oauth_redirect'] = redirect;
+        }
+      }
+
       final authService = ref.read(authServiceProvider);
       final credential = await authService.signInWithGoogle();
 
       if (!mounted) return;
+
+      // Cache profile picture for next login screen visit
+      _cacheProfilePicture(credential.user);
 
       // Track login event
       final analytics = ref.read(analyticsServiceProvider);
@@ -600,12 +649,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
 
       logger.info(
-        'Google sign in successful, navigating to home',
+        'Google sign in successful, navigating after login',
         category: LogCategory.auth,
         tag: 'LoginScreen',
       );
 
-      context.go(AppRoutes.home);
+      _navigateAfterLogin();
     } on AuthException catch (e) {
       if (!mounted) return;
 
@@ -647,10 +696,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         tag: 'LoginScreen',
       );
 
+      // Preserve redirect param across OAuth page redirect (web only)
+      if (kIsWeb) {
+        final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
+        if (redirect != null && redirect.isNotEmpty) {
+          // ignore: avoid_web_libraries_in_flutter
+          html.window.sessionStorage['post_oauth_redirect'] = redirect;
+        }
+      }
+
       final authService = ref.read(authServiceProvider);
       final credential = await authService.signInWithApple();
 
       if (!mounted) return;
+
+      // Cache profile picture for next login screen visit
+      _cacheProfilePicture(credential.user);
 
       // Track login event
       final analytics = ref.read(analyticsServiceProvider);
@@ -686,7 +747,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
 
       if (!mounted) return;
-      context.go(AppRoutes.home);
+      _navigateAfterLogin();
     } on AuthException catch (e) {
       if (!mounted) return;
       setState(() => _isAppleLoading = false);
@@ -739,7 +800,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         children: [
                       // Logo
                       Container(
-                            width: 120, // Increased slightly for better visibility
+                            width: 120,
                             height: 120,
                             constraints: const BoxConstraints(
                               maxWidth: 150,
@@ -756,13 +817,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                               ],
                             ),
-                            child: Center(
-                              child: Icon(
-                                Icons.people_alt_rounded,
-                                size: 60,
-                                color: themeColors.textOnGradient,
-                              ),
-                            ),
+                            child: _cachedProfilePictureUrl != null
+                                ? ClipOval(
+                                    child: Image.network(
+                                      _cachedProfilePictureUrl!,
+                                      fit: BoxFit.cover,
+                                      width: 120,
+                                      height: 120,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          Icon(
+                                            Icons.people_alt_rounded,
+                                            size: 60,
+                                            color: themeColors.textOnGradient,
+                                          ),
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.people_alt_rounded,
+                                    size: 60,
+                                    color: themeColors.textOnGradient,
+                                  ),
                           )
                           .animate()
                           .scale(
@@ -961,7 +1035,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       label: 'إنشاء حساب جديد',
                                       button: true,
                                       child: TextButton(
-                                        onPressed: () => context.go(AppRoutes.signup),
+                                        onPressed: () {
+                                          final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
+                                          if (redirect != null && redirect.isNotEmpty) {
+                                            context.go('${AppRoutes.signup}?redirect=${Uri.encodeComponent(redirect)}');
+                                          } else {
+                                            context.go(AppRoutes.signup);
+                                          }
+                                        },
                                         child: Text(
                                           'إنشاء حساب جديد',
                                           style: AppTypography.labelMedium.copyWith(

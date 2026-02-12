@@ -22,6 +22,8 @@ class SessionPersistenceService {
   static const String _savedRefreshTokenKey = 'saved_refresh_token';
   static const String _savedUserEmailKey = 'saved_user_email';
   static const String _savedUserIdForBiometricKey = 'saved_user_id_biometric';
+  // Cached profile picture for login screen
+  static const String _savedProfilePictureUrlKey = 'saved_profile_picture_url';
 
   /// Initialize session persistence service
   Future<void> initialize() async {
@@ -314,6 +316,41 @@ class SessionPersistenceService {
 
       final storage = FlutterSecureStorage();
       return await storage.read(key: _savedUserEmailKey);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Save profile picture URL for display on login screen
+  Future<void> saveProfilePictureUrl(String? url) async {
+    try {
+      if (kIsWeb) {
+        if (url != null) {
+          html.window.localStorage[_savedProfilePictureUrlKey] = url;
+        } else {
+          html.window.localStorage.remove(_savedProfilePictureUrlKey);
+        }
+      } else {
+        final storage = FlutterSecureStorage();
+        if (url != null) {
+          await storage.write(key: _savedProfilePictureUrlKey, value: url);
+        } else {
+          await storage.delete(key: _savedProfilePictureUrlKey);
+        }
+      }
+    } catch (e) {
+      // Non-critical — ignore
+    }
+  }
+
+  /// Get saved profile picture URL for display on login screen
+  Future<String?> getSavedProfilePictureUrl() async {
+    try {
+      if (kIsWeb) {
+        return html.window.localStorage[_savedProfilePictureUrlKey];
+      }
+      final storage = FlutterSecureStorage();
+      return await storage.read(key: _savedProfilePictureUrlKey);
     } catch (e) {
       return null;
     }

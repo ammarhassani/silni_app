@@ -74,7 +74,7 @@ class _EmailVerificationScreenState
 
       if (authService.isEmailVerified) {
         logger.info(
-          'Email verified, navigating to home',
+          'Email verified, navigating to destination',
           category: LogCategory.auth,
           tag: 'EmailVerificationScreen',
         );
@@ -82,6 +82,17 @@ class _EmailVerificationScreenState
         _checkTimer?.cancel();
 
         if (mounted) {
+          // Honor redirect param (e.g. from join link)
+          final redirect =
+              GoRouterState.of(context).uri.queryParameters['redirect'];
+          if (redirect != null && redirect.isNotEmpty) {
+            final decodedPath = Uri.decodeComponent(redirect);
+            if (decodedPath.startsWith('/join') ||
+                decodedPath.startsWith('/join-family-group')) {
+              context.go(decodedPath);
+              return;
+            }
+          }
           context.go(AppRoutes.home);
         }
       }
