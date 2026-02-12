@@ -8,7 +8,7 @@ const FIREBASE_SERVICE_ACCOUNT = Deno.env.get("FIREBASE_SERVICE_ACCOUNT");
 
 interface NotificationRequest {
   userId: string;
-  notificationType: "reminder" | "streak" | "achievement" | "announcement";
+  notificationType: "reminder" | "streak" | "achievement" | "announcement" | "nudge";
   title: string;
   body: string;
   data?: Record<string, string>;

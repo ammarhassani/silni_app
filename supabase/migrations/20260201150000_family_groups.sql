@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS family_groups (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   created_by UUID REFERENCES auth.users(id) NOT NULL,
-  invite_code TEXT UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(6), 'hex'),
+  invite_code TEXT UNIQUE NOT NULL DEFAULT encode(extensions.gen_random_bytes(6), 'hex'),
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
