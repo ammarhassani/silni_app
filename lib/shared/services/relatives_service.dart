@@ -298,14 +298,24 @@ class RelativesService {
     );
   }
 
-  /// Permanently delete a relative
+  /// Permanently delete a relative and all associated data.
   Future<void> permanentlyDeleteRelative(String relativeId) async {
     try {
-      // First, delete all interactions for this relative
+      // Delete all interactions for this relative
       await _supabase
           .from('interactions')
           .delete()
           .eq('relative_id', relativeId);
+
+      // Delete all edges referencing this relative (both directions)
+      await _supabase
+          .from('family_edges')
+          .delete()
+          .eq('from_id', relativeId);
+      await _supabase
+          .from('family_edges')
+          .delete()
+          .eq('to_id', relativeId);
 
       // Then delete the relative
       await _supabase.from(_table).delete().eq('id', relativeId);

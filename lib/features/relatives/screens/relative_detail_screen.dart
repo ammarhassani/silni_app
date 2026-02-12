@@ -25,7 +25,7 @@ import 'package:share_plus/share_plus.dart';
 
 /// Provider for watching a single relative (cache-first)
 final relativeDetailProvider =
-    StreamProvider.family<Relative?, String>((ref, relativeId) {
+    StreamProvider.autoDispose.family<Relative?, String>((ref, relativeId) {
   final repository = ref.watch(relativesRepositoryProvider);
   return repository.watchRelative(relativeId);
 });
@@ -65,12 +65,22 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                 return _buildErrorState(context, themeColors);
               }
 
-              // Compute perspective-shifted label
-              final userId = relative.userId;
-              final graph = ref.watch(familyGraphProvider(userId));
+              // Compute perspective-shifted label.
+              // In group mode, use the shared graph so labels reflect the
+              // viewer's perspective, not the relative creator's.
+              final groupInfo =
+                  ref.watch(userFamilyGroupProvider).valueOrNull;
+              final graph = groupInfo != null
+                  ? ref.watch(sharedFamilyGraphProvider((
+                      groupId: groupInfo.groupId,
+                      viewerNodeId: groupInfo.nodeId,
+                    )))
+                  : ref.watch(familyGraphProvider(relative.userId));
+              final effectiveViewerId =
+                  groupInfo?.nodeId ?? relative.userId;
               final label = getRelationshipLabel(
                 relative: relative,
-                viewerId: userId,
+                viewerId: effectiveViewerId,
                 graph: graph,
                 relativesMap: graph != null ? {relative.id: relative} : null,
               );
@@ -256,6 +266,10 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
 
     setState(() => _isInviting = true);
 
+    final box = context.findRenderObject() as RenderBox?;
+    final shareOrigin =
+        box != null ? box.localToGlobal(Offset.zero) & box.size : Rect.zero;
+
     try {
       // Check if user already has a group
       var group = await FamilySharingService.getUserGroup(user.id);
@@ -285,6 +299,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
       // Share via system sheet (WhatsApp preferred)
       await Share.share(
         'انضم/ي لعائلتنا في صِلني 🌳\n$link',
+        sharePositionOrigin: shareOrigin,
       );
     } catch (e) {
       if (mounted) {
@@ -571,6 +586,13 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
       final user = _authService.currentUser;
       if (user != null) {
         ref.invalidate(relativesStreamProvider(user.id));
+      }
+
+      // Invalidate group providers if user is in a group
+      final groupInfo = ref.read(userFamilyGroupProvider).valueOrNull;
+      if (groupInfo != null) {
+        ref.invalidate(groupRelativesStreamProvider(groupInfo.groupId));
+        ref.invalidate(sharedFamilyEdgesStreamProvider(groupInfo.groupId));
       }
 
       if (!mounted) return;
