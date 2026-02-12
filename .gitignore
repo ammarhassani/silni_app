@@ -72,3 +72,12 @@ lib/core/config/env/*.g.dart
 
 # Supabase CLI temp files
 supabase/.temp/
+
+# Firebase hosting cache
+.firebase/
+
+# MCP config (may contain project refs)
+.mcp.json
+
+# Investigation files with production data
+docs/plans/data investigation
