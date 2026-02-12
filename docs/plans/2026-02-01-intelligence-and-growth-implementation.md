@@ -14,9 +14,19 @@
 
 ## Phase 1: Quick Wins (No structural changes, high impact)
 
-### Task 1: Notification Copy Overhaul to Saudi Dialect
+### Task 1: Notification Copy Overhaul to Saudi Dialect ✅ DONE (2026-02-04)
 
-Transform notification text from formal app-speak to natural Saudi Arabic dialect. The `admin_ui_strings` system already supports remote strings — we add hundreds of variations and rotate them.
+> **Implemented as Smart Nudges** — redesigned as a fully admin-panelized system instead of hardcoded Dart templates.
+> - Migration: `supabase/migrations/20260204120000_smart_nudges.sql`
+> - Edge function: `supabase/functions/send-smart-nudges/index.ts`
+> - Admin panel: nudge category in notification templates page with gap/gender/cooldown fields
+> - 24 gender-aware Saudi dialect templates seeded (4 tiers × 2 genders × 3 variations)
+> - Cooldown enforcement, daily cap (3/user/day), template rotation via `nudge_history`
+> - Deployed to production and verified working on device
+> - Cron: hourly via cron-job.org
+> - Design doc: `docs/plans/2026-02-04-smart-nudges-design.md`
+
+~~Transform notification text from formal app-speak to natural Saudi Arabic dialect. The `admin_ui_strings` system already supports remote strings — we add hundreds of variations and rotate them.~~
 
 **Files:**
 - Create: `supabase/migrations/YYYYMMDD_notification_dialect_strings.sql`
@@ -1295,7 +1305,7 @@ git commit -m "feat: cultural content calendar for social media pipeline"
 
 ```
 Phase 1 (independent, parallel-safe):
-  Task 1 (notifications) ─── no deps
+  Task 1 (notifications) ─── ✅ DONE
   Task 2 (share cards) ──── no deps
   Task 3 (home screen) ──── no deps
   Task 4 (auto reminders) ─ no deps
