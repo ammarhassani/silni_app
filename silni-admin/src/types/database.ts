@@ -127,13 +127,17 @@ export interface AdminNotificationTemplate {
   title_en: string | null;
   body_ar: string;
   body_en: string | null;
-  category: 'reminder' | 'streak' | 'badge' | 'level' | 'challenge' | 'system' | 'promotional';
+  category: 'reminder' | 'streak' | 'badge' | 'level' | 'challenge' | 'system' | 'promotional' | 'nudge';
   variables: string[];
   icon: string | null;
   sound: string;
   channel_id: string;
   priority: 'min' | 'low' | 'default' | 'high' | 'max';
   is_active: boolean;
+  gap_min_days: number | null;
+  gap_max_days: number | null;
+  gender: 'male' | 'female' | null;
+  nudge_cooldown_hours: number | null;
   created_at: string;
   updated_at: string;
 }

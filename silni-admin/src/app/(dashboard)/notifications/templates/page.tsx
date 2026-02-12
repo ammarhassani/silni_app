@@ -43,10 +43,12 @@ import {
   Settings,
   Megaphone,
   Flame,
+  Heart,
 } from "lucide-react";
 import type { AdminNotificationTemplate } from "@/types/database";
 
 const CATEGORIES = [
+  { value: "nudge", label: "التنبيهات الذكية", icon: Heart, color: "bg-red-500" },
   { value: "reminder", label: "التذكيرات", icon: Clock, color: "bg-blue-500" },
   { value: "streak", label: "السلسلة", icon: Flame, color: "bg-orange-500" },
   { value: "badge", label: "الأوسمة", icon: Award, color: "bg-yellow-500" },
@@ -54,6 +56,11 @@ const CATEGORIES = [
   { value: "challenge", label: "التحديات", icon: Target, color: "bg-purple-500" },
   { value: "system", label: "النظام", icon: Settings, color: "bg-gray-500" },
   { value: "promotional", label: "ترويجي", icon: Megaphone, color: "bg-pink-500" },
+];
+
+const GENDERS = [
+  { value: "male", label: "ذكر" },
+  { value: "female", label: "أنثى" },
 ];
 
 const PRIORITIES = [
@@ -79,6 +86,10 @@ const defaultFormData: TemplateFormData = {
   channel_id: "default",
   priority: "default",
   is_active: true,
+  gap_min_days: null,
+  gap_max_days: null,
+  gender: null,
+  nudge_cooldown_hours: null,
 };
 
 export default function NotificationTemplatesPage() {
@@ -116,6 +127,10 @@ export default function NotificationTemplatesPage() {
       channel_id: template.channel_id,
       priority: template.priority,
       is_active: template.is_active,
+      gap_min_days: template.gap_min_days,
+      gap_max_days: template.gap_max_days,
+      gender: template.gender,
+      nudge_cooldown_hours: template.nudge_cooldown_hours,
     });
     setVariablesInput(template.variables?.join(", ") || "");
     setIsDialogOpen(true);
@@ -127,11 +142,16 @@ export default function NotificationTemplatesPage() {
       .map((v) => v.trim())
       .filter(Boolean);
 
+    const isNudge = formData.category === "nudge";
     const data = {
       ...formData,
       title_en: formData.title_en || null,
       body_en: formData.body_en || null,
       variables,
+      gap_min_days: isNudge ? formData.gap_min_days : null,
+      gap_max_days: isNudge ? formData.gap_max_days : null,
+      gender: isNudge ? formData.gender : null,
+      nudge_cooldown_hours: isNudge ? formData.nudge_cooldown_hours : null,
     };
 
     if (editingTemplate) {
@@ -152,8 +172,8 @@ export default function NotificationTemplatesPage() {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-64" />
-        <div className="grid gap-4 grid-cols-7">
-          {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+        <div className="grid gap-4 grid-cols-4 md:grid-cols-8">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
             <Skeleton key={i} className="h-24" />
           ))}
         </div>
@@ -189,7 +209,7 @@ export default function NotificationTemplatesPage() {
       </div>
 
       {/* Category Stats */}
-      <div className="grid grid-cols-7 gap-4">
+      <div className="grid grid-cols-4 md:grid-cols-8 gap-4">
         {CATEGORIES.map((cat) => {
           const Icon = cat.icon;
           return (
@@ -267,7 +287,7 @@ export default function NotificationTemplatesPage() {
                           <p className="text-sm text-muted-foreground line-clamp-1">
                             {template.body_ar}
                           </p>
-                          <div className="flex items-center gap-2 mt-2">
+                          <div className="flex items-center gap-2 mt-2 flex-wrap">
                             <code className="text-xs bg-muted px-2 py-1 rounded" dir="ltr">
                               {template.template_key}
                             </code>
@@ -275,6 +295,23 @@ export default function NotificationTemplatesPage() {
                               <span className="text-xs text-muted-foreground">
                                 المتغيرات: {template.variables.join(", ")}
                               </span>
+                            )}
+                            {template.category === "nudge" && template.gap_min_days != null && (
+                              <>
+                                <Badge variant="outline" className="text-xs">
+                                  {template.gap_min_days}-{template.gap_max_days} يوم
+                                </Badge>
+                                {template.gender && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {template.gender === "male" ? "ذكر" : "أنثى"}
+                                  </Badge>
+                                )}
+                                {template.nudge_cooldown_hours && (
+                                  <Badge variant="outline" className="text-xs">
+                                    كل {template.nudge_cooldown_hours} ساعة
+                                  </Badge>
+                                )}
+                              </>
                             )}
                           </div>
                         </div>
@@ -432,6 +469,98 @@ export default function NotificationTemplatesPage() {
                 dir="ltr"
               />
             </div>
+
+            {/* Nudge-specific fields */}
+            {formData.category === "nudge" && (
+              <>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>أقل عدد أيام (gap_min_days)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={formData.gap_min_days ?? ""}
+                      onChange={(e) => {
+                        const val = e.target.value ? parseInt(e.target.value) : null;
+                        setFormData((f) => ({
+                          ...f,
+                          gap_min_days: val,
+                          // Auto-suggest cooldown when gap_min changes
+                          nudge_cooldown_hours:
+                            f.nudge_cooldown_hours === null && val
+                              ? Math.max(24, Math.min(72, val * 24))
+                              : f.nudge_cooldown_hours,
+                        }));
+                      }}
+                      placeholder="3"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>أكثر عدد أيام (gap_max_days)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={formData.gap_max_days ?? ""}
+                      onChange={(e) =>
+                        setFormData((f) => ({
+                          ...f,
+                          gap_max_days: e.target.value ? parseInt(e.target.value) : null,
+                        }))
+                      }
+                      placeholder="6"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>فترة الانتظار (ساعات)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={formData.nudge_cooldown_hours ?? ""}
+                      onChange={(e) =>
+                        setFormData((f) => ({
+                          ...f,
+                          nudge_cooldown_hours: e.target.value ? parseInt(e.target.value) : null,
+                        }))
+                      }
+                      placeholder="72"
+                      dir="ltr"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      كلما زادت الأيام، قلّت فترة الانتظار (تنبيه أكثر إلحاحاً)
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>الجنس</Label>
+                  <Select
+                    value={formData.gender ?? "both"}
+                    onValueChange={(v) =>
+                      setFormData((f) => ({
+                        ...f,
+                        gender: v === "both" ? null : (v as "male" | "female"),
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="both">الكل</SelectItem>
+                      {GENDERS.map((g) => (
+                        <SelectItem key={g.value} value={g.value}>
+                          {g.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    اختر الجنس لاستخدام الضمائر الصحيحة (له/لها)
+                  </p>
+                </div>
+              </>
+            )}
 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
