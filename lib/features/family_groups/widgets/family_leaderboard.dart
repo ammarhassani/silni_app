@@ -181,11 +181,11 @@ class _LeaderboardEntryCard extends ConsumerWidget {
             radius: AppSpacing.avatarSm / 2,
             backgroundColor: isFirstPlace
                 ? themeColors.secondary.withValues(alpha: 0.3)
-                : themeColors.primary.withValues(alpha: 0.2),
+                : themeColors.onSurface.withValues(alpha: 0.15),
             child: Icon(
               Icons.person_rounded,
               size: AppSpacing.iconSm,
-              color: isFirstPlace ? themeColors.secondary : themeColors.primary,
+              color: isFirstPlace ? themeColors.secondary : themeColors.onSurface,
             ),
           ),
           const SizedBox(width: AppSpacing.sm),

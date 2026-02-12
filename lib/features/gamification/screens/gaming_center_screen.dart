@@ -16,6 +16,9 @@ import '../../auth/providers/auth_provider.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
 import 'badges_screen.dart';
 import '../../../shared/widgets/message_widget.dart';
+import '../../../shared/widgets/persistent_bottom_nav.dart';
+import '../../family_tree/providers/family_graph_providers.dart';
+import '../../home/providers/home_providers.dart';
 
 /// Gaming Center - Main gamification hub with exciting design
 class GamingCenterScreen extends ConsumerStatefulWidget {
@@ -95,6 +98,10 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
 
+    // Check if user is in a family group
+    final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+    final isInGroup = groupInfo != null;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
@@ -123,6 +130,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
 
             // Main content
             SafeArea(
+              bottom: false,
               child: Column(
                 children: [
                   // Content
@@ -220,6 +228,19 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                                 ),
                               ),
 
+                              // Family Leaderboard Section (only when in a group)
+                              if (isInGroup) ...[
+                                SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(AppSpacing.lg),
+                                    child: _buildFamilyLeaderboardCard(
+                                      themeColors,
+                                      groupInfo.groupId,
+                                    ),
+                                  ),
+                                ),
+                              ],
+
                               // Progress Section
                               SliverToBoxAdapter(
                                 child: Padding(
@@ -236,8 +257,8 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                                 ),
                               ),
 
-                              const SliverToBoxAdapter(
-                                child: SizedBox(height: 100),
+                              SliverToBoxAdapter(
+                                child: SizedBox(height: PersistentBottomNav.totalHeight),
                               ),
                             ],
                           ),
@@ -693,6 +714,256 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
         .slideY(begin: 0.2, end: 0)
         .then()
         .shimmer(duration: AppAnimations.loop, delay: AppAnimations.loop);
+  }
+
+  /// Build the family leaderboard card showing group members' stats.
+  Widget _buildFamilyLeaderboardCard(dynamic themeColors, String groupId) {
+    final familyStatsAsync = ref.watch(familyLeaderboardProvider(groupId));
+    final currentUser = ref.watch(currentUserProvider);
+
+    return GlassCard(
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.calmBlue.withValues(alpha: 0.3),
+              AppColors.emotionalPurple.withValues(alpha: 0.2),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: AppColors.calmBlue.withValues(alpha: 0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.family_restroom_rounded,
+                    color: themeColors.textOnGradient,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Text(
+                  'ترتيب العائلة',
+                  style: AppTypography.titleMedium.copyWith(
+                    color: themeColors.textOnGradient,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+
+            // Leaderboard content
+            familyStatsAsync.when(
+              data: (members) {
+                if (members.isEmpty) {
+                  return Text(
+                    'لا يوجد أعضاء في العائلة',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: themeColors.textOnGradient.withValues(alpha: 0.7),
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: [
+                    for (var i = 0; i < members.length && i < 5; i++)
+                      _buildFamilyMemberRow(
+                        members[i],
+                        i + 1,
+                        members[i].userId == currentUser?.id,
+                        themeColors,
+                      ),
+                  ],
+                );
+              },
+              loading: () => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: CircularProgressIndicator(
+                    color: themeColors.primary,
+                    strokeWidth: 2,
+                  ),
+                ),
+              ),
+              error: (_, _) => Text(
+                'فشل في تحميل ترتيب العائلة',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: themeColors.textOnGradient.withValues(alpha: 0.7),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    )
+        .animate()
+        .fadeIn(delay: AppAnimations.celebration, duration: AppAnimations.dramatic)
+        .slideY(begin: 0.2, end: 0);
+  }
+
+  /// Build a row for a family member in the leaderboard.
+  Widget _buildFamilyMemberRow(
+    FamilyMemberStats member,
+    int rank,
+    bool isCurrentUser,
+    dynamic themeColors,
+  ) {
+    final rankColor = rank == 1
+        ? AppColors.premiumGold
+        : rank == 2
+            ? Colors.grey[400]!
+            : rank == 3
+                ? Colors.brown[400]!
+                : themeColors.textOnGradient.withValues(alpha: 0.5);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: isCurrentUser
+          ? BoxDecoration(
+              color: themeColors.primary.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: themeColors.primary.withValues(alpha: 0.5),
+              ),
+            )
+          : null,
+      child: Row(
+        children: [
+          // Rank
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: rankColor,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: rank <= 3
+                  ? Icon(
+                      Icons.emoji_events_rounded,
+                      color: themeColors.textOnGradient,
+                      size: 16,
+                    )
+                  : Text(
+                      '$rank',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: themeColors.textOnGradient,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+
+          // Name
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  member.displayName,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: themeColors.textOnGradient,
+                    fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (isCurrentUser)
+                  Text(
+                    'أنت',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: themeColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // Stats
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Points
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.premiumGold.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.star_rounded,
+                      color: AppColors.premiumGold,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${member.points}',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: themeColors.textOnGradient,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              // Streak
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.energeticRed.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.local_fire_department_rounded,
+                      color: AppColors.energeticRed,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${member.currentStreak}',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: themeColors.textOnGradient,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   /// Get XP required for next level using dynamic admin config

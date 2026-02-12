@@ -89,6 +89,7 @@ class FamilyGroupMember {
   final String? relativeIdInTree;
   final String role;
   final DateTime joinedAt;
+  final String? displayName;
 
   const FamilyGroupMember({
     required this.id,
@@ -97,6 +98,7 @@ class FamilyGroupMember {
     this.relativeIdInTree,
     required this.role,
     required this.joinedAt,
+    this.displayName,
   });
 
   /// Whether this member is a group admin.

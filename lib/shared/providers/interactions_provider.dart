@@ -12,7 +12,7 @@ final interactionsServiceProvider = Provider<InteractionsService>((ref) {
 /// Provider that streams today's contacted relative IDs
 /// Used to derive "contacted" status in reminders screen
 final todayContactedRelativesProvider =
-    StreamProvider.family<Set<String>, String>((ref, userId) {
+    StreamProvider.autoDispose.family<Set<String>, String>((ref, userId) {
   final now = DateTime.now();
   final startOfDay = DateTime(now.year, now.month, now.day);
   final endOfDay = startOfDay.add(const Duration(days: 1));

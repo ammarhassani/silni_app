@@ -171,6 +171,152 @@ final reminderSchedulesStreamProvider =
   return repository.watchSchedules(userId);
 });
 
+/// Stream provider for group-wide today's interactions.
+///
+/// Shows interactions logged by ANY group member for relatives in the family group.
+/// Enables "family awareness" - see that your brother called Dad yesterday.
+/// Requires the shared_interactions_rls migration to be applied.
+final groupTodayInteractionsStreamProvider =
+    StreamProvider.autoDispose.family<List<Interaction>, String>((ref, groupId) {
+  final link = ref.keepAlive();
+  Timer? timer;
+
+  ref.onDispose(() => timer?.cancel());
+  ref.onCancel(() {
+    timer = Timer(_cacheTimeout, () => link.close());
+  });
+  ref.onResume(() => timer?.cancel());
+
+  // Use rahim-scoped IDs when available, fall back to full group
+  final rahimScope = ref.watch(rahimVisibleRelativeIdsProvider);
+  final groupRelativeIds = rahimScope ?? (ref
+      .watch(groupRelativesStreamProvider(groupId))
+      .valueOrNull
+      ?.map((r) => r.id)
+      .toSet() ?? <String>{});
+
+  final now = DateTime.now();
+  final startOfDay = DateTime(now.year, now.month, now.day);
+
+  // Stream interactions visible via RLS, then filter to visible relatives
+  return SupabaseConfig.client
+      .from('interactions')
+      .stream(primaryKey: ['id'])
+      .gte('date', startOfDay.toUtc().toIso8601String())
+      .order('date', ascending: false)
+      .map((data) => data
+          .map((json) => Interaction.fromJson(json))
+          .where((i) => groupRelativeIds.contains(i.relativeId))
+          .toList());
+});
+
+/// Stream provider for group-wide contacted relatives today.
+///
+/// Returns the set of relative IDs that have been contacted today by ANY group member.
+final groupTodayContactedRelativesProvider =
+    StreamProvider.autoDispose.family<Set<String>, String>((ref, groupId) {
+  final link = ref.keepAlive();
+  Timer? timer;
+
+  ref.onDispose(() => timer?.cancel());
+  ref.onCancel(() {
+    timer = Timer(_cacheTimeout, () => link.close());
+  });
+  ref.onResume(() => timer?.cancel());
+
+  // Use rahim-scoped IDs when available, fall back to full group
+  final rahimScope = ref.watch(rahimVisibleRelativeIdsProvider);
+  final groupRelativeIds = rahimScope ?? (ref
+      .watch(groupRelativesStreamProvider(groupId))
+      .valueOrNull
+      ?.map((r) => r.id)
+      .toSet() ?? <String>{});
+
+  final now = DateTime.now();
+  final startOfDay = DateTime(now.year, now.month, now.day);
+
+  return SupabaseConfig.client
+      .from('interactions')
+      .stream(primaryKey: ['id'])
+      .gte('date', startOfDay.toUtc().toIso8601String())
+      .map((data) {
+        return data
+            .map((i) => i['relative_id'] as String?)
+            .where((id) => id != null && id.isNotEmpty && groupRelativeIds.contains(id))
+            .cast<String>()
+            .toSet();
+      });
+});
+
+/// Provider for family group leaderboard stats.
+///
+/// Fetches gamification stats (points, level, streak) for all members of a family group.
+/// Used for the family leaderboard feature.
+final familyLeaderboardProvider =
+    FutureProvider.autoDispose.family<List<FamilyMemberStats>, String>((ref, groupId) async {
+  final link = ref.keepAlive();
+  Timer? timer;
+
+  ref.onDispose(() => timer?.cancel());
+  ref.onCancel(() {
+    timer = Timer(_cacheTimeout, () => link.close());
+  });
+  ref.onResume(() => timer?.cancel());
+
+  // Get all members of the group
+  final membersResponse = await SupabaseConfig.client
+      .from('family_group_members')
+      .select('user_id')
+      .eq('group_id', groupId);
+
+  final memberUserIds = (membersResponse as List)
+      .map((m) => m['user_id'] as String)
+      .toList();
+
+  if (memberUserIds.isEmpty) return [];
+
+  // Get user stats for all members
+  final statsResponse = await SupabaseConfig.client
+      .from('users')
+      .select('id, full_name, email, points, level, current_streak, total_interactions')
+      .inFilter('id', memberUserIds);
+
+  final stats = (statsResponse as List).map((json) {
+    return FamilyMemberStats(
+      userId: json['id'] as String,
+      displayName: json['full_name'] as String? ?? json['email'] as String? ?? 'عضو',
+      points: json['points'] as int? ?? 0,
+      level: json['level'] as int? ?? 1,
+      currentStreak: json['current_streak'] as int? ?? 0,
+      totalInteractions: json['total_interactions'] as int? ?? 0,
+    );
+  }).toList();
+
+  // Sort by points descending
+  stats.sort((a, b) => b.points.compareTo(a.points));
+
+  return stats;
+});
+
+/// Model for family member stats in leaderboard.
+class FamilyMemberStats {
+  final String userId;
+  final String displayName;
+  final int points;
+  final int level;
+  final int currentStreak;
+  final int totalInteractions;
+
+  const FamilyMemberStats({
+    required this.userId,
+    required this.displayName,
+    required this.points,
+    required this.level,
+    required this.currentStreak,
+    required this.totalInteractions,
+  });
+}
+
 /// Provider for today's due relatives based on reminder schedules
 /// Returns relatives with ALL their applicable frequencies (e.g., daily + friday)
 final todayDueRelativesProvider = Provider.family<List<DueRelativeWithFrequencies>, ({

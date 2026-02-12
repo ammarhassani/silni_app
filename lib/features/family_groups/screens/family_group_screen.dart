@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../family_tree/providers/family_graph_providers.dart';
+import '../../home/providers/home_providers.dart';
 import '../models/family_group_model.dart';
 import '../providers/family_group_providers.dart';
 import '../services/family_group_service.dart';
@@ -33,6 +36,8 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
   FamilyGroup? _group;
   bool _isLoadingGroup = true;
   bool _isLeaving = false;
+  bool _isDeleting = false;
+  String? _removingMemberId;
 
   @override
   void initState() {
@@ -59,23 +64,152 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
     }
   }
 
+  /// Whether the current user is an admin in this group.
+  bool _isCurrentUserAdmin(List<FamilyGroupMember> members) {
+    final userId = ref.read(currentUserProvider)?.id;
+    if (userId == null) return false;
+    return members.any((m) => m.userId == userId && m.isAdmin);
+  }
+
+  Future<void> _removeMember(FamilyGroupMember member) async {
+    if (_removingMemberId != null) return; // Guard against double-tap
+
+    final themeColors = ref.read(themeColorsProvider);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: themeColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        ),
+        title: Text(
+          'إزالة العضو',
+          style: AppTypography.titleMedium.copyWith(
+            color: themeColors.onSurface,
+          ),
+        ),
+        content: Text(
+          'هل تريد إزالة ${member.displayName ?? 'هذا العضو'} من المجموعة؟',
+          style: AppTypography.bodyMedium.copyWith(
+            color: themeColors.onSurface,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'إلغاء',
+              style: TextStyle(color: themeColors.textSecondary),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'إزالة',
+              style: TextStyle(color: themeColors.statusError),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _removingMemberId = member.id);
+
+    try {
+      await FamilyGroupService.removeMember(
+        groupId: widget.groupId,
+        memberId: member.id,
+      );
+      if (mounted) {
+        ref.invalidate(groupMembersProvider(widget.groupId));
+        ref.invalidate(groupRelativesStreamProvider(widget.groupId));
+        ref.invalidate(sharedFamilyEdgesStreamProvider(widget.groupId));
+        ref.invalidate(groupMemberNodeIdsProvider(widget.groupId));
+        ref.invalidate(familyLeaderboardProvider(widget.groupId));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تمت إزالة العضو')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('حدث خطأ أثناء إزالة العضو: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _removingMemberId = null);
+    }
+  }
+
   Future<void> _leaveGroup() async {
+    if (_isLeaving) return; // Guard against double-tap
     final user = ref.read(currentUserProvider);
     if (user == null) return;
+
+    final themeColors = ref.read(themeColorsProvider);
+
+    // Check if user is the last admin with other members remaining
+    FamilyGroupMember? selectedNewAdmin;
+    final members = ref.read(groupMembersProvider(widget.groupId)).valueOrNull;
+    if (members != null) {
+      final isAdmin = members.any((m) => m.userId == user.id && m.isAdmin);
+      final otherAdmins = members.where(
+        (m) => m.userId != user.id && m.isAdmin,
+      );
+      final otherMembers = members.where((m) => m.userId != user.id);
+
+      if (isAdmin && otherAdmins.isEmpty && otherMembers.isNotEmpty) {
+        // Last admin — must pick a successor before leaving
+        selectedNewAdmin = await _showAdminTransferPicker(
+          themeColors,
+          otherMembers.toList(),
+        );
+        if (selectedNewAdmin == null || !mounted) return;
+      }
+    }
+
+    if (!mounted) return;
+
+    // Confirm leave — admin transfer happens atomically after confirmation
+    final leaveMessage = selectedNewAdmin != null
+        ? 'سيتم نقل الإدارة إلى ${selectedNewAdmin.displayName ?? 'العضو المختار'} ومغادرة المجموعة. متابعة؟'
+        : 'هل أنت متأكد من مغادرة هذه المجموعة؟';
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('مغادرة المجموعة'),
-        content: const Text('هل أنت متأكد من مغادرة هذه المجموعة؟'),
+        backgroundColor: themeColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        ),
+        title: Text(
+          'مغادرة المجموعة',
+          style: AppTypography.titleMedium.copyWith(
+            color: themeColors.onSurface,
+          ),
+        ),
+        content: Text(
+          leaveMessage,
+          style: AppTypography.bodyMedium.copyWith(
+            color: themeColors.onSurface,
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('إلغاء'),
+            child: Text(
+              'إلغاء',
+              style: TextStyle(color: themeColors.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('مغادرة'),
+            child: Text(
+              'مغادرة',
+              style: TextStyle(color: themeColors.statusError),
+            ),
           ),
         ],
       ),
@@ -86,12 +220,26 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
     setState(() => _isLeaving = true);
 
     try {
+      // Transfer admin first (if needed), then leave — both after confirmation
+      if (selectedNewAdmin != null) {
+        await FamilyGroupService.transferAdmin(
+          groupId: widget.groupId,
+          currentUserId: user.id,
+          newAdminMemberId: selectedNewAdmin.id,
+        );
+      }
+
       await FamilyGroupService.leaveGroup(
         groupId: widget.groupId,
         userId: user.id,
       );
       if (mounted) {
-        context.pop();
+        _invalidateAllProviders();
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go(AppRoutes.home);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -100,6 +248,147 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
           SnackBar(content: Text('حدث خطأ أثناء مغادرة المجموعة: $e')),
         );
       }
+    }
+  }
+
+  /// Show a picker for the user to select the new admin before leaving.
+  Future<FamilyGroupMember?> _showAdminTransferPicker(
+    ThemeColors themeColors,
+    List<FamilyGroupMember> candidates,
+  ) async {
+    return showDialog<FamilyGroupMember>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: themeColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        ),
+        title: Text(
+          'اختر المسؤول الجديد',
+          style: AppTypography.titleMedium.copyWith(
+            color: themeColors.onSurface,
+          ),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: candidates.length,
+            itemBuilder: (ctx, i) {
+              final member = candidates[i];
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundColor:
+                      themeColors.onSurface.withValues(alpha: 0.15),
+                  child: Icon(
+                    Icons.person_rounded,
+                    size: AppSpacing.iconSm,
+                    color: themeColors.onSurface,
+                  ),
+                ),
+                title: Text(
+                  member.displayName ?? 'عضو',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: themeColors.onSurface,
+                  ),
+                ),
+                onTap: () => Navigator.of(ctx).pop(member),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: Text(
+              'إلغاء',
+              style: TextStyle(color: themeColors.textSecondary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteGroup() async {
+    if (_isDeleting) return; // Guard against double-tap
+    final themeColors = ref.read(themeColorsProvider);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: themeColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        ),
+        title: Text(
+          'حذف المجموعة',
+          style: AppTypography.titleMedium.copyWith(
+            color: themeColors.onSurface,
+          ),
+        ),
+        content: Text(
+          'سيتم حذف المجموعة وجميع البيانات المشتركة نهائيًا. هل تريد المتابعة؟',
+          style: AppTypography.bodyMedium.copyWith(
+            color: themeColors.onSurface,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'إلغاء',
+              style: TextStyle(color: themeColors.textSecondary),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'حذف',
+              style: TextStyle(color: themeColors.statusError),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isDeleting = true);
+
+    try {
+      await FamilyGroupService.deleteGroup(widget.groupId);
+      if (mounted) {
+        _invalidateAllProviders();
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go(AppRoutes.home);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isDeleting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('حدث خطأ أثناء حذف المجموعة: $e')),
+        );
+      }
+    }
+  }
+
+  void _invalidateAllProviders() {
+    final userId = ref.read(currentUserProvider)?.id;
+    ref.invalidate(userFamilyGroupProvider);
+    ref.invalidate(groupRelativesStreamProvider(widget.groupId));
+    ref.invalidate(sharedFamilyEdgesStreamProvider(widget.groupId));
+    ref.invalidate(groupMembersProvider(widget.groupId));
+    ref.invalidate(groupMemberNodeIdsProvider(widget.groupId));
+    ref.invalidate(groupTodayInteractionsStreamProvider(widget.groupId));
+    ref.invalidate(groupTodayContactedRelativesProvider(widget.groupId));
+    ref.invalidate(familyLeaderboardProvider(widget.groupId));
+    if (userId != null) {
+      ref.invalidate(userGroupsProvider(userId));
+      ref.invalidate(relativesStreamProvider(userId));
+      ref.invalidate(todayInteractionsStreamProvider(userId));
     }
   }
 
@@ -125,7 +414,14 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
                   child: Row(
                     children: [
                       IconButton(
-                        onPressed: () => context.pop(),
+                        onPressed: () {
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go(AppRoutes.home);
+                          }
+                        },
+                        tooltip: 'العودة',
                         icon: Icon(
                           Icons.arrow_back_ios_rounded,
                           color: themeColors.onSurface,
@@ -177,22 +473,33 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
     ThemeColors themeColors,
     AsyncValue<List<FamilyGroupMember>> membersAsync,
   ) {
-    final group = _group!;
+    final group = _group;
+    if (group == null) return const SizedBox.shrink();
+    final isAdmin = membersAsync.whenOrNull(
+          data: (members) => _isCurrentUserAdmin(members),
+        ) ??
+        false;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Group info card
-          GlassCard(
+    return RefreshIndicator(
+      onRefresh: () async {
+        _invalidateAllProviders();
+        await _loadGroup();
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Group info card
+            GlassCard(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(
               children: [
                 Icon(
                   Icons.family_restroom_rounded,
                   size: AppSpacing.iconXl,
-                  color: themeColors.primary,
+                  color: themeColors.onSurface,
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
@@ -213,13 +520,36 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
 
-          // Invite link card
-          InviteLinkCard(inviteCode: group.inviteCode),
-          const SizedBox(height: AppSpacing.md),
+          // Invite link card (admins only)
+          if (isAdmin) ...[
+            InviteLinkCard(
+              inviteCode: group.inviteCode,
+              isAdmin: true,
+              onRotate: () async {
+                try {
+                  final newCode = await FamilyGroupService.rotateInviteCode(group.id);
+                  if (mounted) {
+                    setState(() {
+                      _group = group.copyWith(inviteCode: newCode);
+                    });
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('حدث خطأ أثناء تجديد الرابط: $e')),
+                    );
+                  }
+                }
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
 
-          // Weekly leaderboard
-          FamilyLeaderboard(groupId: widget.groupId),
-          const SizedBox(height: AppSpacing.md),
+          // Weekly leaderboard (hide when only 1 member)
+          if (membersAsync.valueOrNull != null && membersAsync.valueOrNull!.length > 1) ...[
+            FamilyLeaderboard(groupId: widget.groupId),
+            const SizedBox(height: AppSpacing.md),
+          ],
 
           // Members section
           Text(
@@ -231,7 +561,8 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
           const SizedBox(height: AppSpacing.sm),
 
           membersAsync.when(
-            data: (members) => _buildMembersList(themeColors, members),
+            data: (members) =>
+                _buildMembersList(themeColors, members, isAdmin),
             loading: () => const Center(
               child: Padding(
                 padding: EdgeInsets.all(AppSpacing.lg),
@@ -240,12 +571,25 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
             ),
             error: (error, _) => GlassCard(
               padding: const EdgeInsets.all(AppSpacing.md),
-              child: Text(
-                'حدث خطأ في تحميل الأعضاء',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: themeColors.onSurface,
-                ),
-                textAlign: TextAlign.center,
+              child: Column(
+                children: [
+                  Text(
+                    'حدث خطأ في تحميل الأعضاء',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: themeColors.onSurface,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  TextButton.icon(
+                    onPressed: () => ref.invalidate(groupMembersProvider(widget.groupId)),
+                    icon: Icon(Icons.refresh_rounded, color: themeColors.onSurface),
+                    label: Text(
+                      'إعادة المحاولة',
+                      style: TextStyle(color: themeColors.onSurface),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -289,7 +633,50 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
               ],
             ),
           ),
+
+          // Delete group button (admin only)
+          if (isAdmin) ...[
+            const SizedBox(height: AppSpacing.sm),
+            GlassCard(
+              onTap: _isDeleting ? null : _deleteGroup,
+              semanticsLabel: 'حذف المجموعة',
+              padding: const EdgeInsets.symmetric(
+                vertical: AppSpacing.md,
+                horizontal: AppSpacing.md,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_isDeleting)
+                    SizedBox(
+                      width: AppSpacing.iconSm,
+                      height: AppSpacing.iconSm,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          themeColors.statusError,
+                        ),
+                      ),
+                    )
+                  else
+                    Icon(
+                      Icons.delete_forever_rounded,
+                      size: AppSpacing.iconMd,
+                      color: themeColors.statusError,
+                    ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    'حذف المجموعة',
+                    style: AppTypography.labelLarge.copyWith(
+                      color: themeColors.statusError,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
+        ),
       ),
     );
   }
@@ -297,7 +684,10 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
   Widget _buildMembersList(
     ThemeColors themeColors,
     List<FamilyGroupMember> members,
+    bool isAdmin,
   ) {
+    final currentUserId = ref.read(currentUserProvider)?.id;
+
     if (members.isEmpty) {
       return GlassCard(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -313,6 +703,10 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
 
     return Column(
       children: members.map((member) {
+        // Admin can remove non-admin members (not themselves)
+        final canRemove =
+            isAdmin && !member.isAdmin && member.userId != currentUserId;
+
         return Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
           child: GlassCard(
@@ -322,11 +716,11 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
                 // Avatar
                 CircleAvatar(
                   radius: AppSpacing.avatarSm / 2,
-                  backgroundColor: themeColors.primary.withValues(alpha: 0.2),
+                  backgroundColor: themeColors.onSurface.withValues(alpha: 0.15),
                   child: Icon(
                     Icons.person_rounded,
                     size: AppSpacing.iconSm,
-                    color: themeColors.primary,
+                    color: themeColors.onSurface,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
@@ -336,7 +730,7 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        member.userId,
+                        member.displayName ?? 'عضو',
                         style: AppTypography.bodyMedium.copyWith(
                           color: themeColors.onSurface,
                         ),
@@ -345,6 +739,17 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
                     ],
                   ),
                 ),
+                // Validated badge (linked to tree node)
+                if (member.relativeIdInTree != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: AppSpacing.xs),
+                    child: Icon(
+                      Icons.verified_rounded,
+                      size: AppSpacing.iconSm,
+                      color: themeColors.onSurface,
+                      semanticLabel: 'مرتبط بالشجرة',
+                    ),
+                  ),
                 // Role badge
                 if (member.isAdmin)
                   Container(
@@ -353,15 +758,42 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
                       vertical: AppSpacing.xs,
                     ),
                     decoration: BoxDecoration(
-                      color: themeColors.primary.withValues(alpha: 0.2),
+                      color: themeColors.onSurface.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                     ),
                     child: Text(
                       'مسؤول',
                       style: AppTypography.labelSmall.copyWith(
-                        color: themeColors.primary,
+                        color: themeColors.onSurface,
                       ),
                     ),
+                  ),
+                // Remove button (admin only, not on self or other admins)
+                if (canRemove)
+                  Padding(
+                    padding: const EdgeInsets.only(left: AppSpacing.xs),
+                    child: _removingMemberId == member.id
+                        ? SizedBox(
+                            width: AppSpacing.iconSm,
+                            height: AppSpacing.iconSm,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                themeColors.statusError,
+                              ),
+                            ),
+                          )
+                        : IconButton(
+                            onPressed: _removingMemberId != null
+                                ? null
+                                : () => _removeMember(member),
+                            tooltip: 'إزالة العضو',
+                            icon: Icon(
+                              Icons.person_remove_rounded,
+                              size: AppSpacing.iconSm,
+                              color: themeColors.statusError,
+                            ),
+                          ),
                   ),
               ],
             ),
