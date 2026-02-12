@@ -34,6 +34,12 @@ class ShareCardWidget extends StatelessWidget {
     ShareableCardData cardData, {
     LinearGradient? gradient,
   }) async {
+    // Compute share position origin BEFORE async gap (required for iPad).
+    final box = context.findRenderObject() as RenderBox?;
+    final sharePositionOrigin = box != null
+        ? box.localToGlobal(Offset.zero) & box.size
+        : null;
+
     final boundary = GlobalKey();
 
     final overlay = Overlay.of(context);
@@ -69,6 +75,7 @@ class ShareCardWidget extends StatelessWidget {
       await Share.shareXFiles(
         [XFile(tempFile.path)],
         text: cardData.shareText,
+        sharePositionOrigin: sharePositionOrigin,
       );
     } catch (e) {
       if (context.mounted) {

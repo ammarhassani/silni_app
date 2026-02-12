@@ -20,6 +20,9 @@ final bottomNavVisibilityProvider = StateProvider<bool>((ref) => true);
 class PersistentBottomNav extends ConsumerStatefulWidget {
   const PersistentBottomNav({super.key, required this.onNavTapped});
 
+  /// Total height the navbar occupies (container + margins)
+  static const double totalHeight = 75 + AppSpacing.md * 2;
+
   final Function(String route) onNavTapped;
 
   @override
