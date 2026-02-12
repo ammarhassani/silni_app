@@ -146,8 +146,9 @@ class ErrorHandlerService {
       // Insufficient privilege
       arabicMessage = 'ليس لديك صلاحية للقيام بهذه العملية';
     } else if (error.code?.startsWith('P') == true) {
-      // PostgreSQL errors
-      arabicMessage = 'خطأ في قاعدة البيانات';
+      // PostgreSQL errors — check for known RPC exception messages
+      arabicMessage = _mapRpcExceptionToArabic(error.message)
+          ?? 'خطأ في قاعدة البيانات';
     }
 
     return DatabaseError(
@@ -156,6 +157,66 @@ class ErrorHandlerService {
       originalError: error,
       stackTrace: stackTrace,
     );
+  }
+
+  /// Map known RPC exception messages to Arabic user-facing messages.
+  ///
+  /// Returns null if the message isn't recognized, so the caller can
+  /// fall back to a generic database error message.
+  static String? _mapRpcExceptionToArabic(String message) {
+    final lower = message.toLowerCase();
+
+    // Group operations
+    if (lower.contains('cannot create group for another user')) {
+      return 'لا يمكن إنشاء مجموعة لمستخدم آخر';
+    }
+    if (lower.contains('group name cannot be empty')) {
+      return 'اسم المجموعة لا يمكن أن يكون فارغًا';
+    }
+    if (lower.contains('group name too long')) {
+      return 'اسم المجموعة طويل جدًا';
+    }
+
+    // Admin operations
+    if (lower.contains('cannot transfer admin for another user')) {
+      return 'لا يمكن نقل الإدارة لمستخدم آخر';
+    }
+    if (lower.contains('only admins can transfer admin')) {
+      return 'فقط المسؤولون يمكنهم نقل الإدارة';
+    }
+    if (lower.contains('only admins can remove members')) {
+      return 'فقط المسؤولون يمكنهم إزالة الأعضاء';
+    }
+    if (lower.contains('cannot remove another admin')) {
+      return 'لا يمكن إزالة مسؤول آخر';
+    }
+    if (lower.contains('cannot remove last admin') ||
+        lower.contains('cannot demote last admin')) {
+      return 'لا يمكن إزالة المسؤول الأخير من المجموعة';
+    }
+
+    // Leave operations
+    if (lower.contains('cannot leave group for another user')) {
+      return 'لا يمكن مغادرة المجموعة نيابة عن مستخدم آخر';
+    }
+
+    // Membership
+    if (lower.contains('caller is not a member')) {
+      return 'لست عضوًا في هذه المجموعة';
+    }
+    if (lower.contains('target member not found')) {
+      return 'العضو المطلوب غير موجود في المجموعة';
+    }
+    if (lower.contains('use leave_group to remove yourself')) {
+      return 'استخدم خيار المغادرة لإزالة نفسك';
+    }
+
+    // Immutability / validation
+    if (lower.contains('relative_id_in_tree must reference')) {
+      return 'العضو المختار غير موجود في شجرة هذه المجموعة';
+    }
+
+    return null;
   }
 
   /// Get user-friendly Arabic message for any error
