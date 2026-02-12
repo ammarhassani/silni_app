@@ -62,16 +62,7 @@ class QuickActionsWidget extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          _QuickActionCard(
-            icon: Icons.account_tree_rounded,
-            title: 'شجرة العائلة',
-            subtitle: 'تصور جميل لعائلتك',
-            gradient: LinearGradient(
-              colors: [
-                themeColors.primaryDark,
-                themeColors.primary.withValues(alpha: 0.8),
-              ],
-            ),
+          _FamilyTreeHeroCard(
             themeColors: themeColors,
             onTap: () => context.push(AppRoutes.familyTree),
           ),
@@ -176,4 +167,200 @@ class _QuickActionCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Full-width dramatic family tree card with horizontal layout and visual flair.
+class _FamilyTreeHeroCard extends StatelessWidget {
+  const _FamilyTreeHeroCard({
+    required this.themeColors,
+    required this.onTap,
+  });
+
+  final dynamic themeColors;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'شجرة العائلة - اكتشف روابط عائلتك',
+      button: true,
+      child: GlassCard(
+        onTap: onTap,
+        padding: EdgeInsets.zero,
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [
+            AppColors.premiumGoldDark.withValues(alpha: 0.25),
+            themeColors.primaryDark.withValues(alpha: 0.4),
+            themeColors.primary.withValues(alpha: 0.2),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          child: Stack(
+            children: [
+              // Decorative tree branch lines (background pattern)
+              Positioned(
+                left: -20,
+                top: -10,
+                bottom: -10,
+                width: 140,
+                child: CustomPaint(
+                  painter: _TreeBranchPainter(
+                    color: AppColors.premiumGold.withValues(alpha: 0.08),
+                  ),
+                ),
+              ),
+
+              // Golden accent glow (top-right)
+              Positioned(
+                top: -30,
+                right: -30,
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppColors.premiumGold.withValues(alpha: 0.15),
+                        AppColors.premiumGold.withValues(alpha: 0.0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // Main content
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Row(
+                  children: [
+                    // Tree icon with golden ring
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppColors.premiumGoldDark,
+                            AppColors.premiumGold,
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.premiumGold.withValues(alpha: 0.4),
+                            blurRadius: 16,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.account_tree_rounded,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: AppSpacing.md),
+
+                    // Text
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'شجرة العائلة',
+                            style: AppTypography.titleLarge.copyWith(
+                              color: themeColors.textOnGradient,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'اكتشف روابط عائلتك',
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: themeColors.textOnGradient
+                                  .withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Arrow
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.12),
+                      ),
+                      child: Icon(
+                        Icons.arrow_back_ios_rounded,
+                        color: themeColors.textOnGradient.withValues(alpha: 0.9),
+                        size: 18,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Paints decorative tree branch lines as a background pattern.
+class _TreeBranchPainter extends CustomPainter {
+  _TreeBranchPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    final cx = size.width * 0.6;
+    final cy = size.height * 0.5;
+
+    // Trunk
+    canvas.drawLine(Offset(cx, cy + 40), Offset(cx, cy - 20), paint);
+
+    // Branches
+    canvas.drawLine(Offset(cx, cy - 20), Offset(cx - 30, cy - 50), paint);
+    canvas.drawLine(Offset(cx, cy - 20), Offset(cx + 30, cy - 50), paint);
+    canvas.drawLine(Offset(cx, cy + 5), Offset(cx - 40, cy - 15), paint);
+    canvas.drawLine(Offset(cx, cy + 5), Offset(cx + 40, cy - 15), paint);
+
+    // Nodes (circles at branch tips)
+    final nodePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    for (final offset in [
+      Offset(cx - 30, cy - 50),
+      Offset(cx + 30, cy - 50),
+      Offset(cx - 40, cy - 15),
+      Offset(cx + 40, cy - 15),
+      Offset(cx, cy - 20),
+    ]) {
+      canvas.drawCircle(offset, 5, nodePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
