@@ -1,4 +1,4 @@
-.PHONY: test test-unit test-widget test-integration test-e2e test-golden coverage clean bug-scout test-adversarial adversarial-quick mutation-test torture-quick torture torture-ultimate nuclear
+.PHONY: test test-unit test-widget test-integration test-e2e test-golden coverage clean bug-scout test-adversarial adversarial-quick mutation-test torture-quick torture torture-ultimate nuclear bump bump-dry
 
 # Run all tests (one command to rule them all)
 test:
@@ -138,3 +138,15 @@ nuclear:
 	@echo ""
 	@sleep 2
 	@./scripts/ultimate_torture.sh --full
+
+# ============================================================================
+# VERSION BUMPING - Auto-detect from conventional commits
+# ============================================================================
+
+# Auto-bump version (reads feat:/fix:/BREAKING from commits)
+bump:
+	@./scripts/bump_version.sh
+
+# Preview what bump would happen without writing
+bump-dry:
+	@./scripts/bump_version.sh --dry

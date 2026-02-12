@@ -1,51 +1,87 @@
 <!DOCTYPE html>
-<html>
+<html lang="ar" dir="rtl">
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
-  <base href="$FLUTTER_BASE_HREF">
-
   <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="صِلْني - تطبيق صلة الرحم">
-
-  <!-- Google Sign-In Client ID for web -->
-  <meta name="google-signin-client_id" content="1049917341546-s0v9645jaquokpqqv1kia2trnlpsjfru.apps.googleusercontent.com">
-
-  <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="صِلْني">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
-
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
-
-  <title>صِلْني - Silni</title>
-  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="/icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <title>صِلْني - انضم للعائلة</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, 'SF Pro Arabic', 'Geeza Pro', 'Helvetica Neue', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1a3a2a 0%, #0d1f15 50%, #162e22 100%);
+      color: #fff;
+      padding: 24px;
+    }
+    .card {
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 24px;
+      padding: 40px 32px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+    .logo { width: 80px; height: 80px; margin-bottom: 24px; border-radius: 18px; }
+    h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; line-height: 1.4; }
+    .subtitle { font-size: 16px; color: rgba(255,255,255,0.7); margin-bottom: 32px; line-height: 1.6; }
+    .store-buttons { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+    .store-btn {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 14px 24px; border-radius: 14px; text-decoration: none;
+      font-size: 16px; font-weight: 600; transition: transform 0.15s ease;
+    }
+    .store-btn:active { transform: scale(0.97); }
+    .store-btn.ios { background: #fff; color: #000; }
+    .store-btn.android { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+    .store-icon { width: 22px; height: 22px; }
+    .divider { height: 1px; background: rgba(255,255,255,0.1); margin: 24px 0; }
+    .footer { font-size: 13px; color: rgba(255,255,255,0.4); line-height: 1.5; }
+  </style>
 </head>
 <body>
-  <!-- Google Sign-In API for web - must load synchronously before Flutter -->
-  <script src="https://accounts.google.com/gsi/client"></script>
-
-  <!-- Firebase SDK - Required for Firebase services on web -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-analytics-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-performance-compat.js"></script>
-
-  <script src="flutter_bootstrap.js" async></script>
+  <div class="card">
+    <img src="/icons/Icon-192.png" alt="صِلني" class="logo">
+    <h1>تم دعوتك للانضمام لعائلتك في صِلني</h1>
+    <p class="subtitle">حمّل التطبيق وانضم لعائلتك لتتابعوا صلة الرحم معًا</p>
+    <div class="store-buttons">
+      <a href="https://apps.apple.com/app/id6738029498" class="store-btn ios">
+        <svg class="store-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+        App Store
+      </a>
+      <a href="https://play.google.com/store/apps/details?id=com.silni.app" class="store-btn android">
+        <svg class="store-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3.18 23.04l8.85-8.84L3.2.96C2.83 1.17 2.57 1.6 2.57 2.1v19.81c0 .5.25.93.61 1.13zm1.57 1.13l9.78-5.52-2.78-2.78-7 6.99v1.31zm12.95-7.33l2.61-1.47c.49-.27.49-.95 0-1.22l-2.61-1.47-3.03 3.03 3.03 3.13zM4.75.24L13 8.49l-2.78 2.78L4.75.24z"/></svg>
+        Google Play
+      </a>
+    </div>
+    <div class="divider"></div>
+    <p class="footer">صِلني — تطبيق صلة الرحم</p>
+  </div>
+  <script>
+    // Try to open the app via custom URL scheme for installed users
+    var path = window.location.pathname;
+    var match = path.match(/^\/join\/(.+)/);
+    if (match) {
+      var code = match[1];
+      var query = window.location.search;
+      var deepLink = 'com.silni.app://join/' + code + (query || '');
+      var iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = deepLink;
+      document.body.appendChild(iframe);
+      setTimeout(function() { document.body.removeChild(iframe); }, 2000);
+    }
+  </script>
 </body>
 </html>
