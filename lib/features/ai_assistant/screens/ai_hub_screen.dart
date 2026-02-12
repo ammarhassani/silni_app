@@ -20,6 +20,7 @@ import '../../subscription/screens/paywall_screen.dart';
 import '../providers/ai_chat_provider.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/message_widget.dart';
+import '../../../shared/widgets/persistent_bottom_nav.dart';
 
 /// AI Hub Screen - Main dashboard for all AI features
 /// Replaces the old statistics "Coming Soon" screen
@@ -41,6 +42,7 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen> {
       body: Semantics(
         label: 'مركز ${AIIdentity.name} الذكي',
         child: SafeArea(
+          bottom: false,
           child: CustomScrollView(
             slivers: [
               // Header
@@ -150,8 +152,8 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen> {
             ),
 
             // Bottom spacing for nav bar
-            const SliverToBoxAdapter(
-              child: SizedBox(height: AppSpacing.bottomNavPadding),
+            SliverToBoxAdapter(
+              child: SizedBox(height: PersistentBottomNav.totalHeight),
             ),
           ],
           ),

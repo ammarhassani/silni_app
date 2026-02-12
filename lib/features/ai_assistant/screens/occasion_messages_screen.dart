@@ -45,7 +45,8 @@ class OccasionMessagesScreen extends ConsumerWidget {
       );
     }
 
-    final relativesAsync = ref.watch(relativesStreamProvider(userId));
+    // Rahim-scoped + self-node-filtered relatives via central provider
+    final relativesAsync = ref.watch(viewerFilteredRelativesProvider);
 
     return GradientBackground(
       child: Scaffold(
@@ -166,7 +167,9 @@ class OccasionMessagesScreen extends ConsumerWidget {
       buffer.writeln('${msg.relativeName} (${msg.relationshipType}):');
       buffer.writeln(msg.message);
     }
-    Share.share(buffer.toString());
+    final box = context.findRenderObject() as RenderBox?;
+    final origin = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
+    Share.share(buffer.toString(), sharePositionOrigin: origin);
   }
 }
 
@@ -260,17 +263,21 @@ class _OccasionMessageCard extends StatelessWidget {
                 ),
 
                 // Share button
-                IconButton(
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    Share.share(message.message);
-                  },
-                  icon: Icon(
-                    Icons.share_rounded,
-                    size: AppSpacing.iconSm,
-                    color: themeColors.textSecondary,
+                Builder(
+                  builder: (btnContext) => IconButton(
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      final box = btnContext.findRenderObject() as RenderBox?;
+                      final origin = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
+                      Share.share(message.message, sharePositionOrigin: origin);
+                    },
+                    icon: Icon(
+                      Icons.share_rounded,
+                      size: AppSpacing.iconSm,
+                      color: themeColors.textSecondary,
+                    ),
+                    tooltip: 'مشاركة',
                   ),
-                  tooltip: 'مشاركة',
                 ),
               ],
             ),

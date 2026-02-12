@@ -522,17 +522,21 @@ class _MessageCard extends ConsumerWidget {
               ),
               const SizedBox(width: AppSpacing.xs),
               // Share button
-              IconButton(
-                icon: const Icon(Icons.share_rounded, size: 20),
-                color: Colors.white54,
-                onPressed: isLoading
-                    ? null
-                    : () {
-                        HapticFeedback.lightImpact();
-                        Share.share(message);
-                      },
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
+              Builder(
+                builder: (btnContext) => IconButton(
+                  icon: const Icon(Icons.share_rounded, size: 20),
+                  color: Colors.white54,
+                  onPressed: isLoading
+                      ? null
+                      : () {
+                          HapticFeedback.lightImpact();
+                          final box = btnContext.findRenderObject() as RenderBox?;
+                          final origin = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
+                          Share.share(message, sharePositionOrigin: origin);
+                        },
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
               ),
             ],
           ),
