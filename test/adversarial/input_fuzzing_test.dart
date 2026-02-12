@@ -259,9 +259,9 @@ void main() {
         ];
 
         for (final invalid in invalidGenders) {
-          // Should default to male or handle gracefully
+          // Unknown values should return null (not silent default)
           final gender = Gender.fromString(invalid);
-          expect(gender, isNotNull);
+          expect(gender, isNull);
         }
       });
 

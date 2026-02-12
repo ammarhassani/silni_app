@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../ai/ai_context_engine.dart';
 import 'cache_config_service.dart';
+import '../../features/relatives/services/relationship_inference_service.dart';
+import '../../shared/models/relative_model.dart';
 
 /// Service for managing AI touch points across the app
 ///
@@ -213,7 +215,12 @@ class AITouchPointService {
     // Replace focus relative data
     if (context.focusRelative != null) {
       final r = context.focusRelative!;
-      final isMale = r.gender?.value == 'male';
+      final resolvedGender = RelationshipInferenceService.resolveGender(
+        relationshipType: r.relationshipType,
+        storedGender: r.gender,
+        fullName: r.fullName,
+      );
+      final isMale = resolvedGender != Gender.female;
       final genderPronoun = isMale ? 'ه' : 'ها';
       final genderVerb = isMale ? 'يحب' : 'تحب';
       final genderAsk = isMale ? 'اسأله' : 'اسأليها';

@@ -197,8 +197,8 @@ void main() {
         expect(Gender.fromString(null), isNull);
       });
 
-      test('should default to male for unknown gender', () {
-        expect(Gender.fromString('unknown'), equals(Gender.male));
+      test('should return null for unknown gender', () {
+        expect(Gender.fromString('unknown'), isNull);
       });
 
       test('should have correct Arabic names', () {

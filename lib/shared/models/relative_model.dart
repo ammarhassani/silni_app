@@ -45,10 +45,9 @@ enum Gender {
 
   static Gender? fromString(String? value) {
     if (value == null) return null;
-    return Gender.values.firstWhere(
-      (gender) => gender.value == value,
-      orElse: () => Gender.male,
-    );
+    if (value == 'male') return Gender.male;
+    if (value == 'female') return Gender.female;
+    return null; // Unknown value → null, not silent male
   }
 }
 

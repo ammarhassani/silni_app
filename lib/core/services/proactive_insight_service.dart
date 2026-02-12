@@ -1,6 +1,7 @@
 import '../../shared/models/interaction_model.dart';
 import '../../shared/models/relative_model.dart';
 import 'contact_priority_service.dart';
+import '../../features/relatives/services/relationship_inference_service.dart';
 
 /// A locally-generated insight about the user's family contact patterns.
 ///
@@ -37,6 +38,14 @@ class ProactiveInsight {
 ///   5. null — no actionable pattern found
 class ProactiveInsightService {
   ProactiveInsightService._();
+
+  /// Arabic day pluralization: 1 → يوم واحد, 2 → يومين, 3-10 → أيام, 11+ → يوم
+  static String _arabicDays(int days) {
+    if (days == 1) return 'يوم واحد';
+    if (days == 2) return 'يومين';
+    if (days >= 3 && days <= 10) return '$days أيام';
+    return '$days يوم';
+  }
 
   /// Generates one insight based on the user's relatives and interactions.
   ///
@@ -91,9 +100,17 @@ class ProactiveInsightService {
 
     if (mostOverdue == null) return null;
 
+    final resolvedGender = RelationshipInferenceService.resolveGender(
+      relationshipType: mostOverdue.relationshipType,
+      storedGender: mostOverdue.gender,
+      fullName: mostOverdue.fullName,
+    );
+    final isFemale = resolvedGender == Gender.female;
+    final pronoun = isFemale ? 'عليها' : 'عليه';
+
     return ProactiveInsight(
       type: 'gap',
-      message: 'ما كلمت ${mostOverdue.fullName} من $maxDays يوم، وش رأيك تسلم عليهم؟',
+      message: 'ما كلمت ${mostOverdue.fullName} من ${_arabicDays(maxDays)}، وش رأيك تسلم $pronoun؟',
       emoji: '📞',
       relativeId: mostOverdue.id,
     );
@@ -157,10 +174,26 @@ class ProactiveInsightService {
               : '$minCount مرات';
       final moreCountText = '$maxCount مرات';
 
+      final lessResolvedGender = RelationshipInferenceService.resolveGender(
+        relationshipType: lessContacted.relationshipType,
+        storedGender: lessContacted.gender,
+        fullName: lessContacted.fullName,
+      );
+      final lessIsFemale = lessResolvedGender == Gender.female;
+      final moreResolvedGender = RelationshipInferenceService.resolveGender(
+        relationshipType: moreContacted.relationshipType,
+        storedGender: moreContacted.gender,
+        fullName: moreContacted.fullName,
+      );
+      final moreIsFemale = moreResolvedGender == Gender.female;
+      final needsVerb = lessIsFemale ? 'تحتاج' : 'يحتاج';
+      final lessVerb = lessIsFemale ? 'كلمتها' : 'كلمته';
+      final moreVerb = moreIsFemale ? 'كلمتها' : 'كلمته';
+
       return ProactiveInsight(
         type: 'pattern',
         message:
-            '${lessContacted.fullName} ممكن يحتاج اهتمام أكثر، كلمته $lessCountText هالشهر بينما ${moreContacted.fullName} كلمته $moreCountText',
+            '${lessContacted.fullName} ممكن $needsVerb اهتمام أكثر، $lessVerb $lessCountText هالشهر بينما ${moreContacted.fullName} $moreVerb $moreCountText',
         emoji: '⚖️',
         relativeId: lessContacted.id,
       );
