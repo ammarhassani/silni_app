@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:confetti/confetti.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:uuid/uuid.dart';
+import '../../../core/config/supabase_config.dart';
 import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
@@ -30,6 +31,9 @@ import '../../auth/providers/auth_provider.dart';
 import '../../family_groups/models/family_group_model.dart';
 import '../../family_groups/providers/family_group_providers.dart';
 import '../../family_groups/services/shared_tree_service.dart';
+import '../../family_tree/models/family_graph.dart';
+import '../../family_tree/providers/family_graph_providers.dart';
+import '../../family_tree/services/family_graph_service.dart';
 import '../../home/providers/home_providers.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../services/relationship_inference_service.dart';
@@ -59,6 +63,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   String? _healthStatus; // Health status of the relative
   bool _addToSharedTree = false; // Whether to add to a shared family tree
   FamilyGroup? _selectedGroup; // The selected family group (if shared)
+  FamilySide? _selectedFamilySide; // Paternal or maternal side for extended family
 
   final SupabaseStorageService _storageService = SupabaseStorageService();
 
@@ -80,13 +85,16 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
     if (name.isEmpty) return;
 
     // Only infer if the relationship doesn't already dictate gender
-    final genderFromRelationship =
-        _getGenderFromRelationship(_selectedRelationship);
-    if (genderFromRelationship != null) return;
+    final fromRelationship =
+        RelationshipInferenceService.genderFromRelationship(_selectedRelationship);
+    if (fromRelationship != null) return;
 
-    final inferred = RelationshipInferenceService.inferGender(name);
-    if (inferred != null && inferred != _selectedGender) {
-      setState(() => _selectedGender = inferred);
+    final resolved = RelationshipInferenceService.resolveGender(
+      relationshipType: _selectedRelationship,
+      fullName: name,
+    );
+    if (resolved != null && resolved != _selectedGender) {
+      setState(() => _selectedGender = resolved);
     }
   }
 
@@ -173,6 +181,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         priority: _priority,
         isFavorite: _isFavorite,
         healthStatus: _healthStatus,
+        familySide: _selectedFamilySide,
         createdAt: DateTime.now(),
       );
 
@@ -188,6 +197,90 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         // Add as personal relative
         final repository = ref.read(relativesRepositoryProvider);
         createdRelativeId = await repository.createRelative(relative);
+      }
+
+      // Infer and persist family graph edges so the tree intelligence
+      // (perspective-shifting labels, generation layout) activates.
+      // In group mode, use the shared graph data for correct inference.
+      final groupInfo = ref.read(userFamilyGroupProvider).valueOrNull;
+      final isShared = _addToSharedTree && _selectedGroup != null;
+
+      final List<FamilyEdge> existingEdges;
+      List<Relative> existingRelatives;
+      final String edgeUserId;
+
+      if (isShared && groupInfo != null) {
+        existingEdges = ref
+                .read(sharedFamilyEdgesStreamProvider(groupInfo.groupId))
+                .valueOrNull ??
+            <FamilyEdge>[];
+        existingRelatives = ref
+                .read(groupRelativesStreamProvider(groupInfo.groupId))
+                .valueOrNull ??
+            <Relative>[];
+        edgeUserId = groupInfo.nodeId ?? user.id;
+
+        // Remap relatives to the ADDER's perspective so inferEdges
+        // auto-linking (e.g. spouse between parents) uses correct types.
+        // Without this, a non-admin adding "father" would find the admin's
+        // "mother" and create a wrong spouseOf edge.
+        if (groupInfo.nodeId != null && existingEdges.isNotEmpty) {
+          final tempGraph = FamilyGraphService.buildGraph(
+            userId: groupInfo.nodeId!,
+            edges: existingEdges,
+          );
+          final enriched =
+              FamilyGraphService.enrichAllSiblingEdges(tempGraph);
+          final relativesMap = {
+            for (final r in existingRelatives) r.id: r
+          };
+          existingRelatives = FamilyGraphService.remapForViewer(
+            viewerId: groupInfo.nodeId!,
+            graph: enriched,
+            relatives: existingRelatives,
+            relativesMap: relativesMap,
+          );
+        }
+      } else {
+        existingEdges =
+            ref.read(familyEdgesStreamProvider(user.id)).valueOrNull ??
+                <FamilyEdge>[];
+        existingRelatives =
+            ref.read(relativesStreamProvider(user.id)).valueOrNull ??
+                <Relative>[];
+        edgeUserId = user.id;
+      }
+
+      final inferredEdges = FamilyGraphService.inferEdges(
+        userId: edgeUserId,
+        newRelativeId: createdRelativeId,
+        relationshipType: _selectedRelationship,
+        side: _selectedFamilySide,
+        existingEdges: existingEdges,
+        existingRelatives: existingRelatives,
+      );
+
+      if (inferredEdges.isNotEmpty) {
+        // For shared edges, set family_group_id and ensure user_id is the
+        // auth user ID (not the node ID used as edge anchor for inference).
+        final edgesToPersist = isShared
+            ? inferredEdges
+                .map((e) => FamilyEdge(
+                      id: e.id,
+                      userId: user.id,
+                      fromId: e.fromId,
+                      toId: e.toId,
+                      type: e.type,
+                      createdAt: e.createdAt,
+                      familyGroupId: _selectedGroup!.id,
+                    ))
+                .toList()
+            : inferredEdges;
+
+        await SupabaseConfig.client.from('family_edges').upsert(
+          edgesToPersist.map((e) => e.toJson()).toList(),
+          onConflict: 'user_id,from_id,to_id,edge_type',
+        );
       }
 
       // Fire-and-forget: auto-create a reminder based on relationship type.
@@ -248,39 +341,19 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
     );
   }
 
-  Gender? _getGenderFromRelationship(RelationshipType relationship) {
-    switch (relationship) {
-      case RelationshipType.father:
-      case RelationshipType.brother:
-      case RelationshipType.son:
-      case RelationshipType.grandfather:
-      case RelationshipType.uncle:
-      case RelationshipType.nephew:
-      case RelationshipType.husband:
-        return Gender.male;
-      case RelationshipType.mother:
-      case RelationshipType.sister:
-      case RelationshipType.daughter:
-      case RelationshipType.grandmother:
-      case RelationshipType.aunt:
-      case RelationshipType.niece:
-      case RelationshipType.wife:
-        return Gender.female;
-      case RelationshipType.cousin:
-      case RelationshipType.other:
-        return null; // User needs to select
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
 
     // Watch existing relatives to compute smart suggestions
+    // Use shared relatives when adding to shared tree, personal otherwise
     final user = ref.watch(currentUserProvider);
-    final relativesAsync = user != null
-        ? ref.watch(relativesStreamProvider(user.id))
-        : null;
+    final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+    final relativesAsync = (_addToSharedTree && groupInfo != null)
+        ? ref.watch(groupRelativesStreamProvider(groupInfo.groupId))
+        : (user != null ? ref.watch(relativesStreamProvider(user.id)) : null);
     final existingRelatives = relativesAsync?.valueOrNull ?? <Relative>[];
     final suggestions = RelationshipInferenceService.suggestRelationships(
       existingRelatives,
@@ -360,15 +433,22 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                         SmartRelationshipPicker(
                           selected: _selectedRelationship,
                           suggestions: suggestions,
+                          existingRelatives: existingRelatives,
+                          selectedSide: _selectedFamilySide,
                           onChanged: (value) {
                             setState(() {
                               _selectedRelationship = value;
                               // Auto-detect gender based on relationship
                               _selectedGender =
-                                  _getGenderFromRelationship(value);
+                                  RelationshipInferenceService.genderFromRelationship(value);
                               // Auto-set priority based on relationship closeness
                               _priority = AvatarType.suggestPriority(value);
+                              // Reset family side when relationship changes
+                              _selectedFamilySide = null;
                             });
+                          },
+                          onSideChanged: (side) {
+                            setState(() => _selectedFamilySide = side);
                           },
                         ),
                         const SizedBox(height: AppSpacing.md),

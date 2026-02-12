@@ -18,6 +18,11 @@ import '../../../core/providers/cache_provider.dart';
 import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/widgets/health_status_picker.dart';
 import '../../../shared/utils/ui_helpers.dart';
+import '../../family_tree/models/family_graph.dart';
+import '../../family_tree/providers/family_graph_providers.dart';
+import '../../family_tree/services/family_graph_service.dart';
+import '../../home/providers/home_providers.dart';
+import '../services/relationship_inference_service.dart';
 
 class EditRelativeScreen extends ConsumerStatefulWidget {
   final String relativeId;
@@ -97,29 +102,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
     }
   }
 
-  Gender? _getGenderFromRelationship(RelationshipType relationship) {
-    switch (relationship) {
-      case RelationshipType.father:
-      case RelationshipType.brother:
-      case RelationshipType.son:
-      case RelationshipType.grandfather:
-      case RelationshipType.uncle:
-      case RelationshipType.nephew:
-      case RelationshipType.husband:
-        return Gender.male;
-      case RelationshipType.mother:
-      case RelationshipType.sister:
-      case RelationshipType.daughter:
-      case RelationshipType.grandmother:
-      case RelationshipType.aunt:
-      case RelationshipType.niece:
-      case RelationshipType.wife:
-        return Gender.female;
-      case RelationshipType.cousin:
-      case RelationshipType.other:
-        return null;
-    }
-  }
+
 
   Future<void> _updateRelative() async {
     if (!_formKey.currentState!.validate()) return;
@@ -176,6 +159,89 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
         'is_favorite': _isFavorite,
         'health_status': _healthStatus,
       });
+
+      // Re-infer edges if relationship type changed
+      if (_relative!.relationshipType != _selectedRelationship) {
+        final relative = _relative!;
+        final isShared = relative.familyGroupId != null;
+        final userId = SupabaseConfig.currentUserId;
+
+        // Delete old edges for this relative (both directions)
+        await SupabaseConfig.client
+            .from('family_edges')
+            .delete()
+            .eq('from_id', relative.id);
+        await SupabaseConfig.client
+            .from('family_edges')
+            .delete()
+            .eq('to_id', relative.id);
+
+        // Re-infer with new relationship type
+        if (userId != null) {
+          String edgeUserId = userId;
+          List<FamilyEdge> existingEdges;
+          List<Relative> existingRelatives;
+
+          if (isShared) {
+            final groupInfo =
+                ref.read(userFamilyGroupProvider).valueOrNull;
+            if (groupInfo != null) {
+              existingEdges = ref
+                      .read(sharedFamilyEdgesStreamProvider(
+                          groupInfo.groupId))
+                      .valueOrNull ??
+                  [];
+              existingRelatives = ref
+                      .read(groupRelativesStreamProvider(
+                          groupInfo.groupId))
+                      .valueOrNull ??
+                  [];
+              edgeUserId = groupInfo.nodeId ?? userId;
+            } else {
+              existingEdges = ref
+                      .read(familyEdgesStreamProvider(userId))
+                      .valueOrNull ??
+                  [];
+              existingRelatives = ref
+                      .read(relativesStreamProvider(userId))
+                      .valueOrNull ??
+                  [];
+            }
+          } else {
+            existingEdges = ref
+                    .read(familyEdgesStreamProvider(userId))
+                    .valueOrNull ??
+                [];
+            existingRelatives =
+                ref.read(relativesStreamProvider(userId)).valueOrNull ??
+                    [];
+          }
+
+          // Filter out deleted edges for this relative
+          existingEdges = existingEdges
+              .where(
+                  (e) => e.fromId != relative.id && e.toId != relative.id)
+              .toList();
+
+          final inferredEdges = FamilyGraphService.inferEdges(
+            userId: edgeUserId,
+            newRelativeId: relative.id,
+            relationshipType: _selectedRelationship,
+            existingEdges: existingEdges,
+            existingRelatives: existingRelatives,
+          );
+
+          for (final edge in inferredEdges) {
+            final edgeMap = edge.toJson();
+            if (isShared) {
+              edgeMap['family_group_id'] = relative.familyGroupId;
+            }
+            await SupabaseConfig.client
+                .from('family_edges')
+                .upsert(edgeMap);
+          }
+        }
+      }
 
       if (!mounted) return;
 
@@ -589,7 +655,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
               if (value != null) {
                 setState(() {
                   _selectedRelationship = value;
-                  _selectedGender = _getGenderFromRelationship(value);
+                  _selectedGender = RelationshipInferenceService.genderFromRelationship(value);
                   _priority = AvatarType.suggestPriority(value);
                 });
               }

@@ -8,7 +8,18 @@ import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/theme/app_themes.dart';
+import '../../features/family_tree/models/family_graph.dart';
 import 'glass_card.dart';
+import '../../features/relatives/services/relationship_inference_service.dart';
+
+/// Relationship types that require a "which side?" follow-up question.
+const _extendedFamilyTypes = {
+  RelationshipType.uncle,
+  RelationshipType.aunt,
+  RelationshipType.cousin,
+  RelationshipType.grandfather,
+  RelationshipType.grandmother,
+};
 
 /// Data class for contact with relationship specification
 class ContactWithRelationship {
@@ -16,12 +27,14 @@ class ContactWithRelationship {
   RelationshipType relationshipType;
   Gender? gender;
   String? customRelationship;
+  FamilySide? familySide;
 
   ContactWithRelationship({
     required this.contact,
     required this.relationshipType,
     this.gender,
     this.customRelationship,
+    this.familySide,
   });
 }
 
@@ -64,8 +77,11 @@ class _RelationshipSpecificationDialogState
       final detectedRelationship = _contactsImportService.detectRelationship(
         contact.displayName,
       );
-      // Use relationship-based gender detection instead of name-based
-      final detectedGender = _getGenderFromRelationship(detectedRelationship);
+      // Use resolveGender to detect from relationship type + name
+      final detectedGender = RelationshipInferenceService.resolveGender(
+        relationshipType: detectedRelationship,
+        fullName: contact.displayName,
+      );
 
       return ContactWithRelationship(
         contact: contact,
@@ -85,7 +101,18 @@ class _RelationshipSpecificationDialogState
     setState(() {
       _contactsWithRelationship[index].relationshipType = type;
       // Auto-set gender based on relationship type
-      _contactsWithRelationship[index].gender = _getGenderFromRelationship(type);
+      _contactsWithRelationship[index].gender = RelationshipInferenceService.resolveGender(
+        relationshipType: type,
+        fullName: _contactsWithRelationship[index].contact.displayName,
+      );
+      // Reset family side when relationship changes
+      _contactsWithRelationship[index].familySide = null;
+    });
+  }
+
+  void _updateFamilySide(int index, FamilySide? side) {
+    setState(() {
+      _contactsWithRelationship[index].familySide = side;
     });
   }
 
@@ -95,31 +122,7 @@ class _RelationshipSpecificationDialogState
     });
   }
 
-  /// Get gender from relationship type (auto-detection)
-  /// Returns null for gender-neutral relationships (cousin, other) where user must select
-  Gender? _getGenderFromRelationship(RelationshipType type) {
-    switch (type) {
-      case RelationshipType.father:
-      case RelationshipType.brother:
-      case RelationshipType.son:
-      case RelationshipType.grandfather:
-      case RelationshipType.uncle:
-      case RelationshipType.nephew:
-      case RelationshipType.husband:
-        return Gender.male;
-      case RelationshipType.mother:
-      case RelationshipType.sister:
-      case RelationshipType.daughter:
-      case RelationshipType.grandmother:
-      case RelationshipType.aunt:
-      case RelationshipType.niece:
-      case RelationshipType.wife:
-        return Gender.female;
-      case RelationshipType.cousin:
-      case RelationshipType.other:
-        return null; // User must select
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -279,6 +282,19 @@ class _RelationshipSpecificationDialogState
           ),
           const SizedBox(height: AppSpacing.xs),
           _buildRelationshipSelector(index, relationshipType, themeColors),
+
+          // "Which side?" selector for extended family types
+          if (_extendedFamilyTypes.contains(relationshipType)) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'من طرف أبوك ولا أمك؟',
+              style: AppTypography.bodySmall.copyWith(
+                color: Colors.white.withValues(alpha: 0.9),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            _buildFamilySideSelector(index, contactWithRel.familySide, themeColors),
+          ],
 
           // Gender selector - only show for gender-neutral relationships (cousin, other)
           if (relationshipType == RelationshipType.cousin ||
@@ -464,6 +480,112 @@ class _RelationshipSpecificationDialogState
                       : FontWeight.normal,
                 ),
                 textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFamilySideSelector(
+    int index,
+    FamilySide? currentSide,
+    ThemeColors themeColors,
+  ) {
+    return Row(
+      children: [
+        Expanded(
+          child: GestureDetector(
+            onTap: () => _updateFamilySide(
+              index,
+              currentSide == FamilySide.paternal ? null : FamilySide.paternal,
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                gradient: currentSide == FamilySide.paternal
+                    ? themeColors.primaryGradient
+                    : null,
+                color: currentSide == FamilySide.paternal
+                    ? null
+                    : Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                border: Border.all(
+                  color: currentSide == FamilySide.paternal
+                      ? Colors.transparent
+                      : Colors.white.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('👨', style: TextStyle(fontSize: 16)),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text(
+                    'طرف أبوي',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: currentSide == FamilySide.paternal
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.8),
+                      fontWeight: currentSide == FamilySide.paternal
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        Expanded(
+          child: GestureDetector(
+            onTap: () => _updateFamilySide(
+              index,
+              currentSide == FamilySide.maternal ? null : FamilySide.maternal,
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                gradient: currentSide == FamilySide.maternal
+                    ? themeColors.primaryGradient
+                    : null,
+                color: currentSide == FamilySide.maternal
+                    ? null
+                    : Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                border: Border.all(
+                  color: currentSide == FamilySide.maternal
+                      ? Colors.transparent
+                      : Colors.white.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('👩', style: TextStyle(fontSize: 16)),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text(
+                    'طرف أمي',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: currentSide == FamilySide.maternal
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.8),
+                      fontWeight: currentSide == FamilySide.maternal
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

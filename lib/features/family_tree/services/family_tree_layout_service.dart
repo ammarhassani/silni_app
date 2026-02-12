@@ -117,6 +117,17 @@ class FamilyTreeLayoutService {
       );
     }
 
+    // Propagate family side through spouse edges so uncle's spouse
+    // gets the same side as the uncle, without BFS crossing lineages.
+    for (final nodeId in familySide.keys.toList()) {
+      final spouseId = effectiveGraph.getSpouse(nodeId);
+      if (spouseId != null &&
+          generations.containsKey(spouseId) &&
+          !familySide.containsKey(spouseId)) {
+        familySide[spouseId] = familySide[nodeId]!;
+      }
+    }
+
     // ── 4. Position spine ──
     final centerX = canvasSize.width / 2;
     final userGenY = canvasSize.height / 2;
