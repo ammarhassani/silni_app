@@ -194,52 +194,21 @@ class _OccasionMessagesScreenState
               return const SizedBox.shrink();
             }
 
-            return Column(
-              children: [
-                Expanded(
-                  child: ListView.builder(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm,
-                    ),
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = messages[index];
-                      return _OccasionMessageCard(
-                        message: msg,
-                        themeColors: themeColors,
-                        index: index,
-                      );
-                    },
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: SafeArea(
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: AppSpacing.buttonHeight,
-                      child: FilledButton.icon(
-                        onPressed: () => _shareAll(context, messages),
-                        icon: const Icon(Icons.share_rounded),
-                        label: Text(
-                          'مشاركة جميع الرسائل',
-                          style: AppTypography.labelLarge,
-                        ),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: themeColors.primary,
-                          foregroundColor: themeColors.onPrimary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                                AppSpacing.buttonRadius),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+            return ListView.builder(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              itemCount: messages.length,
+              itemBuilder: (context, index) {
+                final msg = messages[index];
+                return _OccasionMessageCard(
+                  message: msg,
+                  themeColors: themeColors,
+                  index: index,
+                );
+              },
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -256,21 +225,6 @@ class _OccasionMessagesScreenState
     );
   }
 
-  void _shareAll(BuildContext context, List<OccasionMessage> messages) {
-    final buffer = StringBuffer();
-    buffer.writeln(
-        'رسائل ${widget.occasion.arabicName} ${_occasionEmoji(widget.occasion)}');
-    buffer.writeln('─────────────────');
-    for (final msg in messages) {
-      buffer.writeln();
-      buffer.writeln('${msg.relativeName} (${msg.relationshipType}):');
-      buffer.writeln(msg.message);
-    }
-    final box = context.findRenderObject() as RenderBox?;
-    final origin =
-        box != null ? box.localToGlobal(Offset.zero) & box.size : null;
-    Share.share(buffer.toString(), sharePositionOrigin: origin);
-  }
 }
 
 /// Individual message card with copy and share actions.
