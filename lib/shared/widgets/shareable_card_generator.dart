@@ -76,4 +76,56 @@ class ShareableCardData {
       shareText: 'الحمدلله، وصلت للمستوى $newLevel في صلة الرحم!',
     );
   }
+
+  /// Create card data for an occasion greeting card.
+  ///
+  /// [occasionName] - display name of the occasion (e.g. عيد الفطر).
+  /// [occasionEmoji] - emoji representing the occasion.
+  /// [familyName] - optional family name (used when no specific relative).
+  /// [relativeName] - optional specific relative name (takes priority over familyName).
+  factory ShareableCardData.occasion({
+    required String occasionName,
+    required String occasionEmoji,
+    String? familyName,
+    String? relativeName,
+  }) {
+    final target = relativeName ?? (familyName != null ? 'عائلة $familyName' : null);
+    final subtitle = target != null
+        ? '$occasionName مبارك يا $target!'
+        : '$occasionName مبارك!';
+    final shareText = target != null
+        ? '$occasionName مبارك! كل عام و$target بخير 🤍 #صِلني'
+        : '$occasionName مبارك! كل عام وأنتم بخير 🤍 #صِلني';
+
+    return ShareableCardData(
+      emoji: occasionEmoji,
+      title: occasionName,
+      subtitle: subtitle,
+      shareText: shareText,
+    );
+  }
+
+  /// Create card data for a monthly/yearly wrapped summary.
+  ///
+  /// [periodName] - display name of the period (e.g. يناير 2025, ملخص السنة).
+  /// [personalityEmoji] - emoji for the user's relationship personality.
+  /// [personalityLabel] - label for the personality type (e.g. الواصل الدائم).
+  /// [totalInteractions] - total number of interactions in the period.
+  /// [uniqueRelatives] - number of unique relatives interacted with.
+  factory ShareableCardData.wrapped({
+    required String periodName,
+    required String personalityEmoji,
+    required String personalityLabel,
+    required int totalInteractions,
+    required int uniqueRelatives,
+  }) {
+    return ShareableCardData(
+      emoji: personalityEmoji,
+      title: personalityLabel,
+      subtitle: 'ملخص $periodName: $totalInteractions تواصل مع $uniqueRelatives شخص',
+      shareText: 'ملخص $periodName: تواصلت $totalInteractions مرة مع '
+          '$uniqueRelatives شخص! شخصيتي: $personalityLabel $personalityEmoji '
+          '#صِلني',
+    );
+  }
 }
