@@ -5,7 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/theme/app_themes.dart';
-import '../../../shared/widgets/share_card_widget.dart';
+import '../../../shared/widgets/share_bottom_sheet.dart';
+import '../../../shared/widgets/share_cards/wrapped_share_card.dart';
 import '../../../shared/widgets/shareable_card_generator.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
 import '../models/monthly_wrapped_model.dart';
@@ -587,21 +588,24 @@ class _WrappedContent extends ConsumerWidget {
   }
 
   void _shareWrapped(BuildContext context, ThemeColors themeColors) {
-    final cardData = ShareableCardData(
-      emoji: wrapped.personalityEmoji,
-      title: wrapped.personalityLabel,
-      subtitle:
-          'ملخص شهر ${wrapped.arabicMonthName} - ${wrapped.totalInteractions} تفاعل',
-      shareText:
-          'ملخصي لشهر ${wrapped.arabicMonthName}: ${wrapped.personalityLabel} ${wrapped.personalityEmoji}\n'
-          '${wrapped.totalInteractions} تفاعل مع ${wrapped.uniqueRelativesContacted} قريب\n'
-          '#صِلني',
-    );
-
-    ShareCardWidget.captureAndShare(
+    ShareBottomSheet.show(
       context,
-      cardData,
-      gradient: themeColors.primaryGradient,
+      cardBuilder: (format) => WrappedShareCard(
+        format: format,
+        personalityEmoji: wrapped.personalityEmoji,
+        personalityLabel: wrapped.personalityLabel,
+        periodName: wrapped.arabicMonthName,
+        totalInteractions: wrapped.totalInteractions,
+        uniqueRelatives: wrapped.uniqueRelativesContacted,
+        longestStreak: wrapped.longestStreak,
+      ),
+      shareText: ShareableCardData.wrapped(
+        periodName: wrapped.arabicMonthName,
+        personalityEmoji: wrapped.personalityEmoji,
+        personalityLabel: wrapped.personalityLabel,
+        totalInteractions: wrapped.totalInteractions,
+        uniqueRelatives: wrapped.uniqueRelativesContacted,
+      ).shareText,
     );
   }
 }

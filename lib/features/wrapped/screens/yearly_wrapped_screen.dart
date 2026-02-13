@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/constants/app_colors.dart';
-import '../../../shared/widgets/share_card_widget.dart';
+import '../../../shared/widgets/share_bottom_sheet.dart';
+import '../../../shared/widgets/share_cards/wrapped_share_card.dart';
 import '../../../shared/widgets/shareable_card_generator.dart';
 import 'package:silni_app/features/widgets/home_widget_service.dart';
 import '../models/yearly_wrapped_model.dart';
@@ -427,27 +428,26 @@ class _SharePage extends StatelessWidget {
   }
 
   void _shareWrapped(BuildContext context) {
-    final arabicYear = HomeWidgetService.toArabicNumerals(wrapped.year);
+    final periodName = wrapped.year.toString();
 
-    final cardData = ShareableCardData(
-      emoji: wrapped.personalityEmoji,
-      title: wrapped.personalityLabel,
-      subtitle:
-          '\u0645\u0644\u062E\u0635 $arabicYear - '
-          '${wrapped.totalInteractions} '
-          '\u062A\u0641\u0627\u0639\u0644', // ملخص ٢٠٢٥ - 342 تفاعل
-      shareText:
-          '\u0645\u0644\u062E\u0635\u064A \u0644\u0633\u0646\u0629 $arabicYear: '
-          '${wrapped.personalityLabel} ${wrapped.personalityEmoji}\n'
-          '${wrapped.totalInteractions} \u062A\u0641\u0627\u0639\u0644 \u0645\u0639 '
-          '${wrapped.uniqueRelativesContacted} \u0642\u0631\u064A\u0628\n'
-          '#\u0635\u0650\u0644\u0646\u064A', // ملخصي لسنة ٢٠٢٥: ... #صِلني
-    );
-
-    ShareCardWidget.captureAndShare(
+    ShareBottomSheet.show(
       context,
-      cardData,
-      gradient: AppColors.primaryGradient,
+      cardBuilder: (format) => WrappedShareCard(
+        format: format,
+        personalityEmoji: wrapped.personalityEmoji,
+        personalityLabel: wrapped.personalityLabel,
+        periodName: periodName,
+        totalInteractions: wrapped.totalInteractions,
+        uniqueRelatives: wrapped.uniqueRelativesContacted,
+        longestStreak: wrapped.longestStreak,
+      ),
+      shareText: ShareableCardData.wrapped(
+        periodName: periodName,
+        personalityEmoji: wrapped.personalityEmoji,
+        personalityLabel: wrapped.personalityLabel,
+        totalInteractions: wrapped.totalInteractions,
+        uniqueRelatives: wrapped.uniqueRelativesContacted,
+      ).shareText,
     );
   }
 }
