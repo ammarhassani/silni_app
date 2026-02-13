@@ -5,7 +5,8 @@ import 'package:confetti/confetti.dart';
 import '../../core/constants/app_animations.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
-import 'share_card_widget.dart';
+import 'share_bottom_sheet.dart';
+import 'share_cards/level_up_share_card.dart';
 import 'shareable_card_generator.dart';
 
 /// Dramatic level up celebration modal
@@ -290,13 +291,16 @@ class _LevelUpModalState extends State<LevelUpModal>
                     // Share button
                     OutlinedButton.icon(
                       onPressed: () {
-                        final cardData = ShareableCardData.levelUp(
-                          newLevel: widget.newLevel,
-                        );
-                        ShareCardWidget.captureAndShare(
+                        Navigator.of(context).pop();
+                        ShareBottomSheet.show(
                           context,
-                          cardData,
-                          gradient: AppColors.goldenGradient,
+                          cardBuilder: (format) => LevelUpShareCard(
+                            format: format,
+                            level: widget.newLevel,
+                          ),
+                          shareText: ShareableCardData.levelUp(
+                            newLevel: widget.newLevel,
+                          ).shareText,
                         );
                       },
                       style: OutlinedButton.styleFrom(

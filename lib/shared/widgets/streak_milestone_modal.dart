@@ -8,7 +8,8 @@ import '../../core/constants/app_typography.dart';
 import '../../core/models/gamification_event.dart';
 import '../../core/theme/app_themes.dart';
 import '../../core/theme/theme_provider.dart';
-import 'share_card_widget.dart';
+import 'share_bottom_sheet.dart';
+import 'share_cards/streak_share_card.dart';
 import 'shareable_card_generator.dart';
 
 /// Milestone tier for visual customization
@@ -511,13 +512,16 @@ class _StreakMilestoneModalState extends ConsumerState<StreakMilestoneModal>
                     // Share button
                     OutlinedButton.icon(
                       onPressed: () {
-                        final cardData = ShareableCardData.streak(
-                          streak: widget.streak,
-                        );
-                        ShareCardWidget.captureAndShare(
+                        Navigator.of(context).pop();
+                        ShareBottomSheet.show(
                           context,
-                          cardData,
-                          gradient: tierGradient,
+                          cardBuilder: (format) => StreakShareCard(
+                            format: format,
+                            streak: widget.streak,
+                          ),
+                          shareText: ShareableCardData.streak(
+                            streak: widget.streak,
+                          ).shareText,
                         );
                       },
                       style: OutlinedButton.styleFrom(

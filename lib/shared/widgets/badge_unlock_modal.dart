@@ -6,7 +6,8 @@ import '../../core/constants/app_animations.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/utils/badge_prestige.dart';
-import 'share_card_widget.dart';
+import 'share_bottom_sheet.dart';
+import 'share_cards/badge_share_card.dart';
 import 'shareable_card_generator.dart';
 
 /// Dramatic badge unlock celebration modal
@@ -311,21 +312,19 @@ class _BadgeUnlockModalState extends State<BadgeUnlockModal>
                     // Share button
                     OutlinedButton.icon(
                       onPressed: () {
-                        final cardData = ShareableCardData.badge(
-                          badgeName: widget.badgeName,
-                          badgeEmoji: badgeEmoji,
-                        );
-                        ShareCardWidget.captureAndShare(
+                        Navigator.of(context).pop();
+                        ShareBottomSheet.show(
                           context,
-                          cardData,
-                          gradient: LinearGradient(
-                            colors: [
-                              badgeColor,
-                              badgeColor.withValues(alpha: 0.8),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                          cardBuilder: (format) => BadgeShareCard(
+                            format: format,
+                            badgeEmoji: badgeEmoji,
+                            badgeName: widget.badgeName,
+                            badgeColor: badgeColor,
                           ),
+                          shareText: ShareableCardData.badge(
+                            badgeName: widget.badgeName,
+                            badgeEmoji: badgeEmoji,
+                          ).shareText,
                         );
                       },
                       style: OutlinedButton.styleFrom(
