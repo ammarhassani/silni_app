@@ -294,9 +294,10 @@ class _LevelUpModalState extends State<LevelUpModal>
                         Navigator.of(context).pop();
                         ShareBottomSheet.show(
                           context,
-                          cardBuilder: (format) => LevelUpShareCard(
+                          cardBuilder: (format, {String? aiCopy}) => LevelUpShareCard(
                             format: format,
                             level: widget.newLevel,
+                            copyText: aiCopy,
                           ),
                           shareText: ShareableCardData.levelUp(
                             newLevel: widget.newLevel,

@@ -8,22 +8,29 @@ import 'share_cards/share_card_base.dart';
 /// pick between story (9:16) and square (1:1) formats before sharing.
 class ShareBottomSheet extends StatefulWidget {
   /// Builds the card widget for the given [ShareCardFormat].
-  final Widget Function(ShareCardFormat format) cardBuilder;
+  /// Accepts an optional [aiCopy] string for AI-generated caption text.
+  final Widget Function(ShareCardFormat format, {String? aiCopy}) cardBuilder;
 
   /// Caption text sent alongside the shared image.
   final String shareText;
+
+  /// Optional future that resolves to an AI-generated share copy string.
+  /// When provided, the card will update with the AI copy once loaded.
+  final Future<String>? aiCopyFuture;
 
   const ShareBottomSheet({
     super.key,
     required this.cardBuilder,
     required this.shareText,
+    this.aiCopyFuture,
   });
 
   /// Convenience method to show the bottom sheet.
   static void show(
     BuildContext context, {
-    required Widget Function(ShareCardFormat format) cardBuilder,
+    required Widget Function(ShareCardFormat format, {String? aiCopy}) cardBuilder,
     required String shareText,
+    Future<String>? aiCopyFuture,
   }) {
     showModalBottomSheet<void>(
       context: context,
@@ -32,6 +39,7 @@ class ShareBottomSheet extends StatefulWidget {
       builder: (_) => ShareBottomSheet(
         cardBuilder: cardBuilder,
         shareText: shareText,
+        aiCopyFuture: aiCopyFuture,
       ),
     );
   }
@@ -43,6 +51,17 @@ class ShareBottomSheet extends StatefulWidget {
 class _ShareBottomSheetState extends State<ShareBottomSheet> {
   ShareCardFormat _format = ShareCardFormat.story;
   bool _sharing = false;
+  String? _aiCopy;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.aiCopyFuture?.then((copy) {
+      if (mounted) setState(() => _aiCopy = copy);
+    }).catchError((_) {
+      // Silently ignore AI failures — card works without copy
+    });
+  }
 
   Size get _cardSize => switch (_format) {
         ShareCardFormat.story => const Size(360, 640),
@@ -54,7 +73,7 @@ class _ShareBottomSheetState extends State<ShareBottomSheet> {
     try {
       await ShareCardWidget.captureWidgetAndShare(
         context,
-        widget.cardBuilder(_format),
+        widget.cardBuilder(_format, aiCopy: _aiCopy),
         shareText: widget.shareText,
         size: _cardSize,
       );
@@ -102,7 +121,7 @@ class _ShareBottomSheetState extends State<ShareBottomSheet> {
                   child: SizedBox(
                     width: _cardSize.width,
                     height: _cardSize.height,
-                    child: widget.cardBuilder(_format),
+                    child: widget.cardBuilder(_format, aiCopy: _aiCopy),
                   ),
                 ),
               ),

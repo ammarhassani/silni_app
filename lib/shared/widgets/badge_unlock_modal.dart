@@ -315,11 +315,12 @@ class _BadgeUnlockModalState extends State<BadgeUnlockModal>
                         Navigator.of(context).pop();
                         ShareBottomSheet.show(
                           context,
-                          cardBuilder: (format) => BadgeShareCard(
+                          cardBuilder: (format, {String? aiCopy}) => BadgeShareCard(
                             format: format,
                             badgeEmoji: badgeEmoji,
                             badgeName: widget.badgeName,
                             badgeColor: badgeColor,
+                            copyText: aiCopy,
                           ),
                           shareText: ShareableCardData.badge(
                             badgeName: widget.badgeName,

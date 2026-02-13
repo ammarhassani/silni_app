@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/ai/deepseek_ai_service.dart';
 import '../../core/constants/app_animations.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/models/gamification_event.dart';
+import '../../core/providers/subscription_provider.dart';
 import '../../core/theme/app_themes.dart';
 import '../../core/theme/theme_provider.dart';
 import 'share_bottom_sheet.dart';
@@ -513,15 +515,23 @@ class _StreakMilestoneModalState extends ConsumerState<StreakMilestoneModal>
                     OutlinedButton.icon(
                       onPressed: () {
                         Navigator.of(context).pop();
+                        final isMax = ref.read(isMaxProvider);
                         ShareBottomSheet.show(
                           context,
-                          cardBuilder: (format) => StreakShareCard(
+                          cardBuilder: (format, {String? aiCopy}) => StreakShareCard(
                             format: format,
                             streak: widget.streak,
+                            copyText: aiCopy,
                           ),
                           shareText: ShareableCardData.streak(
                             streak: widget.streak,
                           ).shareText,
+                          aiCopyFuture: isMax
+                              ? DeepSeekAIService().generateShareCopy(
+                                  cardType: 'streak',
+                                  context: {'streak': widget.streak},
+                                )
+                              : null,
                         );
                       },
                       style: OutlinedButton.styleFrom(

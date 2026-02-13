@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:confetti/confetti.dart';
+import '../../../core/ai/deepseek_ai_service.dart';
 import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/config/supabase_config.dart';
+import '../../../core/providers/subscription_provider.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/services/gamification_config_service.dart';
@@ -470,9 +472,10 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
             ),
             tooltip: 'مشاركة الإحصائيات',
             onPressed: () {
+              final isMax = ref.read(isMaxProvider);
               ShareBottomSheet.show(
                 context,
-                cardBuilder: (format, {aiCopy}) => WrappedShareCard(
+                cardBuilder: (format, {String? aiCopy}) => WrappedShareCard(
                   format: format,
                   personalityEmoji: '\u{1F3C6}',
                   personalityLabel: '\u0645\u0633\u062A\u0648\u0649 $level',
@@ -480,8 +483,19 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                   totalInteractions: totalInteractions as int,
                   uniqueRelatives: 0,
                   longestStreak: longestStreak as int,
+                  copyText: aiCopy,
                 ),
                 shareText: '\u0645\u0633\u062A\u0648\u0649 $level \u2014 $totalInteractions \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0639\u0627\u0626\u0644\u0629 \u{1F3C6} #\u0635\u0650\u0644\u0646\u064A',
+                aiCopyFuture: isMax
+                    ? DeepSeekAIService().generateShareCopy(
+                        cardType: 'gaming_stats',
+                        context: {
+                          'level': level,
+                          'totalInteractions': totalInteractions,
+                          'longestStreak': longestStreak,
+                        },
+                      )
+                    : null,
               );
             },
           ),
