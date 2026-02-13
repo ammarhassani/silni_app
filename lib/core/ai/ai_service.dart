@@ -49,6 +49,12 @@ abstract class AIService {
     required List<Relative> relatives,
   });
 
+  /// Generate a one-line shareable caption for a card in Saudi dialect
+  Future<String> generateShareCopy({
+    required String cardType,
+    required Map<String, dynamic> context,
+  });
+
   /// Extract memories/facts from a conversation
   Future<List<Map<String, dynamic>>> extractMemories(String conversation);
 

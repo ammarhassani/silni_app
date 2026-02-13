@@ -763,6 +763,7 @@ ${tonePromptModifier != null ? '## تعليمات خاصة بالنبرة: $tone
 - تعكس القيم الإسلامية بشكل طبيعي غير متكلف
 - قصيرة ومركزة (50-80 كلمة)
 - تحتوي على لمسة شخصية إن أمكن
+- لا تفترض أي معلومة غير مذكورة في البيانات — لا تفترض وفاة أو مرض أو حالة اجتماعية أو أي شيء آخر
 
 ## تنويع الأساليب:
 - الرسالة الأولى: مباشرة ودافئة
@@ -825,6 +826,7 @@ $relativesBlock
 - دافئة وطبيعية
 - 20-40 كلمة فقط
 - لا تكرر نفس العبارات أو الأنماط
+- لا تفترض أي معلومة غير مذكورة في البيانات — لا تفترض وفاة أو مرض أو حالة اجتماعية أو أي شيء آخر
 
 قدّم الإجابة بتنسيق JSON فقط:
 {
@@ -1010,5 +1012,54 @@ $personality
 ''');
 
     return buffer.toString();
+  }
+
+  /// System prompt for generating shareable card copy in Saudi dialect.
+  ///
+  /// Produces a single line (max 20 words) suitable for sharing on social media.
+  /// Card types: streak, badge, level_up, occasion, wrapped.
+  static String shareCopyPrompt({
+    required String cardType,
+    required Map<String, dynamic> context,
+  }) {
+    // Card-type specific tone instructions
+    final String toneInstruction;
+    switch (cardType) {
+      case 'streak':
+        toneInstruction = 'اكتب بأسلوب افتخار وحماس (تفاخر بالإنجاز)';
+      case 'badge':
+        toneInstruction = 'اكتب بأسلوب احتفالي (فرحة بالحصول على الشارة)';
+      case 'level_up':
+        toneInstruction = 'اكتب بأسلوب تحفيزي (تشجيع على الاستمرار)';
+      case 'occasion':
+        toneInstruction = 'اكتب بأسلوب تهنئة ومعايدة';
+      case 'wrapped':
+        toneInstruction = 'اكتب بأسلوب ملخّص واستعراض لأبرز الإنجازات';
+      default:
+        toneInstruction = 'اكتب بأسلوب إيجابي ومشجّع';
+    }
+
+    // Build context bullet points
+    final contextLines = StringBuffer();
+    context.forEach((key, value) {
+      contextLines.writeln('- $key: $value');
+    });
+
+    return '''
+اكتب سطر واحد فقط بالعامية السعودية مناسب للمشاركة في السوشال ميديا.
+
+## نوع البطاقة: $cardType
+## النبرة: $toneInstruction
+
+## البيانات المتاحة:
+$contextLines
+
+## قواعد صارمة:
+- سطر واحد فقط، لا يتجاوز ٢٠ كلمة
+- بالعامية السعودية فقط
+- لا تفترض أي معلومة غير موجودة في البيانات
+- يُسمح بإيموجي واحد فقط في نهاية السطر
+- الناتج نص عادي فقط: بدون JSON، بدون علامات اقتباس، بدون ماركداون
+''';
   }
 }

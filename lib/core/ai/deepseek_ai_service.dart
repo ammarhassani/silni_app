@@ -443,6 +443,58 @@ class DeepSeekAIService implements AIService {
   }
 
   @override
+  Future<String> generateShareCopy({
+    required String cardType,
+    required Map<String, dynamic> context,
+  }) async {
+    try {
+      final prompt = AIPrompts.shareCopyPrompt(
+        cardType: cardType,
+        context: context,
+      );
+
+      final response = await getChatCompletion(
+        messages: [
+          ChatMessage(
+            id: '',
+            conversationId: '',
+            userId: '',
+            role: MessageRole.user,
+            content: 'اكتب نص مشاركة',
+            createdAt: DateTime.now(),
+          ),
+        ],
+        systemPrompt: prompt,
+        temperature: 0.8,
+        maxTokens: 100,
+        timeoutSeconds: 3,
+      );
+
+      // Clean up response: trim quotes, markdown, whitespace
+      String cleaned = response.trim();
+      // Remove surrounding quotes
+      if ((cleaned.startsWith('"') && cleaned.endsWith('"')) ||
+          (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+        cleaned = cleaned.substring(1, cleaned.length - 1);
+      }
+      // Remove markdown formatting
+      cleaned = cleaned.replaceAll(RegExp(r'[*_`#]'), '');
+      // Collapse whitespace
+      cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+      return cleaned;
+    } catch (e) {
+      _logger.error(
+        'Share copy generation error',
+        category: LogCategory.network,
+        tag: 'DeepSeekAIService',
+        metadata: {'error': e.toString(), 'cardType': cardType},
+      );
+      rethrow;
+    }
+  }
+
+  @override
   Future<bool> isAvailable() async {
     try {
       // Check if edge function is deployed
@@ -706,6 +758,15 @@ class MockAIService implements AIService {
         suggestedMessage: 'السلام عليكم، كيف حالك؟',
       ),
     ];
+  }
+
+  @override
+  Future<String> generateShareCopy({
+    required String cardType,
+    required Map<String, dynamic> context,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    return 'ما شاء الله تواصلي مع أهلي ما وقف 🔥';
   }
 
   @override
