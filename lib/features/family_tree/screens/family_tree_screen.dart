@@ -1,8 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show UserAttributes;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -52,6 +56,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   final TransformationController _transformationController =
       TransformationController();
   final ScreenshotCallback _screenshotCallback = ScreenshotCallback();
+  final GlobalKey _treeBoundaryKey = GlobalKey();
   double _currentScale = 1.0;
   bool _showWatermark = false;
   bool _showPlaceholders = true;
@@ -202,6 +207,88 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
           name: trimmed,
         );
       }
+    }
+  }
+
+  Future<void> _shareTree() async {
+    HapticFeedback.lightImpact();
+
+    // Compute share position origin BEFORE async gap (required for iPad).
+    final box = context.findRenderObject() as RenderBox?;
+    final sharePositionOrigin = box != null
+        ? box.localToGlobal(Offset.zero) & box.size
+        : null;
+
+    try {
+      final renderObject = _treeBoundaryKey.currentContext
+          ?.findRenderObject() as RenderRepaintBoundary?;
+      if (renderObject == null) {
+        if (mounted) {
+          UIHelpers.showSnackBar(
+            context,
+            'لا يمكن التقاط صورة الشجرة حالياً',
+            isError: true,
+          );
+        }
+        return;
+      }
+
+      // Show watermark during capture
+      setState(() {
+        _showWatermark = true;
+        _showPlaceholders = false;
+      });
+      // Wait a frame for the watermark to render
+      await Future.delayed(const Duration(milliseconds: 150));
+
+      final image = await renderObject.toImage(pixelRatio: 2.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
+
+      // Hide watermark after capture
+      if (mounted) {
+        setState(() {
+          _showWatermark = false;
+          _showPlaceholders = true;
+        });
+      }
+
+      if (byteData == null) return;
+
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File(
+        '${tempDir.path}/silni_tree_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+      await tempFile.writeAsBytes(byteData.buffer.asUint8List());
+
+      await Share.shareXFiles(
+        [XFile(tempFile.path)],
+        text: 'شجرة عائلتي من صِلني 🌳',
+        sharePositionOrigin: sharePositionOrigin,
+      );
+
+      // Clean up temp file after delay
+      Future.delayed(const Duration(seconds: 5), () async {
+        try {
+          if (await tempFile.exists()) {
+            await tempFile.delete();
+          }
+        } catch (_) {}
+      });
+    } catch (e) {
+      // Ensure watermark is hidden even on error
+      if (mounted) {
+        setState(() {
+          _showWatermark = false;
+          _showPlaceholders = true;
+        });
+        UIHelpers.showSnackBar(
+          context,
+          'حدث خطأ أثناء المشاركة',
+          isError: true,
+        );
+      }
+      debugPrint('Share tree failed: $e');
     }
   }
 
@@ -408,6 +495,14 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                       ],
                     ),
                   ),
+          ),
+          Semantics(
+            label: 'مشاركة الشجرة',
+            button: true,
+            child: IconButton(
+              onPressed: _shareTree,
+              icon: Icon(Icons.share_rounded, color: themeColors.textOnGradient),
+            ),
           ),
         ],
       ),
@@ -746,7 +841,9 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
           });
         }
 
-        return Stack(
+        return RepaintBoundary(
+          key: _treeBoundaryKey,
+          child: Stack(
           children: [
             // Main tree with InteractiveViewer for pan/zoom
             InteractiveViewer(
@@ -826,6 +923,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
             // Watermark overlay
             if (_showWatermark) _buildWatermark(),
           ],
+        ),
         );
       },
     );
