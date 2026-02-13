@@ -103,6 +103,93 @@ class ShareCardWidget extends StatelessWidget {
     }
   }
 
+  /// Capture an arbitrary widget as an image and share it.
+  ///
+  /// Works like [captureAndShare] but accepts any [Widget] instead of
+  /// [ShareableCardData]. The widget is wrapped in a [Material] and sized to
+  /// [size] before being rendered off-screen and captured as a PNG.
+  static Future<void> captureWidgetAndShare(
+    BuildContext context,
+    Widget cardWidget, {
+    required String shareText,
+    Size size = const Size(360, 360),
+  }) async {
+    // Compute share position origin BEFORE async gap (required for iPad).
+    final box = context.findRenderObject() as RenderBox?;
+    final sharePositionOrigin = box != null
+        ? box.localToGlobal(Offset.zero) & box.size
+        : null;
+
+    final boundary = GlobalKey();
+
+    final overlay = Overlay.of(context);
+    final entry = OverlayEntry(
+      builder: (context) => Positioned(
+        left: -2000, // Off-screen
+        child: RepaintBoundary(
+          key: boundary,
+          child: Material(
+            color: Colors.transparent,
+            child: SizedBox(
+              width: size.width,
+              height: size.height,
+              child: cardWidget,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(entry);
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    File? tempFile;
+    try {
+      final renderObject =
+          boundary.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (renderObject == null) return;
+
+      final image = await renderObject.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
+      if (byteData == null) return;
+
+      final tempDir = await getTemporaryDirectory();
+      tempFile = File(
+          '${tempDir.path}/silni_card_${DateTime.now().millisecondsSinceEpoch}.png');
+      await tempFile.writeAsBytes(byteData.buffer.asUint8List());
+
+      await Share.shareXFiles(
+        [XFile(tempFile.path)],
+        text: shareText,
+        sharePositionOrigin: sharePositionOrigin,
+      );
+    } catch (e) {
+      if (context.mounted) {
+        UIHelpers.showSnackBar(
+          context,
+          'حدث خطأ أثناء المشاركة: $e',
+          isError: true,
+        );
+      }
+    } finally {
+      entry.remove();
+      // Clean up temporary file after a delay so the share sheet can read it.
+      if (tempFile != null) {
+        final fileToDelete = tempFile;
+        Future.delayed(const Duration(seconds: 5), () async {
+          try {
+            if (await fileToDelete.exists()) {
+              await fileToDelete.delete();
+            }
+          } catch (_) {
+            // Best-effort cleanup; ignore errors.
+          }
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bg = gradient ?? AppColors.primaryGradient;
