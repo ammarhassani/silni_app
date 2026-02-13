@@ -12,6 +12,8 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/services/gamification_config_service.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../shared/widgets/share_bottom_sheet.dart';
+import '../../../shared/widgets/share_cards/wrapped_share_card.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
 import 'badges_screen.dart';
@@ -391,67 +393,101 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
     final stats = _userStats ?? {};
     final points = stats['points'] ?? 0;
     final currentStreak = stats['current_streak'] ?? 0;
+    final longestStreak = stats['longest_streak'] ?? 0;
+    final totalInteractions = stats['total_interactions'] ?? 0;
     final badgesCount = (stats['badges'] as List?)?.length ?? 0;
+    final level = GamificationConfigService.instance.calculateLevel(points);
 
-    return GlassCard(
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.premiumGold.withValues(alpha: 0.2),
-                  AppColors.premiumGoldDark.withValues(alpha: 0.1),
-                ],
+    return Stack(
+      children: [
+        GlassCard(
+              child: Container(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.premiumGold.withValues(alpha: 0.2),
+                      AppColors.premiumGoldDark.withValues(alpha: 0.1),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Flexible(
+                      child: _buildStatColumn(
+                        icon: Icons.star_rounded,
+                        value: points.toString(),
+                        label: 'النقاط',
+                        color: AppColors.premiumGold,
+                        themeColors: themeColors,
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 50,
+                      color: themeColors.textOnGradient.withValues(alpha: 0.3),
+                    ),
+                    Flexible(
+                      child: _buildStatColumn(
+                        icon: Icons.local_fire_department_rounded,
+                        value: currentStreak.toString(),
+                        label: 'السلسلة',
+                        color: AppColors.energeticRed,
+                        themeColors: themeColors,
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 50,
+                      color: themeColors.textOnGradient.withValues(alpha: 0.3),
+                    ),
+                    Flexible(
+                      child: _buildStatColumn(
+                        icon: Icons.emoji_events_rounded,
+                        value: badgesCount.toString(),
+                        label: 'الأوسمة',
+                        color: AppColors.joyfulOrange,
+                        themeColors: themeColors,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              borderRadius: BorderRadius.circular(20),
+            )
+            .animate()
+            .fadeIn(delay: AppAnimations.dramatic, duration: AppAnimations.dramatic)
+            .slideY(begin: 0.2, end: 0),
+        Positioned(
+          top: 4,
+          left: 4,
+          child: IconButton(
+            icon: Icon(
+              Icons.share_rounded,
+              color: themeColors.textOnGradient.withValues(alpha: 0.7),
+              size: 20,
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Flexible(
-                  child: _buildStatColumn(
-                    icon: Icons.star_rounded,
-                    value: points.toString(),
-                    label: 'النقاط',
-                    color: AppColors.premiumGold,
-                    themeColors: themeColors,
-                  ),
+            tooltip: 'مشاركة الإحصائيات',
+            onPressed: () {
+              ShareBottomSheet.show(
+                context,
+                cardBuilder: (format) => WrappedShareCard(
+                  format: format,
+                  personalityEmoji: '\u{1F3C6}',
+                  personalityLabel: '\u0645\u0633\u062A\u0648\u0649 $level',
+                  periodName: '\u0625\u0646\u062C\u0627\u0632\u0627\u062A\u064A \u0641\u064A \u0635\u0650\u0644\u0646\u064A',
+                  totalInteractions: totalInteractions as int,
+                  uniqueRelatives: 0,
+                  longestStreak: longestStreak as int,
                 ),
-                Container(
-                  width: 1,
-                  height: 50,
-                  color: themeColors.textOnGradient.withValues(alpha: 0.3),
-                ),
-                Flexible(
-                  child: _buildStatColumn(
-                    icon: Icons.local_fire_department_rounded,
-                    value: currentStreak.toString(),
-                    label: 'السلسلة',
-                    color: AppColors.energeticRed,
-                    themeColors: themeColors,
-                  ),
-                ),
-                Container(
-                  width: 1,
-                  height: 50,
-                  color: themeColors.textOnGradient.withValues(alpha: 0.3),
-                ),
-                Flexible(
-                  child: _buildStatColumn(
-                    icon: Icons.emoji_events_rounded,
-                    value: badgesCount.toString(),
-                    label: 'الأوسمة',
-                    color: AppColors.joyfulOrange,
-                    themeColors: themeColors,
-                  ),
-                ),
-              ],
-            ),
+                shareText: '\u0645\u0633\u062A\u0648\u0649 $level \u2014 $totalInteractions \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0639\u0627\u0626\u0644\u0629 \u{1F3C6} #\u0635\u0650\u0644\u0646\u064A',
+              );
+            },
           ),
-        )
-        .animate()
-        .fadeIn(delay: AppAnimations.dramatic, duration: AppAnimations.dramatic)
-        .slideY(begin: 0.2, end: 0);
+        ),
+      ],
+    );
   }
 
   Widget _buildStatColumn({
