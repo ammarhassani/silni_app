@@ -145,6 +145,7 @@ class FeatureIds {
   static const String relationshipAnalysis = 'relationship_analysis';
   static const String smartRemindersAI = 'smart_reminders_ai';
   static const String weeklyReports = 'weekly_reports';
+  static const String occasionMessages = 'occasion_messages';
 
   // Other MAX Features
   static const String advancedAnalytics = 'advanced_analytics';
@@ -171,6 +172,7 @@ class FeatureIds {
       relationshipAnalysis => SubscriptionTier.max,
       smartRemindersAI => SubscriptionTier.max,
       weeklyReports => SubscriptionTier.max,
+      occasionMessages => SubscriptionTier.max,
       advancedAnalytics => SubscriptionTier.max,
       leaderboard => SubscriptionTier.max,
       dataExport => SubscriptionTier.max,
