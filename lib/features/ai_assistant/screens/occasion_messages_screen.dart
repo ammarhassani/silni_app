@@ -21,6 +21,8 @@ import 'package:silni_app/shared/models/relative_model.dart';
 import 'package:silni_app/shared/utils/relationship_label_helper.dart';
 import 'package:silni_app/shared/widgets/glass_card.dart';
 import 'package:silni_app/shared/widgets/gradient_background.dart';
+import 'package:silni_app/shared/widgets/share_bottom_sheet.dart';
+import 'package:silni_app/shared/widgets/share_cards/occasion_share_card.dart';
 import 'package:silni_app/core/config/supabase_config.dart';
 import 'package:silni_app/features/family_tree/providers/family_graph_providers.dart';
 
@@ -207,6 +209,8 @@ class _OccasionMessagesScreenState
                   message: msg,
                   themeColors: themeColors,
                   index: index,
+                  occasionEmoji: _occasionEmoji(widget.occasion),
+                  occasionName: widget.occasion.arabicName,
                 );
               },
             );
@@ -233,11 +237,15 @@ class _OccasionMessageCard extends StatelessWidget {
     required this.message,
     required this.themeColors,
     required this.index,
+    required this.occasionEmoji,
+    required this.occasionName,
   });
 
   final OccasionMessage message;
   final dynamic themeColors;
   final int index;
+  final String occasionEmoji;
+  final String occasionName;
 
   @override
   Widget build(BuildContext context) {
@@ -310,6 +318,26 @@ class _OccasionMessageCard extends StatelessWidget {
                     color: themeColors.textSecondary,
                   ),
                   tooltip: 'نسخ',
+                ),
+                IconButton(
+                  onPressed: () {
+                    ShareBottomSheet.show(
+                      context,
+                      cardBuilder: (format) => OccasionShareCard(
+                        format: format,
+                        occasionEmoji: occasionEmoji,
+                        occasionName: occasionName,
+                        greetingText: message.message,
+                      ),
+                      shareText: '${message.message} #صِلني',
+                    );
+                  },
+                  icon: Icon(
+                    Icons.image_rounded,
+                    size: AppSpacing.iconSm,
+                    color: themeColors.textSecondary,
+                  ),
+                  tooltip: 'مشاركة كبطاقة',
                 ),
                 if (message.phoneNumber != null &&
                     message.phoneNumber!.isNotEmpty)
