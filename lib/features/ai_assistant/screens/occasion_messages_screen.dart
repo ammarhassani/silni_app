@@ -7,20 +7,33 @@ import 'package:share_plus/share_plus.dart';
 import 'package:silni_app/core/constants/app_animations.dart';
 import 'package:silni_app/core/constants/app_spacing.dart';
 import 'package:silni_app/core/constants/app_typography.dart';
+import 'package:silni_app/core/models/subscription_tier.dart';
+import 'package:silni_app/core/providers/subscription_provider.dart';
 import 'package:silni_app/core/theme/theme_provider.dart';
+import 'package:silni_app/features/ai_assistant/providers/occasion_messages_provider.dart';
 import 'package:silni_app/features/ai_assistant/services/occasion_message_service.dart';
+import 'package:silni_app/features/ai_assistant/widgets/ai_loading_indicator.dart';
 import 'package:silni_app/features/home/providers/home_providers.dart';
+import 'package:silni_app/features/subscription/screens/paywall_screen.dart';
+import 'package:silni_app/shared/models/relative_model.dart';
 import 'package:silni_app/shared/widgets/glass_card.dart';
 import 'package:silni_app/shared/widgets/gradient_background.dart';
 import 'package:silni_app/core/config/supabase_config.dart';
 
-/// Screen that shows all pre-generated occasion messages for the user's
-/// relatives, with copy and share actions.
-class OccasionMessagesScreen extends ConsumerWidget {
+/// Screen that shows AI-generated occasion messages for the user's relatives.
+/// Gated behind MAX subscription.
+class OccasionMessagesScreen extends ConsumerStatefulWidget {
   const OccasionMessagesScreen({super.key, required this.occasion});
 
   final OccasionType occasion;
 
+  @override
+  ConsumerState<OccasionMessagesScreen> createState() =>
+      _OccasionMessagesScreenState();
+}
+
+class _OccasionMessagesScreenState
+    extends ConsumerState<OccasionMessagesScreen> {
   String _occasionEmoji(OccasionType occasion) {
     switch (occasion) {
       case OccasionType.eidAlFitr:
@@ -34,8 +47,41 @@ class OccasionMessagesScreen extends ConsumerWidget {
     }
   }
 
+  List<String> _loadingMessages(OccasionType occasion) {
+    switch (occasion) {
+      case OccasionType.ramadan:
+        return [
+          'يكتب رسائل رمضان مميزة...',
+          'يختار كلمات دافئة لعائلتك...',
+          'يراعي شخصية كل فرد...',
+          'لحظات وتكون الرسائل جاهزة...',
+        ];
+      case OccasionType.eidAlFitr:
+      case OccasionType.eidAlAdha:
+        return [
+          'يكتب رسائل العيد لأحبابك...',
+          'يختار كلمات تناسب كل شخص...',
+          'يراعي شخصية كل فرد...',
+          'لحظات وتكون الرسائل جاهزة...',
+        ];
+      case OccasionType.nationalDay:
+        return [
+          'يكتب رسائل اليوم الوطني...',
+          'يختار كلمات وطنية مميزة...',
+          'يراعي شخصية كل فرد...',
+          'لحظات وتكون الرسائل جاهزة...',
+        ];
+    }
+  }
+
+  void _triggerGeneration(List<Relative> relatives) {
+    ref
+        .read(occasionMessagesProvider(widget.occasion).notifier)
+        .generate(occasion: widget.occasion, relatives: relatives);
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
     final userId = SupabaseConfig.currentUser?.id;
 
@@ -45,8 +91,15 @@ class OccasionMessagesScreen extends ConsumerWidget {
       );
     }
 
-    // Rahim-scoped + self-node-filtered relatives via central provider
+    // MAX subscription gate
+    final hasAccess =
+        ref.watch(featureAccessProvider(FeatureIds.occasionMessages));
+    if (!hasAccess) {
+      return PaywallScreen(featureToUnlock: FeatureIds.occasionMessages);
+    }
+
     final relativesAsync = ref.watch(viewerFilteredRelativesProvider);
+    final occasionState = ref.watch(occasionMessagesProvider(widget.occasion));
 
     return GradientBackground(
       child: Scaffold(
@@ -55,7 +108,7 @@ class OccasionMessagesScreen extends ConsumerWidget {
           backgroundColor: Colors.transparent,
           elevation: 0,
           title: Text(
-            '${_occasionEmoji(occasion)} رسائل ${occasion.arabicName}',
+            '${_occasionEmoji(widget.occasion)} رسائل ${widget.occasion.arabicName}',
             style: AppTypography.titleLarge.copyWith(
               color: themeColors.textPrimary,
             ),
@@ -73,10 +126,7 @@ class OccasionMessagesScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      '👨‍👩‍👧‍👦',
-                      style: AppTypography.displaySmall,
-                    ),
+                    Text('👨‍👩‍👧‍👦', style: AppTypography.displaySmall),
                     const SizedBox(height: AppSpacing.md),
                     Text(
                       'أضف أقاربك أولا لتظهر لك الرسائل',
@@ -89,10 +139,29 @@ class OccasionMessagesScreen extends ConsumerWidget {
               );
             }
 
-            final messages = OccasionMessageService.generateMessages(
-              occasion: occasion,
-              relatives: relatives,
-            );
+            // Trigger AI generation on first load
+            if (occasionState.messages == null && !occasionState.isLoading) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _triggerGeneration(relatives);
+              });
+            }
+
+            // Loading state
+            if (occasionState.isLoading) {
+              return Center(
+                child: AIEngagingLoader(
+                  emoji: _occasionEmoji(widget.occasion),
+                  messages: _loadingMessages(widget.occasion),
+                  accentColor: themeColors.accent,
+                ),
+              );
+            }
+
+            // Messages ready
+            final messages = occasionState.messages;
+            if (messages == null) {
+              return const SizedBox.shrink();
+            }
 
             return Column(
               children: [
@@ -114,8 +183,6 @@ class OccasionMessagesScreen extends ConsumerWidget {
                     },
                   ),
                 ),
-
-                // Share all button at the bottom
                 Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: SafeArea(
@@ -133,8 +200,8 @@ class OccasionMessagesScreen extends ConsumerWidget {
                           backgroundColor: themeColors.primary,
                           foregroundColor: themeColors.onPrimary,
                           shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(AppSpacing.buttonRadius),
+                            borderRadius: BorderRadius.circular(
+                                AppSpacing.buttonRadius),
                           ),
                         ),
                       ),
@@ -160,7 +227,8 @@ class OccasionMessagesScreen extends ConsumerWidget {
 
   void _shareAll(BuildContext context, List<OccasionMessage> messages) {
     final buffer = StringBuffer();
-    buffer.writeln('رسائل ${occasion.arabicName} ${_occasionEmoji(occasion)}');
+    buffer.writeln(
+        'رسائل ${widget.occasion.arabicName} ${_occasionEmoji(widget.occasion)}');
     buffer.writeln('─────────────────');
     for (final msg in messages) {
       buffer.writeln();
@@ -168,7 +236,8 @@ class OccasionMessagesScreen extends ConsumerWidget {
       buffer.writeln(msg.message);
     }
     final box = context.findRenderObject() as RenderBox?;
-    final origin = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
+    final origin =
+        box != null ? box.localToGlobal(Offset.zero) & box.size : null;
     Share.share(buffer.toString(), sharePositionOrigin: origin);
   }
 }
@@ -194,7 +263,6 @@ class _OccasionMessageCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Relative info row
             Row(
               children: [
                 Text(
@@ -211,7 +279,8 @@ class _OccasionMessageCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: themeColors.primary.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.radiusSm),
                   ),
                   child: Text(
                     message.relationshipType,
@@ -223,8 +292,6 @@ class _OccasionMessageCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
-
-            // Message text
             Text(
               message.message,
               style: AppTypography.bodyMedium.copyWith(
@@ -233,16 +300,14 @@ class _OccasionMessageCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-
-            // Action buttons row
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                // Copy button
                 IconButton(
                   onPressed: () {
                     HapticFeedback.lightImpact();
-                    Clipboard.setData(ClipboardData(text: message.message));
+                    Clipboard.setData(
+                        ClipboardData(text: message.message));
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -261,15 +326,17 @@ class _OccasionMessageCard extends StatelessWidget {
                   ),
                   tooltip: 'نسخ',
                 ),
-
-                // Share button
                 Builder(
                   builder: (btnContext) => IconButton(
                     onPressed: () {
                       HapticFeedback.lightImpact();
-                      final box = btnContext.findRenderObject() as RenderBox?;
-                      final origin = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
-                      Share.share(message.message, sharePositionOrigin: origin);
+                      final box =
+                          btnContext.findRenderObject() as RenderBox?;
+                      final origin = box != null
+                          ? box.localToGlobal(Offset.zero) & box.size
+                          : null;
+                      Share.share(message.message,
+                          sharePositionOrigin: origin);
                     },
                     icon: Icon(
                       Icons.share_rounded,
