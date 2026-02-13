@@ -279,6 +279,7 @@ class DeepSeekAIService implements AIService {
   Future<Map<String, String>> generateOccasionMessages({
     required List<Relative> relatives,
     required String occasionType,
+    Map<String, String>? relationshipLabels,
   }) async {
     try {
       final config = AIConfigService.instance;
@@ -291,6 +292,7 @@ class DeepSeekAIService implements AIService {
       final prompt = AIPrompts.occasionBatchPrompt(
         relatives: relatives,
         occasionType: occasionType,
+        relationshipLabels: relationshipLabels,
         occasionPromptAddition: occasionConfig?.promptAddition,
       );
 

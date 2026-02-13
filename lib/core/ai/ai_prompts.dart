@@ -781,6 +781,7 @@ ${tonePromptModifier != null ? '## تعليمات خاصة بالنبرة: $tone
   static String occasionBatchPrompt({
     required List<Relative> relatives,
     required String occasionType,
+    Map<String, String>? relationshipLabels,
     String? occasionPromptAddition,
   }) {
     final personality = dynamicPersonality;
@@ -788,9 +789,10 @@ ${tonePromptModifier != null ? '## تعليمات خاصة بالنبرة: $tone
     final relativesBlock = StringBuffer();
     for (var i = 0; i < relatives.length; i++) {
       final r = relatives[i];
+      final label = relationshipLabels?[r.id] ?? r.relationshipType.arabicName;
       relativesBlock.writeln('${i + 1}. ID: "${r.id}"');
       relativesBlock.writeln('   - الاسم: ${r.fullName}');
-      relativesBlock.writeln('   - العلاقة: ${r.relationshipType.arabicName}');
+      relativesBlock.writeln('   - العلاقة: $label');
       if (r.personalityType != null) {
         relativesBlock.writeln('   - نوع الشخصية: ${r.personalityType}');
       }

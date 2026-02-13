@@ -16,9 +16,11 @@ import 'package:silni_app/features/ai_assistant/widgets/ai_loading_indicator.dar
 import 'package:silni_app/features/home/providers/home_providers.dart';
 import 'package:silni_app/features/subscription/screens/paywall_screen.dart';
 import 'package:silni_app/shared/models/relative_model.dart';
+import 'package:silni_app/shared/utils/relationship_label_helper.dart';
 import 'package:silni_app/shared/widgets/glass_card.dart';
 import 'package:silni_app/shared/widgets/gradient_background.dart';
 import 'package:silni_app/core/config/supabase_config.dart';
+import 'package:silni_app/features/family_tree/providers/family_graph_providers.dart';
 
 /// Screen that shows AI-generated occasion messages for the user's relatives.
 /// Gated behind MAX subscription.
@@ -74,10 +76,15 @@ class _OccasionMessagesScreenState
     }
   }
 
-  void _triggerGeneration(List<Relative> relatives) {
+  void _triggerGeneration(
+      List<Relative> relatives, Map<String, String>? labels) {
     ref
         .read(occasionMessagesProvider(widget.occasion).notifier)
-        .generate(occasion: widget.occasion, relatives: relatives);
+        .generate(
+          occasion: widget.occasion,
+          relatives: relatives,
+          relationshipLabels: labels,
+        );
   }
 
   @override
@@ -97,6 +104,16 @@ class _OccasionMessagesScreenState
     if (!hasAccess) {
       return PaywallScreen(featureToUnlock: FeatureIds.occasionMessages);
     }
+
+    // Family graph for perspective-aware labels
+    final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+    final graph = groupInfo != null
+        ? ref.watch(sharedFamilyGraphProvider((
+            groupId: groupInfo.groupId,
+            viewerNodeId: groupInfo.nodeId,
+          )))
+        : ref.watch(familyGraphProvider(userId));
+    final effectiveViewerId = groupInfo?.nodeId ?? userId;
 
     final relativesAsync = ref.watch(viewerFilteredRelativesProvider);
     final occasionState = ref.watch(occasionMessagesProvider(widget.occasion));
@@ -139,10 +156,22 @@ class _OccasionMessagesScreenState
               );
             }
 
+            // Build perspective-aware relationship labels
+            final relativesMap = {for (final r in relatives) r.id: r};
+            final relationshipLabels = <String, String>{
+              for (final r in relatives)
+                r.id: getRelationshipLabel(
+                  relative: r,
+                  viewerId: effectiveViewerId,
+                  graph: graph,
+                  relativesMap: relativesMap,
+                ),
+            };
+
             // Trigger AI generation on first load
             if (occasionState.messages == null && !occasionState.isLoading) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                _triggerGeneration(relatives);
+                _triggerGeneration(relatives, relationshipLabels);
               });
             }
 

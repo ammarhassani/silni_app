@@ -41,6 +41,7 @@ class OccasionMessagesNotifier extends StateNotifier<OccasionMessagesState> {
   Future<void> generate({
     required OccasionType occasion,
     required List<Relative> relatives,
+    Map<String, String>? relationshipLabels,
   }) async {
     // Already generated — skip
     if (state.messages != null) return;
@@ -51,6 +52,7 @@ class OccasionMessagesNotifier extends StateNotifier<OccasionMessagesState> {
       final aiMessages = await _aiService.generateOccasionMessages(
         relatives: relatives,
         occasionType: occasion.key,
+        relationshipLabels: relationshipLabels,
       );
 
       final messages = relatives.map((relative) {
@@ -62,10 +64,13 @@ class OccasionMessagesNotifier extends StateNotifier<OccasionMessagesState> {
               relatives: [relative],
             ).first.message;
 
+        final label = relationshipLabels?[relative.id] ??
+            relative.relationshipType.arabicName;
+
         return OccasionMessage(
           relativeId: relative.id,
           relativeName: relative.fullName,
-          relationshipType: relative.relationshipType.arabicName,
+          relationshipType: label,
           occasion: occasion,
           message: message,
           generatedAt: DateTime.now(),
