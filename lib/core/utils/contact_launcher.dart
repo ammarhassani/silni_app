@@ -31,6 +31,9 @@ class ContactLauncher {
   }
 
   /// Open WhatsApp
+  ///
+  /// wa.me requires full international format without leading zero or '+'.
+  /// Converts Saudi local numbers (05x) to international (9665x).
   static Future<bool> openWhatsApp(
     String phoneNumber, {
     required BuildContext context,
@@ -38,8 +41,16 @@ class ContactLauncher {
   }) async {
     HapticFeedback.mediumImpact();
 
-    // Remove any non-digit characters
-    final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+    // Remove any non-digit characters except +
+    var cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+    // Strip leading + (wa.me uses digits only)
+    cleanNumber = cleanNumber.replaceFirst(RegExp(r'^\+'), '');
+    // Convert Saudi local format (05x...) to international (9665x...)
+    if (cleanNumber.startsWith('05')) {
+      cleanNumber = '966${cleanNumber.substring(1)}';
+    } else if (cleanNumber.startsWith('5') && cleanNumber.length == 9) {
+      cleanNumber = '966$cleanNumber';
+    }
     final textParam = message != null ? '?text=${Uri.encodeComponent(message)}' : '';
     final uri = Uri.parse('https://wa.me/$cleanNumber$textParam');
     if (await canLaunchUrl(uri)) {
