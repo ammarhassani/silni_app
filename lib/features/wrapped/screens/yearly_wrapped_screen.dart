@@ -432,7 +432,7 @@ class _SharePage extends StatelessWidget {
 
     ShareBottomSheet.show(
       context,
-      cardBuilder: (format) => WrappedShareCard(
+      cardBuilder: (format, {String? aiCopy}) => WrappedShareCard(
         format: format,
         personalityEmoji: wrapped.personalityEmoji,
         personalityLabel: wrapped.personalityLabel,
@@ -440,6 +440,7 @@ class _SharePage extends StatelessWidget {
         totalInteractions: wrapped.totalInteractions,
         uniqueRelatives: wrapped.uniqueRelativesContacted,
         longestStreak: wrapped.longestStreak,
+        copyText: aiCopy,
       ),
       shareText: ShareableCardData.wrapped(
         periodName: periodName,

@@ -3,6 +3,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/ai/deepseek_ai_service.dart';
+import '../../../core/providers/subscription_provider.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../shared/widgets/share_bottom_sheet.dart';
@@ -215,7 +217,7 @@ class _WrappedContent extends ConsumerWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () => _shareWrapped(context, themeColors),
+                onPressed: () => _shareWrapped(context, themeColors, ref),
                 icon: Icon(Icons.share, color: themeColors.primary),
                 label: Text(
                   'شارك ملخصك',
@@ -587,10 +589,11 @@ class _WrappedContent extends ConsumerWidget {
     );
   }
 
-  void _shareWrapped(BuildContext context, ThemeColors themeColors) {
+  void _shareWrapped(BuildContext context, ThemeColors themeColors, WidgetRef ref) {
+    final isMax = ref.read(isMaxProvider);
     ShareBottomSheet.show(
       context,
-      cardBuilder: (format) => WrappedShareCard(
+      cardBuilder: (format, {String? aiCopy}) => WrappedShareCard(
         format: format,
         personalityEmoji: wrapped.personalityEmoji,
         personalityLabel: wrapped.personalityLabel,
@@ -598,6 +601,7 @@ class _WrappedContent extends ConsumerWidget {
         totalInteractions: wrapped.totalInteractions,
         uniqueRelatives: wrapped.uniqueRelativesContacted,
         longestStreak: wrapped.longestStreak,
+        copyText: aiCopy,
       ),
       shareText: ShareableCardData.wrapped(
         periodName: wrapped.arabicMonthName,
@@ -606,6 +610,16 @@ class _WrappedContent extends ConsumerWidget {
         totalInteractions: wrapped.totalInteractions,
         uniqueRelatives: wrapped.uniqueRelativesContacted,
       ).shareText,
+      aiCopyFuture: isMax
+          ? DeepSeekAIService().generateShareCopy(
+              cardType: 'wrapped',
+              context: {
+                'periodName': wrapped.arabicMonthName,
+                'personalityLabel': wrapped.personalityLabel,
+                'totalInteractions': wrapped.totalInteractions,
+              },
+            )
+          : null,
     );
   }
 }

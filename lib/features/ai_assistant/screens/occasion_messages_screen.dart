@@ -323,11 +323,12 @@ class _OccasionMessageCard extends StatelessWidget {
                   onPressed: () {
                     ShareBottomSheet.show(
                       context,
-                      cardBuilder: (format) => OccasionShareCard(
+                      cardBuilder: (format, {String? aiCopy}) => OccasionShareCard(
                         format: format,
                         occasionEmoji: occasionEmoji,
                         occasionName: occasionName,
                         greetingText: message.message,
+                        copyText: aiCopy,
                       ),
                       shareText: '${message.message} #صِلني',
                     );

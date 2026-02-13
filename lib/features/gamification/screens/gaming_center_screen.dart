@@ -472,7 +472,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
             onPressed: () {
               ShareBottomSheet.show(
                 context,
-                cardBuilder: (format) => WrappedShareCard(
+                cardBuilder: (format, {aiCopy}) => WrappedShareCard(
                   format: format,
                   personalityEmoji: '\u{1F3C6}',
                   personalityLabel: '\u0645\u0633\u062A\u0648\u0649 $level',
