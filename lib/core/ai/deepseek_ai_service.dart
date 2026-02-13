@@ -274,6 +274,66 @@ class DeepSeekAIService implements AIService {
     }
   }
 
+  /// Generate personalized occasion messages for multiple relatives in a single call.
+  /// Returns a map of relative ID → message string.
+  Future<Map<String, String>> generateOccasionMessages({
+    required List<Relative> relatives,
+    required String occasionType,
+  }) async {
+    try {
+      final config = AIConfigService.instance;
+      final params = config.getParametersFor('message_generation');
+
+      final occasionConfig = config.messageOccasions
+          .cast<AIMessageOccasion?>()
+          .firstWhere((o) => o?.occasionKey == occasionType, orElse: () => null);
+
+      final prompt = AIPrompts.occasionBatchPrompt(
+        relatives: relatives,
+        occasionType: occasionType,
+        occasionPromptAddition: occasionConfig?.promptAddition,
+      );
+
+      final response = await getChatCompletion(
+        messages: [
+          ChatMessage(
+            id: '',
+            conversationId: '',
+            userId: '',
+            role: MessageRole.user,
+            content: 'اكتب رسائل المناسبة',
+            createdAt: DateTime.now(),
+          ),
+        ],
+        systemPrompt: prompt,
+        temperature: params.temperature,
+        maxTokens: params.maxTokens,
+        timeoutSeconds: params.timeoutSeconds,
+      );
+
+      final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(response);
+      if (jsonMatch == null) {
+        throw AIServiceException('Invalid response format');
+      }
+
+      final data = jsonDecode(jsonMatch.group(0)!) as Map<String, dynamic>;
+      final messagesMap = data['messages'] as Map<String, dynamic>?;
+      if (messagesMap == null) {
+        throw AIServiceException('Missing messages in response');
+      }
+
+      return messagesMap.map((key, value) => MapEntry(key, value.toString()));
+    } catch (e) {
+      _logger.error(
+        'Occasion message generation error',
+        category: LogCategory.network,
+        tag: 'DeepSeekAIService',
+        metadata: {'error': e.toString()},
+      );
+      rethrow;
+    }
+  }
+
   @override
   Future<RelationshipAnalysis> analyzeRelationship({
     required Relative relative,
