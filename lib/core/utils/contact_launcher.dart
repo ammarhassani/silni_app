@@ -34,12 +34,14 @@ class ContactLauncher {
   static Future<bool> openWhatsApp(
     String phoneNumber, {
     required BuildContext context,
+    String? message,
   }) async {
     HapticFeedback.mediumImpact();
 
     // Remove any non-digit characters
     final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
-    final uri = Uri.parse('https://wa.me/$cleanNumber');
+    final textParam = message != null ? '?text=${Uri.encodeComponent(message)}' : '';
+    final uri = Uri.parse('https://wa.me/$cleanNumber$textParam');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
       return true;

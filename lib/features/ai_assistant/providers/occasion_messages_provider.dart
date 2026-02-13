@@ -71,6 +71,7 @@ class OccasionMessagesNotifier extends StateNotifier<OccasionMessagesState> {
           relativeId: relative.id,
           relativeName: relative.fullName,
           relationshipType: label,
+          phoneNumber: relative.phoneNumber,
           occasion: occasion,
           message: message,
           generatedAt: DateTime.now(),

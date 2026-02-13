@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:silni_app/core/utils/contact_launcher.dart';
 
 import 'package:silni_app/core/constants/app_animations.dart';
 import 'package:silni_app/core/constants/app_spacing.dart';
@@ -355,26 +357,45 @@ class _OccasionMessageCard extends StatelessWidget {
                   ),
                   tooltip: 'نسخ',
                 ),
-                Builder(
-                  builder: (btnContext) => IconButton(
+                if (message.phoneNumber != null &&
+                    message.phoneNumber!.isNotEmpty)
+                  IconButton(
                     onPressed: () {
                       HapticFeedback.lightImpact();
-                      final box =
-                          btnContext.findRenderObject() as RenderBox?;
-                      final origin = box != null
-                          ? box.localToGlobal(Offset.zero) & box.size
-                          : null;
-                      Share.share(message.message,
-                          sharePositionOrigin: origin);
+                      ContactLauncher.openWhatsApp(
+                        message.phoneNumber!,
+                        context: context,
+                        message: message.message,
+                      );
                     },
-                    icon: Icon(
-                      Icons.share_rounded,
+                    icon: FaIcon(
+                      FontAwesomeIcons.whatsapp,
                       size: AppSpacing.iconSm,
                       color: themeColors.textSecondary,
                     ),
-                    tooltip: 'مشاركة',
+                    tooltip: 'واتساب',
+                  )
+                else
+                  Builder(
+                    builder: (btnContext) => IconButton(
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        final box =
+                            btnContext.findRenderObject() as RenderBox?;
+                        final origin = box != null
+                            ? box.localToGlobal(Offset.zero) & box.size
+                            : null;
+                        Share.share(message.message,
+                            sharePositionOrigin: origin);
+                      },
+                      icon: Icon(
+                        Icons.share_rounded,
+                        size: AppSpacing.iconSm,
+                        color: themeColors.textSecondary,
+                      ),
+                      tooltip: 'مشاركة',
+                    ),
                   ),
-                ),
               ],
             ),
           ],

@@ -17,6 +17,7 @@ class OccasionMessage {
   final String relativeId;
   final String relativeName;
   final String relationshipType;
+  final String? phoneNumber;
   final OccasionType occasion;
   final String message;
   final DateTime generatedAt;
@@ -25,6 +26,7 @@ class OccasionMessage {
     required this.relativeId,
     required this.relativeName,
     required this.relationshipType,
+    this.phoneNumber,
     required this.occasion,
     required this.message,
     required this.generatedAt,
