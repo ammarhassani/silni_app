@@ -776,6 +776,64 @@ ${tonePromptModifier != null ? '## تعليمات خاصة بالنبرة: $tone
 ''';
   }
 
+  /// System prompt for batch occasion message generation.
+  /// Generates one personalized message per relative in a single API call.
+  static String occasionBatchPrompt({
+    required List<Relative> relatives,
+    required String occasionType,
+    String? occasionPromptAddition,
+  }) {
+    final personality = dynamicPersonality;
+
+    final relativesBlock = StringBuffer();
+    for (var i = 0; i < relatives.length; i++) {
+      final r = relatives[i];
+      relativesBlock.writeln('${i + 1}. ID: "${r.id}"');
+      relativesBlock.writeln('   - الاسم: ${r.fullName}');
+      relativesBlock.writeln('   - العلاقة: ${r.relationshipType.arabicName}');
+      if (r.personalityType != null) {
+        relativesBlock.writeln('   - نوع الشخصية: ${r.personalityType}');
+      }
+      if (r.communicationStyle != null) {
+        relativesBlock.writeln('   - أسلوب التواصل: ${r.communicationStyle}');
+      }
+      if (r.interests != null && r.interests!.isNotEmpty) {
+        relativesBlock.writeln('   - الاهتمامات: ${r.interests!.join("، ")}');
+      }
+      if (r.relationshipStrengths != null) {
+        relativesBlock.writeln('   - نقاط قوة العلاقة: ${r.relationshipStrengths}');
+      }
+    }
+
+    return '''
+أنت كاتب رسائل محترف متخصص في الرسائل العائلية.
+
+$personality
+
+## المناسبة: $occasionType
+${occasionPromptAddition != null ? '## تعليمات خاصة: $occasionPromptAddition' : ''}
+
+## أفراد العائلة:
+$relativesBlock
+
+## تعليمات:
+اكتب رسالة تهنئة واحدة لكل شخص. كل رسالة:
+- فريدة ومختلفة عن باقي الرسائل
+- مناسبة لنوع العلاقة
+- دافئة وطبيعية
+- 20-40 كلمة فقط
+- لا تكرر نفس العبارات أو الأنماط
+
+قدّم الإجابة بتنسيق JSON فقط:
+{
+  "messages": {
+    "<relative_id>": "<الرسالة>",
+    ...
+  }
+}
+''';
+  }
+
   /// System prompt for communication scripts
   /// Uses dynamic personality from admin config
   static String communicationScriptPrompt(String scenario, Relative? relative, String? context) {
