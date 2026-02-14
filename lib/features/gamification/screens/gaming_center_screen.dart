@@ -69,6 +69,15 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
           .eq('id', user.id)
           .single();
 
+      // Fetch active relatives count
+      final relativesRows = await SupabaseConfig.client
+          .from('relatives')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('is_archived', false);
+      response['active_relatives_count'] =
+          (relativesRows as List).length;
+
       // Check if level needs to be synced with points
       final points = response['points'] as int? ?? 0;
       final dbLevel = response['level'] as int? ?? 1;
@@ -398,6 +407,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
     final longestStreak = stats['longest_streak'] ?? 0;
     final totalInteractions = stats['total_interactions'] ?? 0;
     final badgesCount = (stats['badges'] as List?)?.length ?? 0;
+    final activeRelativesCount = stats['active_relatives_count'] ?? 0;
     final level = GamificationConfigService.instance.calculateLevel(points);
 
     return Stack(
@@ -481,7 +491,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                   personalityLabel: '\u0645\u0633\u062A\u0648\u0649 $level',
                   periodName: '\u0625\u0646\u062C\u0627\u0632\u0627\u062A\u064A \u0641\u064A \u0635\u0650\u0644\u0646\u064A',
                   totalInteractions: totalInteractions as int,
-                  uniqueRelatives: 0,
+                  uniqueRelatives: activeRelativesCount as int,
                   longestStreak: longestStreak as int,
                   copyText: aiCopy,
                 ),

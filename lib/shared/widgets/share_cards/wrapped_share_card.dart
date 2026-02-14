@@ -96,13 +96,11 @@ class WrappedShareCard extends StatelessWidget {
                 value: '$totalInteractions',
                 label: '\u062A\u0648\u0627\u0635\u0644', // تواصل
               ),
-              if (uniqueRelatives > 0) ...[
-                const SizedBox(width: 24),
-                _StatItem(
-                  value: '$uniqueRelatives',
-                  label: '\u0634\u062E\u0635', // شخص
-                ),
-              ],
+              const SizedBox(width: 24),
+              _StatItem(
+                value: '$uniqueRelatives',
+                label: '\u0634\u062E\u0635', // شخص
+              ),
               if (longestStreak != null && longestStreak! > 0) ...[
                 const SizedBox(width: 24),
                 _StatItem(
