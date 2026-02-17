@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:ui' as ui;
 import '../../core/ai/ai_identity.dart';
-import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/router/app_routes.dart';
@@ -175,14 +174,10 @@ class _PersistentBottomNavState extends ConsumerState<PersistentBottomNav>
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: UIHelpers.withOpacity(themeColors.primary, 0.5),
-                    blurRadius: 50,
+                    color: UIHelpers.withOpacity(themeColors.primary, 0.3),
+                    blurRadius: 20,
                     spreadRadius: -5,
-                  ),
-                  BoxShadow(
-                    color: UIHelpers.withOpacity(AppColors.premiumGold, 0.4),
-                    blurRadius: 40,
-                    spreadRadius: -10,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),

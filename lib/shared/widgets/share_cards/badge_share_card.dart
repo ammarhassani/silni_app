@@ -26,24 +26,22 @@ class BadgeShareCard extends StatelessWidget {
   /// Optional user name displayed at the bottom.
   final String? userName;
 
+  /// Background gradient for the card (theme-aware).
+  final LinearGradient gradient;
+
   const BadgeShareCard({
     super.key,
     required this.format,
     required this.badgeEmoji,
     required this.badgeName,
     required this.badgeColor,
+    required this.gradient,
     this.copyText,
     this.userName,
   });
 
   @override
   Widget build(BuildContext context) {
-    final gradient = LinearGradient(
-      colors: [badgeColor, badgeColor.withValues(alpha: 0.7)],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    );
-
     return ShareCardBase(
       format: format,
       gradient: gradient,

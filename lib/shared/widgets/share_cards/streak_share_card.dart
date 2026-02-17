@@ -7,6 +7,16 @@ import 'share_card_base.dart';
 ///
 /// Displays a fire emoji, the streak count, and "يوم متتالي" label
 /// on an amber-to-deep-orange gradient.
+/// Arabic day form based on number agreement rules (تمييز العدد).
+String _arabicDaysLabel(int count) {
+  if (count >= 3 && count <= 10) return 'أيام متتالية';
+  if (count % 100 == 0) return 'يوم متتالٍ';
+  final lastTwo = count % 100;
+  if (lastTwo >= 3 && lastTwo <= 10) return 'أيام متتالية';
+  if (lastTwo >= 11) return 'يومًا متتاليًا';
+  return 'يوم متتالٍ';
+}
+
 class StreakShareCard extends StatelessWidget {
   /// The card format (story or square).
   final ShareCardFormat format;
@@ -20,25 +30,23 @@ class StreakShareCard extends StatelessWidget {
   /// Optional user name displayed at the bottom.
   final String? userName;
 
+  /// Background gradient for the card (theme-aware).
+  final LinearGradient gradient;
+
   const StreakShareCard({
     super.key,
     required this.format,
     required this.streak,
+    required this.gradient,
     this.copyText,
     this.userName,
   });
-
-  static const _gradient = LinearGradient(
-    colors: [Color(0xFFFF8A00), Color(0xFFE52E71)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
 
   @override
   Widget build(BuildContext context) {
     return ShareCardBase(
       format: format,
-      gradient: _gradient,
+      gradient: gradient,
       copyText: copyText,
       userName: userName,
       heroContent: Column(
@@ -60,7 +68,7 @@ class StreakShareCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '\u064A\u0648\u0645 \u0645\u062A\u062A\u0627\u0644\u064A', // يوم متتالي
+            _arabicDaysLabel(streak),
             textDirection: TextDirection.rtl,
             style: GoogleFonts.cairo(
               fontSize: 20,

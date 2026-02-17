@@ -31,11 +31,23 @@ class WrappedShareCard extends StatelessWidget {
   /// Longest streak in the period (optional).
   final int? longestStreak;
 
+  /// Coverage percentage (0-100), shown in second stats row.
+  final int? coveragePercent;
+
+  /// Most used interaction type label (e.g. "مكالمة"), shown in second stats row.
+  final String? mostUsedTypeLabel;
+
+  /// Total active days (yearly only), shown in second stats row.
+  final int? totalActiveDays;
+
   /// Optional AI or static copy text.
   final String? copyText;
 
   /// Optional user name displayed at the bottom.
   final String? userName;
+
+  /// Background gradient (theme-aware). Falls back to AppColors.primaryGradient.
+  final LinearGradient? gradient;
 
   const WrappedShareCard({
     super.key,
@@ -46,15 +58,19 @@ class WrappedShareCard extends StatelessWidget {
     required this.totalInteractions,
     required this.uniqueRelatives,
     this.longestStreak,
+    this.coveragePercent,
+    this.mostUsedTypeLabel,
+    this.totalActiveDays,
     this.copyText,
     this.userName,
+    this.gradient,
   });
 
   @override
   Widget build(BuildContext context) {
     return ShareCardBase(
       format: format,
-      gradient: AppColors.primaryGradient,
+      gradient: gradient ?? AppColors.primaryGradient,
       copyText: copyText,
       userName: userName,
       heroContent: Column(
@@ -110,6 +126,28 @@ class WrappedShareCard extends StatelessWidget {
               ],
             ],
           ),
+          if (coveragePercent != null || mostUsedTypeLabel != null || totalActiveDays != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              textDirection: TextDirection.rtl,
+              children: [
+                if (coveragePercent != null) ...[
+                  _StatItem(value: '$coveragePercent٪', label: 'تغطية'),
+                ],
+                if (coveragePercent != null && (mostUsedTypeLabel != null || totalActiveDays != null))
+                  const SizedBox(width: 24),
+                if (mostUsedTypeLabel != null) ...[
+                  _StatItem(value: mostUsedTypeLabel!, label: 'أكثر نوع تواصل'),
+                ],
+                if (mostUsedTypeLabel != null && totalActiveDays != null)
+                  const SizedBox(width: 24),
+                if (totalActiveDays != null) ...[
+                  _StatItem(value: '$totalActiveDays', label: 'يوم نشط'),
+                ],
+              ],
+            ),
+          ],
         ],
       ),
     );

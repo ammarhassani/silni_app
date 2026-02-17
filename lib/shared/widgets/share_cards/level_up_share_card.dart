@@ -20,25 +20,23 @@ class LevelUpShareCard extends StatelessWidget {
   /// Optional user name displayed at the bottom.
   final String? userName;
 
+  /// Background gradient for the card (theme-aware).
+  final LinearGradient gradient;
+
   const LevelUpShareCard({
     super.key,
     required this.format,
     required this.level,
+    required this.gradient,
     this.copyText,
     this.userName,
   });
-
-  static const _gradient = LinearGradient(
-    colors: [Color(0xFFFFD700), Color(0xFF7B2FF7)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
 
   @override
   Widget build(BuildContext context) {
     return ShareCardBase(
       format: format,
-      gradient: _gradient,
+      gradient: gradient,
       copyText: copyText,
       userName: userName,
       heroContent: Column(

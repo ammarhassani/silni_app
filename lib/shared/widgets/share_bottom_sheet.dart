@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/theme/app_themes.dart';
+import '../../core/theme/theme_provider.dart';
 import 'share_card_widget.dart';
 import 'share_cards/share_card_base.dart';
 
 /// A modal bottom sheet that previews a share card and lets the user
 /// pick between story (9:16) and square (1:1) formats before sharing.
-class ShareBottomSheet extends StatefulWidget {
+class ShareBottomSheet extends ConsumerStatefulWidget {
   /// Builds the card widget for the given [ShareCardFormat].
   /// Accepts an optional [aiCopy] string for AI-generated caption text.
   final Widget Function(ShareCardFormat format, {String? aiCopy}) cardBuilder;
@@ -45,22 +48,26 @@ class ShareBottomSheet extends StatefulWidget {
   }
 
   @override
-  State<ShareBottomSheet> createState() => _ShareBottomSheetState();
+  ConsumerState<ShareBottomSheet> createState() => _ShareBottomSheetState();
 }
 
-class _ShareBottomSheetState extends State<ShareBottomSheet> {
+class _ShareBottomSheetState extends ConsumerState<ShareBottomSheet> {
   ShareCardFormat _format = ShareCardFormat.story;
   bool _sharing = false;
   String? _aiCopy;
+  bool _aiCopyLoading = false;
 
   @override
   void initState() {
     super.initState();
-    widget.aiCopyFuture?.then((copy) {
-      if (mounted) setState(() => _aiCopy = copy);
-    }).catchError((_) {
-      // Silently ignore AI failures — card works without copy
-    });
+    if (widget.aiCopyFuture != null) {
+      _aiCopyLoading = true;
+      widget.aiCopyFuture!.then((copy) {
+        if (mounted) setState(() { _aiCopy = copy; _aiCopyLoading = false; });
+      }).catchError((_) {
+        if (mounted) setState(() => _aiCopyLoading = false);
+      });
+    }
   }
 
   Size get _cardSize => switch (_format) {
@@ -86,10 +93,12 @@ class _ShareBottomSheetState extends State<ShareBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = ref.watch(themeColorsProvider);
+
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       child: SafeArea(
@@ -103,7 +112,7 @@ class _ShareBottomSheetState extends State<ShareBottomSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: colors.divider,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -116,13 +125,54 @@ class _ShareBottomSheetState extends State<ShareBottomSheet> {
               constraints: const BoxConstraints(maxHeight: 340),
               child: AspectRatio(
                 aspectRatio: _cardSize.width / _cardSize.height,
-                child: FittedBox(
-                  fit: BoxFit.contain,
-                  child: SizedBox(
-                    width: _cardSize.width,
-                    height: _cardSize.height,
-                    child: widget.cardBuilder(_format, aiCopy: _aiCopy),
-                  ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    FittedBox(
+                      fit: BoxFit.contain,
+                      child: SizedBox(
+                        width: _cardSize.width,
+                        height: _cardSize.height,
+                        child: widget.cardBuilder(_format, aiCopy: _aiCopy),
+                      ),
+                    ),
+                    if (_aiCopyLoading)
+                      Positioned(
+                        bottom: 16,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 1.5,
+                                  color: colors.onPrimary,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'جاري إنشاء النص...',
+                                style: GoogleFonts.cairo(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -137,12 +187,14 @@ class _ShareBottomSheetState extends State<ShareBottomSheet> {
                   label: 'ستوري',
                   selected: _format == ShareCardFormat.story,
                   onTap: () => setState(() => _format = ShareCardFormat.story),
+                  colors: colors,
                 ),
                 const SizedBox(width: 12),
                 _FormatChip(
                   label: 'مربع',
                   selected: _format == ShareCardFormat.square,
                   onTap: () => setState(() => _format = ShareCardFormat.square),
+                  colors: colors,
                 ),
               ],
             ),
@@ -156,12 +208,12 @@ class _ShareBottomSheetState extends State<ShareBottomSheet> {
               child: ElevatedButton.icon(
                 onPressed: _sharing ? null : _share,
                 icon: _sharing
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: colors.onPrimary,
                         ),
                       )
                     : const Icon(Icons.share),
@@ -173,8 +225,8 @@ class _ShareBottomSheetState extends State<ShareBottomSheet> {
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2D7A3E),
-                  foregroundColor: Colors.white,
+                  backgroundColor: colors.primary,
+                  foregroundColor: colors.onPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -195,11 +247,13 @@ class _FormatChip extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final ThemeColors colors;
 
   const _FormatChip({
     required this.label,
     required this.selected,
     required this.onTap,
+    required this.colors,
   });
 
   @override
@@ -211,13 +265,13 @@ class _FormatChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         decoration: BoxDecoration(
           color: selected
-              ? const Color(0xFF2D7A3E)
-              : Colors.grey.shade100,
+              ? colors.primary
+              : colors.surfaceVariant,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: selected
-                ? const Color(0xFF2D7A3E)
-                : Colors.grey.shade300,
+                ? colors.primary
+                : colors.divider,
           ),
         ),
         child: Text(
@@ -225,7 +279,7 @@ class _FormatChip extends StatelessWidget {
           style: GoogleFonts.cairo(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : Colors.grey.shade700,
+            color: selected ? colors.onPrimary : colors.textSecondary,
           ),
         ),
       ),
