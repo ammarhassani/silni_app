@@ -60,6 +60,44 @@ final aiRelativesProvider = StreamProvider<List<Relative>>((ref) {
   return relativesService.getRelativesStream(userId);
 });
 
+/// Perspective-aware relationship labels for display.
+///
+/// In family group mode, computes labels like "عمي" instead of "عم/خال"
+/// using [FamilyGraphService.getLabelForViewer].
+/// Returns empty map in personal mode (arabicName is already correct).
+final perspectiveLabelsProvider = Provider<Map<String, String>>((ref) {
+  final relatives = ref.watch(aiRelativesProvider).valueOrNull ?? [];
+  final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+
+  if (groupInfo == null || groupInfo.nodeId == null || relatives.isEmpty) {
+    return {};
+  }
+
+  final graph = ref.watch(sharedFamilyGraphProvider((
+    groupId: groupInfo.groupId,
+    viewerNodeId: groupInfo.nodeId,
+  )));
+
+  if (graph == null) return {};
+
+  final enriched = FamilyGraphService.enrichAllSiblingEdges(graph);
+  final relativesMap = {for (final r in relatives) r.id: r};
+
+  final labels = <String, String>{};
+  for (final r in relatives) {
+    final label = FamilyGraphService.getLabelForViewer(
+      graph: enriched,
+      viewerId: groupInfo.nodeId!,
+      targetId: r.id,
+      relativesMap: relativesMap,
+    );
+    if (label.isNotEmpty) {
+      labels[r.id] = label;
+    }
+  }
+  return labels;
+});
+
 /// Provider for AI memories
 final aiMemoriesProvider = FutureProvider<List<AIMemory>>((ref) async {
   final chatHistoryService = ref.watch(chatHistoryServiceProvider);
@@ -86,31 +124,8 @@ final aiChatProvider =
   final relatives = ref.read(aiRelativesProvider).valueOrNull ?? [];
   final memories = ref.read(aiMemoriesProvider).valueOrNull ?? [];
 
-  // Compute perspective-shifted labels for group mode
-  // In personal mode, raw arabicName is already correct (user added relatives themselves)
-  Map<String, String> relationshipLabels = {};
-  final groupInfo = ref.read(userFamilyGroupProvider).valueOrNull;
-  if (groupInfo != null && groupInfo.nodeId != null && relatives.isNotEmpty) {
-    final graph = ref.read(sharedFamilyGraphProvider((
-      groupId: groupInfo.groupId,
-      viewerNodeId: groupInfo.nodeId,
-    )));
-    if (graph != null) {
-      final enriched = FamilyGraphService.enrichAllSiblingEdges(graph);
-      final relativesMap = {for (final r in relatives) r.id: r};
-      for (final r in relatives) {
-        final label = FamilyGraphService.getLabelForViewer(
-          graph: enriched,
-          viewerId: groupInfo.nodeId!,
-          targetId: r.id,
-          relativesMap: relativesMap,
-        );
-        if (label.isNotEmpty) {
-          relationshipLabels[r.id] = label;
-        }
-      }
-    }
-  }
+  // Use pre-computed perspective labels from shared provider
+  final relationshipLabels = ref.read(perspectiveLabelsProvider);
 
   return AIChatNotifier(
     aiService: aiService,

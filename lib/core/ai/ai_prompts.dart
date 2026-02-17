@@ -1014,14 +1014,17 @@ $personality
     return buffer.toString();
   }
 
-  /// System prompt for generating shareable card copy in Saudi dialect.
+  /// System prompt for generating shareable card copy.
   ///
+  /// Uses dynamic personality from admin config for dialect/style.
   /// Produces a single line (max 20 words) suitable for sharing on social media.
   /// Card types: streak, badge, level_up, occasion, wrapped.
   static String shareCopyPrompt({
     required String cardType,
     required Map<String, dynamic> context,
   }) {
+    final personality = dynamicPersonality;
+
     // Card-type specific tone instructions
     final String toneInstruction;
     switch (cardType) {
@@ -1046,7 +1049,9 @@ $personality
     });
 
     return '''
-اكتب سطر واحد فقط بالعامية السعودية مناسب للمشاركة في السوشال ميديا.
+اكتب سطر واحد فقط مناسب للمشاركة في السوشال ميديا.
+
+$personality
 
 ## نوع البطاقة: $cardType
 ## النبرة: $toneInstruction
@@ -1056,10 +1061,63 @@ $contextLines
 
 ## قواعد صارمة:
 - سطر واحد فقط، لا يتجاوز ٢٠ كلمة
-- بالعامية السعودية فقط
 - لا تفترض أي معلومة غير موجودة في البيانات
 - يُسمح بإيموجي واحد فقط في نهاية السطر
 - الناتج نص عادي فقط: بدون JSON، بدون علامات اقتباس، بدون ماركداون
+''';
+  }
+
+  /// System prompt for generating a creative wrapped personality title.
+  ///
+  /// Takes wrapped stats as context and returns JSON with `title` and `emoji`.
+  static String wrappedPersonalityPrompt({
+    required Map<String, dynamic> stats,
+  }) {
+    final personality = dynamicPersonality;
+
+    final statsLines = StringBuffer();
+    stats.forEach((key, value) {
+      statsLines.writeln('- $key: $value');
+    });
+
+    return '''
+أنت كاتب ألقاب إبداعية لملخصات التواصل العائلي في تطبيق صِلني.
+
+$personality
+
+## بيانات التواصل:
+$statsLines
+
+## مهمتك:
+ابتكر لقباً عربياً إبداعياً (٢-٤ كلمات) يصف أسلوب هذا الشخص في التواصل مع عائلته.
+اللقب يجب أن يكون:
+- مناسب للمشاركة في السوشال ميديا (يثير الفخر والاهتمام)
+- فريد وغير تقليدي
+- يعكس البيانات الفعلية (إذا زياراته كثيرة، اللقب يعكس ذلك)
+- باللهجة السعودية أو العربية الفصحى الخفيفة
+- إيجابي ومشجع
+- لا يتجاوز ٤ كلمات
+
+## أمثلة على ألقاب جيدة:
+- "حارس الروابط" (لمن يتواصل بانتظام)
+- "صانع اللحظات" (لمن ينوع في أساليب التواصل)
+- "نجم العائلة" (لمن يتواصل مع أقارب كثيرين)
+- "قلب لا ينقطع" (لمن عنده سلسلة تواصل طويلة)
+- "جسر العائلة" (لمن تغطيته عالية)
+- "عمود البيت" (لمن تفاعلاته كثيرة ومتنوعة)
+
+## ألقاب ممنوعة (لا تستخدمها أبداً):
+- "ملك الزيارات"
+- "طائر الصباح العائلي"
+- "بومة الليل العائلية"
+- "وصّال الرحم"
+- "صاحب المكالمات"
+- "واصل العائلة"
+- "الكريم"
+
+## تنسيق الإجابة:
+قدّم الإجابة بتنسيق JSON فقط:
+{"title": "اللقب الإبداعي", "emoji": "🌟"}
 ''';
   }
 }

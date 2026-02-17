@@ -726,6 +726,8 @@ class AIParameterConfig {
       'relationship_analysis': (temp: 0.7, tokens: 2048, count: null),
       'smart_reminders': (temp: 0.7, tokens: 1024, count: null),
       'memory_extraction': (temp: 0.3, tokens: 500, count: null),
+      'share_copy': (temp: 0.8, tokens: 100, count: null),
+      'wrapped_personality': (temp: 0.9, tokens: 200, count: null),
       'weekly_report': (temp: 0.7, tokens: 1500, count: null),
     };
     final config = defaults[featureKey] ?? (temp: 0.7, tokens: 2048, count: null);

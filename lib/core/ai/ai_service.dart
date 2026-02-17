@@ -55,6 +55,11 @@ abstract class AIService {
     required Map<String, dynamic> context,
   });
 
+  /// Generate a creative AI personality title for a wrapped summary.
+  Future<({String title, String emoji})> generateWrappedPersonality({
+    required Map<String, dynamic> stats,
+  });
+
   /// Extract memories/facts from a conversation
   Future<List<Map<String, dynamic>>> extractMemories(String conversation);
 

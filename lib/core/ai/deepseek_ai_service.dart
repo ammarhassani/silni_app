@@ -448,6 +448,7 @@ class DeepSeekAIService implements AIService {
     required Map<String, dynamic> context,
   }) async {
     try {
+      final params = AIConfigService.instance.getParametersFor('share_copy');
       final prompt = AIPrompts.shareCopyPrompt(
         cardType: cardType,
         context: context,
@@ -465,9 +466,9 @@ class DeepSeekAIService implements AIService {
           ),
         ],
         systemPrompt: prompt,
-        temperature: 0.8,
-        maxTokens: 100,
-        timeoutSeconds: 3,
+        temperature: params.temperature,
+        maxTokens: params.maxTokens,
+        timeoutSeconds: params.timeoutSeconds,
       );
 
       // Clean up response: trim quotes, markdown, whitespace
@@ -489,6 +490,58 @@ class DeepSeekAIService implements AIService {
         category: LogCategory.network,
         tag: 'DeepSeekAIService',
         metadata: {'error': e.toString(), 'cardType': cardType},
+      );
+      rethrow;
+    }
+  }
+
+  @override
+  Future<({String title, String emoji})> generateWrappedPersonality({
+    required Map<String, dynamic> stats,
+  }) async {
+    try {
+      final params =
+          AIConfigService.instance.getParametersFor('wrapped_personality');
+      final prompt = AIPrompts.wrappedPersonalityPrompt(stats: stats);
+
+      final response = await getChatCompletion(
+        messages: [
+          ChatMessage(
+            id: '',
+            conversationId: '',
+            userId: '',
+            role: MessageRole.user,
+            content: 'ابتكر لقباً لملخص تواصلي',
+            createdAt: DateTime.now(),
+          ),
+        ],
+        systemPrompt: prompt,
+        temperature: params.temperature,
+        maxTokens: params.maxTokens,
+        timeoutSeconds: params.timeoutSeconds,
+      );
+
+      final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(response);
+      if (jsonMatch == null) {
+        throw AIServiceException('Invalid response format');
+      }
+
+      final data =
+          jsonDecode(jsonMatch.group(0)!) as Map<String, dynamic>;
+      final title = data['title'] as String? ?? '';
+      final emoji = data['emoji'] as String? ?? '';
+
+      if (title.isEmpty) {
+        throw AIServiceException('Empty title in response');
+      }
+
+      return (title: title, emoji: emoji);
+    } catch (e) {
+      _logger.error(
+        'Wrapped personality generation error',
+        category: LogCategory.network,
+        tag: 'DeepSeekAIService',
+        metadata: {'error': e.toString()},
       );
       rethrow;
     }
@@ -767,6 +820,14 @@ class MockAIService implements AIService {
   }) async {
     await Future.delayed(const Duration(milliseconds: 200));
     return 'ما شاء الله تواصلي مع أهلي ما وقف 🔥';
+  }
+
+  @override
+  Future<({String title, String emoji})> generateWrappedPersonality({
+    required Map<String, dynamic> stats,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    return (title: 'حارس الروابط', emoji: '🌟');
   }
 
   @override
