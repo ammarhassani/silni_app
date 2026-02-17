@@ -26,14 +26,29 @@ class MonthlyWrapped {
   /// Longest run of consecutive days with at least one interaction.
   final int longestStreak;
 
-  /// Arabic personality label (e.g. "ملك الزيارات").
+  /// Arabic personality label (e.g. "ملك الزيارات") — deterministic fallback.
   final String personalityLabel;
 
-  /// Emoji representing the personality label.
+  /// Emoji representing the personality label — deterministic fallback.
   final String personalityEmoji;
 
   /// Per-type breakdown of interactions (e.g. {call: 5, visit: 3}).
   final Map<InteractionType, int> interactionBreakdown;
+
+  /// The interaction type used most often, or null if no interactions.
+  final InteractionType? mostUsedInteractionType;
+
+  /// The weekday with the most interactions (1=Mon…7=Sun), or null.
+  final int? busiestDayOfWeek;
+
+  /// Average interactions per week during this month.
+  final double averageInteractionsPerWeek;
+
+  /// AI-generated creative personality title, or null if not yet generated.
+  final String? aiPersonalityTitle;
+
+  /// AI-generated personality emoji, or null if not yet generated.
+  final String? aiPersonalityEmoji;
 
   const MonthlyWrapped({
     required this.month,
@@ -46,7 +61,42 @@ class MonthlyWrapped {
     required this.personalityLabel,
     required this.personalityEmoji,
     required this.interactionBreakdown,
+    this.mostUsedInteractionType,
+    this.busiestDayOfWeek,
+    this.averageInteractionsPerWeek = 0.0,
+    this.aiPersonalityTitle,
+    this.aiPersonalityEmoji,
   });
+
+  /// Returns the AI-generated title if available, otherwise the deterministic label.
+  String get effectivePersonalityLabel => aiPersonalityTitle ?? personalityLabel;
+
+  /// Returns the AI-generated emoji if available, otherwise the deterministic one.
+  String get effectivePersonalityEmoji => aiPersonalityEmoji ?? personalityEmoji;
+
+  /// Creates a copy with overridden AI personality fields.
+  MonthlyWrapped copyWith({
+    String? aiPersonalityTitle,
+    String? aiPersonalityEmoji,
+  }) {
+    return MonthlyWrapped(
+      month: month,
+      totalInteractions: totalInteractions,
+      uniqueRelativesContacted: uniqueRelativesContacted,
+      relativesCoverage: relativesCoverage,
+      mostContactedRelativeName: mostContactedRelativeName,
+      mostContactedRelativeCount: mostContactedRelativeCount,
+      longestStreak: longestStreak,
+      personalityLabel: personalityLabel,
+      personalityEmoji: personalityEmoji,
+      interactionBreakdown: interactionBreakdown,
+      mostUsedInteractionType: mostUsedInteractionType,
+      busiestDayOfWeek: busiestDayOfWeek,
+      averageInteractionsPerWeek: averageInteractionsPerWeek,
+      aiPersonalityTitle: aiPersonalityTitle ?? this.aiPersonalityTitle,
+      aiPersonalityEmoji: aiPersonalityEmoji ?? this.aiPersonalityEmoji,
+    );
+  }
 
   /// Arabic month names (1-indexed: index 0 is unused).
   static const List<String> arabicMonthNames = [
@@ -63,6 +113,18 @@ class MonthlyWrapped {
     'أكتوبر',
     'نوفمبر',
     'ديسمبر',
+  ];
+
+  /// Arabic weekday names (1-indexed: 1=Monday…7=Sunday, index 0 unused).
+  static const List<String> arabicWeekdayNames = [
+    '',
+    'الاثنين',
+    'الثلاثاء',
+    'الأربعاء',
+    'الخميس',
+    'الجمعة',
+    'السبت',
+    'الأحد',
   ];
 
   /// The Arabic name for this month (e.g. "يناير").

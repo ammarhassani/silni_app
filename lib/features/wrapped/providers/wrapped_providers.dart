@@ -1,18 +1,70 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/ai/deepseek_ai_service.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/providers/cache_provider.dart';
+import '../../../shared/models/interaction_model.dart';
+import '../../home/providers/home_providers.dart';
 import '../models/monthly_wrapped_model.dart';
 import '../models/yearly_wrapped_model.dart';
+import '../services/wrapped_ai_cache_service.dart';
 import '../services/wrapped_generator_service.dart';
+
+/// Builds a stats context map for the AI personality prompt.
+Map<String, dynamic> _buildStatsContext({
+  required int totalInteractions,
+  required int uniqueRelativesContacted,
+  required double relativesCoverage,
+  required int longestStreak,
+  required String personalityLabel,
+  required String? mostContactedRelativeName,
+  required int? mostContactedRelativeCount,
+  required InteractionType? mostUsedInteractionType,
+  required Map<InteractionType, int> interactionBreakdown,
+  int? totalActiveDays,
+  int? peakMonth,
+  int? peakMonthCount,
+}) {
+  final map = <String, dynamic>{
+    'إجمالي التواصلات': totalInteractions,
+    'عدد الأقارب': uniqueRelativesContacted,
+    'نسبة التغطية': '${(relativesCoverage * 100).round()}%',
+    'أطول سلسلة تواصل': '$longestStreak يوم',
+    'التصنيف الحالي': personalityLabel,
+  };
+
+  if (mostContactedRelativeName != null) {
+    map['أكثر قريب تواصلاً'] = mostContactedRelativeName;
+    map['عدد تواصلاته'] = mostContactedRelativeCount;
+  }
+
+  if (mostUsedInteractionType != null) {
+    map['أكثر نوع تواصل'] = mostUsedInteractionType.arabicName;
+  }
+
+  final breakdownSummary = interactionBreakdown.entries
+      .where((e) => e.value > 0)
+      .map((e) => '${e.key.arabicName}: ${e.value}')
+      .join('، ');
+  if (breakdownSummary.isNotEmpty) {
+    map['توزيع التواصلات'] = breakdownSummary;
+  }
+
+  if (totalActiveDays != null) {
+    map['أيام نشطة'] = totalActiveDays;
+  }
+  if (peakMonth != null) {
+    map['أكثر شهر نشاطاً'] = MonthlyWrapped.arabicMonthNames[peakMonth];
+    map['تواصلات الشهر الأكثر'] = peakMonthCount;
+  }
+
+  return map;
+}
 
 /// Provides a [MonthlyWrapped] for the given calendar month.
 ///
-/// Fetches interactions from the interactions repository (streams the first
-/// emission) and relatives from the relatives repository, then delegates to
-/// [WrappedGeneratorService.generate].
-///
-/// The parameter is a [DateTime] anywhere within the target month.
+/// Fetches interactions, generates deterministic stats, then attempts
+/// to load or generate an AI personality title (cached via SharedPreferences).
 final monthlyWrappedProvider =
     FutureProvider.autoDispose.family<MonthlyWrapped, DateTime>(
   (ref, month) async {
@@ -22,28 +74,69 @@ final monthlyWrappedProvider =
     }
 
     final interactionsRepo = ref.read(interactionsRepositoryProvider);
-    final relativesRepo = ref.read(relativesRepositoryProvider);
-
-    // Stream-based repos: take the first emission which includes cached data.
     final interactions =
         await interactionsRepo.watchUserInteractions(userId).first;
-    final relatives = await relativesRepo.watchRelatives(userId).first;
+    final relativesAsync = ref.read(viewerFilteredRelativesProvider);
+    final relatives = relativesAsync.valueOrNull ?? [];
 
-    return WrappedGeneratorService.generate(
+    var wrapped = WrappedGeneratorService.generate(
       interactions: interactions,
       relatives: relatives,
       month: month,
     );
+
+    // AI personality title: cache-first, then generate, fallback to deterministic.
+    try {
+      final firstOfMonth = DateTime(month.year, month.month, 1);
+      final cached = await WrappedAICacheService.getMonthlyTitle(
+        userId,
+        firstOfMonth.year,
+        firstOfMonth.month,
+      );
+
+      if (cached != null) {
+        wrapped = wrapped.copyWith(
+          aiPersonalityTitle: cached.title,
+          aiPersonalityEmoji: cached.emoji,
+        );
+      } else if (wrapped.totalInteractions > 0) {
+        final result = await DeepSeekAIService().generateWrappedPersonality(
+          stats: _buildStatsContext(
+            totalInteractions: wrapped.totalInteractions,
+            uniqueRelativesContacted: wrapped.uniqueRelativesContacted,
+            relativesCoverage: wrapped.relativesCoverage,
+            longestStreak: wrapped.longestStreak,
+            personalityLabel: wrapped.personalityLabel,
+            mostContactedRelativeName: wrapped.mostContactedRelativeName,
+            mostContactedRelativeCount: wrapped.mostContactedRelativeCount,
+            mostUsedInteractionType: wrapped.mostUsedInteractionType,
+            interactionBreakdown: wrapped.interactionBreakdown,
+          ),
+        );
+        await WrappedAICacheService.putMonthlyTitle(
+          userId,
+          firstOfMonth.year,
+          firstOfMonth.month,
+          result.title,
+          result.emoji,
+        );
+        wrapped = wrapped.copyWith(
+          aiPersonalityTitle: result.title,
+          aiPersonalityEmoji: result.emoji,
+        );
+      }
+    } catch (_) {
+      // AI failed silently; deterministic fallback is already in wrapped.
+    }
+
+    return wrapped;
   },
 );
 
 /// Provides a [YearlyWrapped] for the given calendar year.
 ///
-/// Fetches interactions from the interactions repository (streams the first
-/// emission) and relatives from the relatives repository, then delegates to
-/// [WrappedGeneratorService.generateYearly].
-///
-/// The parameter is the target year as an [int] (e.g. 2025).
+/// Fetches interactions, generates deterministic stats, then attempts
+/// to load or generate an AI personality title (cached via SharedPreferences).
 final yearlyWrappedProvider =
     FutureProvider.autoDispose.family<YearlyWrapped, int>(
   (ref, year) async {
@@ -53,18 +146,59 @@ final yearlyWrappedProvider =
     }
 
     final interactionsRepo = ref.read(interactionsRepositoryProvider);
-    final relativesRepo = ref.read(relativesRepositoryProvider);
-
-    // Stream-based repos: take the first emission which includes cached data.
     final interactions =
         await interactionsRepo.watchUserInteractions(userId).first;
-    final relatives = await relativesRepo.watchRelatives(userId).first;
+    final relativesAsync = ref.read(viewerFilteredRelativesProvider);
+    final relatives = relativesAsync.valueOrNull ?? [];
 
-    return WrappedGeneratorService.generateYearly(
+    var wrapped = WrappedGeneratorService.generateYearly(
       interactions: interactions,
       relatives: relatives,
       year: year,
     );
+
+    // AI personality title: cache-first, then generate, fallback to deterministic.
+    try {
+      final cached = await WrappedAICacheService.getYearlyTitle(userId, year);
+
+      if (cached != null) {
+        wrapped = wrapped.copyWith(
+          aiPersonalityTitle: cached.title,
+          aiPersonalityEmoji: cached.emoji,
+        );
+      } else if (wrapped.totalInteractions > 0) {
+        final result = await DeepSeekAIService().generateWrappedPersonality(
+          stats: _buildStatsContext(
+            totalInteractions: wrapped.totalInteractions,
+            uniqueRelativesContacted: wrapped.uniqueRelativesContacted,
+            relativesCoverage: wrapped.relativesCoverage,
+            longestStreak: wrapped.longestStreak,
+            personalityLabel: wrapped.personalityLabel,
+            mostContactedRelativeName: wrapped.mostContactedRelativeName,
+            mostContactedRelativeCount: wrapped.mostContactedRelativeCount,
+            mostUsedInteractionType: wrapped.mostUsedInteractionType,
+            interactionBreakdown: wrapped.interactionBreakdown,
+            totalActiveDays: wrapped.totalActiveDays,
+            peakMonth: wrapped.peakMonth,
+            peakMonthCount: wrapped.peakMonthCount,
+          ),
+        );
+        await WrappedAICacheService.putYearlyTitle(
+          userId,
+          year,
+          result.title,
+          result.emoji,
+        );
+        wrapped = wrapped.copyWith(
+          aiPersonalityTitle: result.title,
+          aiPersonalityEmoji: result.emoji,
+        );
+      }
+    } catch (_) {
+      // AI failed silently; deterministic fallback is already in wrapped.
+    }
+
+    return wrapped;
   },
 );
 

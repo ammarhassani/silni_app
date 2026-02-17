@@ -73,6 +73,14 @@ class WrappedGeneratorService {
     // 6. Longest consecutive-day streak
     final longestStreak = _calculateLongestStreak(monthInteractions);
 
+    // 7. Additional stats
+    final mostUsedType = _mostUsedInteractionType(breakdown);
+    final busiestDay = _busiestDayOfWeek(monthInteractions);
+    final daysInMonth = firstOfNextMonth.difference(firstOfMonth).inDays;
+    final weeksInMonth = daysInMonth / 7.0;
+    final avgPerWeek =
+        weeksInMonth > 0 ? totalInteractions / weeksInMonth : 0.0;
+
     return MonthlyWrapped(
       month: firstOfMonth,
       totalInteractions: totalInteractions,
@@ -84,6 +92,9 @@ class WrappedGeneratorService {
       personalityLabel: label,
       personalityEmoji: emoji,
       interactionBreakdown: breakdown,
+      mostUsedInteractionType: mostUsedType,
+      busiestDayOfWeek: busiestDay,
+      averageInteractionsPerWeek: avgPerWeek,
     );
   }
 
@@ -228,6 +239,12 @@ class WrappedGeneratorService {
       monthlyTotals[i.date.month] = (monthlyTotals[i.date.month] ?? 0) + 1;
     }
 
+    // 9. Additional stats
+    final mostUsedType = _mostUsedInteractionType(breakdown);
+    final busiestDay = _busiestDayOfWeek(yearInteractions);
+    final avgPerMonth = totalInteractions / 12.0;
+    final peak = _peakMonth(monthlyTotals);
+
     return YearlyWrapped(
       year: year,
       totalInteractions: totalInteractions,
@@ -241,7 +258,38 @@ class WrappedGeneratorService {
       interactionBreakdown: breakdown,
       totalActiveDays: totalActiveDays,
       monthlyTotals: monthlyTotals,
+      mostUsedInteractionType: mostUsedType,
+      busiestDayOfWeek: busiestDay,
+      averageInteractionsPerMonth: avgPerMonth,
+      peakMonth: peak?.$1,
+      peakMonthCount: peak?.$2,
     );
+  }
+
+  /// Returns the [InteractionType] with the highest count, or null if empty.
+  static InteractionType? _mostUsedInteractionType(
+      Map<InteractionType, int> breakdown) {
+    if (breakdown.isEmpty) return null;
+    return breakdown.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+  }
+
+  /// Returns the weekday (1=Mon…7=Sun) with the most interactions, or null.
+  static int? _busiestDayOfWeek(List<Interaction> interactions) {
+    if (interactions.isEmpty) return null;
+    final dayCount = <int, int>{};
+    for (final i in interactions) {
+      final dow = i.date.weekday;
+      dayCount[dow] = (dayCount[dow] ?? 0) + 1;
+    }
+    return dayCount.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+  }
+
+  /// Returns the peak month (number, count) from monthly totals, or null.
+  static (int, int)? _peakMonth(Map<int, int> monthlyTotals) {
+    if (monthlyTotals.isEmpty) return null;
+    final peak =
+        monthlyTotals.entries.reduce((a, b) => a.value >= b.value ? a : b);
+    return (peak.key, peak.value);
   }
 
   /// Calculate the longest run of consecutive calendar days with at least

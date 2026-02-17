@@ -27,10 +27,10 @@ class YearlyWrapped {
   /// Longest run of consecutive days with at least one interaction.
   final int longestStreak;
 
-  /// Arabic personality label (e.g. "ملك الزيارات").
+  /// Arabic personality label (e.g. "ملك الزيارات") — deterministic fallback.
   final String personalityLabel;
 
-  /// Emoji representing the personality label.
+  /// Emoji representing the personality label — deterministic fallback.
   final String personalityEmoji;
 
   /// Per-type breakdown of interactions (e.g. {call: 5, visit: 3}).
@@ -41,6 +41,27 @@ class YearlyWrapped {
 
   /// Per-month interaction totals (key: month number 1-12, value: count).
   final Map<int, int> monthlyTotals;
+
+  /// The interaction type used most often, or null if no interactions.
+  final InteractionType? mostUsedInteractionType;
+
+  /// The weekday with the most interactions (1=Mon…7=Sun), or null.
+  final int? busiestDayOfWeek;
+
+  /// Average interactions per month across the year.
+  final double averageInteractionsPerMonth;
+
+  /// The month (1-12) with the highest interaction count, or null.
+  final int? peakMonth;
+
+  /// The interaction count for the peak month, or null.
+  final int? peakMonthCount;
+
+  /// AI-generated creative personality title, or null if not yet generated.
+  final String? aiPersonalityTitle;
+
+  /// AI-generated personality emoji, or null if not yet generated.
+  final String? aiPersonalityEmoji;
 
   const YearlyWrapped({
     required this.year,
@@ -55,5 +76,46 @@ class YearlyWrapped {
     required this.interactionBreakdown,
     required this.totalActiveDays,
     required this.monthlyTotals,
+    this.mostUsedInteractionType,
+    this.busiestDayOfWeek,
+    this.averageInteractionsPerMonth = 0.0,
+    this.peakMonth,
+    this.peakMonthCount,
+    this.aiPersonalityTitle,
+    this.aiPersonalityEmoji,
   });
+
+  /// Returns the AI-generated title if available, otherwise the deterministic label.
+  String get effectivePersonalityLabel => aiPersonalityTitle ?? personalityLabel;
+
+  /// Returns the AI-generated emoji if available, otherwise the deterministic one.
+  String get effectivePersonalityEmoji => aiPersonalityEmoji ?? personalityEmoji;
+
+  /// Creates a copy with overridden AI personality fields.
+  YearlyWrapped copyWith({
+    String? aiPersonalityTitle,
+    String? aiPersonalityEmoji,
+  }) {
+    return YearlyWrapped(
+      year: year,
+      totalInteractions: totalInteractions,
+      uniqueRelativesContacted: uniqueRelativesContacted,
+      relativesCoverage: relativesCoverage,
+      mostContactedRelativeName: mostContactedRelativeName,
+      mostContactedRelativeCount: mostContactedRelativeCount,
+      longestStreak: longestStreak,
+      personalityLabel: personalityLabel,
+      personalityEmoji: personalityEmoji,
+      interactionBreakdown: interactionBreakdown,
+      totalActiveDays: totalActiveDays,
+      monthlyTotals: monthlyTotals,
+      mostUsedInteractionType: mostUsedInteractionType,
+      busiestDayOfWeek: busiestDayOfWeek,
+      averageInteractionsPerMonth: averageInteractionsPerMonth,
+      peakMonth: peakMonth,
+      peakMonthCount: peakMonthCount,
+      aiPersonalityTitle: aiPersonalityTitle ?? this.aiPersonalityTitle,
+      aiPersonalityEmoji: aiPersonalityEmoji ?? this.aiPersonalityEmoji,
+    );
+  }
 }
