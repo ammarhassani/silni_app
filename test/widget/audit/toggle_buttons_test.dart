@@ -36,8 +36,8 @@ import '../../helpers/widget_test_helpers.dart';
 ///    - Line 110-114: Switch for schedule active/inactive toggle
 ///    STATUS: WORKING - Persisted via onToggle callback to Supabase
 ///
-/// 5. AddRelativesDialog (lib/features/reminders/widgets/add_relatives_dialog.dart)
-///    - Line 119: CheckboxListTile for selecting relatives
+/// 5. AddRelativesBottomSheet (lib/features/reminders/widgets/add_relatives_dialog.dart)
+///    - Custom GestureDetector rows with animated checkmark circles
 ///    STATUS: WORKING - Selection state managed correctly
 ///
 /// 6. ContactImportScreen (lib/features/contacts/screens/contact_import_screen.dart)
@@ -80,10 +80,9 @@ void main() {
         await tester.pumpWidget(
           createTestWidget(
             child: Scaffold(
-              body: ScheduleCard(
+              body: CompactScheduleCard(
                 schedule: schedule,
                 allRelatives: [],
-                allAssignedRelativeIds: {},
                 onToggle: (value) {
                   toggleCalled = true;
                   toggleValue = value;
@@ -92,7 +91,6 @@ void main() {
                 onDelete: () {},
                 onAddRelatives: () {},
                 onRemoveRelative: (_) {},
-                onDrop: (_) {},
               ),
             ),
           ),
@@ -113,8 +111,8 @@ void main() {
       });
     });
 
-    group('AddRelativesDialog CheckboxListTile', () {
-      testWidgets('checkbox should respond to selection', (tester) async {
+    group('AddRelativesBottomSheet selection', () {
+      testWidgets('row should respond to selection tap', (tester) async {
         final schedule = ReminderSchedule(
           id: 'test-schedule-id',
           userId: 'test-user-id',
@@ -150,9 +148,11 @@ void main() {
                 body: Builder(
                   builder: (context) => ElevatedButton(
                     onPressed: () {
-                      showDialog(
+                      showModalBottomSheet(
                         context: context,
-                        builder: (context) => AddRelativesDialog(
+                        backgroundColor: Colors.transparent,
+                        isScrollControlled: true,
+                        builder: (context) => AddRelativesBottomSheet(
                           schedule: schedule,
                           relatives: relatives,
                         ),
@@ -166,27 +166,23 @@ void main() {
           ),
         );
 
-        // Open the dialog
+        // Open the bottom sheet
         await tester.tap(find.text('Open Dialog'));
         await tester.pumpAndSettle();
 
-        // Find CheckboxListTile widgets
-        final checkboxes = find.byType(CheckboxListTile);
-        expect(checkboxes, findsNWidgets(2));
+        // Both relative names should be shown
+        expect(find.text('Test Relative 1'), findsOneWidget);
+        expect(find.text('Test Relative 2'), findsOneWidget);
 
-        // Initially both should be unchecked
-        final checkbox1 =
-            tester.widget<CheckboxListTile>(checkboxes.first);
-        expect(checkbox1.value, isFalse);
+        // Initially no check icon should be visible
+        expect(find.byIcon(Icons.check_rounded), findsNothing);
 
-        // Tap the first checkbox
-        await tester.tap(checkboxes.first);
-        await tester.pump();
+        // Tap the first relative row
+        await tester.tap(find.text('Test Relative 1'));
+        await tester.pumpAndSettle();
 
-        // Verify it's now checked
-        final checkbox1After =
-            tester.widget<CheckboxListTile>(checkboxes.first);
-        expect(checkbox1After.value, isTrue);
+        // Verify check icon appears (selected state)
+        expect(find.byIcon(Icons.check_rounded), findsOneWidget);
       });
     });
   });

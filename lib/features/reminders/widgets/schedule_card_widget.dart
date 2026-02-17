@@ -1,89 +1,151 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import '../../../core/constants/app_colors.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
+
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/widgets/glass_card.dart';
-import '../../../shared/widgets/gradient_button.dart';
 
-/// Card displaying a reminder schedule with drag-and-drop support
-class ScheduleCard extends ConsumerWidget {
-  const ScheduleCard({
+/// Compact schedule card with swipe actions for edit/delete
+class CompactScheduleCard extends ConsumerStatefulWidget {
+  const CompactScheduleCard({
     super.key,
     required this.schedule,
     required this.allRelatives,
-    required this.allAssignedRelativeIds,
+    this.relationshipLabels,
     required this.onToggle,
     required this.onEdit,
     required this.onDelete,
     required this.onAddRelatives,
     required this.onRemoveRelative,
-    required this.onDrop,
   });
 
   final ReminderSchedule schedule;
   final List<Relative> allRelatives;
-  final Set<String> allAssignedRelativeIds;
+  final Map<String, String>? relationshipLabels;
   final ValueChanged<bool> onToggle;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onAddRelatives;
   final void Function(String relativeId) onRemoveRelative;
-  final void Function(Relative relative) onDrop;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CompactScheduleCard> createState() =>
+      _CompactScheduleCardState();
+}
+
+class _CompactScheduleCardState extends ConsumerState<CompactScheduleCard> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
-    final scheduledRelatives = allRelatives
-        .where((r) => schedule.relativeIds.contains(r.id))
+    final scheduledRelatives = widget.allRelatives
+        .where((r) => widget.schedule.relativeIds.contains(r.id))
         .toList();
 
-    return DragTarget<Relative>(
-      // Only accept if relative is not already assigned to ANY schedule
-      onWillAcceptWithDetails: (details) =>
-          !allAssignedRelativeIds.contains(details.data.id),
-      onAcceptWithDetails: (details) => onDrop(details.data),
-      builder: (context, candidateData, rejectedData) {
-        final isHovering = candidateData.isNotEmpty;
-
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: isHovering
-              ? BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                  boxShadow: [
-                    BoxShadow(
-                      color: themeColors.primary.withValues(alpha: 0.4),
-                      blurRadius: 12,
-                      spreadRadius: 2,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Slidable(
+        key: ValueKey(widget.schedule.id),
+        startActionPane: ActionPane(
+          motion: const BehindMotion(),
+          extentRatio: 0.4,
+          children: [
+            CustomSlidableAction(
+              onPressed: (_) {
+                HapticFeedback.lightImpact();
+                widget.onEdit();
+              },
+              backgroundColor: Colors.transparent,
+              padding: const EdgeInsets.only(
+                right: AppSpacing.xs,
+                top: AppSpacing.xs,
+                bottom: AppSpacing.xs,
+              ),
+              child: SizedBox.expand(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: themeColors.primary.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    border: Border.all(
+                      color: themeColors.primary.withValues(alpha: 0.3),
                     ),
-                  ],
-                )
-              : null,
-          child: GlassCard(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-            gradient: isHovering
-                ? LinearGradient(
-                    colors: [
-                      themeColors.primary.withValues(alpha: 0.3),
-                      themeColors.primary.withValues(alpha: 0.1),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.edit_rounded, color: Colors.white, size: 20),
+                      const SizedBox(height: 4),
+                      Text(
+                        'تعديل',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
-                  )
-                : null,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header row
-                Row(
+                  ),
+                ),
+              ),
+            ),
+            CustomSlidableAction(
+              onPressed: (_) {
+                HapticFeedback.lightImpact();
+                widget.onDelete();
+              },
+              backgroundColor: Colors.transparent,
+              padding: const EdgeInsets.only(
+                right: AppSpacing.xs,
+                top: AppSpacing.xs,
+                bottom: AppSpacing.xs,
+              ),
+              child: SizedBox.expand(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: themeColors.statusError.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    border: Border.all(
+                      color: themeColors.statusError.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.delete_rounded, color: Colors.white, size: 20),
+                      const SizedBox(height: 4),
+                      Text(
+                        'حذف',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        child: GlassCard(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top row: emoji + name + count + time pill + switch
+              GestureDetector(
+                onTap: () => setState(() => _isExpanded = !_isExpanded),
+                behavior: HitTestBehavior.opaque,
+                child: Row(
                   children: [
                     Text(
-                      schedule.frequency.emoji,
-                      style: const TextStyle(fontSize: 32),
+                      widget.schedule.frequency.emoji,
+                      style: const TextStyle(fontSize: 24),
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
@@ -91,170 +153,266 @@ class ScheduleCard extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            schedule.frequency.arabicName,
-                            style: AppTypography.headlineSmall.copyWith(
-                              color: themeColors.textPrimary, // Better contrast
+                            widget.schedule.frequency.arabicName,
+                            style: AppTypography.titleMedium.copyWith(
+                              color: themeColors.textPrimary,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          Text(
-                            schedule.description,
-                            style: AppTypography.bodySmall.copyWith(
-                              color: themeColors.textSecondary, // Better contrast
+                          if (scheduledRelatives.isNotEmpty)
+                            Text(
+                              '${scheduledRelatives.length} أقارب',
+                              style: AppTypography.labelSmall.copyWith(
+                                color: themeColors.textSecondary,
+                              ),
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
                         ],
                       ),
                     ),
-                    Switch(
-                      value: schedule.isActive,
-                      onChanged: onToggle,
-                      activeTrackColor: themeColors.primary.withValues(alpha: 0.5),
-                      activeThumbColor: themeColors.primary,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                const Divider(color: Colors.white24),
-                const SizedBox(height: AppSpacing.md),
-
-                // Drag hint when hovering
-                if (isHovering)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                    child: Text(
-                      '✨ أفلت هنا للإضافة',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: themeColors.primary,
-                        fontWeight: FontWeight.bold,
+                    // Time pill
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: themeColors.primary.withValues(alpha: 0.15),
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusRound),
+                        border: Border.all(
+                          color: themeColors.primary.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Text(
+                        widget.schedule.time,
+                        style: AppTypography.labelSmall.copyWith(
+                          color: themeColors.textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
-                  ),
-
-                // Relatives in this schedule
-                if (scheduledRelatives.isEmpty)
-                  Text(
-                    'لا يوجد أقارب في هذا التذكير',
-                    style: AppTypography.bodySmall.copyWith(
+                    const SizedBox(width: AppSpacing.xs),
+                    // Compact switch
+                    SizedBox(
+                      height: 28,
+                      child: FittedBox(
+                        child: Switch(
+                          value: widget.schedule.isActive,
+                          onChanged: widget.onToggle,
+                          activeTrackColor:
+                              themeColors.primary.withValues(alpha: 0.5),
+                          activeThumbColor: themeColors.primary,
+                          inactiveTrackColor:
+                              Colors.white.withValues(alpha: 0.15),
+                          inactiveThumbColor:
+                              Colors.white.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ),
+                    // Expand chevron
+                    Icon(
+                      _isExpanded
+                          ? Icons.expand_less_rounded
+                          : Icons.expand_more_rounded,
                       color: themeColors.textSecondary,
-                    ),
-                  )
-                else
-                  Wrap(
-                    spacing: AppSpacing.sm,
-                    runSpacing: AppSpacing.sm,
-                    children: scheduledRelatives.map((relative) {
-                      return RelativeChip(
-                        relative: relative,
-                        onRemove: () => onRemoveRelative(relative.id),
-                      );
-                    }).toList(),
-                  ),
-                const SizedBox(height: AppSpacing.md),
-
-                // Actions
-                Row(
-                  children: [
-                    Expanded(
-                      child: GradientButton(
-                        onPressed: onAddRelatives,
-                        text: 'إضافة أقارب',
-                        icon: Icons.person_add_rounded,
-                        height: 40,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    GradientButton(
-                      onPressed: onEdit,
-                      text: '',
-                      icon: Icons.edit_rounded,
-                      height: 40,
-                      width: 50,
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    GradientButton(
-                      onPressed: onDelete,
-                      text: '',
-                      icon: Icons.delete_rounded,
-                      height: 40,
-                      width: 50,
-                      gradient: AppColors.streakFire,
+                      size: 20,
                     ),
                   ],
-                ),
-              ],
-            ),
-          ),
-        ).animate().fadeIn().slideX();
-      },
-    );
-  }
-}
-
-/// Chip displaying a relative in a schedule
-class RelativeChip extends ConsumerWidget {
-  const RelativeChip({
-    super.key,
-    required this.relative,
-    required this.onRemove,
-  });
-
-  final Relative relative;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final themeColors = ref.watch(themeColorsProvider);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            themeColors.primary.withValues(alpha: 0.3),
-            themeColors.primary.withValues(alpha: 0.15),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.2),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(relative.displayEmoji, style: const TextStyle(fontSize: 18)),
-          const SizedBox(width: AppSpacing.xs),
-          Text(
-            relative.fullName,
-            style: AppTypography.bodySmall.copyWith(color: Colors.white),
-          ),
-          GestureDetector(
-            onTap: onRemove,
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.xs),
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.close_rounded,
-                  size: 16,
-                  color: Colors.white,
                 ),
               ),
-            ),
+
+              // Expandable relatives list
+              AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                child: _isExpanded
+                    ? Padding(
+                        padding:
+                            const EdgeInsets.only(top: AppSpacing.sm),
+                        child: scheduledRelatives.isEmpty
+                            ? GestureDetector(
+                                onTap: widget.onAddRelatives,
+                                behavior: HitTestBehavior.opaque,
+                                child:
+                                    _buildEmptyRelativesHint(themeColors),
+                              )
+                            : _buildRelativesList(
+                                scheduledRelatives, themeColors),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildRelativesList(
+    List<Relative> relatives,
+    dynamic themeColors,
+  ) {
+    return Column(
+      children: [
+        ...relatives.map((relative) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+              child: Row(
+                children: [
+                  // Emoji avatar
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [
+                          themeColors.primary.withValues(alpha: 0.3),
+                          themeColors.primary.withValues(alpha: 0.15),
+                        ],
+                      ),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        relative.displayEmoji,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  // Name + relationship
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          relative.fullName,
+                          style: AppTypography.labelMedium.copyWith(
+                            color: themeColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          widget.relationshipLabels?[relative.id] ??
+                              relative.relationshipType.arabicName,
+                          style: AppTypography.labelSmall.copyWith(
+                            color: themeColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Remove button
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      widget.onRemoveRelative(relative.id);
+                    },
+                    child: Icon(
+                      Icons.remove_circle_outline_rounded,
+                      size: 18,
+                      color: Colors.white.withValues(alpha: 0.3),
+                    ),
+                  ),
+                ],
+              ),
+            )),
+        // Action row: add relatives + delete
+        Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.md),
+          child: Row(
+            children: [
+              // Add relatives — white on semi-opaque bg
+              Expanded(
+                child: GestureDetector(
+                  onTap: widget.onAddRelatives,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.radiusRound),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.person_add_rounded,
+                            size: 16, color: Colors.white),
+                        const SizedBox(width: AppSpacing.xs),
+                        Text(
+                          'إضافة أقارب',
+                          style: AppTypography.labelMedium.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              // Delete schedule
+              GestureDetector(
+                onTap: widget.onDelete,
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.15),
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.radiusRound),
+                    border: Border.all(
+                      color: Colors.red.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline_rounded,
+                          size: 16, color: Colors.red.shade300),
+                      const SizedBox(width: 4),
+                      Text(
+                        'حذف',
+                        style: AppTypography.labelMedium.copyWith(
+                          color: Colors.red.shade300,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyRelativesHint(dynamic themeColors) {
+    return Row(
+      children: [
+        Icon(Icons.person_add_alt_1_rounded,
+            size: 16, color: themeColors.textHint),
+        const SizedBox(width: AppSpacing.xs),
+        Text(
+          'اضغط لإضافة أقارب',
+          style: AppTypography.bodySmall.copyWith(
+            color: themeColors.textHint,
+          ),
+        ),
+      ],
     );
   }
 }

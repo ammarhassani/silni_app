@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_spacing.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/services/reminder_schedules_service.dart';
+import '../../../shared/widgets/glass_bottom_sheet.dart';
+import '../../../shared/widgets/gradient_button.dart';
 import 'day_selector_widget.dart';
+import 'glass_time_picker.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../core/theme/theme_provider.dart';
 
-/// Dialog for editing an existing reminder schedule
-class EditScheduleDialog extends ConsumerStatefulWidget {
-  const EditScheduleDialog({
+/// Glass bottom sheet for editing an existing reminder schedule.
+class EditScheduleBottomSheet extends ConsumerStatefulWidget {
+  const EditScheduleBottomSheet({
     super.key,
     required this.schedule,
   });
@@ -19,13 +22,16 @@ class EditScheduleDialog extends ConsumerStatefulWidget {
   final ReminderSchedule schedule;
 
   @override
-  ConsumerState<EditScheduleDialog> createState() => _EditScheduleDialogState();
+  ConsumerState<EditScheduleBottomSheet> createState() =>
+      _EditScheduleBottomSheetState();
 }
 
-class _EditScheduleDialogState extends ConsumerState<EditScheduleDialog> {
+class _EditScheduleBottomSheetState
+    extends ConsumerState<EditScheduleBottomSheet> {
   late TimeOfDay _selectedTime;
   late List<int> _selectedDays;
   late int? _selectedDayOfMonth;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -37,17 +43,6 @@ class _EditScheduleDialogState extends ConsumerState<EditScheduleDialog> {
     );
     _selectedDays = List.from(widget.schedule.customDays ?? []);
     _selectedDayOfMonth = widget.schedule.dayOfMonth;
-  }
-
-  Future<void> _pickTime() async {
-    final time = await showTimePicker(
-      context: context,
-      initialTime: _selectedTime,
-      builder: (context, child) => Theme(data: ThemeData.dark(), child: child!),
-    );
-    if (time != null) {
-      setState(() => _selectedTime = time);
-    }
   }
 
   void _saveChanges() async {
@@ -70,7 +65,9 @@ class _EditScheduleDialogState extends ConsumerState<EditScheduleDialog> {
       return;
     }
 
+    setState(() => _isLoading = true);
     final service = ref.read(reminderSchedulesServiceProvider);
+
     try {
       final timeString =
           '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
@@ -85,141 +82,128 @@ class _EditScheduleDialogState extends ConsumerState<EditScheduleDialog> {
       );
       if (mounted) {
         Navigator.pop(context);
-        UIHelpers.showSnackBar(
-          context,
-          'تم تحديث التذكير بنجاح',
-          backgroundColor: AppColors.islamicGreenPrimary,
-        );
+        UIHelpers.showSnackBar(context, 'تم تحديث التذكير بنجاح');
       }
     } catch (e) {
+      setState(() => _isLoading = false);
       if (mounted) {
-        UIHelpers.showSnackBar(
-          context,
-          'خطأ: $e',
-          isError: true,
-        );
+        UIHelpers.showSnackBar(context, 'خطأ: $e', isError: true);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final themeColors = ref.watch(themeColorsProvider);
+    ref.watch(themeColorsProvider);
 
-    return AlertDialog(
-      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-      ),
-      titlePadding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.sm,
-      ),
-      contentPadding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        0,
-        AppSpacing.lg,
-        AppSpacing.md,
-      ),
-      actionsPadding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        0,
-        AppSpacing.lg,
-        AppSpacing.lg,
-      ),
-      title: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.edit_calendar_rounded, color: Colors.white, size: 32),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'تعديل التذكير',
-            style: AppTypography.titleLarge.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-      content: SingleChildScrollView(
+    return GlassBottomSheet(
+      icon: Icons.edit_calendar_rounded,
+      title: 'تعديل التذكير',
+      child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'وقت التذكير',
-              style: AppTypography.titleMedium.copyWith(color: Colors.white),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            ElevatedButton.icon(
-              onPressed: _pickTime,
-              icon: const Icon(Icons.schedule_rounded),
-              label: Text('الوقت: ${_selectedTime.format(context)}'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withValues(alpha: 0.2),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.md,
+            // Time picker section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'وقت التذكير',
+                    style: AppTypography.titleMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  GlassTimePicker(
+                    initialTime: _selectedTime,
+                    onTimeChanged: (time) {
+                      setState(() => _selectedTime = time);
+                    },
+                  ),
+                ],
+              ),
+            ).animate(delay: 200.ms).fadeIn().slideY(begin: 0.05),
+
+            // Weekly day selector
+            if (widget.schedule.frequency ==
+                ReminderFrequency.weekly) ...[
+              const SizedBox(height: AppSpacing.lg),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'يوم الأسبوع',
+                      style: AppTypography.titleMedium.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    WeekDaySelector(
+                      selectedDays: _selectedDays,
+                      onDaySelected: (dayNumber) {
+                        setState(() {
+                          _selectedDays.clear();
+                          _selectedDays.add(dayNumber);
+                        });
+                      },
+                    ),
+                  ],
                 ),
-              ),
-            ),
-
-            if (widget.schedule.frequency == ReminderFrequency.weekly) ...[
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                'يوم الأسبوع',
-                style: AppTypography.titleMedium.copyWith(color: Colors.white),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              WeekDaySelector(
-                selectedDays: _selectedDays,
-                onDaySelected: (dayNumber) {
-                  setState(() {
-                    _selectedDays.clear();
-                    _selectedDays.add(dayNumber);
-                  });
-                },
-              ),
+              ).animate(delay: 300.ms).fadeIn().slideY(begin: 0.05),
             ],
 
-            if (widget.schedule.frequency == ReminderFrequency.monthly) ...[
+            // Monthly day selector
+            if (widget.schedule.frequency ==
+                ReminderFrequency.monthly) ...[
               const SizedBox(height: AppSpacing.lg),
-              Text(
-                'يوم من الشهر',
-                style: AppTypography.titleMedium.copyWith(color: Colors.white),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              MonthDaySelector(
-                selectedDay: _selectedDayOfMonth,
-                onDaySelected: (day) {
-                  setState(() => _selectedDayOfMonth = day);
-                },
-              ),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'يوم من الشهر',
+                      style: AppTypography.titleMedium.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    MonthDaySelector(
+                      selectedDay: _selectedDayOfMonth,
+                      onDaySelected: (day) {
+                        setState(() => _selectedDayOfMonth = day);
+                      },
+                    ),
+                  ],
+                ),
+              ).animate(delay: 300.ms).fadeIn().slideY(begin: 0.05),
             ],
+
+            const SizedBox(height: AppSpacing.lg),
+
+            // Save button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: GradientButton(
+                text: 'حفظ',
+                icon: Icons.save_rounded,
+                onPressed: _saveChanges,
+                isLoading: _isLoading,
+              ),
+            ).animate(delay: 400.ms).fadeIn(),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(
-            'إلغاء',
-            style: TextStyle(color: themeColors.primary),
-          ),
-        ),
-        ElevatedButton(
-          onPressed: _saveChanges,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: themeColors.primary,
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('حفظ'),
-        ),
-      ],
     );
   }
 }

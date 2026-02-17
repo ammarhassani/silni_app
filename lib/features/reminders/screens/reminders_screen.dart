@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
-import '../../../shared/widgets/gradient_background.dart';
+import '../../../shared/widgets/glass_bottom_sheet.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../shared/widgets/glass_pill_title.dart';
+import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/services/reminder_schedules_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../family_tree/providers/family_graph_providers.dart';
 import '../../home/providers/home_providers.dart';
 import '../../../core/providers/realtime_provider.dart';
+import '../../../shared/utils/relationship_label_helper.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../widgets/widgets.dart';
 import '../../../shared/widgets/message_widget.dart';
@@ -26,7 +33,11 @@ class RemindersScreen extends ConsumerStatefulWidget {
 }
 
 class _RemindersScreenState extends ConsumerState<RemindersScreen> {
-  ReminderFrequency? _selectedFrequency;
+  // Provider-sourced cache (for loading fallback)
+  List<ReminderSchedule>? _providerSchedules;
+  List<Relative>? _providerRelatives;
+  // Optimistic override — set by mutations, takes priority over provider
+  List<ReminderSchedule>? _optimisticSchedules;
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +49,73 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     ref.watch(autoRealtimeSubscriptionsProvider);
 
     final schedulesAsync = ref.watch(reminderSchedulesStreamProvider(userId));
-    final relativesAsync = ref.watch(relativesStreamProvider(userId));
+
+    // Replicate the family tree's exact pattern: use .when() on group info
+    // so we WAIT before deciding which relatives source to watch.
+    // This prevents watching the wrong provider during loading.
+    final groupInfoAsync = ref.watch(userFamilyGroupProvider);
+
+    // Resolve relatives inside .when() — only the correct provider is watched
+    List<Relative>? filteredRelatives;
+    Map<String, String>? relationshipLabels;
+    bool relativesHasError = false;
+    groupInfoAsync.when(
+      loading: () {}, // will be handled by isInitialLoad below
+      error: (_, _) => relativesHasError = true,
+      data: (groupInfo) {
+        final relativesAsync = groupInfo != null
+            ? ref.watch(groupRelativesStreamProvider(groupInfo.groupId))
+            : ref.watch(relativesStreamProvider(userId));
+
+        if (relativesAsync.hasError) relativesHasError = true;
+
+        if (relativesAsync.hasValue) {
+          final viewerNodeId = groupInfo?.nodeId;
+          var visible = relativesAsync.value!;
+          if (viewerNodeId != null) {
+            // Group mode: exclude viewer's tree node
+            visible = visible.where((r) => r.id != viewerNodeId).toList();
+          } else {
+            // Personal mode: exclude self entry
+            visible = visible.where((r) => !r.isSelf).toList();
+          }
+          filteredRelatives = visible;
+
+          // Build perspective-aware relationship labels from family graph
+          final graph = groupInfo != null
+              ? ref.watch(sharedFamilyGraphProvider((
+                  groupId: groupInfo.groupId,
+                  viewerNodeId: groupInfo.nodeId,
+                )))
+              : ref.watch(familyGraphProvider(userId));
+          final effectiveViewerId = groupInfo?.nodeId ?? userId;
+          final relativesMap = {
+            for (final r in relativesAsync.value!) r.id: r,
+          };
+          relationshipLabels = {
+            for (final r in visible)
+              r.id: getRelationshipLabel(
+                relative: r,
+                viewerId: effectiveViewerId,
+                graph: graph,
+                relativesMap: relativesMap,
+              ),
+          };
+        }
+      },
+    );
+
+    // Update provider cache when data is available
+    if (filteredRelatives != null) _providerRelatives = filteredRelatives;
+    if (schedulesAsync.hasValue) _providerSchedules = schedulesAsync.value;
+
+    // Optimistic schedules take priority over provider data
+    final relatives = filteredRelatives ?? _providerRelatives;
+    final schedules =
+        _optimisticSchedules ?? schedulesAsync.valueOrNull ?? _providerSchedules;
+    final hasError =
+        relativesHasError || schedulesAsync.hasError;
+    final isInitialLoad = relatives == null || schedules == null;
 
     return Scaffold(
       body: Semantics(
@@ -49,7 +126,6 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
             SafeArea(
               child: Column(
                 children: [
-                  _buildHeader(context, themeColors),
                   // Messages (unified: banners + in-app messages)
                   const Padding(
                     padding: EdgeInsets.symmetric(
@@ -59,69 +135,60 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                     child: MessageWidget(screenPath: '/reminders'),
                   ),
                   Expanded(
-                    child: relativesAsync.when(
-                      data: (relatives) => schedulesAsync.when(
-                        data: (schedules) =>
-                            _buildContent(context, relatives, schedules, themeColors),
-                        loading: () => const Center(
-                          child: PremiumLoadingIndicator(
-                            message: 'جاري تحميل التذكيرات...',
-                          ),
-                        ),
-                        error: (_, _) => _buildError(themeColors),
-                      ),
-                      loading: () => const Center(
-                        child: PremiumLoadingIndicator(
-                          message: 'جاري تحميل البيانات...',
-                        ),
-                      ),
-                      error: (_, _) => _buildError(themeColors),
-                    ),
+                    child: hasError && isInitialLoad
+                        ? _buildError(themeColors)
+                        : isInitialLoad
+                            ? const Center(
+                                child: PremiumLoadingIndicator(
+                                  message: 'جاري تحميل البيانات...',
+                                ),
+                              )
+                            : _buildContent(context, relatives, schedules,
+                                themeColors, userId, relationshipLabels),
                   ),
                 ],
               ),
             ),
+            // Floating header
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  child: Row(
+                    children: [
+                      Semantics(
+                        label: 'رجوع',
+                        button: true,
+                        child: IconButton(
+                          onPressed: () => context.pop(),
+                          icon: Icon(Icons.arrow_back_ios_rounded,
+                              color: themeColors.textOnGradient),
+                        ),
+                      ),
+                      GlassPillTitle(
+                        text: 'تذكير صلة الرحم',
+                        subtitle: Text(
+                          'نظّم تذكيراتك للتواصل مع أحبتك',
+                          style: AppTypography.bodySmall.copyWith(
+                            color: themeColors.textOnGradient
+                                .withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, dynamic themeColors) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-      child: Row(
-        children: [
-          Semantics(
-            label: 'رجوع',
-            button: true,
-            child: IconButton(
-              onPressed: () => context.pop(),
-              icon: Icon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'تذكير صلة الرحم',
-                  style: AppTypography.headlineLarge.copyWith(
-                    color: themeColors.textOnGradient,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'نظّم تذكيراتك للتواصل مع أحبتك',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: themeColors.textOnGradient.withValues(alpha: 0.8),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -131,138 +198,117 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     List<Relative> relatives,
     List<ReminderSchedule> schedules,
     dynamic themeColors,
+    String userId,
+    Map<String, String>? relationshipLabels,
   ) {
     if (relatives.isEmpty) {
       return _buildEmptyState(themeColors);
     }
 
-    final unassignedRelatives = _getUnassignedRelatives(relatives, schedules);
-    final user = ref.watch(currentUserProvider);
-    final userId = user?.id ?? '';
+    final usedFrequencies =
+        schedules.map((s) => s.frequency).toSet();
+    final allFrequenciesUsed =
+        usedFrequencies.length >= ReminderFrequency.values.length;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return ListView(
+      padding: const EdgeInsets.only(
+        top: 100, // Clearance for floating header + subtitle
+        left: AppSpacing.md,
+        right: AppSpacing.md,
+        bottom: AppSpacing.xl,
+      ),
+      children: [
+        // Unscheduled relatives banner
+        UnscheduledRelativesSection(
+          relatives: relatives,
+          schedules: schedules,
+        ),
+
+        // Schedule cards or empty schedule state
+        if (schedules.isEmpty)
+          _buildEmptyScheduleState(themeColors)
+        else ...[
+          ...schedules.map((schedule) {
+            return CompactScheduleCard(
+              schedule: schedule,
+              allRelatives: relatives,
+              relationshipLabels: relationshipLabels,
+              onToggle: (value) => _toggleSchedule(schedule, value),
+              onEdit: () => _editSchedule(schedule),
+              onDelete: () => _deleteSchedule(schedule),
+              onAddRelatives: () =>
+                  _showAddRelativesToSchedule(
+                      schedule, schedules, relatives, relationshipLabels),
+              onRemoveRelative: (relativeId) =>
+                  _removeRelativeFromSchedule(schedule, relativeId),
+            );
+          }),
+          const SizedBox(height: AppSpacing.sm),
+          // Create new schedule button (hidden when all types used)
+          if (!allFrequenciesUsed)
+            _buildCreateScheduleButton(themeColors),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCreateScheduleButton(dynamic themeColors) {
+    return GlassCard(
+      onTap: _showCreateScheduleBottomSheet,
+      padding: const EdgeInsets.symmetric(
+        vertical: AppSpacing.md,
+        horizontal: AppSpacing.lg,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Smart Suggestions Section
-          SmartSuggestionSection(
-            relatives: relatives,
-            schedules: schedules,
-            userId: userId,
-          ),
-
-          // Reminder Templates Section
+          Icon(Icons.add_rounded, color: themeColors.primary, size: 24),
+          const SizedBox(width: AppSpacing.sm),
           Text(
-            '✨ اختر نوع التذكير',
-            style: AppTypography.headlineMedium.copyWith(color: themeColors.textOnGradient),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          ReminderTemplatesWidget(
-            selectedFrequency: _selectedFrequency,
-            onTemplateSelected: (template) {
-              setState(() {
-                _selectedFrequency = _selectedFrequency == template.frequency
-                    ? null
-                    : template.frequency;
-              });
-              if (_selectedFrequency != null) {
-                _showCreateScheduleDialog(template);
-              }
-            },
-          ),
-          const SizedBox(height: AppSpacing.md),
-
-          // Schedule Cards
-          Text(
-            '📅 جداول التذكير',
-            style: AppTypography.headlineMedium.copyWith(color: themeColors.textOnGradient),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _buildScheduleCards(schedules, relatives, themeColors),
-          const SizedBox(height: AppSpacing.md),
-
-          // Unassigned Relatives
-          if (unassignedRelatives.isNotEmpty) ...[
-            Text(
-              '👥 الأقارب غير المضافين',
-              style: AppTypography.headlineMedium.copyWith(color: themeColors.textOnGradient),
+            'إنشاء تذكير جديد',
+            style: AppTypography.titleSmall.copyWith(
+              color: themeColors.textPrimary,
+              fontWeight: FontWeight.w600,
             ),
-            const SizedBox(height: AppSpacing.md),
-            UnassignedRelativesWidget(
-              unassignedRelatives: unassignedRelatives,
-            ),
-            const SizedBox(height: AppSpacing.md),
-          ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildScheduleCards(
-    List<ReminderSchedule> schedules,
-    List<Relative> relatives,
-    dynamic themeColors,
-  ) {
-    if (schedules.isEmpty) {
-      return GlassCard(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+  Widget _buildEmptyScheduleState(dynamic themeColors) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+      child: GlassCard(
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           children: [
-            const Text('📝', style: TextStyle(fontSize: 48)),
+            const Text('🔔', style: TextStyle(fontSize: 48)),
             const SizedBox(height: AppSpacing.md),
             Text(
               'لا توجد جداول تذكير بعد',
-              style: AppTypography.bodyLarge.copyWith(color: themeColors.textOnGradient),
+              style: AppTypography.bodyLarge
+                  .copyWith(color: themeColors.textOnGradient),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'اختر نوع تذكير من الأعلى للبدء',
+              'أنشئ أول تذكير للبدء بالتواصل مع أحبتك',
               style: AppTypography.bodySmall.copyWith(
                 color: themeColors.textOnGradient.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
+            const SizedBox(height: AppSpacing.lg),
+            GradientButton(
+              onPressed: _showCreateScheduleBottomSheet,
+              text: 'أنشئ أول تذكير',
+              icon: Icons.add_alarm_rounded,
+            ),
           ],
         ),
-      );
-    }
-
-    // Get IDs of all relatives assigned to any schedule
-    final allAssignedIds = schedules
-        .expand((s) => s.relativeIds)
-        .toSet();
-
-    return Column(
-      children: schedules.map((schedule) {
-        return ScheduleCard(
-          schedule: schedule,
-          allRelatives: relatives,
-          allAssignedRelativeIds: allAssignedIds,
-          onToggle: (value) => _toggleSchedule(schedule, value),
-          onEdit: () => _editSchedule(schedule),
-          onDelete: () => _deleteSchedule(schedule),
-          onAddRelatives: () => _showAddRelativesToSchedule(schedule, schedules, relatives),
-          onRemoveRelative: (relativeId) =>
-              _removeRelativeFromSchedule(schedule, relativeId),
-          onDrop: (relative) => _handleDrop(schedule, relative),
-        );
-      }).toList(),
+      ),
     );
-  }
-
-  List<Relative> _getUnassignedRelatives(
-    List<Relative> allRelatives,
-    List<ReminderSchedule> schedules,
-  ) {
-    final assignedIds = schedules
-        .expand((schedule) => schedule.relativeIds)
-        .toSet();
-
-    return allRelatives
-        .where((relative) => !assignedIds.contains(relative.id))
-        .toList();
   }
 
   Widget _buildEmptyState(dynamic themeColors) {
@@ -321,7 +367,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
             const SizedBox(height: AppSpacing.md),
             Text(
               'حدث خطأ في تحميل البيانات',
-              style: AppTypography.bodyLarge.copyWith(color: themeColors.textOnGradient),
+              style: AppTypography.bodyLarge
+                  .copyWith(color: themeColors.textOnGradient),
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
@@ -335,6 +382,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
             GradientButton(
               onPressed: () {
                 if (user != null) {
+                  ref.invalidate(relativesStreamProvider(user.id));
                   ref.invalidate(reminderSchedulesStreamProvider(user.id));
                 }
               },
@@ -347,15 +395,38 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     );
   }
 
-  // --- Dialog methods ---
+  // --- Bottom sheet / dialog methods ---
 
-  void _showCreateScheduleDialog(ReminderTemplate template) {
+  void _showCreateScheduleBottomSheet() {
     final user = ref.read(currentUserProvider);
     final userId = user?.id ?? '';
 
-    showDialog(
+    // Get current schedules to determine used frequencies
+    final schedulesAsync =
+        ref.read(reminderSchedulesStreamProvider(userId));
+    final usedFrequencies = schedulesAsync.valueOrNull
+            ?.map((s) => s.frequency)
+            .toSet() ??
+        {};
+
+    showModalBottomSheet(
       context: context,
-      builder: (context) => CreateScheduleDialog(
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => CreateScheduleBottomSheet(
+        usedFrequencies: usedFrequencies,
+        onTemplateSelected: (template) {
+          Navigator.pop(context);
+          _showCreateScheduleDialog(template, userId);
+        },
+      ),
+    );
+  }
+
+  void _showCreateScheduleDialog(ReminderTemplate template, String userId) {
+    GlassBottomSheet.show(
+      context: context,
+      builder: (context) => CreateScheduleConfigSheet(
         template: template,
         userId: userId,
       ),
@@ -366,23 +437,45 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     ReminderSchedule schedule,
     List<ReminderSchedule> allSchedules,
     List<Relative> allRelatives,
-  ) {
-    // Get relatives not assigned to ANY schedule
-    final unassigned = _getUnassignedRelatives(allRelatives, allSchedules);
-
-    showDialog(
+    Map<String, String>? relationshipLabels,
+  ) async {
+    // Show relatives not already in THIS specific schedule
+    // (viewer's own node already excluded by filteredRelatives)
+    final notInThisSchedule = allRelatives
+        .where((r) => !schedule.relativeIds.contains(r.id))
+        .toList();
+    final addedIds = await GlassBottomSheet.show<List<String>>(
       context: context,
-      builder: (context) => AddRelativesDialog(
+      builder: (context) => AddRelativesBottomSheet(
         schedule: schedule,
-        relatives: unassigned,
+        relatives: notInThisSchedule,
+        relationshipLabels: relationshipLabels,
       ),
     );
+
+    // Optimistic update so UI reflects changes immediately
+    if (addedIds != null && addedIds.isNotEmpty && mounted) {
+      setState(() {
+        _optimisticSchedules =
+            (_optimisticSchedules ?? _providerSchedules)?.map((s) {
+          if (s.id == schedule.id) {
+            return s.copyWith(
+              relativeIds: [...s.relativeIds, ...addedIds],
+            );
+          }
+          return s;
+        }).toList();
+      });
+      // Let stream catch up then clear optimistic override
+      await Future.delayed(const Duration(seconds: 2));
+      if (mounted) setState(() => _optimisticSchedules = null);
+    }
   }
 
   void _editSchedule(ReminderSchedule schedule) {
-    showDialog(
+    GlassBottomSheet.show(
       context: context,
-      builder: (context) => EditScheduleDialog(schedule: schedule),
+      builder: (context) => EditScheduleBottomSheet(schedule: schedule),
     );
   }
 
@@ -390,18 +483,24 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
 
   void _toggleSchedule(ReminderSchedule schedule, bool value) async {
     final service = ref.read(reminderSchedulesServiceProvider);
-    final user = ref.read(currentUserProvider);
+
+    // Optimistic update
+    setState(() {
+      _optimisticSchedules =
+          (_optimisticSchedules ?? _providerSchedules)?.map((s) {
+        if (s.id == schedule.id) return s.copyWith(isActive: value);
+        return s;
+      }).toList();
+    });
+
     try {
       await service.updateSchedule(
         schedule.id,
         schedule.copyWith(isActive: value).toJson(),
       );
-
-      // Invalidate provider to refresh UI immediately
-      if (user != null) {
-        ref.invalidate(reminderSchedulesStreamProvider(user.id));
-      }
     } catch (e) {
+      // Revert optimistic update
+      setState(() => _optimisticSchedules = null);
       if (mounted) {
         UIHelpers.showSnackBar(
           context,
@@ -413,61 +512,32 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   }
 
   void _deleteSchedule(ReminderSchedule schedule) async {
-    final themeColors = ref.read(themeColorsProvider);
+    HapticFeedback.mediumImpact();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: themeColors.background1.withValues(alpha: 0.95),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        ),
-        title: Text(
-          'حذف التذكير',
-          style: AppTypography.titleLarge.copyWith(color: Colors.white),
-          textAlign: TextAlign.center,
-        ),
-        content: Text(
-          'هل أنت متأكد من حذف هذا التذكير؟',
-          style: AppTypography.bodyMedium.copyWith(color: Colors.white),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'إلغاء',
-              style: TextStyle(color: themeColors.primary),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('حذف'),
-          ),
-        ],
-      ),
+      barrierColor: Colors.black.withValues(alpha: 0.7),
+      builder: (context) => _DeleteScheduleDialog(schedule: schedule),
     );
 
     if (confirmed == true && mounted) {
       final service = ref.read(reminderSchedulesServiceProvider);
-      final user = ref.read(currentUserProvider);
+
+      // Optimistic update — remove schedule from list
+      setState(() {
+        _optimisticSchedules =
+            (_optimisticSchedules ?? _providerSchedules)
+                ?.where((s) => s.id != schedule.id)
+                .toList();
+      });
+
       try {
         await service.deleteSchedule(schedule.id);
-
-        // Invalidate provider to refresh UI immediately
-        if (user != null) {
-          ref.invalidate(reminderSchedulesStreamProvider(user.id));
-        }
-
         if (mounted) {
-          UIHelpers.showSnackBar(
-            context,
-            'تم حذف التذكير',
-          );
+          UIHelpers.showSnackBar(context, 'تم حذف التذكير');
         }
       } catch (e) {
+        // Revert optimistic update
+        setState(() => _optimisticSchedules = null);
         if (mounted) {
           UIHelpers.showSnackBar(
             context,
@@ -484,21 +554,28 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     String relativeId,
   ) async {
     final service = ref.read(reminderSchedulesServiceProvider);
-    final user = ref.read(currentUserProvider);
-    try {
-      final updatedRelativeIds = List<String>.from(schedule.relativeIds)
-        ..remove(relativeId);
+    final updatedRelativeIds = List<String>.from(schedule.relativeIds)
+      ..remove(relativeId);
 
+    // Optimistic update — remove relative from schedule immediately
+    setState(() {
+      _optimisticSchedules =
+          (_optimisticSchedules ?? _providerSchedules)?.map((s) {
+        if (s.id == schedule.id) {
+          return s.copyWith(relativeIds: updatedRelativeIds);
+        }
+        return s;
+      }).toList();
+    });
+
+    try {
       await service.updateSchedule(
         schedule.id,
         schedule.copyWith(relativeIds: updatedRelativeIds).toJson(),
       );
-
-      // Invalidate provider to refresh UI immediately
-      if (user != null) {
-        ref.invalidate(reminderSchedulesStreamProvider(user.id));
-      }
     } catch (e) {
+      // Revert optimistic update
+      setState(() => _optimisticSchedules = null);
       if (mounted) {
         UIHelpers.showSnackBar(
           context,
@@ -508,36 +585,160 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       }
     }
   }
+}
 
-  void _handleDrop(ReminderSchedule schedule, Relative relative) async {
-    final updatedRelativeIds = [...schedule.relativeIds, relative.id];
+/// Premium glass delete confirmation dialog with warning icon and animations.
+class _DeleteScheduleDialog extends ConsumerWidget {
+  const _DeleteScheduleDialog({required this.schedule});
 
-    final service = ref.read(reminderSchedulesServiceProvider);
-    final user = ref.read(currentUserProvider);
-    try {
-      await service.updateSchedule(schedule.id, {
-        'relative_ids': updatedRelativeIds,
-      });
+  final ReminderSchedule schedule;
 
-      // Invalidate provider to refresh UI immediately
-      if (user != null) {
-        ref.invalidate(reminderSchedulesStreamProvider(user.id));
-      }
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = ref.watch(themeColorsProvider);
 
-      if (mounted) {
-        UIHelpers.showSnackBar(
-          context,
-          'تمت إضافة ${relative.fullName} إلى التذكير',
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        UIHelpers.showSnackBar(
-          context,
-          'حدث خطأ أثناء إضافة القريب إلى التذكير',
-          isError: true,
-        );
-      }
-    }
+    return Semantics(
+      label: 'تأكيد حذف التذكير',
+      liveRegion: true,
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        insetPadding: const EdgeInsets.all(AppSpacing.md),
+        child: GlassCard(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          borderRadius: AppSpacing.radiusLg,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Warning icon in red accent circle
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: colors.statusError.withValues(alpha: 0.15),
+                  border: Border.all(
+                    color: colors.statusError.withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.warning_rounded,
+                    color: colors.statusError,
+                    size: 32,
+                  ),
+                ),
+              ).animate().fadeIn(duration: 300.ms).scale(
+                    begin: const Offset(0.8, 0.8),
+                    end: const Offset(1.0, 1.0),
+                    duration: 400.ms,
+                    curve: Curves.easeOut,
+                  ),
+
+              const SizedBox(height: AppSpacing.lg),
+
+              // Title
+              Text(
+                'حذف التذكير',
+                style: AppTypography.titleLarge.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ).animate().fadeIn(delay: 100.ms, duration: 300.ms).slideY(
+                    begin: 0.05,
+                    end: 0,
+                    delay: 100.ms,
+                    duration: 300.ms,
+                  ),
+
+              const SizedBox(height: AppSpacing.sm),
+
+              // Body
+              Text(
+                'هل أنت متأكد من حذف هذا التذكير؟\nلا يمكن التراجع عن هذا الإجراء.',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: colors.textSecondary,
+                ),
+                textAlign: TextAlign.center,
+              ).animate().fadeIn(delay: 200.ms, duration: 300.ms),
+
+              const SizedBox(height: AppSpacing.xl),
+
+              // Action buttons
+              Row(
+                children: [
+                  // Cancel button
+                  Expanded(
+                    child: Semantics(
+                      label: 'إلغاء',
+                      button: true,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: colors.textPrimary,
+                          side: BorderSide(
+                            color: colors.glassBorder,
+                            width: 1.5,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.md,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(AppSpacing.radiusMd),
+                          ),
+                        ),
+                        child: Text(
+                          'إلغاء',
+                          style: AppTypography.titleSmall.copyWith(
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: AppSpacing.md),
+
+                  // Delete button
+                  Expanded(
+                    child: Semantics(
+                      label: 'تأكيد الحذف',
+                      button: true,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          HapticFeedback.mediumImpact();
+                          Navigator.pop(context, true);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colors.statusError,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.md,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(AppSpacing.radiusMd),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'حذف',
+                          style: AppTypography.titleSmall.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ).animate().fadeIn(delay: 300.ms, duration: 300.ms),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
