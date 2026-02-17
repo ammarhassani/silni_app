@@ -8,6 +8,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../shared/widgets/glass_pill_title.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/swipeable_relative_card.dart';
 import '../../../shared/models/relative_model.dart';
@@ -161,13 +162,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
           child: Row(
             children: [
               const SizedBox(width: AppSpacing.sm),
-              Text(
-                'الأقارب',
-                style: AppTypography.headlineMedium.copyWith(
-                  color: themeColors.textOnGradient,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              const GlassPillTitle(text: 'الأقارب'),
               const Spacer(),
             ],
           ),

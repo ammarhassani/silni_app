@@ -22,6 +22,7 @@ import '../../../core/services/auto_reminder_service.dart';
 import '../../../core/services/error_handler_service.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../shared/widgets/glass_pill_title.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../core/providers/cache_provider.dart';
@@ -593,13 +594,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
-          Text(
-            'إضافة قريب',
-            style: AppTypography.headlineMedium.copyWith(
-              color: themeColors.textOnGradient,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          const GlassPillTitle(text: 'إضافة قريب'),
         ],
       ),
     )

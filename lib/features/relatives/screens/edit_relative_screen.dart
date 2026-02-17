@@ -12,6 +12,7 @@ import '../../../core/services/error_handler_service.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../shared/widgets/glass_pill_title.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../core/providers/cache_provider.dart';
@@ -326,14 +327,9 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
                           ),
                         ),
                         const Spacer(),
-                        Flexible(
-                          child: Text(
-                            'تعديل بيانات القريب',
-                            style: AppTypography.headlineSmall.copyWith(
-                              color: themeColors.textOnGradient,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                        const Flexible(
+                          child: GlassPillTitle(
+                            text: 'تعديل بيانات القريب',
                           ),
                         ),
                         const Spacer(),

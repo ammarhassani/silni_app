@@ -9,6 +9,7 @@ import '../../../core/utils/contact_launcher.dart';
 import '../../../core/providers/cache_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/voice_note_button.dart';
+import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../../shared/services/auth_service.dart';
@@ -335,6 +336,8 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
             ? Icons.card_giftcard_rounded
             : Icons.celebration_rounded;
 
+    String? recordedFilePath;
+
     final confirmed = await showDialog<bool>(
       context: context,
       useRootNavigator: true,
@@ -352,29 +355,44 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
           ),
           textAlign: TextAlign.center,
         ),
-        content: SingleChildScrollView(
-          child: TextField(
-            controller: notesController,
-            decoration: InputDecoration(
-              hintText: hintText,
-              hintStyle: TextStyle(
-                color: themeColors.textOnGradient.withValues(alpha: 0.5),
+        content: StatefulBuilder(
+          builder: (context, setDialogState) {
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: notesController,
+                    decoration: InputDecoration(
+                      hintText: hintText,
+                      hintStyle: TextStyle(
+                        color: themeColors.textOnGradient
+                            .withValues(alpha: 0.5),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor:
+                          themeColors.surface.withValues(alpha: 0.3),
+                    ),
+                    style: TextStyle(color: themeColors.textOnGradient),
+                    maxLines: 3,
+                    textDirection: TextDirection.rtl,
+                  ),
+                  const SizedBox(height: 12),
+                  VoiceNoteRecorder(
+                    idleColor: themeColors.textOnGradient
+                        .withValues(alpha: 0.7),
+                    recordingColor: themeColors.statusError,
+                    onRecordingChanged: (path) {
+                      setDialogState(() => recordedFilePath = path);
+                    },
+                  ),
+                ],
               ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              filled: true,
-              fillColor: themeColors.surface.withValues(alpha: 0.3),
-              suffixIcon: VoiceNoteButton(
-                controller: notesController,
-                idleColor: themeColors.textOnGradient.withValues(alpha: 0.7),
-                listeningColor: themeColors.statusError,
-              ),
-            ),
-            style: TextStyle(color: themeColors.textOnGradient),
-            maxLines: 3,
-            textDirection: TextDirection.rtl,
-          ),
+            );
+          },
         ),
         actions: [
           TextButton(
@@ -410,6 +428,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
       await _logInteraction(
         type,
         notes.isNotEmpty ? notes : type.arabicName,
+        audioFilePath: recordedFilePath,
       );
     }
 
@@ -437,7 +456,11 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
     }
   }
 
-  Future<void> _logInteraction(InteractionType type, String notes) async {
+  Future<void> _logInteraction(
+    InteractionType type,
+    String notes, {
+    String? audioFilePath,
+  }) async {
     if (_isLoggingInteraction) return;
 
     _isLoggingInteraction = true;
@@ -460,7 +483,25 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
       );
 
       final repository = ref.read(interactionsRepositoryProvider);
-      await repository.createInteraction(interaction);
+      final interactionId = await repository.createInteraction(interaction);
+
+      // Upload voice note if recorded
+      if (audioFilePath != null) {
+        try {
+          final storageService = SupabaseStorageService();
+          final audioUrl = await storageService.uploadVoiceNote(
+            audioFilePath,
+            user.id,
+            interactionId,
+          );
+          await repository.updateInteraction(
+            interactionId,
+            {'audio_note_url': audioUrl},
+          );
+        } catch (e) {
+          debugPrint('[VoiceNote] Upload failed: $e');
+        }
+      }
 
       if (mounted) {
         final themeColors = ref.read(themeColorsProvider);

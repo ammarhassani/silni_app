@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_animations.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
@@ -26,7 +25,7 @@ class OnboardingCompletionModal extends ConsumerStatefulWidget {
     return showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: AppColors.islamicGreenDark.withValues(alpha: 0.9),
+      barrierColor: Colors.black.withValues(alpha: 0.85),
       transitionDuration: AppAnimations.modal,
       pageBuilder: (context, animation, secondaryAnimation) {
         return const OnboardingCompletionModal();
@@ -104,11 +103,9 @@ class _OnboardingCompletionModalState
               emissionFrequency: 0.05,
               numberOfParticles: 25,
               gravity: 0.2,
-              colors: const [
-                AppColors.premiumGold,
-                AppColors.premiumGoldLight,
-                AppColors.islamicGreenLight,
-                AppColors.islamicGreenPrimary,
+              colors: [
+                ...themeColors.primaryGradient.colors,
+                ...themeColors.goldenGradient.colors.take(2),
                 Colors.white,
               ],
             ),
@@ -118,8 +115,8 @@ class _OnboardingCompletionModalState
           DramaticGlassCard(
             gradient: LinearGradient(
               colors: [
-                AppColors.premiumGold.withValues(alpha: 0.3),
-                AppColors.premiumGoldDark.withValues(alpha: 0.2),
+                themeColors.primary.withValues(alpha: 0.3),
+                themeColors.primaryDark.withValues(alpha: 0.2),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -134,11 +131,11 @@ class _OnboardingCompletionModalState
                     width: 100,
                     height: 100,
                     decoration: BoxDecoration(
-                      gradient: AppColors.goldenGradient,
+                      gradient: themeColors.primaryGradient,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.premiumGold.withValues(alpha: 0.5),
+                          color: themeColors.primary.withValues(alpha: 0.5),
                           blurRadius: 30,
                           spreadRadius: 5,
                         ),
@@ -165,7 +162,7 @@ class _OnboardingCompletionModalState
                   Text(
                     OnboardingContent.completionTitle,
                     style: AppTypography.dramatic.copyWith(
-                      color: AppColors.premiumGold,
+                      color: themeColors.accent,
                       fontSize: 32,
                     ),
                   )
@@ -285,7 +282,7 @@ class _QuickActionButton extends StatelessWidget {
             child: Text(
               step.titleArabic.split(' ').first, // First word only
               style: AppTypography.labelSmall.copyWith(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 11,
               ),
               textAlign: TextAlign.center,

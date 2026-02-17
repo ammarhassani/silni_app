@@ -50,6 +50,14 @@ class DueRemindersCard extends ConsumerWidget {
 
     // If no due reminders today
     if (dueRelatives.isEmpty) {
+      // Check if there are relatives not assigned to any schedule
+      final scheduledIds = schedules.expand((s) => s.relativeIds).toSet();
+      final unscheduledCount =
+          relatives.where((r) => !scheduledIds.contains(r.id)).length;
+
+      if (unscheduledCount > 0) {
+        return _buildUnscheduledNudge(context, themeColors, unscheduledCount);
+      }
       return _buildAllDoneState(themeColors);
     }
 
@@ -133,6 +141,60 @@ class DueRemindersCard extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    ).animate().fadeIn(duration: AppAnimations.normal);
+  }
+
+  Widget _buildUnscheduledNudge(
+    BuildContext context,
+    dynamic themeColors,
+    int unscheduledCount,
+  ) {
+    return Semantics(
+      label: 'لديك $unscheduledCount أقارب بدون تذكيرات - اضغط لجدولتهم',
+      button: true,
+      child: GestureDetector(
+        onTap: () => context.push(AppRoutes.reminders),
+        child: GlassCard(
+          gradient: LinearGradient(
+            colors: [
+              themeColors.primary.withValues(alpha: 0.25),
+              AppColors.premiumGold.withValues(alpha: 0.15),
+            ],
+          ),
+          child: Row(
+            children: [
+              const Text('📋', style: TextStyle(fontSize: 40)),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'لديك $unscheduledCount أقارب بدون تذكيرات',
+                      style: AppTypography.titleSmall.copyWith(
+                        color: themeColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'جدوّل تواصلك معهم لتبقى قريبًا منهم',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: themeColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: themeColors.textHint,
+                size: 16,
+              ),
+            ],
+          ),
         ),
       ),
     ).animate().fadeIn(duration: AppAnimations.normal);

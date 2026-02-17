@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:confetti/confetti.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
+import '../../../core/providers/admin_provider.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/models/gamification_event.dart';
 import '../../../core/providers/gamification_events_provider.dart';
@@ -14,6 +15,7 @@ import '../../../shared/widgets/level_up_modal.dart';
 import '../../../shared/widgets/badge_unlock_modal.dart';
 import '../../../shared/widgets/streak_milestone_modal.dart';
 import '../../../shared/widgets/error_widgets.dart';
+import '../../dev_tools/screens/dev_tools_screen.dart';
 import '../../../shared/models/hadith_model.dart';
 import '../../../shared/providers/interactions_provider.dart';
 import '../../../core/config/supabase_config.dart';
@@ -246,6 +248,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     final streamUser = ref.watch(currentUserProvider);
@@ -343,6 +346,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
+      floatingActionButton: ref.watch(isAdminProvider)
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 100),
+              child: FloatingActionButton.small(
+                heroTag: 'dev_tools',
+                backgroundColor: themeColors.primary.withValues(alpha: 0.8),
+                onPressed: () => DevToolsSheet.show(context),
+                child: Icon(Icons.developer_mode, color: themeColors.onPrimary),
+              ),
+            )
+          : null,
       body: Stack(
         children: [
           // Confetti overlay
@@ -436,20 +450,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     AIPriorityContactsWidget(userId: userId),
                     const SizedBox(height: AppSpacing.md),
 
-                    // Frequency carousel for tomorrow/yesterday reminders
-                    relativesAsync.when(
-                      data: (relatives) => schedulesAsync.when(
-                        data: (schedules) => FrequencyCarousel(
-                          relatives: relatives,
-                          schedules: schedules,
-                        ),
-                        loading: () => const FrequencyCarouselSkeleton(),
-                        error: (_, _) => const SizedBox.shrink(),
-                      ),
-                      loading: () => const FrequencyCarouselSkeleton(),
-                      error: (_, _) => const SizedBox.shrink(),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
+                    // TODO: Frequency carousel temporarily disabled
+                    // relativesAsync.when(
+                    //   data: (relatives) => schedulesAsync.when(
+                    //     data: (schedules) => FrequencyCarousel(
+                    //       relatives: relatives,
+                    //       schedules: schedules,
+                    //     ),
+                    //     loading: () => const FrequencyCarouselSkeleton(),
+                    //     error: (_, _) => const SizedBox.shrink(),
+                    //   ),
+                    //   loading: () => const FrequencyCarouselSkeleton(),
+                    //   error: (_, _) => const SizedBox.shrink(),
+                    // ),
 
                     // Due Reminders Card
                     relativesAsync.when(

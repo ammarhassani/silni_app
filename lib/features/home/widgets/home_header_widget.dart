@@ -128,17 +128,6 @@ class HomeHeaderWidget extends ConsumerWidget {
             displayName: displayName,
             profilePhotoUrl: profilePhotoUrl,
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            '"ومن أحب أن يُبسَط له في رزقه، وأن يُنسَأ له في أثره، فليصل رحمه"',
-            style: AppTypography.bodySmall.copyWith(
-              color: themeColors.textSecondary,
-              fontStyle: FontStyle.italic,
-              height: 1.6,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
         ],
       ),
     )

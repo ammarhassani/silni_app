@@ -74,8 +74,6 @@ class _FrequencyCarouselState extends ConsumerState<FrequencyCarousel> {
         return false;
       case ReminderFrequency.friday:
         return date.weekday == 5;
-      case ReminderFrequency.custom:
-        return false;
     }
   }
 
@@ -130,8 +128,6 @@ class _FrequencyCarouselState extends ConsumerState<FrequencyCarousel> {
         return const Color(0xFF7B1FA2);
       case ReminderFrequency.monthly:
         return const Color(0xFFE64A19);
-      case ReminderFrequency.custom:
-        return const Color(0xFF455A64);
     }
   }
 

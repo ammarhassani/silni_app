@@ -8,6 +8,7 @@ import '../../../../shared/widgets/glass_card.dart';
 import '../../../../shared/models/interaction_model.dart';
 import '../../../../core/providers/cache_provider.dart';
 import '../../../../shared/widgets/mood_selector.dart';
+import '../../../../shared/widgets/voice_note_player.dart';
 
 /// List of recent interactions for a relative
 class RelativeInteractionsList extends ConsumerWidget {
@@ -196,6 +197,15 @@ class _InteractionCard extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                ],
+                // Voice note player
+                if (interaction.audioNoteUrl != null &&
+                    interaction.audioNoteUrl!.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  VoiceNotePlayer(
+                    audioUrl: interaction.audioNoteUrl!,
+                    accentColor: themeColors.primary,
                   ),
                 ],
               ],
