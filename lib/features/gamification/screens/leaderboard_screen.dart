@@ -78,12 +78,11 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
           break;
       }
 
-      // Get top 50 users
-      final response = await SupabaseConfig.client
-          .from('users')
-          .select('id, full_name, email, points, level, current_streak, avatar_url')
-          .order(orderColumn, ascending: false)
-          .limit(50);
+      // Use RPC to bypass RLS and get all users safely
+      final response = await SupabaseConfig.client.rpc('get_leaderboard', params: {
+        'order_by': orderColumn,
+        'result_limit': 50,
+      });
 
       final data = List<Map<String, dynamic>>.from(response as List);
 
@@ -94,27 +93,6 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
       if (currentUserIndex >= 0) {
         currentUserRank = {
           ...data[currentUserIndex],
-          'rank': currentUserIndex + 1,
-        };
-      } else {
-        // User not in top 50, fetch their rank separately
-        final allUsers = await SupabaseConfig.client
-            .from('users')
-            .select('id')
-            .order(orderColumn, ascending: false);
-
-        final allUsersList = List<Map<String, dynamic>>.from(allUsers as List);
-        final userRank = allUsersList.indexWhere((u) => u['id'] == user.id) + 1;
-
-        final userData = await SupabaseConfig.client
-            .from('users')
-            .select('id, full_name, email, points, level, current_streak, avatar_url')
-            .eq('id', user.id)
-            .single();
-
-        currentUserRank = {
-          ...userData,
-          'rank': userRank,
         };
       }
 
@@ -314,7 +292,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               radius: 24,
               backgroundColor: themeColors.primary,
               child: Text(
-                _getInitials(userData['full_name'] as String? ?? userData['email'] as String),
+                _getInitials(userData['full_name'] as String? ?? 'مستخدم'),
                 style: AppTypography.titleMedium.copyWith(
                   color: themeColors.textOnGradient,
                   fontWeight: FontWeight.bold,
@@ -394,7 +372,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                 radius: 20,
                 backgroundColor: _getRankColor(rank).withValues(alpha: 0.3),
                 child: Text(
-                  _getInitials(userData['full_name'] as String? ?? userData['email'] as String),
+                  _getInitials(userData['full_name'] as String? ?? 'مستخدم'),
                   style: AppTypography.bodyMedium.copyWith(
                     color: themeColors.textOnGradient,
                     fontWeight: FontWeight.bold,
