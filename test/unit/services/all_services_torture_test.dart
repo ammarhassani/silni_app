@@ -1244,7 +1244,7 @@ void main() {
         test('should handle custom days for weekly frequency', () {
           final customDays = [1, 3, 5]; // Mon, Wed, Fri
           final schedule = createTestReminderSchedule(
-            frequency: ReminderFrequency.custom,
+            frequency: ReminderFrequency.weekly,
             customDays: customDays,
           );
           expect(schedule.customDays, equals(customDays));

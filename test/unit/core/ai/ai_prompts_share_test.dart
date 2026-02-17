@@ -3,7 +3,7 @@ import 'package:silni_app/core/ai/ai_prompts.dart';
 
 void main() {
   group('AIPrompts.shareCopyPrompt', () {
-    test('streak prompt contains streak count and Saudi dialect instruction', () {
+    test('streak prompt contains streak count and proud tone', () {
       final prompt = AIPrompts.shareCopyPrompt(
         cardType: 'streak',
         context: {
@@ -13,7 +13,6 @@ void main() {
       );
 
       expect(prompt, contains('15'));
-      expect(prompt, contains('سعودية'));
       expect(prompt, contains('streak'));
       expect(prompt, contains('افتخار'));
     });
@@ -92,7 +91,16 @@ void main() {
       );
 
       expect(prompt, contains('إيجابي'));
-      expect(prompt, contains('سعودية'));
+    });
+
+    test('prompt includes dynamic personality from admin config', () {
+      final prompt = AIPrompts.shareCopyPrompt(
+        cardType: 'streak',
+        context: {'streak_count': 7},
+      );
+
+      // Should include the dynamic personality (fallback includes واصل)
+      expect(prompt, contains(AIPrompts.dynamicPersonality));
     });
   });
 }

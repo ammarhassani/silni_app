@@ -121,8 +121,6 @@ void main() {
             return const Color(0xFF7B1FA2); // Purple
           case 'monthly':
             return const Color(0xFFE64A19); // Deep orange
-          case 'custom':
-            return const Color(0xFF455A64); // Blue grey
           default:
             return Colors.grey;
         }
@@ -147,9 +145,6 @@ void main() {
         expect(getFrequencyColor('monthly'), equals(const Color(0xFFE64A19)));
       });
 
-      test('custom should be blue grey', () {
-        expect(getFrequencyColor('custom'), equals(const Color(0xFF455A64)));
-      });
     });
 
     // =====================================================

@@ -114,14 +114,10 @@ void main() {
         expect(ReminderFrequency.fromString('friday'), equals(ReminderFrequency.friday));
       });
 
-      test('should parse custom frequency', () {
-        expect(ReminderFrequency.fromString('custom'), equals(ReminderFrequency.custom));
-      });
-
-      test('should default to custom for unknown frequency', () {
-        expect(ReminderFrequency.fromString('unknown'), equals(ReminderFrequency.custom));
-        expect(ReminderFrequency.fromString('invalid'), equals(ReminderFrequency.custom));
-        expect(ReminderFrequency.fromString(''), equals(ReminderFrequency.custom));
+      test('should default to daily for unknown frequency', () {
+        expect(ReminderFrequency.fromString('unknown'), equals(ReminderFrequency.daily));
+        expect(ReminderFrequency.fromString('invalid'), equals(ReminderFrequency.daily));
+        expect(ReminderFrequency.fromString(''), equals(ReminderFrequency.daily));
       });
 
       test('should have correct values', () {
@@ -129,7 +125,6 @@ void main() {
         expect(ReminderFrequency.weekly.value, equals('weekly'));
         expect(ReminderFrequency.monthly.value, equals('monthly'));
         expect(ReminderFrequency.friday.value, equals('friday'));
-        expect(ReminderFrequency.custom.value, equals('custom'));
       });
 
       test('should have Arabic names', () {
@@ -137,7 +132,6 @@ void main() {
         expect(ReminderFrequency.weekly.arabicName, equals('أسبوعي'));
         expect(ReminderFrequency.monthly.arabicName, equals('شهري'));
         expect(ReminderFrequency.friday.arabicName, equals('جمعة'));
-        expect(ReminderFrequency.custom.arabicName, equals('مخصص'));
       });
 
       test('should have emoji representations', () {
@@ -145,7 +139,6 @@ void main() {
         expect(ReminderFrequency.weekly.emoji, equals('📆'));
         expect(ReminderFrequency.monthly.emoji, equals('📋'));
         expect(ReminderFrequency.friday.emoji, equals('🕌'));
-        expect(ReminderFrequency.custom.emoji, equals('⚙️'));
       });
     });
 
@@ -269,32 +262,6 @@ void main() {
         });
       });
 
-      group('Custom Frequency', () {
-        test('custom schedule should never fire automatically', () {
-          final schedule = createTestReminderSchedule(
-            frequency: ReminderFrequency.custom,
-          );
-          expect(schedule.shouldFireToday(), isFalse);
-        });
-
-        test('custom schedule should not fire even with customDays', () {
-          final today = DateTime.now().weekday;
-          final schedule = createTestReminderSchedule(
-            frequency: ReminderFrequency.custom,
-            customDays: [today],
-          );
-          expect(schedule.shouldFireToday(), isFalse);
-        });
-
-        test('custom schedule should not fire even with dayOfMonth', () {
-          final today = DateTime.now().day;
-          final schedule = createTestReminderSchedule(
-            frequency: ReminderFrequency.custom,
-            dayOfMonth: today,
-          );
-          expect(schedule.shouldFireToday(), isFalse);
-        });
-      });
     });
 
     // =====================================================
@@ -360,13 +327,6 @@ void main() {
         expect(schedule.description, contains('16:00'));
       });
 
-      test('custom description should be generic', () {
-        final schedule = createTestReminderSchedule(
-          frequency: ReminderFrequency.custom,
-          time: '17:00',
-        );
-        expect(schedule.description, equals('مخصص'));
-      });
     });
 
     // =====================================================

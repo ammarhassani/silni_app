@@ -253,12 +253,6 @@ void main() {
         expect(schedule.shouldFireToday(), equals(isFriday));
       });
 
-      test('custom schedule should never fire automatically', () {
-        final schedule = createTestReminderSchedule(
-          frequency: ReminderFrequency.custom,
-        );
-        expect(schedule.shouldFireToday(), isFalse);
-      });
     });
 
     // =====================================================
@@ -282,20 +276,16 @@ void main() {
           ReminderFrequency.fromString('friday'),
           equals(ReminderFrequency.friday),
         );
-        expect(
-          ReminderFrequency.fromString('custom'),
-          equals(ReminderFrequency.custom),
-        );
       });
 
-      test('should default to custom for unknown string', () {
+      test('should default to daily for unknown string', () {
         expect(
           ReminderFrequency.fromString('unknown'),
-          equals(ReminderFrequency.custom),
+          equals(ReminderFrequency.daily),
         );
         expect(
           ReminderFrequency.fromString(''),
-          equals(ReminderFrequency.custom),
+          equals(ReminderFrequency.daily),
         );
       });
 
@@ -304,7 +294,6 @@ void main() {
         expect(ReminderFrequency.weekly.value, equals('weekly'));
         expect(ReminderFrequency.monthly.value, equals('monthly'));
         expect(ReminderFrequency.friday.value, equals('friday'));
-        expect(ReminderFrequency.custom.value, equals('custom'));
       });
 
       test('should have Arabic names', () {
@@ -312,7 +301,6 @@ void main() {
         expect(ReminderFrequency.weekly.arabicName, equals('أسبوعي'));
         expect(ReminderFrequency.monthly.arabicName, equals('شهري'));
         expect(ReminderFrequency.friday.arabicName, equals('جمعة'));
-        expect(ReminderFrequency.custom.arabicName, equals('مخصص'));
       });
 
       test('should have emojis', () {
@@ -320,7 +308,6 @@ void main() {
         expect(ReminderFrequency.weekly.emoji, equals('📆'));
         expect(ReminderFrequency.monthly.emoji, equals('📋'));
         expect(ReminderFrequency.friday.emoji, equals('🕌'));
-        expect(ReminderFrequency.custom.emoji, equals('⚙️'));
       });
     });
 
@@ -375,12 +362,6 @@ void main() {
         expect(schedule.description, contains('16:00'));
       });
 
-      test('custom description', () {
-        final schedule = createTestReminderSchedule(
-          frequency: ReminderFrequency.custom,
-        );
-        expect(schedule.description, equals('مخصص'));
-      });
     });
 
     // =====================================================

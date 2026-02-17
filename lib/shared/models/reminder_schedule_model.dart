@@ -6,8 +6,7 @@ enum ReminderFrequency {
   daily('daily', 'يومي', '📅'),
   weekly('weekly', 'أسبوعي', '📆'),
   monthly('monthly', 'شهري', '📋'),
-  friday('friday', 'جمعة', '🕌'),
-  custom('custom', 'مخصص', '⚙️');
+  friday('friday', 'جمعة', '🕌');
 
   final String value;
   final String arabicName;
@@ -18,7 +17,7 @@ enum ReminderFrequency {
   static ReminderFrequency fromString(String value) {
     return ReminderFrequency.values.firstWhere(
       (type) => type.value == value,
-      orElse: () => ReminderFrequency.custom,
+      orElse: () => ReminderFrequency.daily,
     );
   }
 }
@@ -154,8 +153,6 @@ class ReminderSchedule {
         return 'كل شهر في الساعة $time';
       case ReminderFrequency.friday:
         return 'كل جمعة في الساعة $time';
-      case ReminderFrequency.custom:
-        return 'مخصص';
     }
   }
 
@@ -202,9 +199,6 @@ class ReminderSchedule {
 
       case ReminderFrequency.friday:
         return now.weekday == 5; // Friday
-
-      case ReminderFrequency.custom:
-        return false;
     }
   }
 }
