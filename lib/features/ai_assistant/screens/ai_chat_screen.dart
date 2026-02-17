@@ -8,6 +8,7 @@ import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../../shared/widgets/glass_pill_title.dart';
 import '../../../core/ai/ai_identity.dart';
 import '../../../core/ai/ai_models.dart';
 import '../../../shared/widgets/gradient_background.dart';
@@ -175,51 +176,33 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           onPressed: () => context.pop(),
         ),
       ),
-      title: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [themeColors.primary, themeColors.primaryLight],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: themeColors.primary.withValues(alpha: 0.4),
-                  blurRadius: 8,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.smart_toy_rounded,
-              size: 20,
-              color: themeColors.textOnGradient,
+      title: GlassPillTitle(
+        text: AIIdentity.name,
+        style: AppTypography.titleMedium.copyWith(
+          color: themeColors.textOnGradient,
+          fontWeight: FontWeight.bold,
+        ),
+        leading: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [themeColors.primary, themeColors.primaryLight],
             ),
           ),
-          const SizedBox(width: AppSpacing.sm),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                AIIdentity.name,
-                style: AppTypography.titleMedium.copyWith(
-                  color: themeColors.textOnGradient,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                ref.watch(counselingModeProvider).arabicName,
-                style: AppTypography.labelSmall.copyWith(
-                  color: themeColors.textOnGradient.withValues(alpha: 0.6),
-                ),
-              ),
-            ],
+          child: Icon(
+            Icons.smart_toy_rounded,
+            size: 18,
+            color: themeColors.textOnGradient,
           ),
-        ],
+        ),
+        subtitle: Text(
+          ref.watch(counselingModeProvider).arabicName,
+          style: AppTypography.labelSmall.copyWith(
+            color: themeColors.textOnGradient.withValues(alpha: 0.6),
+          ),
+        ),
       ),
       actions: [
         Semantics(
@@ -263,7 +246,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
         children: [
           const SizedBox(height: AppSpacing.xl),
 
-          // Welcome message
+          // Welcome message — 3-layer glow halo avatar
           Container(
             width: 80,
             height: 80,
@@ -275,8 +258,18 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
               boxShadow: [
                 BoxShadow(
                   color: themeColors.primary.withValues(alpha: 0.5),
-                  blurRadius: 24,
+                  blurRadius: 16,
                   spreadRadius: 2,
+                ),
+                BoxShadow(
+                  color: themeColors.primary.withValues(alpha: 0.3),
+                  blurRadius: 32,
+                  spreadRadius: 4,
+                ),
+                BoxShadow(
+                  color: themeColors.primary.withValues(alpha: 0.15),
+                  blurRadius: 48,
+                  spreadRadius: 6,
                 ),
               ],
             ),
@@ -297,8 +290,18 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           Text(
             'مرحباً، أنا ${AIIdentity.name}',
             style: AppTypography.headlineSmall.copyWith(
-              color: themeColors.textOnGradient,
+              color: Colors.white,
               fontWeight: FontWeight.bold,
+              shadows: [
+                Shadow(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  blurRadius: 10,
+                ),
+                Shadow(
+                  color: themeColors.primary.withValues(alpha: 0.4),
+                  blurRadius: 20,
+                ),
+              ],
             ),
           ).animate().fadeIn(duration: AppAnimations.normal).slideY(begin: 0.2, end: 0),
 
@@ -307,7 +310,13 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           Text(
             'مساعدك الذكي في صلة الرحم',
             style: AppTypography.bodyMedium.copyWith(
-              color: themeColors.textOnGradient.withValues(alpha: 0.7),
+              color: Colors.white.withValues(alpha: 0.8),
+              shadows: [
+                Shadow(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  blurRadius: 8,
+                ),
+              ],
             ),
           ).animate(delay: AppAnimations.instant).fadeIn(duration: AppAnimations.normal),
 
@@ -317,7 +326,13 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           Text(
             'جرب أحد هذه الأسئلة',
             style: AppTypography.titleSmall.copyWith(
-              color: themeColors.textOnGradient.withValues(alpha: 0.7),
+              color: Colors.white.withValues(alpha: 0.7),
+              shadows: [
+                Shadow(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  blurRadius: 6,
+                ),
+              ],
             ),
           ).animate(delay: AppAnimations.modal).fadeIn(duration: AppAnimations.normal),
 
@@ -595,9 +610,14 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
                         ? null
                         : [
                             BoxShadow(
-                              color: themeColors.primary.withValues(alpha: 0.4),
+                              color: themeColors.primary.withValues(alpha: 0.5),
                               blurRadius: 12,
                               spreadRadius: 1,
+                            ),
+                            BoxShadow(
+                              color: themeColors.primary.withValues(alpha: 0.25),
+                              blurRadius: 24,
+                              spreadRadius: 2,
                             ),
                           ],
                   ),

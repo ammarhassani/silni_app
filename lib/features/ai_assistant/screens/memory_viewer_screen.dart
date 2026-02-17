@@ -13,6 +13,7 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../shared/services/chat_history_service.dart';
 import '../providers/ai_chat_provider.dart';
 import '../../../shared/utils/ui_helpers.dart';
+import '../../../shared/widgets/glass_pill_title.dart';
 
 /// Screen to view and manage AI memories
 class MemoryViewerScreen extends ConsumerStatefulWidget {
@@ -49,9 +50,12 @@ class _MemoryViewerScreenState extends ConsumerState<MemoryViewerScreen> {
       backgroundColor: themeColors.background1,
       appBar: AppBar(
         backgroundColor: themeColors.background1,
-        title: Text(
-          'ذاكرة ${AIIdentity.name}',
-          style: AppTypography.headlineSmall.copyWith(color: themeColors.textOnGradient),
+        title: GlassPillTitle(
+          text: 'ذاكرة ${AIIdentity.name}',
+          style: AppTypography.headlineSmall.copyWith(
+            color: themeColors.textOnGradient,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
         leading: Semantics(

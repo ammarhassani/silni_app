@@ -143,6 +143,31 @@ MarkdownStyleSheet buildChatMarkdownStyle(BuildContext context) {
   );
 }
 
+/// Builds a markdown style for AI content in cards (reports, analysis).
+/// Adds text shadows for readability on gradient backgrounds.
+MarkdownStyleSheet buildCardMarkdownStyle(BuildContext context) {
+  final shadow = [
+    Shadow(
+      color: Colors.black.withValues(alpha: 0.4),
+      blurRadius: 6,
+    ),
+  ];
+  final base = buildChatMarkdownStyle(context);
+  return base.copyWith(
+    p: base.p?.copyWith(
+      color: Colors.white.withValues(alpha: 0.9),
+      height: 1.6,
+      shadows: shadow,
+    ),
+    pPadding: const EdgeInsets.only(bottom: 4),
+    strong: base.strong?.copyWith(shadows: shadow),
+    em: base.em?.copyWith(shadows: shadow),
+    h1: base.h1?.copyWith(shadows: shadow),
+    h2: base.h2?.copyWith(shadows: shadow),
+    h3: base.h3?.copyWith(shadows: shadow),
+  );
+}
+
 /// Builds a compact markdown style for streaming content
 MarkdownStyleSheet buildStreamingMarkdownStyle(BuildContext context) {
   final baseStyle = buildChatMarkdownStyle(context);

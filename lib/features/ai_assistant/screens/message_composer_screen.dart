@@ -5,11 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/ai/ai_identity.dart';
+import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../core/theme/theme_provider.dart';
-import '../../../shared/widgets/glass_card.dart';
+import '../../../shared/widgets/glass_pill_title.dart';
 import '../providers/message_composer_provider.dart';
 import '../widgets/ai_error_card.dart';
 import '../widgets/ai_loading_indicator.dart';
@@ -17,7 +18,7 @@ import '../widgets/relative_selector.dart';
 import '../../../shared/utils/ui_helpers.dart';
 
 /// Screen for AI-powered message composition
-class MessageComposerScreen extends ConsumerWidget {
+class MessageComposerScreen extends ConsumerStatefulWidget {
   final String? initialRelativeId;
 
   const MessageComposerScreen({
@@ -26,12 +27,42 @@ class MessageComposerScreen extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MessageComposerScreen> createState() =>
+      _MessageComposerScreenState();
+}
+
+class _MessageComposerScreenState extends ConsumerState<MessageComposerScreen>
+    with TickerProviderStateMixin {
+  late AnimationController _glowController;
+  late Animation<double> _glowIntensity;
+
+  @override
+  void initState() {
+    super.initState();
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3000),
+    )..repeat(reverse: true);
+
+    _glowIntensity = Tween<double>(begin: 0.3, end: 0.55).animate(
+      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _glowController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(messageComposerProvider);
     final themeColors = ref.watch(themeColorsProvider);
 
     return Scaffold(
       backgroundColor: themeColors.background1,
+      extendBody: true,
       appBar: AppBar(
         backgroundColor: themeColors.background1,
         elevation: 0,
@@ -39,130 +70,240 @@ class MessageComposerScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          'كتابة رسالة',
-          style: AppTypography.headlineSmall.copyWith(color: Colors.white),
+        title: GlassPillTitle(
+          text: 'كتابة رسالة',
+          style: AppTypography.headlineSmall.copyWith(
+            color: themeColors.textOnGradient,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white70),
-            onPressed: state.selectedRelative != null && state.selectedOccasion != null
-                ? () => ref.read(messageComposerProvider.notifier).generateMessages()
+            icon:
+                const Icon(Icons.refresh_rounded, color: Colors.white70),
+            onPressed: state.selectedRelative != null &&
+                    state.selectedOccasion != null
+                ? () => ref
+                    .read(messageComposerProvider.notifier)
+                    .generateMessages()
                 : null,
           ),
         ],
       ),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            // Selection area
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Relative selector
-                    RelativeSelector(
-                      selectedRelativeId: state.selectedRelative?.id,
-                      onChanged: (relative) {
-                        ref.read(messageComposerProvider.notifier).selectRelative(relative);
-                      },
-                      hintText: 'اختر المرسل إليه',
-                    ),
+            // Ambient glow orbs
+            _buildAmbientOrbs(themeColors),
 
-                    const SizedBox(height: AppSpacing.lg),
-
-                    // Occasion chips
-                    Text(
-                      'نوع الرسالة',
-                      style: AppTypography.titleSmall.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Wrap(
-                      spacing: AppSpacing.xs,
-                      runSpacing: AppSpacing.xs,
-                      children: messageOccasions.map((occasion) {
-                        final isSelected = state.selectedOccasion == occasion['id'];
-                        return _OccasionChip(
-                          label: occasion['label']!,
-                          emoji: occasion['emoji']!,
-                          isSelected: isSelected,
-                          themeColors: themeColors,
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            ref.read(messageComposerProvider.notifier).selectOccasion(
-                                  isSelected ? null : occasion['id'],
-                                );
+            // Content
+            Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Relative selector
+                        RelativeSelector(
+                          selectedRelativeId:
+                              state.selectedRelative?.id,
+                          onChanged: (relative) {
+                            ref
+                                .read(
+                                    messageComposerProvider.notifier)
+                                .selectRelative(relative);
                           },
-                        );
-                      }).toList(),
-                    ),
+                          hintText: 'اختر المرسل إليه',
+                        ),
 
-                    const SizedBox(height: AppSpacing.lg),
+                        const SizedBox(height: AppSpacing.lg),
 
-                    // Tone chips
-                    Text(
-                      'نبرة الرسالة',
-                      style: AppTypography.titleSmall.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Row(
-                      children: toneOptions.map((tone) {
-                        final isSelected = state.selectedTone == tone['id'];
-                        return Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.only(
-                              left: tone == toneOptions.first ? 0 : AppSpacing.xs,
-                            ),
-                            child: _ToneChip(
-                              label: tone['label']!,
-                              emoji: tone['emoji']!,
+                        // Occasion chips
+                        Text(
+                          'نوع الرسالة',
+                          style: AppTypography.titleSmall.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black
+                                    .withValues(alpha: 0.5),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Wrap(
+                          spacing: AppSpacing.xs,
+                          runSpacing: AppSpacing.xs,
+                          children:
+                              messageOccasions.map((occasion) {
+                            final isSelected =
+                                state.selectedOccasion ==
+                                    occasion['id'];
+                            return _OccasionChip(
+                              label: occasion['label']!,
+                              emoji: occasion['emoji']!,
                               isSelected: isSelected,
                               themeColors: themeColors,
                               onTap: () {
                                 HapticFeedback.selectionClick();
-                                ref.read(messageComposerProvider.notifier).selectTone(
-                                      isSelected ? null : tone['id'],
+                                ref
+                                    .read(messageComposerProvider
+                                        .notifier)
+                                    .selectOccasion(
+                                      isSelected
+                                          ? null
+                                          : occasion['id'],
                                     );
                               },
-                            ),
+                            );
+                          }).toList(),
+                        ),
+
+                        const SizedBox(height: AppSpacing.lg),
+
+                        // Tone chips
+                        Text(
+                          'نبرة الرسالة',
+                          style: AppTypography.titleSmall.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black
+                                    .withValues(alpha: 0.5),
+                                blurRadius: 8,
+                              ),
+                            ],
                           ),
-                        );
-                      }).toList(),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Row(
+                          children: toneOptions.map((tone) {
+                            final isSelected =
+                                state.selectedTone == tone['id'];
+                            return Expanded(
+                              child: Padding(
+                                padding: EdgeInsets.only(
+                                  left: tone == toneOptions.first
+                                      ? 0
+                                      : AppSpacing.xs,
+                                ),
+                                child: _ToneChip(
+                                  label: tone['label']!,
+                                  emoji: tone['emoji']!,
+                                  isSelected: isSelected,
+                                  themeColors: themeColors,
+                                  onTap: () {
+                                    HapticFeedback
+                                        .selectionClick();
+                                    ref
+                                        .read(
+                                            messageComposerProvider
+                                                .notifier)
+                                        .selectTone(
+                                          isSelected
+                                              ? null
+                                              : tone['id'],
+                                        );
+                                  },
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+
+                        const SizedBox(height: AppSpacing.lg),
+
+                        // Generate button
+                        _GenerateButton(
+                          isEnabled:
+                              state.selectedRelative != null &&
+                                  state.selectedOccasion != null,
+                          isLoading: state.isLoading,
+                          themeColors: themeColors,
+                          onPressed: () {
+                            ref
+                                .read(
+                                    messageComposerProvider.notifier)
+                                .generateMessages();
+                          },
+                        ),
+
+                        const SizedBox(height: AppSpacing.lg),
+
+                        // Results area
+                        _buildResultsArea(
+                            context, ref, state, themeColors),
+                      ],
                     ),
-
-                    const SizedBox(height: AppSpacing.lg),
-
-                    // Generate button
-                    _GenerateButton(
-                      isEnabled: state.selectedRelative != null &&
-                          state.selectedOccasion != null,
-                      isLoading: state.isLoading,
-                      themeColors: themeColors,
-                      onPressed: () {
-                        ref.read(messageComposerProvider.notifier).generateMessages();
-                      },
-                    ),
-
-                    const SizedBox(height: AppSpacing.lg),
-
-                    // Results area
-                    _buildResultsArea(context, ref, state, themeColors),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAmbientOrbs(ThemeColors themeColors) {
+    return AnimatedBuilder(
+      animation: _glowController,
+      builder: (context, _) {
+        final intensity = _glowIntensity.value;
+        return Stack(
+          children: [
+            Positioned(
+              top: -60,
+              right: -80,
+              child: Container(
+                width: 220,
+                height: 220,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      themeColors.primary
+                          .withValues(alpha: intensity * 0.3),
+                      themeColors.primary
+                          .withValues(alpha: intensity * 0.1),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.5, 1.0],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 80,
+              left: -100,
+              child: Container(
+                width: 260,
+                height: 260,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      themeColors.accent
+                          .withValues(alpha: intensity * 0.2),
+                      themeColors.accent
+                          .withValues(alpha: intensity * 0.07),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.5, 1.0],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -211,6 +352,12 @@ class MessageComposerScreen extends ConsumerWidget {
           style: AppTypography.titleSmall.copyWith(
             color: Colors.white,
             fontWeight: FontWeight.bold,
+            shadows: [
+              Shadow(
+                color: Colors.black.withValues(alpha: 0.5),
+                blurRadius: 8,
+              ),
+            ],
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -223,10 +370,10 @@ class MessageComposerScreen extends ConsumerWidget {
               message: message,
               index: index + 1,
               themeColors: themeColors,
-            ).animate(delay: Duration(milliseconds: index * 100)).fadeIn().slideY(
-                  begin: 0.1,
-                  end: 0,
-                ),
+            )
+                .animate(delay: Duration(milliseconds: index * 100))
+                .fadeIn()
+                .slideY(begin: 0.1, end: 0),
           );
         }),
       ],
@@ -234,7 +381,7 @@ class MessageComposerScreen extends ConsumerWidget {
   }
 }
 
-/// Occasion selection chip
+/// Occasion selection chip — neon glow on selected
 class _OccasionChip extends StatelessWidget {
   final String label;
   final String emoji;
@@ -255,21 +402,45 @@ class _OccasionChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: AppAnimations.fast,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.sm,
           vertical: AppSpacing.xs,
         ),
         decoration: BoxDecoration(
+          gradient: isSelected
+              ? LinearGradient(
+                  colors: [
+                    themeColors.primary.withValues(alpha: 0.4),
+                    themeColors.primary.withValues(alpha: 0.15),
+                  ],
+                )
+              : null,
           color: isSelected
-              ? themeColors.primary.withValues(alpha: 0.3)
-              : Colors.white.withValues(alpha: 0.08),
+              ? null
+              : Colors.black.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           border: Border.all(
             color: isSelected
                 ? themeColors.primaryLight
-                : Colors.white.withValues(alpha: 0.1),
+                : Colors.white.withValues(alpha: 0.08),
+            width: isSelected ? 1.5 : 1.0,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color:
+                        themeColors.primary.withValues(alpha: 0.35),
+                    blurRadius: 10,
+                  ),
+                  BoxShadow(
+                    color:
+                        themeColors.primary.withValues(alpha: 0.15),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -280,8 +451,20 @@ class _OccasionChip extends StatelessWidget {
               child: Text(
                 label,
                 style: AppTypography.labelSmall.copyWith(
-                  color: isSelected ? themeColors.primaryLight : Colors.white70,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.7),
+                  fontWeight:
+                      isSelected ? FontWeight.bold : FontWeight.normal,
+                  shadows: isSelected
+                      ? [
+                          Shadow(
+                            color: Colors.black
+                                .withValues(alpha: 0.5),
+                            blurRadius: 6,
+                          ),
+                        ]
+                      : null,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -294,7 +477,7 @@ class _OccasionChip extends StatelessWidget {
   }
 }
 
-/// Tone selection chip
+/// Tone selection chip — neon glow on selected
 class _ToneChip extends StatelessWidget {
   final String label;
   final String emoji;
@@ -315,32 +498,70 @@ class _ToneChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: AppAnimations.fast,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.sm,
           vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
+          gradient: isSelected
+              ? LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    themeColors.accent.withValues(alpha: 0.35),
+                    themeColors.accent.withValues(alpha: 0.1),
+                  ],
+                )
+              : null,
           color: isSelected
-              ? themeColors.accent.withValues(alpha: 0.2)
-              : Colors.white.withValues(alpha: 0.08),
+              ? null
+              : Colors.black.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           border: Border.all(
             color: isSelected
                 ? themeColors.accent
-                : Colors.white.withValues(alpha: 0.1),
+                : Colors.white.withValues(alpha: 0.08),
+            width: isSelected ? 1.5 : 1.0,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color:
+                        themeColors.accent.withValues(alpha: 0.35),
+                    blurRadius: 10,
+                  ),
+                  BoxShadow(
+                    color:
+                        themeColors.accent.withValues(alpha: 0.15),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ]
+              : null,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 20)),
+            Text(emoji, style: const TextStyle(fontSize: 28)),
             const SizedBox(height: 4),
             Text(
               label,
               style: AppTypography.labelSmall.copyWith(
-                color: isSelected ? themeColors.accent : Colors.white70,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.7),
+                fontWeight:
+                    isSelected ? FontWeight.bold : FontWeight.normal,
+                shadows: isSelected
+                    ? [
+                        Shadow(
+                          color:
+                              Colors.black.withValues(alpha: 0.5),
+                          blurRadius: 6,
+                        ),
+                      ]
+                    : null,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -353,7 +574,7 @@ class _ToneChip extends StatelessWidget {
   }
 }
 
-/// Generate button
+/// Generate button — neon gradient with glow
 class _GenerateButton extends StatelessWidget {
   final bool isEnabled;
   final bool isLoading;
@@ -369,18 +590,46 @@ class _GenerateButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
+    return GestureDetector(
       onTap: isEnabled && !isLoading ? onPressed : null,
-      gradient: isEnabled
-          ? LinearGradient(
-              colors: [
-                themeColors.primary.withValues(alpha: 0.5),
-                themeColors.primaryLight.withValues(alpha: 0.3),
-              ],
-            )
-          : null,
-      child: Container(
+      child: AnimatedContainer(
+        duration: AppAnimations.fast,
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+        decoration: BoxDecoration(
+          gradient: isEnabled
+              ? LinearGradient(
+                  colors: [
+                    themeColors.primary.withValues(alpha: 0.5),
+                    themeColors.primaryDark.withValues(alpha: 0.8),
+                  ],
+                )
+              : null,
+          color: isEnabled
+              ? null
+              : Colors.black.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          border: Border.all(
+            color: isEnabled
+                ? themeColors.primary.withValues(alpha: 0.5)
+                : Colors.white.withValues(alpha: 0.08),
+            width: 1.5,
+          ),
+          boxShadow: isEnabled
+              ? [
+                  BoxShadow(
+                    color:
+                        themeColors.primary.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                  ),
+                  BoxShadow(
+                    color:
+                        themeColors.primary.withValues(alpha: 0.15),
+                    blurRadius: 25,
+                    spreadRadius: 2,
+                  ),
+                ]
+              : null,
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -395,10 +644,29 @@ class _GenerateButton extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
             ] else ...[
-              Icon(
-                Icons.edit_note_rounded,
-                color: isEnabled ? Colors.white : Colors.white38,
-                size: 22,
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isEnabled
+                      ? themeColors.primary.withValues(alpha: 0.3)
+                      : Colors.transparent,
+                  boxShadow: isEnabled
+                      ? [
+                          BoxShadow(
+                            color: themeColors.primary
+                                .withValues(alpha: 0.4),
+                            blurRadius: 8,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Icon(
+                  Icons.edit_note_rounded,
+                  color:
+                      isEnabled ? Colors.white : Colors.white38,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: AppSpacing.sm),
             ],
@@ -407,6 +675,15 @@ class _GenerateButton extends StatelessWidget {
               style: AppTypography.titleMedium.copyWith(
                 color: isEnabled ? Colors.white : Colors.white38,
                 fontWeight: FontWeight.bold,
+                shadows: isEnabled
+                    ? [
+                        Shadow(
+                          color:
+                              Colors.black.withValues(alpha: 0.5),
+                          blurRadius: 8,
+                        ),
+                      ]
+                    : null,
               ),
             ),
           ],
@@ -416,7 +693,7 @@ class _GenerateButton extends StatelessWidget {
   }
 }
 
-/// Message preview card with copy, share, regenerate, and edit actions
+/// Message preview card — deep gradient with accent bar and glow badge
 class _MessageCard extends ConsumerWidget {
   final String message;
   final int index;
@@ -433,147 +710,226 @@ class _MessageCard extends ConsumerWidget {
     final isLoading = message == '___LOADING___';
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            themeColors.primary.withValues(alpha: 0.12),
+            Colors.black.withValues(alpha: 0.5),
+          ],
+        ),
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: themeColors.primary.withValues(alpha: 0.2),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: themeColors.primary.withValues(alpha: 0.15),
+            blurRadius: 12,
+          ),
+        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          // Header with number
-          Row(
-            children: [
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: themeColors.primary.withValues(alpha: 0.3),
-                ),
-                child: Center(
-                  child: Text(
-                    '$index',
-                    style: AppTypography.labelSmall.copyWith(
-                      color: themeColors.primaryLight,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+          // Left accent bar
+          Positioned(
+            left: 0,
+            top: 10,
+            bottom: 10,
+            width: 3,
+            child: Container(
+              decoration: BoxDecoration(
+                color:
+                    themeColors.primary.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(2),
               ),
-              const Spacer(),
-              // Regenerate button
-              IconButton(
-                icon: isLoading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white54,
-                        ),
-                      )
-                    : const Icon(Icons.refresh_rounded, size: 20),
-                color: Colors.white54,
-                onPressed: isLoading
-                    ? null
-                    : () {
-                        HapticFeedback.selectionClick();
-                        ref.read(messageComposerProvider.notifier).regenerateSingleMessage(index - 1);
-                      },
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                tooltip: 'إعادة كتابة',
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              // Edit button
-              IconButton(
-                icon: const Icon(Icons.edit_rounded, size: 20),
-                color: Colors.white54,
-                onPressed: isLoading
-                    ? null
-                    : () => _showEditDialog(context, ref),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                tooltip: 'تعديل',
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              // Copy button
-              IconButton(
-                icon: const Icon(Icons.copy_rounded, size: 20),
-                color: Colors.white54,
-                onPressed: isLoading
-                    ? null
-                    : () {
-                        Clipboard.setData(ClipboardData(text: message));
-                        HapticFeedback.lightImpact();
-                        UIHelpers.showSnackBar(
-                          context,
-                          'تم نسخ الرسالة',
-                          backgroundColor: themeColors.primary,
-                          duration: const Duration(seconds: 2),
-                        );
-                      },
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              // Share button
-              Builder(
-                builder: (btnContext) => IconButton(
-                  icon: const Icon(Icons.share_rounded, size: 20),
-                  color: Colors.white54,
-                  onPressed: isLoading
-                      ? null
-                      : () {
-                          HapticFeedback.lightImpact();
-                          final box = btnContext.findRenderObject() as RenderBox?;
-                          final origin = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
-                          Share.share(message, sharePositionOrigin: origin);
-                        },
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ),
-            ],
+            ),
           ),
 
-          const SizedBox(height: AppSpacing.sm),
-
-          // Message text or loading indicator
-          if (isLoading)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                child: Column(
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with number
+                Row(
                   children: [
-                    const CircularProgressIndicator(
-                      color: Colors.white54,
-                      strokeWidth: 2,
+                    // Number badge with glow
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            themeColors.primary,
+                            themeColors.primaryLight,
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: themeColors.primary
+                                .withValues(alpha: 0.5),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$index',
+                          style:
+                              AppTypography.labelSmall.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      'جاري إعادة الكتابة...',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: Colors.white54,
+                    const Spacer(),
+                    // Regenerate button
+                    IconButton(
+                      icon: isLoading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white54,
+                              ),
+                            )
+                          : const Icon(Icons.refresh_rounded,
+                              size: 20),
+                      color: Colors.white70,
+                      onPressed: isLoading
+                          ? null
+                          : () {
+                              HapticFeedback.selectionClick();
+                              ref
+                                  .read(messageComposerProvider
+                                      .notifier)
+                                  .regenerateSingleMessage(
+                                      index - 1);
+                            },
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      tooltip: 'إعادة كتابة',
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    // Edit button
+                    IconButton(
+                      icon: const Icon(Icons.edit_rounded,
+                          size: 20),
+                      color: Colors.white70,
+                      onPressed: isLoading
+                          ? null
+                          : () =>
+                              _showEditDialog(context, ref),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      tooltip: 'تعديل',
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    // Copy button
+                    IconButton(
+                      icon: const Icon(Icons.copy_rounded,
+                          size: 20),
+                      color: Colors.white70,
+                      onPressed: isLoading
+                          ? null
+                          : () {
+                              Clipboard.setData(
+                                  ClipboardData(text: message));
+                              HapticFeedback.lightImpact();
+                              UIHelpers.showSnackBar(
+                                context,
+                                'تم نسخ الرسالة',
+                                backgroundColor:
+                                    themeColors.primary,
+                                duration:
+                                    const Duration(seconds: 2),
+                              );
+                            },
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    // Share button
+                    Builder(
+                      builder: (btnContext) => IconButton(
+                        icon: const Icon(Icons.share_rounded,
+                            size: 20),
+                        color: Colors.white70,
+                        onPressed: isLoading
+                            ? null
+                            : () {
+                                HapticFeedback.lightImpact();
+                                final box =
+                                    btnContext.findRenderObject()
+                                        as RenderBox?;
+                                final origin = box != null
+                                    ? box.localToGlobal(
+                                            Offset.zero) &
+                                        box.size
+                                    : null;
+                                Share.share(message,
+                                    sharePositionOrigin: origin);
+                              },
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       ),
                     ),
                   ],
                 ),
-              ),
-            )
-          else
-            SelectableText(
-              message,
-              style: AppTypography.bodyMedium.copyWith(
-                color: Colors.white,
-                height: 1.6,
-              ),
-              textDirection: TextDirection.rtl,
+
+                const SizedBox(height: AppSpacing.sm),
+
+                // Message text or loading indicator
+                if (isLoading)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.lg),
+                      child: Column(
+                        children: [
+                          const CircularProgressIndicator(
+                            color: Colors.white54,
+                            strokeWidth: 2,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            'جاري إعادة الكتابة...',
+                            style:
+                                AppTypography.bodySmall.copyWith(
+                              color: Colors.white54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  SelectableText(
+                    message,
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: Colors.white,
+                      height: 1.6,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black
+                              .withValues(alpha: 0.3),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                    textDirection: TextDirection.rtl,
+                  ),
+              ],
             ),
+          ),
         ],
       ),
     );
@@ -585,9 +941,11 @@ class _MessageCard extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: themeColors.background1.withValues(alpha: 0.95),
+        backgroundColor:
+            themeColors.background1.withValues(alpha: 0.95),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          borderRadius:
+              BorderRadius.circular(AppSpacing.cardRadius),
         ),
         titlePadding: const EdgeInsets.fromLTRB(
           AppSpacing.lg,
@@ -610,7 +968,8 @@ class _MessageCard extends ConsumerWidget {
         title: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.edit_note_rounded, color: Colors.white, size: 32),
+            const Icon(Icons.edit_note_rounded,
+                color: Colors.white, size: 32),
             const SizedBox(height: AppSpacing.sm),
             Text(
               'تعديل الرسالة',
@@ -634,7 +993,8 @@ class _MessageCard extends ConsumerWidget {
             filled: true,
             fillColor: Colors.white.withValues(alpha: 0.08),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              borderRadius:
+                  BorderRadius.circular(AppSpacing.radiusMd),
               borderSide: BorderSide.none,
             ),
             hintText: 'اكتب رسالتك هنا...',
@@ -648,12 +1008,15 @@ class _MessageCard extends ConsumerWidget {
             onPressed: () => Navigator.pop(context),
             child: Text(
               'إلغاء',
-              style: AppTypography.labelMedium.copyWith(color: themeColors.primary),
+              style: AppTypography.labelMedium
+                  .copyWith(color: themeColors.primary),
             ),
           ),
           ElevatedButton(
             onPressed: () {
-              ref.read(messageComposerProvider.notifier).updateMessage(index - 1, controller.text);
+              ref
+                  .read(messageComposerProvider.notifier)
+                  .updateMessage(index - 1, controller.text);
               Navigator.pop(context);
               HapticFeedback.lightImpact();
             },
@@ -661,12 +1024,14 @@ class _MessageCard extends ConsumerWidget {
               backgroundColor: themeColors.primary,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                borderRadius:
+                    BorderRadius.circular(AppSpacing.radiusMd),
               ),
             ),
             child: Text(
               'حفظ',
-              style: AppTypography.labelMedium.copyWith(color: Colors.white),
+              style: AppTypography.labelMedium
+                  .copyWith(color: Colors.white),
             ),
           ),
         ],

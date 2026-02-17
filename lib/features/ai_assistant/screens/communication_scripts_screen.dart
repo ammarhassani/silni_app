@@ -16,7 +16,8 @@ import '../../../core/theme/app_themes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/services/relatives_service.dart';
-import '../../../shared/widgets/glass_card.dart';
+import '../../../shared/widgets/glass_pill_title.dart';
+import '../providers/ai_chat_provider.dart';
 import '../widgets/ai_error_card.dart';
 import '../widgets/ai_loading_indicator.dart';
 import '../../../shared/utils/ui_helpers.dart';
@@ -190,11 +191,40 @@ final communicationScriptsProvider =
 });
 
 /// Communication Scripts Screen
-class CommunicationScriptsScreen extends ConsumerWidget {
+class CommunicationScriptsScreen extends ConsumerStatefulWidget {
   const CommunicationScriptsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CommunicationScriptsScreen> createState() =>
+      _CommunicationScriptsScreenState();
+}
+
+class _CommunicationScriptsScreenState
+    extends ConsumerState<CommunicationScriptsScreen>
+    with TickerProviderStateMixin {
+  late AnimationController _glowController;
+  late Animation<double> _glowIntensity;
+
+  @override
+  void initState() {
+    super.initState();
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+    _glowIntensity = Tween<double>(begin: 0.3, end: 0.55).animate(
+      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _glowController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(communicationScriptsProvider);
     final themeColors = ref.watch(themeColorsProvider);
 
@@ -207,22 +237,79 @@ class CommunicationScriptsScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          'سيناريوهات التواصل',
-          style: AppTypography.headlineSmall.copyWith(color: Colors.white),
+        title: GlassPillTitle(
+          text: 'سيناريوهات التواصل',
+          style: AppTypography.headlineSmall.copyWith(
+            color: themeColors.textOnGradient,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
         actions: [
           if (state.generatedScript != null)
             IconButton(
               icon: const Icon(Icons.refresh_rounded, color: Colors.white70),
-              onPressed: () => ref.read(communicationScriptsProvider.notifier).reset(),
+              onPressed: () =>
+                  ref.read(communicationScriptsProvider.notifier).reset(),
               tooltip: 'البدء من جديد',
             ),
         ],
       ),
       body: SafeArea(
-        child: _buildContent(context, ref, state, themeColors),
+        child: Stack(
+          children: [
+            // Ambient orbs
+            _buildAmbientOrbs(themeColors),
+            // Content
+            _buildContent(context, ref, state, themeColors),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAmbientOrbs(ThemeColors themeColors) {
+    return AnimatedBuilder(
+      animation: _glowIntensity,
+      builder: (context, _) => Stack(
+        children: [
+          Positioned(
+            top: -60,
+            right: -40,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    themeColors.primary
+                        .withValues(alpha: _glowIntensity.value * 0.4),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 60,
+            left: -40,
+            child: Container(
+              width: 180,
+              height: 180,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    themeColors.accent
+                        .withValues(alpha: _glowIntensity.value * 0.3),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -239,7 +326,8 @@ class CommunicationScriptsScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.md),
         child: AIErrorCard(
           error: state.error!,
-          onRetry: () => ref.read(communicationScriptsProvider.notifier).generateScript(),
+          onRetry: () =>
+              ref.read(communicationScriptsProvider.notifier).generateScript(),
         ),
       );
     }
@@ -276,7 +364,8 @@ class CommunicationScriptsScreen extends ConsumerWidget {
     return _ScenarioSelectionView(
       state: state,
       themeColors: themeColors,
-      onGenerate: () => ref.read(communicationScriptsProvider.notifier).generateScript(),
+      onGenerate: () =>
+          ref.read(communicationScriptsProvider.notifier).generateScript(),
     );
   }
 }
@@ -304,13 +393,25 @@ class _ScenarioSelectionView extends ConsumerWidget {
           style: AppTypography.titleMedium.copyWith(
             color: Colors.white,
             fontWeight: FontWeight.bold,
+            shadows: [
+              Shadow(
+                color: Colors.black.withValues(alpha: 0.5),
+                blurRadius: 8,
+              ),
+            ],
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
           '${AIIdentity.name} يساعدك تصيغ كلامك بشكل مناسب',
           style: AppTypography.bodySmall.copyWith(
-            color: Colors.white60,
+            color: Colors.white.withValues(alpha: 0.7),
+            shadows: [
+              Shadow(
+                color: Colors.black.withValues(alpha: 0.4),
+                blurRadius: 6,
+              ),
+            ],
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -335,9 +436,14 @@ class _ScenarioSelectionView extends ConsumerWidget {
               isSelected: isSelected,
               onTap: () {
                 HapticFeedback.lightImpact();
-                ref.read(communicationScriptsProvider.notifier).selectScenario(scenario);
+                ref
+                    .read(communicationScriptsProvider.notifier)
+                    .selectScenario(scenario);
               },
-            ).animate(delay: Duration(milliseconds: index * 50)).fadeIn().scale(
+            )
+                .animate(delay: Duration(milliseconds: index * 50))
+                .fadeIn()
+                .scale(
                   begin: const Offset(0.9, 0.9),
                   end: const Offset(1, 1),
                 );
@@ -353,46 +459,66 @@ class _ScenarioSelectionView extends ConsumerWidget {
             style: AppTypography.titleSmall.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.bold,
+              shadows: [
+                Shadow(
+                  color: Colors.black.withValues(alpha: 0.5),
+                  blurRadius: 8,
+                ),
+              ],
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
+              color: Colors.black.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
             ),
             child: DropdownButton<String?>(
               value: state.selectedRelative?.id,
               hint: Text(
                 'بدون تحديد قريب',
-                style: AppTypography.bodyMedium.copyWith(color: Colors.white60),
+                style: AppTypography.bodyMedium
+                    .copyWith(color: Colors.white60),
               ),
               dropdownColor: themeColors.background2,
               isExpanded: true,
               underline: const SizedBox.shrink(),
-              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white54),
+              icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                  color: Colors.white54),
               items: [
                 DropdownMenuItem<String?>(
                   value: null,
                   child: Text(
                     'بدون تحديد قريب',
-                    style: AppTypography.bodyMedium.copyWith(color: Colors.white60),
+                    style: AppTypography.bodyMedium
+                        .copyWith(color: Colors.white60),
                   ),
                 ),
-                ...state.relatives.map((relative) => DropdownMenuItem<String?>(
-                      value: relative.id,
-                      child: Text(
-                        '${relative.fullName} (${relative.relationshipType.arabicName})',
-                        style: AppTypography.bodyMedium.copyWith(color: Colors.white),
-                      ),
-                    )),
+                ...state.relatives.map((relative) {
+                  final labels = ref.read(perspectiveLabelsProvider);
+                  final label = labels[relative.id] ??
+                      relative.relationshipType.arabicName;
+                  return DropdownMenuItem<String?>(
+                    value: relative.id,
+                    child: Text(
+                      '${relative.fullName} ($label)',
+                      style: AppTypography.bodyMedium
+                          .copyWith(color: Colors.white),
+                    ),
+                  );
+                }),
               ],
               onChanged: (value) {
                 final relative = value != null
                     ? state.relatives.firstWhere((r) => r.id == value)
                     : null;
-                ref.read(communicationScriptsProvider.notifier).selectRelative(relative);
+                ref
+                    .read(communicationScriptsProvider.notifier)
+                    .selectRelative(relative);
               },
             ),
           ),
@@ -401,22 +527,78 @@ class _ScenarioSelectionView extends ConsumerWidget {
 
         // Generate button
         if (state.selectedScenario != null)
-          ElevatedButton.icon(
-            onPressed: onGenerate,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: state.selectedScenario!.color,
-              foregroundColor: Colors.white,
+          GestureDetector(
+            onTap: onGenerate,
+            child: Container(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-              shape: RoundedRectangleBorder(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    state.selectedScenario!.color.withValues(alpha: 0.6),
+                    state.selectedScenario!.color.withValues(alpha: 0.3),
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                border: Border.all(
+                  color:
+                      state.selectedScenario!.color.withValues(alpha: 0.5),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: state.selectedScenario!.color
+                        .withValues(alpha: 0.4),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                  BoxShadow(
+                    color: state.selectedScenario!.color
+                        .withValues(alpha: 0.2),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
-            ),
-            icon: const Icon(Icons.auto_awesome_rounded),
-            label: Text(
-              'اكتب السيناريو',
-              style: AppTypography.labelLarge.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.white.withValues(alpha: 0.25),
+                          Colors.white.withValues(alpha: 0.1),
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: state.selectedScenario!.color
+                              .withValues(alpha: 0.4),
+                          blurRadius: 8,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.auto_awesome_rounded,
+                        color: Colors.white, size: 18),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    'اكتب السيناريو',
+                    style: AppTypography.labelLarge.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          blurRadius: 8,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ).animate().fadeIn().slideY(begin: 0.2, end: 0),
@@ -444,25 +626,66 @@ class _ScenarioCard extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: isSelected
-              ? scenario.color.withValues(alpha: 0.2)
-              : Colors.white.withValues(alpha: 0.06),
+          gradient: isSelected
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    scenario.color.withValues(alpha: 0.35),
+                    Colors.black.withValues(alpha: 0.7),
+                  ],
+                )
+              : null,
+          color: isSelected ? null : Colors.black.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           border: Border.all(
-            color: isSelected ? scenario.color : Colors.transparent,
-            width: 2,
+            color: isSelected
+                ? scenario.color.withValues(alpha: 0.7)
+                : Colors.white.withValues(alpha: 0.08),
+            width: isSelected ? 2 : 1,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: scenario.color.withValues(alpha: 0.4),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                  BoxShadow(
+                    color: scenario.color.withValues(alpha: 0.2),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
+              : null,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(scenario.emoji, style: const TextStyle(fontSize: 32)),
+            Text(
+              scenario.emoji,
+              style: TextStyle(
+                fontSize: 32,
+                shadows: [
+                  Shadow(
+                    color: scenario.color.withValues(alpha: 0.6),
+                    blurRadius: 12,
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: AppSpacing.xs),
             Text(
               scenario.title,
               style: AppTypography.labelLarge.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    blurRadius: 8,
+                  ),
+                ],
               ),
               textAlign: TextAlign.center,
             ),
@@ -472,8 +695,14 @@ class _ScenarioCard extends StatelessWidget {
               child: Text(
                 scenario.description,
                 style: AppTypography.bodySmall.copyWith(
-                  color: Colors.white54,
+                  color: Colors.white.withValues(alpha: 0.7),
                   fontSize: 11,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      blurRadius: 6,
+                    ),
+                  ],
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
@@ -511,16 +740,56 @@ class _ScriptResultView extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
             gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
               colors: [
-                scenario.color.withValues(alpha: 0.2),
-                scenario.color.withValues(alpha: 0.1),
+                scenario.color.withValues(alpha: 0.35),
+                Colors.black.withValues(alpha: 0.7),
               ],
             ),
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            border: Border.all(
+              color: scenario.color.withValues(alpha: 0.4),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: scenario.color.withValues(alpha: 0.3),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Row(
             children: [
-              Text(scenario.emoji, style: const TextStyle(fontSize: 32)),
+              // Emoji with glow halo
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      scenario.color.withValues(alpha: 0.4),
+                      scenario.color.withValues(alpha: 0.15),
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: scenario.color.withValues(alpha: 0.5),
+                      blurRadius: 12,
+                    ),
+                    BoxShadow(
+                      color: scenario.color.withValues(alpha: 0.25),
+                      blurRadius: 24,
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(scenario.emoji,
+                      style: const TextStyle(fontSize: 24)),
+                ),
+              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
@@ -531,13 +800,25 @@ class _ScriptResultView extends StatelessWidget {
                       style: AppTypography.titleSmall.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black.withValues(alpha: 0.6),
+                            blurRadius: 8,
+                          ),
+                        ],
                       ),
                     ),
                     if (relative != null)
                       Text(
                         'مع ${relative!.fullName}',
                         style: AppTypography.bodySmall.copyWith(
-                          color: Colors.white70,
+                          color: Colors.white.withValues(alpha: 0.8),
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              blurRadius: 6,
+                            ),
+                          ],
                         ),
                       ),
                   ],
@@ -606,19 +887,57 @@ class _ScriptResultView extends StatelessWidget {
 
         const SizedBox(height: AppSpacing.xl),
 
-        // Copy all button
-        ElevatedButton.icon(
-          onPressed: () => _copyAllToClipboard(context),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: themeColors.primary,
-            foregroundColor: Colors.white,
+        // Copy all button — neon gradient
+        GestureDetector(
+          onTap: () => _copyAllToClipboard(context),
+          child: Container(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-            shape: RoundedRectangleBorder(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  themeColors.primary.withValues(alpha: 0.5),
+                  themeColors.primary.withValues(alpha: 0.25),
+                ],
+              ),
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              border: Border.all(
+                color: themeColors.primary.withValues(alpha: 0.5),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: themeColors.primary.withValues(alpha: 0.35),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+                BoxShadow(
+                  color: themeColors.primary.withValues(alpha: 0.15),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.copy_all_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  'نسخ الكل',
+                  style: AppTypography.labelLarge.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          icon: const Icon(Icons.copy_all_rounded),
-          label: const Text('نسخ الكل'),
         ).animate(delay: 600.ms).fadeIn(),
       ],
     );
@@ -686,21 +1005,59 @@ class _ScriptSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
+    return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withValues(alpha: 0.15),
+            Colors.black.withValues(alpha: 0.5),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
           Row(
             children: [
+              // Icon badge with glow halo
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
+                  gradient: LinearGradient(
+                    colors: [
+                      color.withValues(alpha: 0.4),
+                      color.withValues(alpha: 0.15),
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.4),
+                      blurRadius: 8,
+                    ),
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.2),
+                      blurRadius: 16,
+                    ),
+                  ],
                 ),
-                child: Icon(icon, color: color, size: 20),
+                child: Icon(icon, color: Colors.white, size: 20),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
@@ -709,12 +1066,19 @@ class _ScriptSection extends StatelessWidget {
                   style: AppTypography.titleSmall.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        blurRadius: 8,
+                      ),
+                    ],
                   ),
                 ),
               ),
               // Copy button
               IconButton(
-                icon: Icon(Icons.copy_rounded, color: Colors.white38, size: 18),
+                icon: const Icon(Icons.copy_rounded,
+                    color: Colors.white54, size: 18),
                 onPressed: () {
                   final text = content ?? items?.join('\n') ?? '';
                   Clipboard.setData(ClipboardData(text: text));
@@ -726,7 +1090,8 @@ class _ScriptSection extends StatelessWidget {
                   );
                 },
                 tooltip: 'نسخ',
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                constraints:
+                    const BoxConstraints(minWidth: 32, minHeight: 32),
                 padding: EdgeInsets.zero,
               ),
             ],
@@ -740,7 +1105,7 @@ class _ScriptSection extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
+                color: Colors.black.withValues(alpha: 0.25),
                 borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
               ),
               child: SelectableText(
@@ -748,6 +1113,12 @@ class _ScriptSection extends StatelessWidget {
                 style: AppTypography.bodyMedium.copyWith(
                   color: Colors.white,
                   height: 1.5,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      blurRadius: 6,
+                    ),
+                  ],
                 ),
                 textDirection: TextDirection.rtl,
               ),
@@ -779,6 +1150,12 @@ class _ScriptSection extends StatelessWidget {
                           item,
                           style: AppTypography.bodyMedium.copyWith(
                             color: Colors.white,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.4),
+                                blurRadius: 6,
+                              ),
+                            ],
                           ),
                           textDirection: TextDirection.rtl,
                         ),

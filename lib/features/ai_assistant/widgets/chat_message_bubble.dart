@@ -301,16 +301,28 @@ class SuggestedPromptChip extends StatelessWidget {
           vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: Colors.black.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.2),
+            color: Colors.white.withValues(alpha: 0.15),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.white.withValues(alpha: 0.05),
+              blurRadius: 8,
+            ),
+          ],
         ),
         child: Text(
           text,
           style: AppTypography.bodySmall.copyWith(
             color: Colors.white,
+            shadows: [
+              Shadow(
+                color: Colors.black.withValues(alpha: 0.4),
+                blurRadius: 6,
+              ),
+            ],
           ),
           textDirection: TextDirection.rtl,
         ),

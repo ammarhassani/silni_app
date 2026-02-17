@@ -52,6 +52,8 @@ class _RelativeSelectorState extends ConsumerState<RelativeSelector> {
   }
 
   Widget _buildSelector(List<Relative> relatives) {
+    final labels = ref.watch(perspectiveLabelsProvider);
+
     // Safely find selected relative - return null if not found or list is empty
     Relative? selectedRelative;
     if (widget.selectedRelativeId != null && relatives.isNotEmpty) {
@@ -109,7 +111,8 @@ class _RelativeSelectorState extends ConsumerState<RelativeSelector> {
                           ),
                         ),
                         Text(
-                          selectedRelative.relationshipType.arabicName,
+                          labels[selectedRelative.id] ??
+                              selectedRelative.relationshipType.arabicName,
                           style: AppTypography.bodySmall.copyWith(
                             color: Colors.white60,
                           ),
@@ -238,7 +241,8 @@ class _RelativeSelectorState extends ConsumerState<RelativeSelector> {
                           ),
                         ),
                         subtitle: Text(
-                          relative.relationshipType.arabicName,
+                          labels[relative.id] ??
+                              relative.relationshipType.arabicName,
                           style: AppTypography.bodySmall.copyWith(
                             color: Colors.white54,
                           ),

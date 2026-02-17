@@ -20,6 +20,7 @@ import 'package:silni_app/features/subscription/screens/paywall_screen.dart';
 import 'package:silni_app/shared/models/relative_model.dart';
 import 'package:silni_app/shared/utils/relationship_label_helper.dart';
 import 'package:silni_app/shared/widgets/glass_card.dart';
+import 'package:silni_app/shared/widgets/glass_pill_title.dart';
 import 'package:silni_app/shared/widgets/gradient_background.dart';
 import 'package:silni_app/shared/widgets/share_bottom_sheet.dart';
 import 'package:silni_app/shared/widgets/share_cards/occasion_share_card.dart';
@@ -128,10 +129,11 @@ class _OccasionMessagesScreenState
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          title: Text(
-            '${_occasionEmoji(widget.occasion)} رسائل ${widget.occasion.arabicName}',
+          title: GlassPillTitle(
+            text: '${_occasionEmoji(widget.occasion)} رسائل ${widget.occasion.arabicName}',
             style: AppTypography.titleLarge.copyWith(
-              color: themeColors.textPrimary,
+              color: themeColors.textOnGradient,
+              fontWeight: FontWeight.bold,
             ),
           ),
           centerTitle: true,
