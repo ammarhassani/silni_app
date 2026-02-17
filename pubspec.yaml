@@ -36,6 +36,7 @@ dependencies:
   confetti: ^0.8.0
   simple_animations: ^5.0.2
   animations: ^2.0.11
+  mesh_gradient: ^1.3.8
 
   # UI & Design System
   glassmorphism: ^3.0.0
@@ -112,7 +113,8 @@ dependencies:
   flutter_markdown: ^0.7.4+2
   app_links: ^6.4.1
   home_widget: ^0.9.0
-  speech_to_text: ^7.3.0
+  record: ^6.0.0
+  just_audio: ^0.9.42
 
 dev_dependencies:
   flutter_test:
