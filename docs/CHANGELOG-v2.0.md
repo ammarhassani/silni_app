@@ -1,8 +1,8 @@
 # Silni v2.0 — Changelog
 
-**Release: v2.0.0 (Build 35)**
+**Release: v2.0.0 (Build 36)**
 **Date: February 2026**
-**Covers: 79 commits from v1.1.0 to v2.0.0**
+**Covers: 80 commits from v1.1.0 to v2.0.0**
 
 ---
 
@@ -131,15 +131,17 @@ Silni 2.0 is a complete visual overhaul with a premium glassmorphic design langu
 - **CardBuilder signatures** — Aligned all cardBuilder signatures with ShareBottomSheet aiCopy parameter
 - **Saudi phone formatting** — Convert local Saudi numbers to international format for wa.me links
 - **Perspective labels in occasions** — Use perspective-aware relationship labels in occasion messages
+- **Leaderboard not loading** — Users table RLS blocked cross-user reads; added `get_leaderboard()` SECURITY DEFINER RPC exposing only safe columns
 
 ---
 
 ## Backend & Database
 
-- **3 new migrations**:
+- **4 new migrations**:
   - `20260112110000` — Reseed AI touch points with death assumption guard
   - `20260213100000` — Fix AI death assumption in conversation starters prompt
   - `20260214100000` — Create `voice-notes` storage bucket with per-user RLS policies
+  - `20260218100000` — Add `get_leaderboard()` SECURITY DEFINER RPC for cross-user leaderboard
 
 ---
 
