@@ -92,7 +92,7 @@ class InteractionsRepository {
     // Always stream remote updates - Supabase handles reconnection
     try {
       await for (final serverData in _service.getInteractionsStream(userId)) {
-        await _cache.putInteractions(serverData);
+        await _cache.replaceUserInteractions(userId, serverData);
         yield serverData;
       }
     } catch (e) {

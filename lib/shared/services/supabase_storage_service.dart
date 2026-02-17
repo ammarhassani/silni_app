@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
@@ -7,6 +9,7 @@ import '../../core/config/supabase_config.dart';
 class SupabaseStorageService {
   static const String _profileBucket = 'profile-pictures';
   static const String _relativeBucket = 'relative-photos';
+  static const String _voiceNotesBucket = 'voice-notes';
 
   /// Upload user profile picture
   /// Returns the public URL of the uploaded image
@@ -109,6 +112,45 @@ class SupabaseStorageService {
           break;
         }
       }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Upload voice note audio file.
+  /// Returns the public URL of the uploaded audio.
+  Future<String> uploadVoiceNote(
+    String localFilePath,
+    String userId,
+    String interactionId,
+  ) async {
+    try {
+      final bytes = await File(localFilePath).readAsBytes();
+      final filePath = '$userId/$interactionId.m4a';
+
+      await SupabaseConfig.client.storage.from(_voiceNotesBucket).uploadBinary(
+        filePath,
+        bytes,
+        fileOptions: const FileOptions(
+          contentType: 'audio/mp4',
+          upsert: true,
+        ),
+      );
+
+      return SupabaseConfig.client.storage
+          .from(_voiceNotesBucket)
+          .getPublicUrl(filePath);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Delete a voice note from storage.
+  Future<void> deleteVoiceNote(String userId, String interactionId) async {
+    try {
+      await SupabaseConfig.client.storage
+          .from(_voiceNotesBucket)
+          .remove(['$userId/$interactionId.m4a']);
     } catch (e) {
       rethrow;
     }
