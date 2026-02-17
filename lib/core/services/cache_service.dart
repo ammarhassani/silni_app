@@ -215,6 +215,32 @@ class CacheService {
     }
   }
 
+  /// Replace all cached interactions for a user with the server's full list.
+  ///
+  /// Unlike [putInteractions], this removes stale entries that exist in the
+  /// cache but are no longer present on the server (e.g. deleted interactions).
+  Future<void> replaceUserInteractions(
+      String userId, List<Interaction> serverInteractions) async {
+    try {
+      final serverIds = serverInteractions.map((i) => i.id).toSet();
+
+      // Remove cached entries for this user that the server no longer has
+      final staleIds = HiveInitializer.interactionsBox.values
+          .where((i) => i.userId == userId && !serverIds.contains(i.id))
+          .map((i) => i.id)
+          .toList();
+      for (final id in staleIds) {
+        await HiveInitializer.interactionsBox.delete(id);
+      }
+
+      // Upsert server data
+      final entries = {for (final i in serverInteractions) i.id: i};
+      await HiveInitializer.interactionsBox.putAll(entries);
+    } catch (e) {
+      // Silently fail - cache is not critical
+    }
+  }
+
   /// Enforce the interaction limit per relative (keep most recent 100).
   Future<void> _enforceInteractionLimit(String relativeId) async {
     final interactions = getInteractions(relativeId);

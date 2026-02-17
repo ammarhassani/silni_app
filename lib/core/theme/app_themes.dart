@@ -198,6 +198,113 @@ class ThemeColors {
     this.dialogButtonDestructive = const Color(0xFFE53935),
   });
 
+  /// Linearly interpolate between two [ThemeColors] at position [t].
+  ///
+  /// Used by [AnimatedThemeColorsNotifier] to smoothly transition every
+  /// color in the app when the user switches themes.
+  static ThemeColors lerp(ThemeColors a, ThemeColors b, double t) {
+    return ThemeColors(
+      // Primary
+      primary: Color.lerp(a.primary, b.primary, t)!,
+      primaryLight: Color.lerp(a.primaryLight, b.primaryLight, t)!,
+      primaryDark: Color.lerp(a.primaryDark, b.primaryDark, t)!,
+      secondary: Color.lerp(a.secondary, b.secondary, t)!,
+      accent: Color.lerp(a.accent, b.accent, t)!,
+      // Backgrounds
+      background1: Color.lerp(a.background1, b.background1, t)!,
+      background2: Color.lerp(a.background2, b.background2, t)!,
+      background3: Color.lerp(a.background3, b.background3, t)!,
+      // Gradients
+      primaryGradient:
+          LinearGradient.lerp(a.primaryGradient, b.primaryGradient, t)!,
+      backgroundGradient:
+          LinearGradient.lerp(a.backgroundGradient, b.backgroundGradient, t)!,
+      goldenGradient:
+          LinearGradient.lerp(a.goldenGradient, b.goldenGradient, t)!,
+      streakFire: LinearGradient.lerp(a.streakFire, b.streakFire, t)!,
+      healthyGradient:
+          LinearGradient.lerp(a.healthyGradient, b.healthyGradient, t)!,
+      warningGradient:
+          LinearGradient.lerp(a.warningGradient, b.warningGradient, t)!,
+      dangerGradient:
+          LinearGradient.lerp(a.dangerGradient, b.dangerGradient, t)!,
+      // Semantic
+      onPrimary: Color.lerp(a.onPrimary, b.onPrimary, t)!,
+      onSecondary: Color.lerp(a.onSecondary, b.onSecondary, t)!,
+      surface: Color.lerp(a.surface, b.surface, t)!,
+      onSurface: Color.lerp(a.onSurface, b.onSurface, t)!,
+      surfaceVariant: Color.lerp(a.surfaceVariant, b.surfaceVariant, t)!,
+      onSurfaceVariant:
+          Color.lerp(a.onSurfaceVariant, b.onSurfaceVariant, t)!,
+      // Glass
+      glassBackground: Color.lerp(a.glassBackground, b.glassBackground, t)!,
+      glassBorder: Color.lerp(a.glassBorder, b.glassBorder, t)!,
+      glassHighlight: Color.lerp(a.glassHighlight, b.glassHighlight, t)!,
+      // Text
+      textPrimary: Color.lerp(a.textPrimary, b.textPrimary, t)!,
+      textSecondary: Color.lerp(a.textSecondary, b.textSecondary, t)!,
+      textHint: Color.lerp(a.textHint, b.textHint, t)!,
+      textOnGradient: Color.lerp(a.textOnGradient, b.textOnGradient, t)!,
+      // Shimmer
+      shimmerBase: Color.lerp(a.shimmerBase, b.shimmerBase, t)!,
+      shimmerHighlight: Color.lerp(a.shimmerHighlight, b.shimmerHighlight, t)!,
+      // Card
+      cardBackground: Color.lerp(a.cardBackground, b.cardBackground, t)!,
+      cardBorder: Color.lerp(a.cardBorder, b.cardBorder, t)!,
+      // Divider/disabled
+      divider: Color.lerp(a.divider, b.divider, t)!,
+      disabled: Color.lerp(a.disabled, b.disabled, t)!,
+      // Status
+      statusSuccess: Color.lerp(a.statusSuccess, b.statusSuccess, t)!,
+      statusError: Color.lerp(a.statusError, b.statusError, t)!,
+      statusWarning: Color.lerp(a.statusWarning, b.statusWarning, t)!,
+      statusInfo: Color.lerp(a.statusInfo, b.statusInfo, t)!,
+      // Contact frequency
+      contactExcellent: Color.lerp(a.contactExcellent, b.contactExcellent, t)!,
+      contactGood: Color.lerp(a.contactGood, b.contactGood, t)!,
+      contactNormal: Color.lerp(a.contactNormal, b.contactNormal, t)!,
+      contactNeedsCare:
+          Color.lerp(a.contactNeedsCare, b.contactNeedsCare, t)!,
+      contactCritical: Color.lerp(a.contactCritical, b.contactCritical, t)!,
+      contactElderly: Color.lerp(a.contactElderly, b.contactElderly, t)!,
+      contactDisabled: Color.lerp(a.contactDisabled, b.contactDisabled, t)!,
+      // Mood
+      moodHappy: Color.lerp(a.moodHappy, b.moodHappy, t)!,
+      moodNeutral: Color.lerp(a.moodNeutral, b.moodNeutral, t)!,
+      moodSad: Color.lerp(a.moodSad, b.moodSad, t)!,
+      moodExcited: Color.lerp(a.moodExcited, b.moodExcited, t)!,
+      moodCalm: Color.lerp(a.moodCalm, b.moodCalm, t)!,
+      moodWorried: Color.lerp(a.moodWorried, b.moodWorried, t)!,
+      // Priority
+      priorityHigh: Color.lerp(a.priorityHigh, b.priorityHigh, t)!,
+      priorityMedium: Color.lerp(a.priorityMedium, b.priorityMedium, t)!,
+      priorityLow: Color.lerp(a.priorityLow, b.priorityLow, t)!,
+      // Level
+      level1: Color.lerp(a.level1, b.level1, t)!,
+      level2: Color.lerp(a.level2, b.level2, t)!,
+      level3: Color.lerp(a.level3, b.level3, t)!,
+      level4: Color.lerp(a.level4, b.level4, t)!,
+      level5: Color.lerp(a.level5, b.level5, t)!,
+      levelMax: Color.lerp(a.levelMax, b.levelMax, t)!,
+      // Tier gradients
+      tierLegendaryGradient: LinearGradient.lerp(
+          a.tierLegendaryGradient, b.tierLegendaryGradient, t)!,
+      tierEpicGradient:
+          LinearGradient.lerp(a.tierEpicGradient, b.tierEpicGradient, t)!,
+      tierRareGradient:
+          LinearGradient.lerp(a.tierRareGradient, b.tierRareGradient, t)!,
+      tierStarterGradient: LinearGradient.lerp(
+          a.tierStarterGradient, b.tierStarterGradient, t)!,
+      // Dialog buttons
+      dialogButtonPrimary:
+          Color.lerp(a.dialogButtonPrimary, b.dialogButtonPrimary, t)!,
+      dialogButtonSecondary:
+          Color.lerp(a.dialogButtonSecondary, b.dialogButtonSecondary, t)!,
+      dialogButtonDestructive:
+          Color.lerp(a.dialogButtonDestructive, b.dialogButtonDestructive, t)!,
+    );
+  }
+
   /// Silni Green Theme (Default)
   static const defaultGreen = ThemeColors(
     primary: Color(0xFF2E7D32),
