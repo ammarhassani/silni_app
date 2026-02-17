@@ -4,9 +4,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:confetti/confetti.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/theme/app_themes.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/glass_card.dart';
 
 /// Congratulations dialog shown after successful MAX subscription purchase
@@ -20,26 +21,26 @@ class SubscriptionCongratsDialog extends ConsumerStatefulWidget {
   });
 
   /// Show the dialog with confetti celebration
-  static Future<void> show(BuildContext context, {required bool isAnnual}) async {
-    // Haptic feedback for celebration
+  static Future<void> show(BuildContext context,
+      {required bool isAnnual}) async {
     HapticFeedback.heavyImpact();
 
     await showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black87,
+      barrierColor: Colors.black.withValues(alpha: 0.85),
       transitionDuration: const Duration(milliseconds: 400),
       pageBuilder: (context, animation, secondaryAnimation) {
         return SubscriptionCongratsDialog(isAnnual: isAnnual);
       },
       transitionBuilder: (context, animation, secondaryAnimation, child) {
-        return ScaleTransition(
-          scale: CurvedAnimation(
-            parent: animation,
-            curve: Curves.elasticOut,
-          ),
-          child: FadeTransition(
-            opacity: animation,
+        return FadeTransition(
+          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+          child: ScaleTransition(
+            scale: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutBack,
+            ),
             child: child,
           ),
         );
@@ -61,7 +62,6 @@ class _SubscriptionCongratsDialogState
     super.initState();
     _confettiController =
         ConfettiController(duration: const Duration(seconds: 3));
-    // Start confetti immediately
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _confettiController.play();
     });
@@ -75,175 +75,134 @@ class _SubscriptionCongratsDialogState
 
   @override
   Widget build(BuildContext context) {
-    // Wrap in Material to prevent text underline decoration issue
+    final colors = ref.watch(themeColorsProvider);
+    final accent = colors.primary;
+
     return Material(
       type: MaterialType.transparency,
       child: Stack(
         children: [
           // Dialog content
           Center(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: GlassCard(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.premiumGold.withValues(alpha: 0.3),
-                  AppColors.premiumGoldDark.withValues(alpha: 0.2),
-                  Colors.black.withValues(alpha: 0.3),
-                ],
-              ),
-              border: Border.all(
-                color: AppColors.premiumGold.withValues(alpha: 0.5),
-                width: 2,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Crown/Star icon with glow
-                  _buildCrownIcon()
-                      .animate()
-                      .scale(
-                        begin: const Offset(0, 0),
-                        end: const Offset(1, 1),
-                        duration: 600.ms,
-                        curve: Curves.elasticOut,
-                      )
-                      .then()
-                      .shimmer(
-                        duration: 2000.ms,
-                        color: AppColors.premiumGold.withValues(alpha: 0.3),
-                      ),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: GlassCard(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: AppSpacing.md),
 
-                  const SizedBox(height: AppSpacing.md),
-
-                  // Welcome text
-                  Text(
-                    'مرحباً بك في عائلة MAX! 🎉',
-                    style: AppTypography.headlineMedium.copyWith(
-                      color: AppColors.premiumGold,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.3),
-
-                  const SizedBox(height: AppSpacing.sm),
-
-                  // Subtitle
-                  Text(
-                    'أنت الآن من أعضاء صلني المميزين',
-                    style: AppTypography.bodyLarge.copyWith(
-                      color: Colors.white70,
-                    ),
-                    textAlign: TextAlign.center,
-                  ).animate().fadeIn(delay: 400.ms),
-
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // Features unlocked
-                  _buildUnlockedFeatures()
-                      .animate()
-                      .fadeIn(delay: 600.ms)
-                      .slideY(begin: 0.2),
-
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // Subscription type badge
-                  _buildSubscriptionBadge()
-                      .animate()
-                      .fadeIn(delay: 800.ms)
-                      .scale(begin: const Offset(0.8, 0.8)),
-
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // Continue button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.premiumGold,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                    // Checkmark badge
+                    _buildBadge(accent, colors.primaryGradient)
+                        .animate()
+                        .scale(
+                          begin: const Offset(0, 0),
+                          end: const Offset(1, 1),
+                          duration: 500.ms,
+                          curve: Curves.easeOutBack,
                         ),
-                        elevation: 8,
-                        shadowColor: AppColors.premiumGold.withValues(alpha: 0.5),
+
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // Title
+                    Text(
+                      'مرحباً بك في عائلة MAX!',
+                      style: AppTypography.headlineMedium.copyWith(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.bold,
                       ),
-                      child: Text(
-                        'ابدأ الآن',
-                        style: AppTypography.titleMedium.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
+                      textAlign: TextAlign.center,
+                    ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2),
+
+                    const SizedBox(height: AppSpacing.xs),
+
+                    // Subtitle
+                    Text(
+                      'أنت الآن من أعضاء صلني المميزين',
+                      style: AppTypography.bodyLarge.copyWith(
+                        color: colors.textSecondary,
                       ),
-                    ),
-                  ).animate().fadeIn(delay: 1000.ms).slideY(begin: 0.3),
-                ],
+                      textAlign: TextAlign.center,
+                    ).animate().fadeIn(delay: 350.ms),
+
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // Features
+                    _buildFeatures(accent, colors)
+                        .animate()
+                        .fadeIn(delay: 500.ms)
+                        .slideY(begin: 0.15),
+
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Subscription badge
+                    _buildSubscriptionBadge(accent, colors)
+                        .animate()
+                        .fadeIn(delay: 700.ms)
+                        .scale(begin: const Offset(0.9, 0.9)),
+
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // CTA button
+                    _buildButton(accent, colors)
+                        .animate()
+                        .fadeIn(delay: 900.ms)
+                        .slideY(begin: 0.2),
+
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
 
-        // Confetti from top center
-        Align(
-          alignment: Alignment.topCenter,
-          child: ConfettiWidget(
-            confettiController: _confettiController,
-            blastDirectionality: BlastDirectionality.explosive,
-            shouldLoop: false,
-            numberOfParticles: 30,
-            maxBlastForce: 30,
-            minBlastForce: 10,
-            emissionFrequency: 0.05,
-            gravity: 0.2,
-            colors: const [
-              AppColors.premiumGold,
-              AppColors.premiumGoldDark,
-              Colors.white,
-              Colors.amber,
-              Colors.orange,
-            ],
+          // Confetti
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              shouldLoop: false,
+              numberOfParticles: 30,
+              maxBlastForce: 30,
+              minBlastForce: 10,
+              emissionFrequency: 0.05,
+              gravity: 0.2,
+              colors: [
+                ...colors.primaryGradient.colors,
+                Colors.white,
+              ],
+            ),
           ),
-        ),
         ],
       ),
     );
   }
 
-  Widget _buildCrownIcon() {
+  Widget _buildBadge(Color accent, LinearGradient gradient) {
     return Container(
-      width: 100,
-      height: 100,
+      width: 88,
+      height: 88,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.premiumGold,
-            AppColors.premiumGoldDark,
-          ],
-        ),
+        gradient: gradient,
         boxShadow: [
           BoxShadow(
-            color: AppColors.premiumGold.withValues(alpha: 0.6),
-            blurRadius: 30,
-            spreadRadius: 5,
+            color: accent.withValues(alpha: 0.4),
+            blurRadius: 24,
+            spreadRadius: 4,
           ),
         ],
       ),
       child: const Icon(
-        Icons.workspace_premium_rounded,
-        size: 56,
+        Icons.check_rounded,
+        size: 48,
         color: Colors.white,
       ),
     );
   }
 
-  Widget _buildUnlockedFeatures() {
+  Widget _buildFeatures(Color accent, ThemeColors colors) {
     final features = [
       ('مساعد الذكاء الاصطناعي', Icons.psychology_rounded),
       ('كتابة الرسائل الذكية', Icons.edit_note_rounded),
@@ -251,125 +210,115 @@ class _SubscriptionCongratsDialogState
       ('إحصائيات متقدمة', Icons.analytics_rounded),
     ];
 
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.premiumGold.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'الميزات المفعّلة:',
-            style: AppTypography.labelMedium.copyWith(
-              color: Colors.white54,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: features
-                .asMap()
-                .entries
-                .map((entry) => _buildFeatureChip(
-                      entry.value.$1,
-                      entry.value.$2,
-                      entry.key,
-                    ))
-                .toList(),
-          ),
-        ],
-      ),
+    return Column(
+      children: features.asMap().entries.map((entry) {
+        final (label, icon) = entry.value;
+        final delay = Duration(milliseconds: 550 + entry.key * 80);
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 18, color: accent),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.check_circle_rounded,
+                size: 18,
+                color: accent,
+              ),
+            ],
+          ).animate(delay: delay).fadeIn().slideX(begin: 0.05),
+        );
+      }).toList(),
     );
   }
 
-  Widget _buildFeatureChip(String label, IconData icon, int index) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.premiumGold.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppColors.premiumGold.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: AppColors.premiumGold),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: AppTypography.labelSmall.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    ).animate(delay: Duration(milliseconds: 700 + (index * 100))).fadeIn().scale(
-          begin: const Offset(0.8, 0.8),
-        );
-  }
-
-  Widget _buildSubscriptionBadge() {
+  Widget _buildSubscriptionBadge(Color accent, ThemeColors colors) {
     final period = widget.isAnnual ? 'سنوي' : 'شهري';
     final duration = widget.isAnnual ? '12 شهر' : 'شهر واحد';
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.premiumGold.withValues(alpha: 0.2),
-            AppColors.premiumGoldDark.withValues(alpha: 0.1),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(30),
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppColors.premiumGold.withValues(alpha: 0.4),
+          color: accent.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(6),
-            decoration: const BoxDecoration(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.premiumGold,
+              color: accent,
             ),
-            child: const Icon(
-              Icons.check,
-              size: 14,
-              color: Colors.black,
-            ),
+            child: const Icon(Icons.check, size: 12, color: Colors.white),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'اشتراك MAX $period',
                 style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.premiumGold,
+                  color: colors.textPrimary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
                 'صالح لمدة $duration',
                 style: AppTypography.labelSmall.copyWith(
-                  color: Colors.white54,
+                  color: colors.textSecondary,
                 ),
               ),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildButton(Color accent, ThemeColors colors) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: () => Navigator.of(context).pop(),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: accent,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 0,
+        ),
+        child: Text(
+          'ابدأ الآن',
+          style: AppTypography.titleMedium.copyWith(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
       ),
     );
   }

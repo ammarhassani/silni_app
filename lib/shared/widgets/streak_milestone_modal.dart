@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:confetti/confetti.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/ai/deepseek_ai_service.dart';
-import '../../core/constants/app_animations.dart';
+import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/models/gamification_event.dart';
 import '../../core/providers/subscription_provider.dart';
 import '../../core/theme/app_themes.dart';
 import '../../core/theme/theme_provider.dart';
+import 'glass_card.dart';
 import 'share_bottom_sheet.dart';
 import 'share_cards/streak_share_card.dart';
 import 'shareable_card_generator.dart';
 
-/// Milestone tier for visual customization
+/// Milestone tier for visual customization.
 enum MilestoneTier {
   starter,   // 3 days
   common,    // 7, 10, 14, 21 days
@@ -23,12 +23,14 @@ enum MilestoneTier {
   legendary, // 365, 500 days
 }
 
-/// Dramatic streak milestone celebration modal
-/// Shows when user reaches a streak milestone (3, 7, 10, 14, 21, 30, 50, 100, 200, 365, 500 days)
+/// Streak milestone celebration modal.
+///
+/// Clean glass-card dialog with theme-aware colors and subtle entrance
+/// animations. Tier gradient used as accent color on the streak pill.
 class StreakMilestoneModal extends ConsumerStatefulWidget {
   final int streak;
   final VoidCallback? onDismiss;
-  final bool freezeAwarded; // Whether a freeze was awarded at this milestone
+  final bool freezeAwarded;
 
   const StreakMilestoneModal({
     super.key,
@@ -41,13 +43,11 @@ class StreakMilestoneModal extends ConsumerStatefulWidget {
   ConsumerState<StreakMilestoneModal> createState() =>
       _StreakMilestoneModalState();
 
-  /// Show the streak milestone modal
   static Future<void> show(
     BuildContext context, {
     required int streak,
     bool freezeAwarded = false,
   }) {
-    // Check if freeze should be awarded
     final shouldAwardFreeze =
         freezeAwarded || GamificationEvent.isFreezeAwardMilestone(streak);
 
@@ -64,50 +64,33 @@ class StreakMilestoneModal extends ConsumerStatefulWidget {
   }
 }
 
-class _StreakMilestoneModalState extends ConsumerState<StreakMilestoneModal>
-    with TickerProviderStateMixin {
-  late ConfettiController _confettiController;
-  late AnimationController _flameController;
-  late Animation<double> _flameAnimation;
+/// Arabic day noun form based on number agreement rules (تمييز العدد).
+String _arabicDayWord(int count) {
+  if (count >= 3 && count <= 10) return 'أيام';
+  if (count % 100 == 0) return 'يوم';
+  final lastTwo = count % 100;
+  if (lastTwo >= 3 && lastTwo <= 10) return 'أيام';
+  if (lastTwo >= 11) return 'يومًا';
+  return 'يوم';
+}
 
+/// Arabic consecutive adjective agreeing with day form.
+String _arabicConsecutiveWord(int count) {
+  if (count >= 3 && count <= 10) return 'متتالية';
+  if (count % 100 == 0) return 'متتالٍ';
+  final lastTwo = count % 100;
+  if (lastTwo >= 3 && lastTwo <= 10) return 'متتالية';
+  if (lastTwo >= 11) return 'متتاليًا';
+  return 'متتالٍ';
+}
+
+class _StreakMilestoneModalState extends ConsumerState<StreakMilestoneModal> {
   @override
   void initState() {
     super.initState();
-
-    // Confetti controller
-    _confettiController = ConfettiController(
-      duration: const Duration(seconds: 4),
-    );
-
-    // Flame animation
-    _flameController = AnimationController(
-      vsync: this,
-      duration: AppAnimations.celebration,
-    )..repeat(reverse: true);
-
-    _flameAnimation = Tween<double>(begin: 0.9, end: 1.1).animate(
-      CurvedAnimation(parent: _flameController, curve: Curves.easeInOut),
-    );
-
-    // Trigger haptic feedback
-    HapticFeedback.heavyImpact();
-
-    // Start confetti after a short delay
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        _confettiController.play();
-      }
-    });
+    HapticFeedback.mediumImpact();
   }
 
-  @override
-  void dispose() {
-    _confettiController.dispose();
-    _flameController.dispose();
-    super.dispose();
-  }
-
-  /// Get milestone tier for customization
   MilestoneTier _getMilestoneTier() {
     if (widget.streak >= 365) return MilestoneTier.legendary;
     if (widget.streak >= 100) return MilestoneTier.epic;
@@ -116,493 +99,368 @@ class _StreakMilestoneModalState extends ConsumerState<StreakMilestoneModal>
     return MilestoneTier.starter;
   }
 
-  /// Get gradient for tier from theme
   LinearGradient _getTierGradient(ThemeColors colors) {
-    switch (_getMilestoneTier()) {
-      case MilestoneTier.legendary:
-        return colors.tierLegendaryGradient;
-      case MilestoneTier.epic:
-        return colors.tierEpicGradient;
-      case MilestoneTier.rare:
-        return colors.tierRareGradient;
-      case MilestoneTier.common:
-        return colors.streakFire;
-      case MilestoneTier.starter:
-        return colors.tierStarterGradient;
-    }
+    return switch (_getMilestoneTier()) {
+      MilestoneTier.legendary => colors.tierLegendaryGradient,
+      MilestoneTier.epic => colors.tierEpicGradient,
+      MilestoneTier.rare => colors.tierRareGradient,
+      MilestoneTier.common => colors.streakFire,
+      MilestoneTier.starter => colors.tierStarterGradient,
+    };
   }
 
-  /// Get confetti colors from tier gradient
-  List<Color> _getConfettiColors(ThemeColors colors) {
+  Color _getTierAccentColor(ThemeColors colors) {
     final gradient = _getTierGradient(colors);
-    return [...gradient.colors, colors.onPrimary];
+    return gradient.colors.isNotEmpty ? gradient.colors.first : colors.primary;
   }
 
-  /// Get particle count for tier
-  int _getParticleCount() {
-    switch (_getMilestoneTier()) {
-      case MilestoneTier.legendary:
-        return 50;
-      case MilestoneTier.epic:
-        return 40;
-      case MilestoneTier.rare:
-        return 30;
-      case MilestoneTier.common:
-        return 25;
-      case MilestoneTier.starter:
-        return 15;
-    }
-  }
-
-  /// Get milestone message based on streak
   String _getMilestoneMessage() {
-    if (widget.streak >= 500) {
-      return 'إنجاز أسطوري! 500 يوم!';
-    } else if (widget.streak >= 365) {
-      return 'سنة كاملة من التواصل المستمر!';
-    } else if (widget.streak >= 200) {
-      return '200 يوم! مثابرة استثنائية!';
-    } else if (widget.streak >= 100) {
-      return '100 يوم متتالي! إنجاز رائع!';
-    } else if (widget.streak >= 50) {
-      return '50 يوم من الالتزام!';
-    } else if (widget.streak >= 30) {
-      return 'شهر كامل من التواصل!';
-    } else if (widget.streak >= 21) {
-      return '21 يوم! عادة راسخة!';
-    } else if (widget.streak >= 14) {
-      return 'أسبوعان متتاليان!';
-    } else if (widget.streak >= 10) {
-      return '10 أيام متتالية!';
-    } else if (widget.streak >= 7) {
-      return 'أسبوع متتالي رائع!';
-    } else if (widget.streak >= 3) {
-      return 'ثلاثة أيام متتالية!';
-    } else {
-      return 'استمر في التواصل!';
-    }
+    if (widget.streak >= 500) return 'إنجاز أسطوري! 500 يوم!';
+    if (widget.streak >= 365) return 'سنة كاملة من التواصل المستمر!';
+    if (widget.streak >= 200) return '200 يوم! مثابرة استثنائية!';
+    if (widget.streak >= 100) return '100 يوم متتالٍ! إنجاز رائع!';
+    if (widget.streak >= 50) return '50 يومًا من الالتزام!';
+    if (widget.streak >= 30) return 'شهر كامل من التواصل!';
+    if (widget.streak >= 21) return '21 يومًا! عادة راسخة!';
+    if (widget.streak >= 14) return 'أسبوعان متتاليان!';
+    if (widget.streak >= 10) return '10 أيام متتالية!';
+    if (widget.streak >= 7) return 'أسبوع متتالي رائع!';
+    if (widget.streak >= 3) return 'ثلاثة أيام متتالية!';
+    return 'استمر في التواصل!';
   }
 
-  /// Get encouragement message
   String _getEncouragementMessage() {
-    if (widget.streak >= 365) {
-      return 'أنت قدوة حقيقية في صلة الرحم';
-    } else if (widget.streak >= 100) {
-      return 'التزامك ملهم للجميع!';
-    } else if (widget.streak >= 30) {
-      return 'ما شاء الله! استمر على هذا النهج';
-    } else if (widget.streak >= 7) {
-      return 'بداية ممتازة! واصل التميز';
-    } else {
-      return 'كل يوم يقربك من هدفك';
-    }
+    if (widget.streak >= 365) return 'أنت قدوة حقيقية في صلة الرحم';
+    if (widget.streak >= 100) return 'التزامك ملهم للجميع!';
+    if (widget.streak >= 30) return 'ما شاء الله! استمر على هذا النهج';
+    if (widget.streak >= 7) return 'بداية ممتازة! واصل التميز';
+    return 'كل يوم يقربك من هدفك';
   }
 
-  /// Get next milestone
   int _getNextMilestone() {
     const milestones = [3, 7, 10, 14, 21, 30, 50, 100, 200, 365, 500];
     for (final m in milestones) {
       if (m > widget.streak) return m;
     }
-    return widget.streak + 100; // Beyond 500, show +100 increments
+    return widget.streak + 100;
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = ref.watch(themeColorsProvider);
-    final tierGradient = _getTierGradient(colors);
-    final confettiColors = _getConfettiColors(colors);
-    final particleCount = _getParticleCount();
+    final tierAccent = _getTierAccentColor(colors);
     final nextMilestone = _getNextMilestone();
-    final primaryGradientColor = tierGradient.colors.isNotEmpty
-        ? tierGradient.colors.first
-        : colors.primary;
 
     return Semantics(
-      label: 'تهانينا! ${widget.streak} يوم متتالي من التواصل',
+      label: 'تهانينا! ${widget.streak} ${_arabicDayWord(widget.streak)} ${_arabicConsecutiveWord(widget.streak)} من التواصل',
       liveRegion: true,
       child: Dialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Confetti with tier-specific colors
-            Align(
-              alignment: Alignment.topCenter,
-              child: ConfettiWidget(
-                confettiController: _confettiController,
-                blastDirection: 3.14 / 2, // Down
-                emissionFrequency: 0.03,
-                numberOfParticles: particleCount,
-                gravity: 0.2,
-                colors: confettiColors,
-              ),
-            ),
-
-            // Modal content with tier-specific gradient
-            Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                gradient: tierGradient,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: primaryGradientColor.withValues(alpha: 0.6),
-                    blurRadius: 40,
-                    spreadRadius: 10,
+        insetPadding: const EdgeInsets.all(AppSpacing.md),
+        child: GlassCard(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          borderRadius: AppSpacing.radiusLg,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Fire emoji
+              const Text(
+                '🔥',
+                style: TextStyle(fontSize: 56),
+              ).animate().fadeIn(duration: 300.ms).scale(
+                    begin: const Offset(0.8, 0.8),
+                    end: const Offset(1.0, 1.0),
+                    duration: 400.ms,
+                    curve: Curves.easeOut,
                   ),
-                ],
-              ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Fire emoji with animation
-                AnimatedBuilder(
-                  animation: _flameAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _flameAnimation.value,
-                      child: const Text(
-                        '🔥',
-                        style: TextStyle(fontSize: 80),
-                      ),
-                    );
-                  },
-                )
-                    .animate(
-                      onPlay: (controller) => controller.repeat(),
-                    )
-                    .shimmer(
-                      duration: 2000.ms,
-                      color: Colors.white.withValues(alpha: 0.5),
-                    ),
 
-                const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
 
-                // "سلسلة مميزة!" text
-                Text(
-                  'سلسلة مميزة!',
-                  style: AppTypography.dramatic.copyWith(
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        blurRadius: 20,
-                        color: Colors.black.withValues(alpha: 0.5),
-                      ),
-                    ],
+              // Title
+              Text(
+                'سلسلة مميزة!',
+                style: AppTypography.dramatic.copyWith(
+                  color: colors.textPrimary,
+                ),
+              ).animate().fadeIn(delay: 100.ms, duration: 300.ms).slideY(
+                    begin: 0.05,
+                    end: 0,
+                    delay: 100.ms,
+                    duration: 300.ms,
                   ),
-                ).animate().fadeIn(duration: 300.ms).slideY(
-                      begin: -0.2,
-                      end: 0,
-                      duration: 500.ms,
-                      curve: Curves.easeOut,
-                    ),
 
-                const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.lg),
 
-                // Streak number
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
+              // Streak number pill
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: tierAccent.withValues(alpha: 0.15),
+                  border: Border.all(
+                    color: tierAccent.withValues(alpha: 0.3),
+                    width: 2,
                   ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.white,
-                      width: 3,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.white.withValues(alpha: 0.4),
-                        blurRadius: 20,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '${widget.streak}',
-                        style: AppTypography.numberLarge.copyWith(
-                          color: Colors.white,
-                          fontSize: 64,
-                          shadows: [
-                            Shadow(
-                              blurRadius: 20,
-                              color: Colors.black.withValues(alpha: 0.3),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'يوم',
-                            style: AppTypography.titleLarge.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            'متتالي',
-                            style: AppTypography.bodyMedium.copyWith(
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                )
-                    .animate()
-                    .fadeIn(delay: 200.ms, duration: 400.ms)
-                    .scale(
-                      begin: const Offset(0.5, 0.5),
-                      end: const Offset(1.0, 1.0),
-                      delay: 200.ms,
-                      duration: 600.ms,
-                      curve: Curves.elasticOut,
-                    ),
-
-                const SizedBox(height: 24),
-
-                // Milestone message
-                Text(
-                  _getMilestoneMessage(),
-                  textAlign: TextAlign.center,
-                  style: AppTypography.titleLarge.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    shadows: [
-                      Shadow(
-                        blurRadius: 10,
-                        color: Colors.black.withValues(alpha: 0.5),
-                      ),
-                    ],
-                  ),
-                ).animate().fadeIn(delay: 400.ms, duration: 400.ms),
-
-                const SizedBox(height: 12),
-
-                // Encouragement message
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    _getEncouragementMessage(),
-                    textAlign: TextAlign.center,
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: Colors.white,
-                      height: 1.5,
-                    ),
-                  ),
-                ).animate().fadeIn(delay: 600.ms, duration: 400.ms),
-
-                // Freeze earned banner (if applicable)
-                if (widget.freezeAwarded) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        width: 2,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${widget.streak}',
+                      style: AppTypography.numberLarge.copyWith(
+                        color: colors.textPrimary,
+                        fontSize: 48,
                       ),
                     ),
-                    child: Row(
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('❄️', style: TextStyle(fontSize: 24)),
-                        const SizedBox(width: 12),
-                        Flexible(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'حصلت على حماية شعلة!',
-                                style: AppTypography.labelMedium.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                'تحمي شعلتك عند نسيان التفاعل',
-                                style: AppTypography.labelSmall.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                ),
-                              ),
-                            ],
+                        Text(
+                          _arabicDayWord(widget.streak),
+                          style: AppTypography.titleLarge.copyWith(
+                            color: colors.textPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          _arabicConsecutiveWord(widget.streak),
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: colors.textSecondary,
                           ),
                         ),
                       ],
                     ),
-                  )
-                      .animate()
-                      .fadeIn(delay: 700.ms, duration: 400.ms)
-                      .slideY(begin: 0.1, end: 0, delay: 700.ms, duration: 400.ms)
-                      .shimmer(
-                        delay: 1200.ms,
-                        duration: 1500.ms,
-                        color: Colors.white.withValues(alpha: 0.3),
-                      ),
-                ],
+                  ],
+                ),
+              ).animate().fadeIn(delay: 200.ms, duration: 300.ms).scale(
+                    begin: const Offset(0.9, 0.9),
+                    end: const Offset(1.0, 1.0),
+                    delay: 200.ms,
+                    duration: 400.ms,
+                    curve: Curves.easeOut,
+                  ),
 
-                // Progress to next milestone
-                const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.lg),
+
+              // Milestone message
+              Text(
+                _getMilestoneMessage(),
+                textAlign: TextAlign.center,
+                style: AppTypography.titleLarge.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ).animate().fadeIn(delay: 300.ms, duration: 300.ms),
+
+              const SizedBox(height: AppSpacing.sm),
+
+              // Encouragement
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  _getEncouragementMessage(),
+                  textAlign: TextAlign.center,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: colors.textSecondary,
+                    height: 1.5,
+                  ),
+                ),
+              ).animate().fadeIn(delay: 400.ms, duration: 300.ms),
+
+              // Freeze earned banner
+              if (widget.freezeAwarded) ...[
+                const SizedBox(height: AppSpacing.md),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
-                    vertical: 10,
+                    vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
+                    color: colors.statusInfo.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: colors.statusInfo.withValues(alpha: 0.3),
+                      width: 1.5,
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'الهدف التالي:',
-                        style: AppTypography.labelSmall.copyWith(
-                          color: Colors.white.withValues(alpha: 0.9),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '$nextMilestone يوم',
-                        style: AppTypography.labelMedium.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '(${nextMilestone - widget.streak} متبقي)',
-                        style: AppTypography.labelSmall.copyWith(
-                          color: Colors.white.withValues(alpha: 0.8),
+                      const Text('❄️', style: TextStyle(fontSize: 20)),
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'حصلت على حماية شعلة!',
+                              style: AppTypography.labelMedium.copyWith(
+                                color: colors.textPrimary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'تحمي شعلتك عند نسيان التفاعل',
+                              style: AppTypography.labelSmall.copyWith(
+                                color: colors.textSecondary,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                ).animate().fadeIn(delay: 750.ms, duration: 400.ms),
+                ).animate().fadeIn(delay: 500.ms, duration: 300.ms),
+              ],
 
-                const SizedBox(height: 24),
-
-                // Action buttons
-                Row(
+              // Next milestone
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Share button
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        final isMax = ref.read(isMaxProvider);
-                        ShareBottomSheet.show(
-                          context,
-                          cardBuilder: (format, {String? aiCopy}) => StreakShareCard(
-                            format: format,
-                            streak: widget.streak,
-                            copyText: aiCopy,
-                          ),
-                          shareText: ShareableCardData.streak(
-                            streak: widget.streak,
-                          ).shareText,
-                          aiCopyFuture: isMax
-                              ? DeepSeekAIService().generateShareCopy(
-                                  cardType: 'streak',
-                                  context: {'streak': widget.streak},
-                                )
-                              : null,
-                        );
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: const BorderSide(color: Colors.white, width: 2),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 14,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                      icon: const Icon(Icons.share, size: 18),
-                      label: Text(
-                        'شارك',
-                        style: AppTypography.buttonLarge.copyWith(
-                          color: Colors.white,
-                        ),
+                    Text(
+                      'الهدف التالي:',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: colors.textSecondary,
                       ),
                     ),
-
-                    const SizedBox(width: 12),
-
-                    // Dismiss button
-                    ElevatedButton(
-                      onPressed: () {
-                        widget.onDismiss?.call();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colors.onPrimary,
-                        foregroundColor: primaryGradientColor,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        elevation: 8,
+                    const SizedBox(width: 8),
+                    Text(
+                      '$nextMilestone ${_arabicDayWord(nextMilestone)}',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.bold,
                       ),
-                      child: Text(
-                        'رائع!',
-                        style: AppTypography.buttonLarge.copyWith(
-                          color: primaryGradientColor,
-                        ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '(${nextMilestone - widget.streak} ${_arabicDayWord(nextMilestone - widget.streak)} متبقي)',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: colors.textSecondary,
                       ),
                     ),
                   ],
-                )
-                    .animate()
-                    .fadeIn(delay: 800.ms, duration: 400.ms)
-                    .slideY(
-                      begin: 0.2,
-                      end: 0,
-                      delay: 800.ms,
-                      duration: 400.ms,
+                ),
+              ).animate().fadeIn(
+                    delay: widget.freezeAwarded ? 600.ms : 500.ms,
+                    duration: 300.ms,
+                  ),
+
+              const SizedBox(height: AppSpacing.lg),
+
+              // Action buttons
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      final isMax = ref.read(isMaxProvider);
+                      ShareBottomSheet.show(
+                        context,
+                        cardBuilder: (format, {String? aiCopy}) =>
+                            StreakShareCard(
+                          format: format,
+                          streak: widget.streak,
+                          gradient: _getTierGradient(colors),
+                          copyText: aiCopy,
+                        ),
+                        shareText: ShareableCardData.streak(
+                          streak: widget.streak,
+                        ).shareText,
+                        aiCopyFuture: isMax
+                            ? DeepSeekAIService().generateShareCopy(
+                                cardType: 'streak',
+                                context: {'streak': widget.streak},
+                              )
+                            : null,
+                      );
+                    },
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: Size.zero,
+                      foregroundColor: colors.dialogButtonPrimary,
+                      side: BorderSide(
+                        color: colors.dialogButtonPrimary,
+                        width: 1.5,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-              ],
+                    icon: const Icon(Icons.share, size: 18),
+                    label: Text(
+                      'شارك',
+                      style: AppTypography.buttonLarge.copyWith(
+                        color: colors.dialogButtonPrimary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: () => widget.onDismiss?.call(),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: Size.zero,
+                      backgroundColor: colors.primary,
+                      foregroundColor: colors.onPrimary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 28,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      'رائع!',
+                      style: AppTypography.buttonLarge.copyWith(
+                        color: colors.onPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ).animate().fadeIn(
+                    delay: widget.freezeAwarded ? 700.ms : 600.ms,
+                    duration: 300.ms,
+                  ),
+            ],
+          ),
+        )
+            .animate()
+            .fadeIn(duration: 300.ms)
+            .scale(
+              begin: const Offset(0.95, 0.95),
+              end: const Offset(1.0, 1.0),
+              duration: 400.ms,
+              curve: Curves.easeOut,
             ),
-          )
-              .animate()
-              .fadeIn(duration: 300.ms)
-              .scale(
-                begin: const Offset(0.8, 0.8),
-                end: const Offset(1.0, 1.0),
-                duration: 500.ms,
-                curve: Curves.easeOut,
-              ),
-        ],
-      ),
       ),
     );
   }
