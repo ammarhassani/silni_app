@@ -84,7 +84,7 @@ extension SubscriptionTierExtension on SubscriptionTier {
   ///
   /// Do NOT use this getter directly for limit enforcement.
   int get reminderLimit => switch (this) {
-    SubscriptionTier.free => 3,
+    SubscriptionTier.free => 1,
     SubscriptionTier.max => -1, // Unlimited
   };
 

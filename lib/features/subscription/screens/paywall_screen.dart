@@ -164,7 +164,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'جرب مجاناً لمدة 7 أيام',
+                  'جرّب MAX مجاناً — ٠ ريال لمدة ٧ أيام',
                   style: AppTypography.titleMedium.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -594,7 +594,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                 ),
               )
             : Text(
-                'ابدأ التجربة المجانية',
+                'جرّب مجاناً بـ ٠ ريال',
                 style: AppTypography.titleMedium.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
