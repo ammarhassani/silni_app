@@ -4,6 +4,7 @@ export 'daily_priority_card.dart';
 export 'family_tree_gap_card.dart';
 export 'occasion_card.dart';
 export 'post_activity_card.dart';
+export 'premium_upgrade_banner.dart';
 export 'proactive_insight_card.dart';
 export 'due_reminders_card.dart';
 export 'family_circles_widget.dart';
