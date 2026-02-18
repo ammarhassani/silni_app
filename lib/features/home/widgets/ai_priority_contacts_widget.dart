@@ -1,12 +1,17 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../core/constants/app_animations.dart';
+import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/models/subscription_tier.dart';
 import '../../../core/providers/subscription_provider.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_themes.dart';
@@ -15,6 +20,7 @@ import '../../../shared/models/relative_model.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/relative_avatar.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
+import '../../subscription/screens/paywall_screen.dart';
 import '../providers/home_providers.dart';
 
 /// AI-powered priority contacts widget (MAX subscription only)
@@ -37,9 +43,9 @@ class AIPriorityContactsWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isMax = ref.watch(isMaxProvider);
 
-    // Only show for MAX subscribers
+    // Show blurred teaser for non-MAX users
     if (!isMax) {
-      return const SizedBox.shrink();
+      return const _AIPriorityContactsBlurredTeaser();
     }
 
     return _AIPriorityContactsContent(userId: userId);
@@ -319,5 +325,212 @@ class _PriorityContactTile extends StatelessWidget {
     }
     final months = (days / 30).floor();
     return months == 1 ? 'منذ شهر' : 'منذ $months أشهر';
+  }
+}
+
+/// Blurred teaser card shown to non-MAX users to entice subscription
+class _AIPriorityContactsBlurredTeaser extends ConsumerWidget {
+  const _AIPriorityContactsBlurredTeaser();
+
+  static const _fakeContacts = [
+    ('أحمد محمد', 'منذ ١٢ يوم'),
+    ('فاطمة علي', 'منذ ٣ أسابيع'),
+    ('خالد عبدالله', 'لم يتم التواصل بعد'),
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => PaywallScreen(
+              featureToUnlock: FeatureIds.relationshipAnalysis,
+              contextHeadline: PaywallContext.headlineForFeature(
+                FeatureIds.relationshipAnalysis,
+              ),
+            ),
+          ),
+        );
+      },
+      child: GlassCard(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header (matches real card)
+            Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        themeColors.primary,
+                        themeColors.primaryLight,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    LucideIcons.users,
+                    color: themeColors.onPrimary,
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'من يحتاجك اليوم',
+                    style: AppTypography.titleSmall.copyWith(
+                      color: themeColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        themeColors.primary,
+                        themeColors.primaryLight,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        LucideIcons.sparkles,
+                        size: 12,
+                        color: themeColors.onPrimary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'AI',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: themeColors.onPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+
+            // Blurred fake contacts with overlay
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Stack(
+                children: [
+                  // Fake contact rows behind blur
+                  Column(
+                    children: _fakeContacts.map((contact) {
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: themeColors.glassBackground,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: themeColors.glassBorder,
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: themeColors.textSecondary
+                                    .withValues(alpha: 0.2),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    contact.$1,
+                                    style: AppTypography.bodyMedium.copyWith(
+                                      color: themeColors.textPrimary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    contact.$2,
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: themeColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+
+                  // Blur filter
+                  Positioned.fill(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                      child: Container(
+                        color: themeColors.glassBackground
+                            .withValues(alpha: 0.1),
+                      ),
+                    ),
+                  ),
+
+                  // Lock overlay
+                  Positioned.fill(
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            LucideIcons.lock,
+                            color: AppColors.premiumGold,
+                            size: 24,
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            'MAX يخبرك من يجب أن تتواصل معه أولاً',
+                            style: AppTypography.labelMedium.copyWith(
+                              color: AppColors.premiumGold,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    )
+        .animate()
+        .fadeIn(duration: AppAnimations.normal)
+        .slideY(begin: 0.1, end: 0);
   }
 }
