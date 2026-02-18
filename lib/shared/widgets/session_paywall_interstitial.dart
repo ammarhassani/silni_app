@@ -1,0 +1,270 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_spacing.dart';
+import '../../core/constants/app_typography.dart';
+import '../../features/subscription/screens/paywall_screen.dart';
+
+/// Session-based paywall interstitial shown every 3rd app open (or every 5th after 5 skips).
+///
+/// Displays a modal bottom sheet with MAX subscription highlights and a CTA
+/// to open the full paywall screen.
+class SessionPaywallInterstitial {
+  SessionPaywallInterstitial._();
+
+  static const _openCountKey = 'silni_app_open_count';
+  static const _skipCountKey = 'silni_paywall_skip_count';
+
+  /// Call on each app open. Shows the interstitial if the session threshold is met.
+  static Future<void> maybeShow(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final openCount = (prefs.getInt(_openCountKey) ?? 0) + 1;
+    await prefs.setInt(_openCountKey, openCount);
+
+    final skipCount = prefs.getInt(_skipCountKey) ?? 0;
+
+    // After 5 skips, reduce frequency to every 5th open
+    final interval = skipCount >= 5 ? 5 : 3;
+
+    if (openCount % interval != 0) return;
+
+    if (!context.mounted) return;
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _PaywallSheet(
+        onSkip: () async {
+          final updatedSkipCount = (prefs.getInt(_skipCountKey) ?? 0) + 1;
+          await prefs.setInt(_skipCountKey, updatedSkipCount);
+        },
+      ),
+    );
+  }
+}
+
+class _PaywallSheet extends StatelessWidget {
+  final Future<void> Function() onSkip;
+
+  const _PaywallSheet({required this.onSkip});
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF1A1A2E),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: AppSpacing.sm),
+
+            // Drag handle
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.lg),
+
+            // Gold star icon in circle
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [AppColors.premiumGold, AppColors.premiumGoldDark],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.premiumGold.withValues(alpha: 0.4),
+                    blurRadius: 16,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.star_rounded,
+                color: Colors.white,
+                size: 32,
+              ),
+            ).animate().scale(
+                  begin: const Offset(0.5, 0.5),
+                  end: const Offset(1.0, 1.0),
+                  duration: 400.ms,
+                  curve: Curves.elasticOut,
+                ),
+
+            const SizedBox(height: AppSpacing.md),
+
+            // Headline in gold
+            Text(
+              'جرّب صِلني MAX',
+              style: AppTypography.headlineSmall.copyWith(
+                color: AppColors.premiumGold,
+                fontWeight: FontWeight.bold,
+              ),
+            ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.2),
+
+            const SizedBox(height: AppSpacing.xs),
+
+            // Subtitle
+            Text(
+              'مجاناً بـ ٠ ريال لمدة ٧ أيام',
+              style: AppTypography.bodyMedium.copyWith(
+                color: Colors.white70,
+              ),
+            ).animate().fadeIn(delay: 200.ms),
+
+            const SizedBox(height: AppSpacing.lg),
+
+            // Feature bullets
+            _FeatureRow(
+              icon: LucideIcons.brain,
+              text: 'ذكاء اصطناعي يحلل علاقاتك',
+              delay: 250.ms,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _FeatureRow(
+              icon: LucideIcons.bell,
+              text: 'تذكيرات ذكية بلا حدود',
+              delay: 350.ms,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _FeatureRow(
+              icon: LucideIcons.barChart2,
+              text: 'تحليلات وتقارير متقدمة',
+              delay: 450.ms,
+            ),
+
+            const SizedBox(height: AppSpacing.lg),
+
+            // Gold gradient CTA button
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.premiumGold, AppColors.premiumGoldDark],
+                  ),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.premiumGold.withValues(alpha: 0.4),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.of(context).pop();
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const PaywallScreen(),
+                        ),
+                      );
+                    },
+                    child: Center(
+                      child: Text(
+                        'ابدأ التجربة',
+                        style: AppTypography.titleMedium.copyWith(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.2),
+
+            const SizedBox(height: AppSpacing.sm),
+
+            // Skip button
+            TextButton(
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                onSkip();
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                'تخطي',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: Colors.white38,
+                ),
+              ),
+            ),
+
+            SizedBox(height: bottomPadding > 0 ? bottomPadding : AppSpacing.md),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FeatureRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Duration delay;
+
+  const _FeatureRow({
+    required this.icon,
+    required this.text,
+    required this.delay,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.premiumGold.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          ),
+          child: Icon(
+            icon,
+            color: AppColors.premiumGold,
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Text(
+            text,
+            style: AppTypography.bodyLarge.copyWith(
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    ).animate().fadeIn(delay: delay).slideX(begin: 0.1);
+  }
+}

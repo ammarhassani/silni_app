@@ -27,6 +27,8 @@ import '../../../shared/widgets/message_widget.dart';
 import '../../../shared/utils/relationship_label_helper.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
 import '../../../shared/widgets/persistent_bottom_nav.dart';
+import '../../../core/providers/subscription_provider.dart';
+import '../../../shared/widgets/session_paywall_interstitial.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -59,6 +61,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     _loadDailyHadith();
     _checkPremiumOnboarding();
+    _checkSessionPaywall();
   }
 
   /// Check if premium onboarding should be shown for returning MAX users
@@ -71,6 +74,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       final shouldShow = ref.read(shouldShowOnboardingProvider);
       if (shouldShow && mounted) {
         await PremiumOnboardingScreen.show(context);
+      }
+    });
+  }
+
+  /// Show session-based paywall interstitial for free users every few app opens
+  void _checkSessionPaywall() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Future.delayed(const Duration(seconds: 1));
+      if (!mounted) return;
+      final isMax = ref.read(isMaxProvider);
+      if (!isMax) {
+        SessionPaywallInterstitial.maybeShow(context);
       }
     });
   }
