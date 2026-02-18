@@ -848,6 +848,7 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen>
         MaterialPageRoute(
           builder: (_) => PaywallScreen(
             featureToUnlock: featureId,
+            contextHeadline: PaywallContext.headlineForFeature(featureId),
           ),
         ),
       );

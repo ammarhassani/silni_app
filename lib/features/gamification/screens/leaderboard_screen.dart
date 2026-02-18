@@ -610,8 +610,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const PaywallScreen(
+                    builder: (_) => PaywallScreen(
                       featureToUnlock: FeatureIds.leaderboard,
+                      contextHeadline: PaywallContext.headlineForFeature(FeatureIds.leaderboard),
                     ),
                   ),
                 );

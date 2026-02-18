@@ -107,7 +107,10 @@ class _OccasionMessagesScreenState
     final hasAccess =
         ref.watch(featureAccessProvider(FeatureIds.occasionMessages));
     if (!hasAccess) {
-      return PaywallScreen(featureToUnlock: FeatureIds.occasionMessages);
+      return PaywallScreen(
+        featureToUnlock: FeatureIds.occasionMessages,
+        contextHeadline: PaywallContext.headlineForFeature(FeatureIds.occasionMessages),
+      );
     }
 
     // Family graph for perspective-aware labels

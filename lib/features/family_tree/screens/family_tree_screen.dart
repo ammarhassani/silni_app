@@ -1688,8 +1688,9 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const PaywallScreen(
+                    builder: (_) => PaywallScreen(
                       featureToUnlock: FeatureIds.familyTree,
+                      contextHeadline: PaywallContext.headlineForFeature(FeatureIds.familyTree),
                     ),
                   ),
                 );

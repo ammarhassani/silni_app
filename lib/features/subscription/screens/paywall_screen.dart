@@ -32,15 +32,40 @@ class _PriceInfo {
   });
 }
 
+/// Contextual headlines for paywall based on trigger source
+class PaywallContext {
+  PaywallContext._();
+
+  static String? headlineForFeature(String? featureId) {
+    return switch (featureId) {
+      FeatureIds.aiChat => 'احصل على مساعد ذكي لعلاقاتك',
+      FeatureIds.unlimitedReminders => 'لا تنسَ أحداً — تذكيرات بلا حدود',
+      FeatureIds.advancedAnalytics => 'اعرف من تواصلت معه ومن نسيته',
+      FeatureIds.leaderboard => 'تنافس مع عائلتك في صلة الرحم',
+      FeatureIds.familyTree => 'شاهد شجرة عائلتك التفاعلية',
+      FeatureIds.messageComposer => 'رسائل ذكية لكل مناسبة',
+      FeatureIds.relationshipAnalysis => 'تحليل شامل لعلاقاتك العائلية',
+      FeatureIds.weeklyReports => 'تقارير أسبوعية عن تواصلك',
+      FeatureIds.occasionMessages => 'رسائل مناسبات بالذكاء الاصطناعي',
+      FeatureIds.communicationScripts => 'نصوص جاهزة للتواصل مع أقاربك',
+      _ => null,
+    };
+  }
+}
+
 /// Paywall screen for subscription purchase
 /// Follows glassmorphism design pattern
 class PaywallScreen extends ConsumerStatefulWidget {
   /// Feature that triggered the paywall (for analytics)
   final String? featureToUnlock;
 
+  /// Contextual headline shown in the app bar based on trigger source
+  final String? contextHeadline;
+
   const PaywallScreen({
     super.key,
     this.featureToUnlock,
+    this.contextHeadline,
   });
 
   @override
@@ -127,7 +152,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
           ),
           const Spacer(),
           Text(
-            'الاشتراك المميز',
+            widget.contextHeadline ?? 'الاشتراك المميز',
             style: AppTypography.headlineMedium.copyWith(
               color: themeColors.textOnGradient,
               fontWeight: FontWeight.bold,

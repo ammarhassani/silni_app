@@ -288,8 +288,9 @@ class _ThemeCarouselState extends ConsumerState<ThemeCarousel> {
       HapticFeedback.lightImpact();
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => const PaywallScreen(
+          builder: (_) => PaywallScreen(
             featureToUnlock: FeatureIds.customThemes,
+            contextHeadline: PaywallContext.headlineForFeature(FeatureIds.customThemes),
           ),
         ),
       );
