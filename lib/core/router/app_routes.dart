@@ -26,6 +26,24 @@ class AppRoutes {
     return publicRoutes.any((route) => path == route || path.startsWith('$route/'));
   }
 
+  /// Routes that require MAX subscription
+  static const Set<String> premiumRoutes = {
+    aiChat,
+    aiMessages,
+    aiAnalysis,
+    aiScripts,
+    aiReport,
+    aiMemories,
+    statistics,
+    detailedStats,
+    leaderboard,
+  };
+
+  /// Check if a route requires premium subscription
+  static bool isPremiumRoute(String path) {
+    return premiumRoutes.any((route) => path == route || path.startsWith('$route/'));
+  }
+
   // Main routes
   static const String home = '/home';
   static const String relatives = '/relatives';

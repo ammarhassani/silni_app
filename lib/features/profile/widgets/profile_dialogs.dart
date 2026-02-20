@@ -12,6 +12,9 @@ import '../../../shared/providers/data_export_provider.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/data_export_dialog.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../core/providers/subscription_provider.dart';
+import '../../../core/models/subscription_tier.dart';
+import '../../../features/subscription/screens/paywall_screen.dart';
 
 /// Show image source selection dialog
 void showImageSourceDialog({
@@ -162,6 +165,22 @@ Future<void> showExportDataDialogFlow({
       'يرجى تسجيل الدخول أولاً',
       isError: true,
     );
+    return;
+  }
+
+  // Check subscription access for data export
+  final hasAccess = ref.read(featureAccessProvider(FeatureIds.dataExport));
+  if (!hasAccess) {
+    if (context.mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const PaywallScreen(
+            featureToUnlock: FeatureIds.dataExport,
+            contextHeadline: 'صدّر بياناتك مع صِلني MAX',
+          ),
+        ),
+      );
+    }
     return;
   }
 

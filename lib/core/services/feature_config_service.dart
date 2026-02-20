@@ -245,8 +245,8 @@ class FeatureConfigService {
     // First check if feature exists and is active
     final feature = await getFeature(featureId);
     if (feature == null) {
-      // Feature not in config - fallback to allowing access (backwards compatibility)
-      return true;
+      // Feature not in config — use hardcoded fallback which properly gates MAX features
+      return _hardcodedFeatureAccess(featureId, userTier);
     }
 
     if (!feature.isActive) {
@@ -266,7 +266,7 @@ class FeatureConfigService {
   /// Get reminder limit for a tier
   Future<int> getReminderLimit(String tierKey) async {
     final tier = await getTier(tierKey);
-    return tier?.reminderLimit ?? 3; // Default to 3 for free
+    return tier?.reminderLimit ?? 1; // Default to 1 for free
   }
 
   /// Get all features for a specific tier

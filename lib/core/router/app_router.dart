@@ -7,6 +7,8 @@ import '../config/supabase_config.dart';
 import '../providers/connectivity_provider.dart';
 import '../providers/stream_recovery_provider.dart';
 import '../providers/realtime_provider.dart';
+import '../providers/subscription_provider.dart';
+import '../models/subscription_tier.dart';
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
@@ -104,6 +106,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             : state.matchedLocation;
         final redirectPath = Uri.encodeComponent(fullPath);
         return '${AppRoutes.login}?redirect=$redirectPath';
+      }
+
+      // Case 4: Free user on premium route - redirect to home
+      if (isAuthenticated && AppRoutes.isPremiumRoute(currentPath)) {
+        final tier = ref.read(subscriptionTierProvider);
+        if (tier != SubscriptionTier.max) {
+          return AppRoutes.home;
+        }
       }
 
       return null; // No redirect needed

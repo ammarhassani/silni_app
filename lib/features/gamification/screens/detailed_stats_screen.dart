@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../providers/stats_provider.dart';
 import '../widgets/stats/widgets.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
+import '../../../core/providers/subscription_provider.dart';
+import '../../../core/models/subscription_tier.dart';
+import '../../../features/subscription/screens/paywall_screen.dart';
 
 /// Detailed statistics screen showing comprehensive gamification data
 class DetailedStatsScreen extends ConsumerWidget {
@@ -15,7 +19,60 @@ class DetailedStatsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeColors = ref.watch(themeColorsProvider);
+    final hasStatsAccess = ref.watch(featureAccessProvider(FeatureIds.advancedAnalytics));
     final statsAsync = ref.watch(detailedStatsProvider);
+
+    if (!hasStatsAccess) {
+      return Scaffold(
+        body: Semantics(
+          label: 'الإحصائيات التفصيلية',
+          child: Stack(
+            children: [
+              const GradientBackground(animated: true, child: SizedBox.expand()),
+              SafeArea(
+                child: Column(
+                  children: [
+                    // Header
+                    _buildHeader(context, themeColors),
+                    // Locked content
+                    Expanded(
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.lock_rounded, size: 48, color: Colors.white38),
+                            const SizedBox(height: 16),
+                            Text(
+                              'ميزة ماكس',
+                              style: AppTypography.titleMedium.copyWith(color: Colors.white),
+                            ),
+                            const SizedBox(height: 8),
+                            TextButton(
+                              onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const PaywallScreen(
+                                    featureToUnlock: FeatureIds.advancedAnalytics,
+                                    contextHeadline: 'تحليلات متقدمة مع صِلني MAX',
+                                  ),
+                                ),
+                              ),
+                              child: Text(
+                                'اشترك الآن',
+                                style: AppTypography.bodyMedium.copyWith(color: AppColors.premiumGold),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       body: Semantics(

@@ -134,10 +134,8 @@ serve(async (req: Request) => {
 
     console.log("[DEBUG] isPremium:", isPremium);
 
-    // Give all authenticated users at least 50 requests (free users blocked at app level)
-    // Premium users get 200
-    const BASE_LIMIT = 50;
-    const rateLimit = isPremium ? RATE_LIMIT_PREMIUM : BASE_LIMIT;
+    // Free users: 0 requests (blocked at server level), Premium users: 200
+    const rateLimit = isPremium ? RATE_LIMIT_PREMIUM : RATE_LIMIT_FREE;
 
     console.log("[DEBUG] Rate limit set to:", rateLimit);
 

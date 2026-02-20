@@ -85,7 +85,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       if (!mounted) return;
       final isMax = ref.read(isMaxProvider);
       if (!isMax) {
-        SessionPaywallInterstitial.maybeShow(context);
+        SessionPaywallInterstitial.maybeShow(context, userId: SupabaseConfig.currentUserId);
       }
     });
   }

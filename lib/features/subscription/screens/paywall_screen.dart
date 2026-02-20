@@ -150,15 +150,18 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
             onPressed: () => Navigator.of(context).pop(),
             icon: Icon(Icons.close, color: themeColors.textOnGradient),
           ),
-          const Spacer(),
-          Text(
-            widget.contextHeadline ?? 'الاشتراك المميز',
-            style: AppTypography.headlineMedium.copyWith(
-              color: themeColors.textOnGradient,
-              fontWeight: FontWeight.bold,
+          Expanded(
+            child: Text(
+              widget.contextHeadline ?? 'الاشتراك المميز',
+              style: AppTypography.headlineMedium.copyWith(
+                color: themeColors.textOnGradient,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          const Spacer(),
           const SizedBox(width: 48), // Balance close button
         ],
       ),
@@ -229,7 +232,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
           _buildFeatureRow('إدارة الأقارب', true, true),
           _buildFeatureRow('شجرة العائلة', true, true),
           _buildFeatureRow('المظاهر المخصصة', true, true),
-          _buildFeatureRow('التذكيرات', '3', '∞'),
+          _buildFeatureRow('التذكيرات', '1', '∞'),
           _buildFeatureRow('مساعد AI', false, true),
           _buildFeatureRow('كتابة الرسائل', false, true),
           _buildFeatureRow('تحليل العلاقات', false, true),

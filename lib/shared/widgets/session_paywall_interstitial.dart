@@ -20,13 +20,19 @@ class SessionPaywallInterstitial {
   static const _skipCountKey = 'silni_paywall_skip_count';
 
   /// Call on each app open. Shows the interstitial if the session threshold is met.
-  static Future<void> maybeShow(BuildContext context) async {
+  static Future<void> maybeShow(BuildContext context, {String? userId}) async {
+    if (userId == null) return;
+
     final prefs = await SharedPreferences.getInstance();
 
-    final openCount = (prefs.getInt(_openCountKey) ?? 0) + 1;
-    await prefs.setInt(_openCountKey, openCount);
+    // Scope keys to user to prevent counter leakage across sessions
+    final openCountKey = '${_openCountKey}_$userId';
+    final skipCountKey = '${_skipCountKey}_$userId';
 
-    final skipCount = prefs.getInt(_skipCountKey) ?? 0;
+    final openCount = (prefs.getInt(openCountKey) ?? 0) + 1;
+    await prefs.setInt(openCountKey, openCount);
+
+    final skipCount = prefs.getInt(skipCountKey) ?? 0;
 
     // After 5 skips, reduce frequency to every 5th open
     final interval = skipCount >= 5 ? 5 : 3;
@@ -41,8 +47,8 @@ class SessionPaywallInterstitial {
       isScrollControlled: true,
       builder: (_) => _PaywallSheet(
         onSkip: () async {
-          final updatedSkipCount = (prefs.getInt(_skipCountKey) ?? 0) + 1;
-          await prefs.setInt(_skipCountKey, updatedSkipCount);
+          final updatedSkipCount = (prefs.getInt(skipCountKey) ?? 0) + 1;
+          await prefs.setInt(skipCountKey, updatedSkipCount);
         },
       ),
     );

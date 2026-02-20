@@ -30,7 +30,7 @@ class SubscriptionService {
   static const String _cacheTierKey = 'tier';
   static const String _cacheExpirationKey = 'expiration';
   static const String _cacheTimestampKey = 'cached_at';
-  static const Duration _cacheValidity = Duration(hours: 24);
+  static const Duration _cacheValidity = Duration(hours: 1);
 
   /// Singleton instance
   static SubscriptionService get instance {
@@ -614,12 +614,33 @@ class SubscriptionService {
 
       final response = await supabase
           .from('users')
-          .select('subscription_status')
+          .select('subscription_status, subscription_expires_at')
           .eq('id', userId)
           .single();
 
       final status = response['subscription_status'] as String?;
       if (status == 'premium' || status == 'max') {
+        // Verify expiration — don't grant MAX if expired or missing expiration
+        final expiresAtStr = response['subscription_expires_at'] as String?;
+        if (expiresAtStr == null) {
+          _logger.warning(
+            'Supabase fallback: premium status but no expiration date, treating as free',
+            category: LogCategory.service,
+            tag: 'SubscriptionService',
+          );
+          return SubscriptionState.free();
+        }
+
+        final expiresAt = DateTime.tryParse(expiresAtStr);
+        if (expiresAt == null || expiresAt.isBefore(DateTime.now())) {
+          _logger.warning(
+            'Supabase fallback: premium status but expired, treating as free',
+            category: LogCategory.service,
+            tag: 'SubscriptionService',
+          );
+          return SubscriptionState.free();
+        }
+
         _logger.info(
           'Supabase fallback returned premium status',
           category: LogCategory.service,
@@ -629,6 +650,7 @@ class SubscriptionService {
         return SubscriptionState(
           tier: SubscriptionTier.max,
           isActive: true,
+          expirationDate: expiresAt,
           isLoading: false,
         );
       }
@@ -714,14 +736,18 @@ class SubscriptionService {
 
       final status = state.tier == SubscriptionTier.max ? 'premium' : 'free';
 
-      await supabase.from('users').update({
-        'subscription_status': status,
-        'trial_started_at': state.isTrialActive ? DateTime.now().toIso8601String() : null,
-        'trial_used': state.isTrialActive ? false : null,
-      }).eq('id', userId);
+      await supabase.functions.invoke(
+        'sync-subscription',
+        body: {
+          'status': status,
+          'product_id': state.productId,
+          'expires_at': state.expirationDate?.toIso8601String(),
+          'trial_active': state.isTrialActive,
+        },
+      );
 
       _logger.info(
-        'Subscription synced to Supabase',
+        'Subscription synced to Supabase via edge function',
         category: LogCategory.service,
         tag: 'SubscriptionService',
         metadata: {'userId': userId, 'status': status},
