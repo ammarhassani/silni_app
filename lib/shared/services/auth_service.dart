@@ -762,7 +762,7 @@ class AuthService {
       );
       await _supabase.auth.resetPasswordForEmail(
         email,
-        redirectTo: kIsWeb ? null : 'com.silni.app://reset-password',
+        redirectTo: kIsWeb ? null : 'com.silni.app://login-callback',
       );
       logger.info(
         'Password reset email sent',

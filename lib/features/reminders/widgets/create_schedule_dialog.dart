@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
-import '../../../shared/services/reminder_schedules_service.dart';
+import '../../../core/providers/cache_provider.dart';
 import '../../../shared/widgets/collapsible_picker.dart';
 import '../../../shared/widgets/glass_bottom_sheet.dart';
 import '../../../shared/widgets/gradient_button.dart';
@@ -83,7 +83,7 @@ class _CreateScheduleConfigSheetState
     }
 
     setState(() => _isLoading = true);
-    final service = ref.read(reminderSchedulesServiceProvider);
+    final repository = ref.read(reminderSchedulesRepositoryProvider);
 
     try {
       final schedule = ReminderSchedule(
@@ -102,10 +102,10 @@ class _CreateScheduleConfigSheetState
         createdAt: DateTime.now(),
       );
 
-      await service.createSchedule(schedule.toJson());
+      final serverId = await repository.createSchedule(schedule.toJson());
 
       if (mounted) {
-        Navigator.pop(context);
+        Navigator.pop(context, schedule.copyWith(id: serverId));
         UIHelpers.showSnackBar(context, 'تم إنشاء التذكير بنجاح');
       }
     } catch (e) {

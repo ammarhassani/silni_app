@@ -486,7 +486,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final emailController = TextEditingController();
     final formKey = GlobalKey<FormState>();
     final themeColors = ref.read(themeColorsProvider);
-    final dialogWidth = MediaQuery.of(context).size.width - (AppSpacing.md * 2);
 
     final result = await showDialog<bool>(
       context: context,
@@ -495,81 +494,83 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         ),
-        insetPadding: const EdgeInsets.all(AppSpacing.md),
-        child: SizedBox(
-          width: dialogWidth,
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Title
-                  Text(
-                    'إعادة تعيين كلمة المرور',
-                    style: AppTypography.titleLarge.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+        insetPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.xxl,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Title
+                Text(
+                  'إعادة تعيين كلمة المرور',
+                  style: AppTypography.titleLarge.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                // Description
+                Text(
+                  'سنرسل لك رابط لإعادة تعيين كلمة المرور',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                // Email field
+                ThemeAwareTextField(
+                  controller: emailController,
+                  label: 'البريد الإلكتروني',
+                  hintText: 'user@example.com',
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'يرجى إدخال البريد الإلكتروني';
+                    }
+                    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                    if (!emailRegex.hasMatch(value)) {
+                      return 'يرجى إدخال بريد إلكتروني صحيح';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                // Actions
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(false),
+                      child: Text(
+                        'إلغاء',
+                        style: AppTypography.buttonMedium.copyWith(
+                          color: themeColors.primary,
+                        ),
+                      ),
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  // Description
-                  Text(
-                    'سنرسل لك رابط لإعادة تعيين كلمة المرور',
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  // Email field
-                  ThemeAwareTextField(
-                    controller: emailController,
-                    label: 'البريد الإلكتروني',
-                    hintText: 'user@example.com',
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'يرجى إدخال البريد الإلكتروني';
-                      }
-                      final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-                      if (!emailRegex.hasMatch(value)) {
-                        return 'يرجى إدخال بريد إلكتروني صحيح';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  // Actions
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(false),
-                        child: Text(
-                          'إلغاء',
-                          style: AppTypography.buttonMedium.copyWith(
-                            color: themeColors.primary,
-                          ),
-                        ),
+                    const SizedBox(width: AppSpacing.sm),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (formKey.currentState!.validate()) {
+                          Navigator.of(dialogContext).pop(true);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: themeColors.primary,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(0, AppSpacing.buttonHeightSmall),
                       ),
-                      const SizedBox(width: AppSpacing.sm),
-                      ElevatedButton(
-                        onPressed: () {
-                          if (formKey.currentState!.validate()) {
-                            Navigator.of(dialogContext).pop(true);
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: themeColors.primary,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('إرسال'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                      child: const Text('إرسال'),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
@@ -780,9 +781,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final themeColors = ref.watch(themeColorsProvider);
 
     return Scaffold(
-      body: Semantics(
-        label: 'شاشة تسجيل الدخول',
-        child: GradientBackground(
+      body: GradientBackground(
           animated: true,
           child: SafeArea(
             child: LayoutBuilder(
@@ -878,10 +877,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           child: Column(
                             children: [
                               // Email field
-                              Semantics(
-                                label: 'حقل البريد الإلكتروني',
-                                textField: true,
-                                child: TextFormField(
+                              TextFormField(
                                   controller: _emailController,
                                   keyboardType: TextInputType.emailAddress,
                                   textDirection: TextDirection.ltr,
@@ -942,16 +938,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     }
                                     return null;
                                   },
-                                ),
                               ),
 
                               const SizedBox(height: AppSpacing.md),
 
                               // Password field
-                              Semantics(
-                                label: 'حقل كلمة المرور',
-                                textField: true,
-                                child: TextFormField(
+                              TextFormField(
                                   controller: _passwordController,
                                   obscureText: _obscurePassword,
                                   textDirection: TextDirection.ltr,
@@ -1021,7 +1013,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     // Supabase will validate the actual password
                                     return null;
                                   },
-                                ),
                               ),
 
                               const SizedBox(height: AppSpacing.sm),
@@ -1031,10 +1022,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Flexible(
-                                    child: Semantics(
-                                      label: 'إنشاء حساب جديد',
-                                      button: true,
-                                      child: TextButton(
+                                    child: TextButton(
                                         onPressed: () {
                                           final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
                                           if (redirect != null && redirect.isNotEmpty) {
@@ -1050,14 +1038,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
-                                      ),
                                     ),
                                   ),
                                   Flexible(
-                                    child: Semantics(
-                                      label: 'نسيت كلمة المرور',
-                                      button: true,
-                                      child: TextButton(
+                                    child: TextButton(
                                         onPressed: _showForgotPasswordDialog,
                                         child: Text(
                                           'نسيت كلمة المرور؟',
@@ -1065,7 +1049,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                             color: themeColors.textOnGradient.withValues(alpha: 0.8),
                                           ),
                                         ),
-                                      ),
                                     ),
                                   ),
                                 ],
@@ -1110,10 +1093,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: AppSpacing.md),
-                                Semantics(
-                                  label: 'تسجيل الدخول بالبصمة',
-                                  button: true,
-                                  child: SizedBox(
+                                SizedBox(
                                     width: double.infinity,
                                     child: OutlinedButton.icon(
                                       onPressed: _isLoading ? null : _authenticateWithBiometrics,
@@ -1141,7 +1121,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         ),
                                       ),
                                     ),
-                                  ),
                                 ),
                               ],
                             ],
@@ -1160,27 +1139,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: AppSpacing.md),
 
                         // Google Sign-In button
-                        Semantics(
-                          label: 'تسجيل الدخول بحساب Google',
-                          button: true,
-                          child: SocialLoginButton(
+                        SocialLoginButton(
                             provider: SocialProvider.google,
                             onPressed: _signInWithGoogle,
                             isLoading: _isGoogleLoading,
-                          ),
                         ),
 
                         // Apple Sign-In button (iOS only)
                         if (!kIsWeb && Platform.isIOS) ...[
                           const SizedBox(height: AppSpacing.sm),
-                          Semantics(
-                            label: 'تسجيل الدخول بحساب Apple',
-                            button: true,
-                            child: SocialLoginButton(
+                          SocialLoginButton(
                               provider: SocialProvider.apple,
                               onPressed: _signInWithApple,
                               isLoading: _isAppleLoading,
-                            ),
                           ),
                         ],
                       ],
@@ -1198,7 +1169,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
       ),
-    ),
     );
   }
 }
