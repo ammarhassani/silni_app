@@ -32,6 +32,7 @@ interface GenerateRequest {
   dateRange: { start: string; end: string };
   tone: string;
   occasion?: string;
+  skipCoveredDays?: boolean;
 }
 
 interface GeneratedPost {
@@ -104,7 +105,7 @@ function generateMockPosts(req: GenerateRequest): GeneratedPost[] {
       posts.push({
         text_ar: sample.ar,
         text_en: sample.en,
-        hashtags: ["#صلني", "#صلة_الرحم", "#عائلة"],
+        hashtags: [],
         suggested_time: postDate.toISOString(),
         image_prompt: `Islamic geometric pattern background with warm gold tones, featuring Arabic calligraphy about ${req.contentType} and family connections`,
       });
@@ -114,9 +115,7 @@ function generateMockPosts(req: GenerateRequest): GeneratedPost[] {
           ? sample.ar.slice(0, 250) + "..."
           : sample.ar,
         text_en: sample.en,
-        hashtags: req.platform === "instagram"
-          ? ["#صلني", "#صلة_الرحم", "#عائلة", "#تواصل", "#رحم", "#إسلام"]
-          : ["#صلني", "#صلة_الرحم", "#عائلة"],
+        hashtags: [],
         suggested_time: postDate.toISOString(),
         image_prompt: `Islamic geometric pattern background with warm gold tones, featuring Arabic calligraphy about ${req.contentType} and family connections`,
       });
@@ -135,62 +134,82 @@ function buildSystemPrompt(
   tone: string,
   occasion?: string,
 ): string {
-  let prompt = `You are a social media content creator for "Silni" (صِلني), a mobile app that helps Muslims maintain family relationships (صلة الرحم). Generate social media posts in Arabic and English.\n\n`;
+  let prompt = `You are a social media content creator for "Silni" (صِلني), a mobile app that helps Muslims maintain family relationships (صلة الرحم).\n\n`;
+
+  prompt += `## App Features (ONLY reference these — do NOT invent features)\n`;
+  prompt += `### Free Features:\n`;
+  prompt += `- تذكيرات للتواصل مع الأقارب (reminders to contact relatives — 1 free, unlimited with MAX)\n`;
+  prompt += `- شجرة العائلة التفاعلية مع التكبير والتصغير (interactive pan-and-zoom family tree)\n`;
+  prompt += `- تسجيل التواصل: مكالمات، رسائل، زيارات (log interactions: calls, messages, visits)\n`;
+  prompt += `- سلاسل الصلة — streaks للحفاظ على التواصل المستمر مع تجميد الأيام (connection streaks with freeze protection)\n`;
+  prompt += `- نقاط ومستويات وأوسمة — نظام تحفيزي (points, levels, badges — gamification system)\n`;
+  prompt += `- مجموعات عائلية مع شجرة مشتركة ولوحة متصدرين (family groups with shared tree & leaderboard)\n`;
+  prompt += `- أحاديث نبوية يومية على الشاشة الرئيسية (daily hadiths on home screen)\n`;
+  prompt += `- تقارير سنوية وشهرية — ملخص تواصلك مع عائلتك (annual & monthly wrapped reports)\n`;
+  prompt += `- استيراد جهات الاتصال من الجوال (import contacts from phone)\n`;
+  prompt += `### MAX (Premium) Features:\n`;
+  prompt += `- مركز واصل — محادثة ذكية مع AI عن علاقاتك العائلية (AI chat about family relationships)\n`;
+  prompt += `- محرر رسائل ذكي — AI يكتب لك رسائل مخصصة لكل قريب (AI message composer for each relative)\n`;
+  prompt += `- تحليل العلاقات — تقييم قوة العلاقة مع كل قريب (relationship strength analysis)\n`;
+  prompt += `- تقارير أسبوعية ذكية (AI weekly reports)\n`;
+  prompt += `- رسائل مناسبات — تهاني عيد وتهاني مخصصة بالذكاء الاصطناعي (AI occasion messages)\n`;
+  prompt += `- تذكيرات غير محدودة (unlimited reminders)\n`;
+  prompt += `### General:\n`;
+  prompt += `- متوفر على iOS و Android مجاناً\n`;
+  prompt += `IMPORTANT: When promoting the app (format F), ONLY mention features listed above. NEVER make up features like plate sharing, group organization tools, or features that don't exist.\n\n`;
 
   if (brandVoice) {
-    prompt += `## Brand Voice Guidelines\n`;
-    prompt += `- Tone guidelines: ${brandVoice.tone_guidelines}\n`;
-    prompt += `- Arabic dialect: ${brandVoice.arabic_dialect === "msa" ? "Modern Standard Arabic (فصحى)" : brandVoice.arabic_dialect === "colloquial" ? "Colloquial Arabic (عامية)" : "Mix of MSA and colloquial"}\n`;
+    prompt += `## Brand Voice\n`;
+    prompt += `- Tone: ${brandVoice.tone_guidelines}\n`;
+    prompt += `- Dialect: ${brandVoice.arabic_dialect === "msa" ? "Modern Standard Arabic (فصحى)" : brandVoice.arabic_dialect === "colloquial" ? "Colloquial Arabic (عامية)" : "Mix of MSA and colloquial"}\n`;
 
     if (brandVoice.banned_words.length > 0) {
       prompt += `- NEVER use these words: ${brandVoice.banned_words.join(", ")}\n`;
     }
-
-    const hashtagSets = brandVoice.hashtag_sets;
-    if (hashtagSets && Object.keys(hashtagSets).length > 0) {
-      prompt += `- Available hashtag sets:\n`;
-      for (const [setName, tags] of Object.entries(hashtagSets)) {
-        prompt += `  - ${setName}: ${tags.join(", ")}\n`;
-      }
-    }
   }
 
   if (templates.length > 0) {
-    prompt += `\n## Reference Templates\nUse these as inspiration for style and structure:\n`;
+    prompt += `\n## Reference Templates (for style inspiration only)\n`;
     for (const t of templates) {
-      prompt += `- ${t.name}: "${t.text_template}" (hashtags: ${(t.default_hashtags || []).join(", ")})\n`;
+      prompt += `- ${t.name}: "${t.text_template}"\n`;
     }
   }
 
-  prompt += `\n## Content Requirements\n`;
-  prompt += `- Desired tone: ${tone}\n`;
-
   if (occasion) {
-    prompt += `- Occasion/context: ${occasion}\n`;
+    prompt += `\n## Occasion Context\n`;
+    prompt += `${occasion}\n`;
+    prompt += `\nIMPORTANT: Use the themes and emotional angles above. Each post MUST use a DIFFERENT theme or angle. Cycle through ALL of them before repeating any.\n`;
   }
 
+  prompt += `\n## Content Rules\n`;
+  prompt += `- Desired tone: ${tone}\n`;
+  prompt += `- Do NOT include any hashtags\n`;
+  prompt += `- Do NOT start every post the same way\n`;
+  prompt += `- Use different emojis across posts — never repeat the same emoji in consecutive posts\n`;
+  prompt += `\n## MANDATORY Format Rotation\n`;
+  prompt += `You MUST cycle through these 6 formats in order. Post 1 uses format A, post 2 uses format B, etc. After format F, restart from A.\n`;
+  prompt += `A) حكمة/اقتباس — Start with a hadith, Quran verse, or Arab proverb. Then a brief reflection.\n`;
+  prompt += `B) نصيحة عملية — A concrete, actionable family tip. Use imperative verbs (اتصل، زُر، أرسل).\n`;
+  prompt += `C) سؤال تفاعلي — An engaging question that sparks discussion. Keep it short.\n`;
+  prompt += `D) قصة/مشهد — Paint a vivid 2-3 sentence scenario (e.g., "تخيل أنك..." or "في بيت جدتي...").\n`;
+  prompt += `E) تأمل/خاطرة — A personal-feeling reflection or observation. Introspective, emotional.\n`;
+  prompt += `F) دعوة للتطبيق — Directly promote Silni app with a specific feature or benefit. Include app name.\n`;
+
   if (platform === "twitter") {
-    prompt += `- Platform: Twitter/X\n`;
-    prompt += `- IMPORTANT: Each Arabic text (text_ar) MUST be 280 characters or less including hashtags\n`;
-    prompt += `- Keep posts concise and impactful\n`;
+    prompt += `- Platform: Twitter/X — each text_ar MUST be ≤280 characters\n`;
   } else if (platform === "instagram") {
-    prompt += `- Platform: Instagram\n`;
-    prompt += `- Longer text is acceptable (up to 2200 characters)\n`;
-    prompt += `- Include more hashtags (8-15 recommended)\n`;
-    prompt += `- Text can be more descriptive and storytelling-oriented\n`;
+    prompt += `- Platform: Instagram — longer text OK (up to 2200 chars), be descriptive\n`;
   } else {
     prompt += `- Platform: Both Twitter and Instagram\n`;
-    prompt += `- For Twitter versions: text_ar MUST be 280 characters or less\n`;
-    prompt += `- For Instagram versions: text can be longer with more hashtags\n`;
+    prompt += `- Twitter versions: text_ar ≤280 chars. Instagram versions: longer, more descriptive.\n`;
   }
 
   prompt += `\n## Output Format\n`;
-  prompt += `Respond with a JSON array ONLY (no other text). Each element must have:\n`;
-  prompt += `- "text_ar": Arabic post text\n`;
-  prompt += `- "text_en": English translation of the post\n`;
-  prompt += `- "hashtags": array of hashtag strings (include # prefix)\n`;
-  prompt += `- "suggested_time": ISO 8601 datetime string for optimal posting time\n`;
-  prompt += `- "image_prompt": English prompt for AI image generation describing the ideal visual for this post\n`;
+  prompt += `Respond with a JSON array ONLY. Each element:\n`;
+  prompt += `- "text_ar": Arabic post text (NO hashtags)\n`;
+  prompt += `- "text_en": English translation\n`;
+  prompt += `- "suggested_time": ISO 8601 datetime\n`;
+  prompt += `- "image_prompt": English prompt for AI image generation\n`;
 
   return prompt;
 }
@@ -216,7 +235,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { contentType, platform, batchSize, dateRange, tone, occasion } = body;
+  const { contentType, platform, batchSize, dateRange, tone, occasion, skipCoveredDays } = body;
 
   if (!contentType || !platform || !batchSize || !dateRange?.start || !dateRange?.end || !tone) {
     return NextResponse.json(
@@ -225,9 +244,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (batchSize < 1 || batchSize > 14) {
+  if (batchSize < 1 || batchSize > 30) {
     return NextResponse.json(
-      { error: "batchSize must be between 1 and 14" },
+      { error: "batchSize must be between 1 and 30" },
       { status: 400 },
     );
   }
@@ -258,15 +277,54 @@ export async function POST(request: NextRequest) {
     const brandVoice: BrandVoice | null = brandVoiceResult.data as BrandVoice | null;
     const templates: SocialTemplate[] = (templatesResult.data as SocialTemplate[]) || [];
 
+    // Build list of target dates (uncovered dates in range)
+    const allDatesInRange: string[] = [];
+    const rangeStart = new Date(dateRange.start);
+    const rangeEnd = new Date(dateRange.end);
+    for (let d = new Date(rangeStart); d <= rangeEnd; d.setDate(d.getDate() + 1)) {
+      allDatesInRange.push(d.toISOString().split("T")[0]);
+    }
+
+    let targetDates = allDatesInRange;
+
+    if (skipCoveredDays) {
+      const { data: existingPosts } = await supabase
+        .from("social_posts")
+        .select("scheduled_at")
+        .in("status", ["queued", "approved", "scheduled", "published"])
+        .gte("scheduled_at", `${dateRange.start}T00:00:00`)
+        .lte("scheduled_at", `${dateRange.end}T23:59:59`);
+
+      if (existingPosts && existingPosts.length > 0) {
+        const coveredSet = new Set<string>();
+        for (const p of existingPosts) {
+          if (p.scheduled_at) {
+            coveredSet.add(p.scheduled_at.split("T")[0]);
+          }
+        }
+        targetDates = allDatesInRange.filter((d) => !coveredSet.has(d));
+      }
+    }
+
+    // Cap batch size to available dates
+    const effectiveBatchSize = Math.min(batchSize, targetDates.length);
+
+    if (effectiveBatchSize === 0) {
+      return NextResponse.json(
+        { error: "جميع الأيام في النطاق المحدد لديها منشورات بالفعل" },
+        { status: 400 },
+      );
+    }
+
     const systemPrompt = buildSystemPrompt(brandVoice, templates, platform, tone, occasion);
 
-    let userMessage = `Generate ${batchSize} social media posts about "${contentType}" content.`;
-    userMessage += ` The posts should be scheduled between ${dateRange.start} and ${dateRange.end}.`;
+    let userMessage = `Generate exactly ${effectiveBatchSize} posts about "${contentType}".`;
     if (occasion) {
-      userMessage += ` The occasion is: ${occasion}.`;
+      userMessage += `\n\nUse the occasion themes from the system prompt. Spread them evenly — each post should use a different theme.`;
     }
+    userMessage += `\n\nREMINDER: Follow the A-B-C-D-E-F format rotation strictly. Post 1=A (quote), Post 2=B (tip), Post 3=C (question), Post 4=D (story), Post 5=E (reflection), Post 6=F (app promo), Post 7=A again, etc.`;
     if (platform === "both") {
-      userMessage += ` Generate two versions per concept: one for Twitter (short, <=280 chars) and one for Instagram (longer, more hashtags). Total output should be ${batchSize * 2} posts.`;
+      userMessage += `\nGenerate two versions per concept: Twitter (≤280 chars) and Instagram (longer). Total: ${effectiveBatchSize * 2} posts.`;
     }
 
     const deepseekResponse = await fetch("https://api.deepseek.com/chat/completions", {
@@ -281,8 +339,8 @@ export async function POST(request: NextRequest) {
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
         ],
-        temperature: 0.8,
-        max_tokens: 4096,
+        temperature: 1.0,
+        max_tokens: 8192,
         response_format: { type: "json_object" },
       }),
     });
@@ -308,23 +366,37 @@ export async function POST(request: NextRequest) {
 
     let posts: GeneratedPost[];
     try {
-      const parsed = JSON.parse(content);
+      // Strip markdown code fences if present (```json ... ```)
+      let jsonStr = content.trim();
+      const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (fenceMatch) {
+        jsonStr = fenceMatch[1].trim();
+      }
+      const parsed = JSON.parse(jsonStr);
       posts = Array.isArray(parsed) ? parsed : (parsed.posts || parsed.data || []);
     } catch {
-      console.error("Failed to parse DeepSeek response:", content);
+      console.error("Failed to parse DeepSeek response:", content.slice(0, 500));
       return NextResponse.json(
         { error: "Failed to parse AI response as JSON" },
         { status: 502 },
       );
     }
 
-    const validatedPosts: GeneratedPost[] = posts.map((post) => ({
-      text_ar: post.text_ar || "",
-      text_en: post.text_en || "",
-      hashtags: Array.isArray(post.hashtags) ? post.hashtags : [],
-      suggested_time: post.suggested_time || new Date().toISOString(),
-      image_prompt: post.image_prompt || "",
-    }));
+    // Assign dates from targetDates (don't trust AI's suggested_time)
+    const timeSlots = [9, 12, 15, 18, 21]; // varied posting hours
+    const validatedPosts: GeneratedPost[] = posts
+      .slice(0, effectiveBatchSize)
+      .map((post, i) => {
+        const dateStr = targetDates[i % targetDates.length];
+        const hour = timeSlots[i % timeSlots.length];
+        return {
+          text_ar: post.text_ar || "",
+          text_en: post.text_en || "",
+          hashtags: [],
+          suggested_time: `${dateStr}T${String(hour).padStart(2, "0")}:00:00.000Z`,
+          image_prompt: post.image_prompt || "",
+        };
+      });
 
     return NextResponse.json({ posts: validatedPosts, mock: false });
   } catch (error) {

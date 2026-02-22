@@ -122,9 +122,10 @@ export default function SocialTemplatesPage() {
 
     let parsedHashtagSets: Record<string, string[]> = {};
     try {
-      parsedHashtagSets = JSON.parse(hashtagSetsJson);
+      const trimmed = hashtagSetsJson.trim();
+      parsedHashtagSets = trimmed ? JSON.parse(trimmed) : {};
     } catch {
-      parsedHashtagSets = brandVoice.hashtag_sets || {};
+      parsedHashtagSets = {};
     }
 
     const parsedBannedWords = bannedWordsText

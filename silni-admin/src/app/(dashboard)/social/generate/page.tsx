@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { createClient } from "@/lib/supabase/client";
 import {
   useSocialPosts,
   useCreateSocialPostsBatch,
@@ -12,6 +14,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -92,6 +95,7 @@ interface GenerateFormState {
   dateEnd: string;
   tone: SocialTone;
   occasion: string;
+  skipCoveredDays: boolean;
 }
 
 // --- Helpers ---
@@ -231,6 +235,7 @@ export default function SocialGeneratePage() {
     dateEnd: getDefaultDateEnd(),
     tone: "inspirational",
     occasion: "",
+    skipCoveredDays: true,
   });
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
@@ -240,6 +245,37 @@ export default function SocialGeneratePage() {
   const createBatch = useCreateSocialPostsBatch();
   const updatePost = useUpdateSocialPost();
   const bulkUpdate = useBulkUpdatePostStatus();
+
+  // Count total days and covered days in selected range
+  const totalDaysInRange = useMemo(() => {
+    const start = new Date(form.dateStart);
+    const end = new Date(form.dateEnd);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return 0;
+    return Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  }, [form.dateStart, form.dateEnd]);
+
+  const supabase = createClient();
+  const { data: coveredDaysCount = 0 } = useQuery({
+    queryKey: ["covered-days", form.dateStart, form.dateEnd],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("social_posts")
+        .select("scheduled_at")
+        .in("status", ["queued", "approved", "scheduled", "published"])
+        .gte("scheduled_at", `${form.dateStart}T00:00:00`)
+        .lte("scheduled_at", `${form.dateEnd}T23:59:59`);
+
+      if (!data) return 0;
+      const dates = new Set(data.map((p) => p.scheduled_at?.split("T")[0]).filter(Boolean));
+      return dates.size;
+    },
+    enabled: totalDaysInRange > 0,
+  });
+
+  const availableDays = form.skipCoveredDays
+    ? totalDaysInRange - coveredDaysCount
+    : totalDaysInRange;
+  const effectivePostCount = Math.min(form.batchSize, availableDays);
 
   // Find connected account for a given platform
   const getAccountForPlatform = (platform: string): string | null => {
@@ -265,6 +301,7 @@ export default function SocialGeneratePage() {
           dateRange: { start: form.dateStart, end: form.dateEnd },
           tone: form.tone,
           occasion: form.occasion || undefined,
+          skipCoveredDays: form.skipCoveredDays,
         }),
       });
 
@@ -441,12 +478,12 @@ export default function SocialGeneratePage() {
                 <Input
                   type="number"
                   min={1}
-                  max={14}
+                  max={30}
                   value={form.batchSize}
                   onChange={(e) =>
                     setForm((f) => ({
                       ...f,
-                      batchSize: Math.min(14, Math.max(1, parseInt(e.target.value) || 1)),
+                      batchSize: Math.min(30, Math.max(1, parseInt(e.target.value) || 1)),
                     }))
                   }
                 />
@@ -476,6 +513,42 @@ export default function SocialGeneratePage() {
                 </div>
               </div>
 
+              {/* Skip Covered Days */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="skipCoveredDays"
+                    checked={form.skipCoveredDays}
+                    onCheckedChange={(checked) =>
+                      setForm((f) => ({ ...f, skipCoveredDays: checked === true }))
+                    }
+                  />
+                  <Label htmlFor="skipCoveredDays" className="text-sm cursor-pointer">
+                    تخطي الأيام التي لديها منشورات بالفعل
+                  </Label>
+                </div>
+                {totalDaysInRange > 0 && (
+                  <div className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2 space-y-1">
+                    <div className="flex justify-between">
+                      <span>إجمالي الأيام</span>
+                      <span className="font-medium">{totalDaysInRange} يوم</span>
+                    </div>
+                    {form.skipCoveredDays && coveredDaysCount > 0 && (
+                      <div className="flex justify-between text-amber-600">
+                        <span>أيام لديها منشورات</span>
+                        <span className="font-medium">−{coveredDaysCount}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between border-t border-border/50 pt-1">
+                      <span>سيتم توليد</span>
+                      <span className="font-bold text-foreground">
+                        {effectivePostCount} منشور
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Cultural Calendar Suggestions */}
               {(() => {
                 const upcomingEvents = getUpcomingEvents();
@@ -501,7 +574,7 @@ export default function SocialGeneratePage() {
                                 event.gregorianDates[new Date().getFullYear()]?.start || f.dateStart,
                               dateEnd:
                                 event.gregorianDates[new Date().getFullYear()]?.end || f.dateEnd,
-                              batchSize: Math.min(event.durationDays, 14),
+                              batchSize: Math.min(event.durationDays, 30),
                             }));
                           }}
                         >
