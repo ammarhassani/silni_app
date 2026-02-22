@@ -196,11 +196,13 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     await SupabaseConfig.client.auth.updateUser(
       UserAttributes(data: {'family_name': trimmed}),
     );
+    if (!mounted) return;
 
     // Also update the family group name if user has one
     final userId = SupabaseConfig.client.auth.currentUser?.id;
     if (userId != null) {
       final group = await FamilySharingService.getUserGroup(userId);
+      if (!mounted) return;
       if (group != null) {
         await FamilyGroupService.updateGroupName(
           groupId: group.id,

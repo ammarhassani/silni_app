@@ -258,8 +258,15 @@ class SubscriptionService {
         category: LogCategory.service,
         tag: 'SubscriptionService',
       );
+      // All verification sources failed — default to free to prevent unauthorized access
       _updateState(_currentState.copyWith(
         isLoading: false,
+        tier: SubscriptionTier.free,
+        isActive: false,
+        isTrialActive: false,
+        trialDaysRemaining: 0,
+        clearExpiration: true,
+        clearProductId: true,
         error: 'فشل تحميل حالة الاشتراك',
       ));
     }

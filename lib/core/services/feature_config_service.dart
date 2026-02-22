@@ -291,10 +291,13 @@ class FeatureConfigService {
           .from('admin_trial_config')
           .select()
           .eq('config_key', 'default')
-          .single();
+          .maybeSingle();
 
-      _trialConfigCache = TrialConfig.fromJson(response);
-      return _trialConfigCache!;
+      if (response != null) {
+        _trialConfigCache = TrialConfig.fromJson(response);
+        return _trialConfigCache!;
+      }
+      return _trialConfigCache ?? TrialConfig.fallback;
     } catch (_) {
       if (_trialConfigCache != null) return _trialConfigCache!;
       return TrialConfig.fallback;

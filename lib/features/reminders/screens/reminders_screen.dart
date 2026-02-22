@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/glass_bottom_sheet.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -19,6 +20,8 @@ import '../../../shared/services/reminder_schedules_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
 import '../../home/providers/home_providers.dart';
+import '../../subscription/screens/paywall_screen.dart';
+import '../../../core/providers/feature_config_provider.dart';
 import '../../../core/providers/realtime_provider.dart';
 import '../../../shared/utils/relationship_label_helper.dart';
 import '../../../shared/utils/ui_helpers.dart';
@@ -38,6 +41,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   List<Relative>? _providerRelatives;
   // Optimistic override — set by mutations, takes priority over provider
   List<ReminderSchedule>? _optimisticSchedules;
+  // Guard against concurrent mutations (rapid double-taps)
+  bool _isMutating = false;
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +54,16 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     ref.watch(autoRealtimeSubscriptionsProvider);
 
     final schedulesAsync = ref.watch(reminderSchedulesStreamProvider(userId));
+
+    // Clear optimistic override when stream emits fresh data
+    ref.listen<AsyncValue<List<ReminderSchedule>>>(
+      reminderSchedulesStreamProvider(userId),
+      (previous, next) {
+        if (next.hasValue && _optimisticSchedules != null) {
+          setState(() => _optimisticSchedules = null);
+        }
+      },
+    );
 
     // Replicate the family tree's exact pattern: use .when() on group info
     // so we WAIT before deciding which relatives source to watch.
@@ -339,7 +354,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               ),
               const SizedBox(height: AppSpacing.lg),
               GradientButton(
-                onPressed: () => context.pop(),
+                onPressed: () => context.push(AppRoutes.relatives),
                 text: 'إضافة أقارب',
                 icon: Icons.person_add_rounded,
               ),
@@ -399,15 +414,30 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
 
   void _showCreateScheduleBottomSheet() {
     final user = ref.read(currentUserProvider);
-    final userId = user?.id ?? '';
+    if (user == null) return;
+    final userId = user.id;
 
-    // Get current schedules to determine used frequencies
+    // Use optimistic data if available (reflects pending deletes), then stream
     final schedulesAsync =
         ref.read(reminderSchedulesStreamProvider(userId));
-    final usedFrequencies = schedulesAsync.valueOrNull
-            ?.map((s) => s.frequency)
-            .toSet() ??
-        {};
+    final schedules =
+        _optimisticSchedules ?? schedulesAsync.valueOrNull ?? _providerSchedules ?? [];
+    final usedFrequencies = schedules.map((s) => s.frequency).toSet();
+
+    // Enforce reminder limit for free users
+    final reminderLimit = ref.read(dynamicReminderLimitProvider);
+    if (reminderLimit != -1 && schedules.length >= reminderLimit) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const PaywallScreen(
+            featureToUnlock: 'unlimited_reminders',
+            contextHeadline: 'تذكيرات غير محدودة',
+          ),
+        ),
+      );
+      return;
+    }
 
     showModalBottomSheet(
       context: context,
@@ -423,14 +453,26 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     );
   }
 
-  void _showCreateScheduleDialog(ReminderTemplate template, String userId) {
-    GlassBottomSheet.show(
+  void _showCreateScheduleDialog(ReminderTemplate template, String userId) async {
+    final result = await GlassBottomSheet.show<ReminderSchedule>(
       context: context,
       builder: (context) => CreateScheduleConfigSheet(
         template: template,
         userId: userId,
       ),
     );
+
+    // Optimistic update — add created schedule to UI immediately
+    if (result != null && mounted) {
+      setState(() {
+        _optimisticSchedules = [
+          ...(_optimisticSchedules ?? _providerSchedules ?? []),
+          result,
+        ];
+      });
+      // Invalidate stream — ref.listen in build() clears optimistic on fresh data
+      ref.invalidate(reminderSchedulesStreamProvider(userId));
+    }
   }
 
   void _showAddRelativesToSchedule(
@@ -466,22 +508,28 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
           return s;
         }).toList();
       });
-      // Let stream catch up then clear optimistic override
-      await Future.delayed(const Duration(seconds: 2));
-      if (mounted) setState(() => _optimisticSchedules = null);
+      // ref.listen in build() clears optimistic on fresh stream data
     }
   }
 
-  void _editSchedule(ReminderSchedule schedule) {
-    GlassBottomSheet.show(
+  void _editSchedule(ReminderSchedule schedule) async {
+    final user = ref.read(currentUserProvider);
+    await GlassBottomSheet.show(
       context: context,
       builder: (context) => EditScheduleBottomSheet(schedule: schedule),
     );
+
+    // After bottom sheet closes, force refresh from this screen's ref
+    if (mounted && user != null) {
+      ref.invalidate(reminderSchedulesStreamProvider(user.id));
+    }
   }
 
   // --- Action methods ---
 
   void _toggleSchedule(ReminderSchedule schedule, bool value) async {
+    if (_isMutating) return;
+    _isMutating = true;
     final service = ref.read(reminderSchedulesServiceProvider);
 
     // Optimistic update
@@ -508,6 +556,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
           isError: true,
         );
       }
+    } finally {
+      _isMutating = false;
     }
   }
 
@@ -520,6 +570,9 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     );
 
     if (confirmed == true && mounted) {
+      if (_isMutating) return;
+      _isMutating = true;
+      final user = ref.read(currentUserProvider);
       final service = ref.read(reminderSchedulesServiceProvider);
 
       // Optimistic update — remove schedule from list
@@ -532,7 +585,9 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
 
       try {
         await service.deleteSchedule(schedule.id);
+        // Invalidate stream so client-side checks (e.g. create gate) see fresh data
         if (mounted) {
+          ref.invalidate(reminderSchedulesStreamProvider(user?.id ?? ''));
           UIHelpers.showSnackBar(context, 'تم حذف التذكير');
         }
       } catch (e) {
@@ -545,6 +600,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
             isError: true,
           );
         }
+      } finally {
+        _isMutating = false;
       }
     }
   }
@@ -553,6 +610,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     ReminderSchedule schedule,
     String relativeId,
   ) async {
+    if (_isMutating) return;
+    _isMutating = true;
     final service = ref.read(reminderSchedulesServiceProvider);
     final updatedRelativeIds = List<String>.from(schedule.relativeIds)
       ..remove(relativeId);
@@ -583,6 +642,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
           isError: true,
         );
       }
+    } finally {
+      _isMutating = false;
     }
   }
 }

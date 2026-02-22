@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
-import '../../../shared/services/reminder_schedules_service.dart';
+import '../../../core/providers/cache_provider.dart';
+import '../../home/providers/home_providers.dart';
 import '../../../shared/widgets/glass_bottom_sheet.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import 'day_selector_widget.dart';
@@ -66,7 +67,7 @@ class _EditScheduleBottomSheetState
     }
 
     setState(() => _isLoading = true);
-    final service = ref.read(reminderSchedulesServiceProvider);
+    final repository = ref.read(reminderSchedulesRepositoryProvider);
 
     try {
       final timeString =
@@ -76,11 +77,16 @@ class _EditScheduleBottomSheetState
         customDays: _selectedDays,
         dayOfMonth: _selectedDayOfMonth,
       );
-      await service.updateSchedule(
+      await repository.updateSchedule(
         widget.schedule.id,
         updatedSchedule.toJson(),
       );
+
+      // Invalidate the stream provider so the list refreshes immediately
+      ref.invalidate(reminderSchedulesStreamProvider(widget.schedule.userId));
+
       if (mounted) {
+        setState(() => _isLoading = false);
         Navigator.pop(context);
         UIHelpers.showSnackBar(context, 'تم تحديث التذكير بنجاح');
       }

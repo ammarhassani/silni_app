@@ -227,6 +227,23 @@ class PermissionError extends AppError {
   String toString() => 'PermissionError: $message (permission: $permission)';
 }
 
+/// Server-side business rule rejection (e.g., DB trigger denying an INSERT).
+/// These must NOT be retried because the server deliberately rejected the operation.
+class ServerRejectionError extends AppError {
+  const ServerRejectionError({
+    super.message = 'Server rejected the operation',
+    super.arabicMessage,
+    super.originalError,
+    super.stackTrace,
+  });
+
+  @override
+  bool get isRetryable => false;
+
+  @override
+  String toString() => 'ServerRejectionError: $message';
+}
+
 /// Unknown/unhandled errors
 class UnknownError extends AppError {
   const UnknownError({

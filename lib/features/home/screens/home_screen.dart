@@ -66,22 +66,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   /// Check if premium onboarding should be shown for returning MAX users
   void _checkPremiumOnboarding() {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // Small delay to ensure providers are ready
-      await Future.delayed(const Duration(milliseconds: 500));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-
       final shouldShow = ref.read(shouldShowOnboardingProvider);
-      if (shouldShow && mounted) {
-        await PremiumOnboardingScreen.show(context);
+      if (shouldShow) {
+        PremiumOnboardingScreen.show(context);
       }
     });
   }
 
   /// Show session-based paywall interstitial for free users every few app opens
   void _checkSessionPaywall() {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Future.delayed(const Duration(seconds: 1));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final isMax = ref.read(isMaxProvider);
       if (!isMax) {

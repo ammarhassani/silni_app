@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/reminder_schedule_model.dart';
 import '../models/offline_operation.dart';
 import '../services/reminder_schedules_service.dart';
+import '../../core/errors/app_errors.dart';
 import '../../core/services/cache_service.dart';
 import '../../core/services/offline_queue_service.dart';
 import '../../core/services/sync_service.dart';
@@ -182,6 +184,18 @@ class ReminderSchedulesRepository {
         }
         return id;
       } catch (e) {
+        // Distinguish server-side rejections (trigger errors) from network errors.
+        // PostgrestException with code starting with 'P' = trigger/constraint violation.
+        // These must NOT be queued for retry — the server deliberately rejected it.
+        if (e is PostgrestException && (e.code ?? '').startsWith('P')) {
+          await _cache.deleteReminderSchedule(id);
+          throw ServerRejectionError(
+            message: e.message,
+            arabicMessage: 'تم الوصول للحد الأقصى من التذكيرات',
+            originalError: e,
+          );
+        }
+        // Network/transient error — safe to queue for retry
         await _queueOperation(OperationType.create, id, data);
         return id;
       }
@@ -248,14 +262,7 @@ class ReminderSchedulesRepository {
         'relative_ids': existingIds.toList(),
       });
     }
-
-    if (_connectivity.isOnline) {
-      try {
-        await _service.addRelativesToSchedule(scheduleId, relativeIds);
-      } catch (e) {
-        // Already handled in updateSchedule
-      }
-    }
+    // updateSchedule already handles cache + server write + offline queue.
   }
 
   /// Remove a relative from a schedule.
@@ -270,14 +277,7 @@ class ReminderSchedulesRepository {
           .toList();
       await updateSchedule(scheduleId, {'relative_ids': updatedIds});
     }
-
-    if (_connectivity.isOnline) {
-      try {
-        await _service.removeRelativeFromSchedule(scheduleId, relativeId);
-      } catch (e) {
-        // Already handled in updateSchedule
-      }
-    }
+    // updateSchedule already handles cache + server write + offline queue.
   }
 
   // ============================================================

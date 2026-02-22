@@ -76,7 +76,9 @@ extension AsyncValueErrorHandling<T> on AsyncValue<T> {
     return when(
       data: data,
       loading: loading ?? () => const SizedBox.shrink(),
-      error: (e, s) => hideOnError ? const SizedBox.shrink() : data(value as T),
+      error: (e, s) => hideOnError || value == null
+          ? const SizedBox.shrink()
+          : data(value as T),
     );
   }
 

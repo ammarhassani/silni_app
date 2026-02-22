@@ -250,6 +250,9 @@ class RelativesRepository {
   /// Permanently delete a relative (hard delete).
   /// Removes from cache immediately for instant UI update.
   Future<void> permanentlyDeleteRelative(String relativeId) async {
+    // Snapshot before deleting so we can rollback on server failure
+    final snapshot = _cache.getRelative(relativeId);
+
     // Remove from cache immediately (optimistic update)
     await _cache.deleteRelative(relativeId);
 
@@ -257,17 +260,20 @@ class RelativesRepository {
       try {
         await _service.permanentlyDeleteRelative(relativeId);
       } catch (e) {
-        // Failed - queue for later
+        // Server rejected — restore cache entry so UI stays consistent
+        if (snapshot != null) {
+          await _cache.putRelative(snapshot);
+        }
         _logger.warning(
-          'Failed to permanently delete relative, queued for later',
+          'Failed to permanently delete relative, restored from cache',
           category: LogCategory.database,
           tag: 'RelativesRepository',
           metadata: {'relativeId': relativeId, 'error': e.toString()},
         );
-        await _queueOperation(OperationType.delete, 'relative', relativeId, null);
+        rethrow;
       }
     } else {
-      // Offline: queue for later
+      // Offline: keep optimistic delete, queue for later sync
       await _queueOperation(OperationType.delete, 'relative', relativeId, null);
     }
   }
