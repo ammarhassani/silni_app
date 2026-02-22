@@ -7,6 +7,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/widgets/relative_avatar.dart';
+import '../../home/providers/home_providers.dart';
 import '../providers/ai_chat_provider.dart';
 
 /// Reusable relative selector dropdown for AI features
@@ -42,7 +43,7 @@ class _RelativeSelectorState extends ConsumerState<RelativeSelector> {
 
   @override
   Widget build(BuildContext context) {
-    final relativesAsync = ref.watch(aiRelativesProvider);
+    final relativesAsync = ref.watch(viewerFilteredRelativesProvider);
 
     return relativesAsync.when(
       data: (relatives) => _buildSelector(relatives),

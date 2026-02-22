@@ -17,6 +17,7 @@ import '../../../core/providers/cache_provider.dart';
 import '../../../shared/providers/interactions_provider.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../family_tree/providers/family_graph_providers.dart';
 import '../../home/providers/home_providers.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
 import '../../../shared/utils/ui_helpers.dart';
@@ -37,10 +38,13 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final userId = user?.id ?? '';
-    final relativesAsync = ref.watch(relativesStreamProvider(userId));
+    final relativesAsync = ref.watch(viewerFilteredRelativesProvider);
     final schedulesAsync = ref.watch(reminderSchedulesStreamProvider(userId));
-    // Watch today's contacted relatives from database (persists across navigation)
-    final todayContactedAsync = ref.watch(todayContactedRelativesProvider(userId));
+    // Watch today's contacted relatives — group-aware
+    final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+    final todayContactedAsync = groupInfo != null
+        ? ref.watch(groupTodayContactedRelativesProvider(groupInfo.groupId))
+        : ref.watch(todayContactedRelativesProvider(userId));
 
     final themeColors = ref.watch(themeColorsProvider);
 

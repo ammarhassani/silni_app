@@ -9,9 +9,9 @@ import '../../../core/config/supabase_config.dart';
 import '../../../core/services/ai_config_service.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/services/chat_history_service.dart';
-import '../../../shared/services/relatives_service.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
 import '../../family_tree/services/family_graph_service.dart';
+import '../../home/providers/home_providers.dart';
 
 /// Provider for AI service instance
 final aiServiceProvider = Provider<AIService>((ref) {
@@ -23,41 +23,12 @@ final chatHistoryServiceProvider = Provider<ChatHistoryService>((ref) {
   return ChatHistoryService();
 });
 
-/// Provider for all user's relatives (for AI context).
+/// Rahim-scoped relatives for AI context.
 ///
-/// Uses its own persistent Supabase stream so data is ready when
-/// [aiChatProvider] does `ref.read()` (one-shot). Applies rahim scope
-/// via [rahimVisibleRelativeIdsProvider] so the AI only sees relatives
-/// the viewer is connected to by blood.
-final aiRelativesProvider = StreamProvider<List<Relative>>((ref) {
-  final userId = SupabaseConfig.currentUser?.id;
-  if (userId == null) return Stream.value([]);
-
-  final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
-
-  if (groupInfo != null) {
-    final viewerNodeId = groupInfo.nodeId;
-    final rahimScope = ref.watch(rahimVisibleRelativeIdsProvider);
-    return SupabaseConfig.client
-        .from('relatives')
-        .stream(primaryKey: ['id'])
-        .eq('family_group_id', groupInfo.groupId)
-        .order('full_name')
-        .map((data) {
-          var list = data
-              .where((r) => r['is_archived'] != true)
-              .where((r) => r['id'] != viewerNodeId)
-              .map((json) => Relative.fromJson(json))
-              .toList();
-          if (rahimScope != null) {
-            list = list.where((r) => rahimScope.contains(r.id)).toList();
-          }
-          return list;
-        });
-  }
-
-  final relativesService = RelativesService();
-  return relativesService.getRelativesStream(userId);
+/// Non-autoDispose wrapper over [viewerFilteredRelativesProvider] so data
+/// stays warm for [aiChatProvider]'s `ref.read()` one-shot reads.
+final aiRelativesProvider = Provider<AsyncValue<List<Relative>>>((ref) {
+  return ref.watch(viewerFilteredRelativesProvider);
 });
 
 /// Perspective-aware relationship labels for display.
@@ -66,7 +37,7 @@ final aiRelativesProvider = StreamProvider<List<Relative>>((ref) {
 /// using [FamilyGraphService.getLabelForViewer].
 /// Returns empty map in personal mode (arabicName is already correct).
 final perspectiveLabelsProvider = Provider<Map<String, String>>((ref) {
-  final relatives = ref.watch(aiRelativesProvider).valueOrNull ?? [];
+  final relatives = ref.watch(viewerFilteredRelativesProvider).valueOrNull ?? [];
   final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
 
   if (groupInfo == null || groupInfo.nodeId == null || relatives.isEmpty) {
@@ -121,7 +92,7 @@ final aiChatProvider =
 
   // Use read instead of watch - we only need initial values for context
   // Watching these causes provider rebuild when invalidated, losing chat state
-  final relatives = ref.read(aiRelativesProvider).valueOrNull ?? [];
+  final relatives = ref.read(viewerFilteredRelativesProvider).valueOrNull ?? [];
   final memories = ref.read(aiMemoriesProvider).valueOrNull ?? [];
 
   // Use pre-computed perspective labels from shared provider

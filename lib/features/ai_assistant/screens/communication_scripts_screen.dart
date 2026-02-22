@@ -8,15 +8,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/ai/ai_identity.dart';
 import '../../../core/ai/ai_models.dart';
 import '../../../core/ai/deepseek_ai_service.dart';
-import '../../../core/config/supabase_config.dart';
 import '../../../core/services/ai_config_service.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/relative_model.dart';
-import '../../../shared/services/relatives_service.dart';
 import '../../../shared/widgets/glass_pill_title.dart';
+import '../../home/providers/home_providers.dart';
 import '../providers/ai_chat_provider.dart';
 import '../widgets/ai_error_card.dart';
 import '../widgets/ai_loading_indicator.dart';
@@ -106,31 +105,9 @@ class CommunicationScriptsState {
 /// Communication scripts notifier
 class CommunicationScriptsNotifier extends StateNotifier<CommunicationScriptsState> {
   final DeepSeekAIService _aiService;
-  final RelativesService _relativesService;
 
-  CommunicationScriptsNotifier(this._aiService, this._relativesService)
-      : super(const CommunicationScriptsState()) {
-    _loadRelatives();
-  }
-
-  Future<void> _loadRelatives() async {
-    try {
-      final userId = SupabaseConfig.currentUser?.id;
-      if (userId == null) return;
-
-      final relatives = await _relativesService
-          .getRelativesStream(userId)
-          .first
-          .timeout(
-            const Duration(seconds: 10),
-            onTimeout: () => <Relative>[],
-          );
-      if (!mounted) return;
-      state = state.copyWith(relatives: relatives);
-    } catch (_) {
-      // Ignore errors loading relatives
-    }
-  }
+  CommunicationScriptsNotifier(this._aiService, List<Relative> relatives)
+      : super(CommunicationScriptsState(relatives: relatives));
 
   void selectScenario(ScenarioTemplate scenario) {
     state = state.copyWith(
@@ -186,8 +163,8 @@ class CommunicationScriptsNotifier extends StateNotifier<CommunicationScriptsSta
 final communicationScriptsProvider =
     StateNotifierProvider.autoDispose<CommunicationScriptsNotifier, CommunicationScriptsState>((ref) {
   final aiService = DeepSeekAIService();
-  final relativesService = RelativesService();
-  return CommunicationScriptsNotifier(aiService, relativesService);
+  final relatives = ref.watch(viewerFilteredRelativesProvider).valueOrNull ?? [];
+  return CommunicationScriptsNotifier(aiService, relatives);
 });
 
 /// Communication Scripts Screen

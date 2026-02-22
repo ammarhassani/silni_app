@@ -65,60 +65,45 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       },
     );
 
-    // Replicate the family tree's exact pattern: use .when() on group info
-    // so we WAIT before deciding which relatives source to watch.
-    // This prevents watching the wrong provider during loading.
-    final groupInfoAsync = ref.watch(userFamilyGroupProvider);
+    // Rahim-scoped, self-node-excluded relatives via central gateway
+    final relativesAsync = ref.watch(viewerFilteredRelativesProvider);
 
-    // Resolve relatives inside .when() — only the correct provider is watched
     List<Relative>? filteredRelatives;
     Map<String, String>? relationshipLabels;
     bool relativesHasError = false;
-    groupInfoAsync.when(
-      loading: () {}, // will be handled by isInitialLoad below
-      error: (_, _) => relativesHasError = true,
-      data: (groupInfo) {
-        final relativesAsync = groupInfo != null
-            ? ref.watch(groupRelativesStreamProvider(groupInfo.groupId))
-            : ref.watch(relativesStreamProvider(userId));
 
-        if (relativesAsync.hasError) relativesHasError = true;
+    if (relativesAsync.hasError) relativesHasError = true;
 
-        if (relativesAsync.hasValue) {
-          final viewerNodeId = groupInfo?.nodeId;
-          var visible = relativesAsync.value!;
-          if (viewerNodeId != null) {
-            // Group mode: exclude viewer's tree node
-            visible = visible.where((r) => r.id != viewerNodeId).toList();
-          } else {
-            // Personal mode: exclude self entry
-            visible = visible.where((r) => !r.isSelf).toList();
-          }
-          filteredRelatives = visible;
+    if (relativesAsync.hasValue) {
+      filteredRelatives = relativesAsync.value!;
 
-          // Build perspective-aware relationship labels from family graph
-          final graph = groupInfo != null
-              ? ref.watch(sharedFamilyGraphProvider((
-                  groupId: groupInfo.groupId,
-                  viewerNodeId: groupInfo.nodeId,
-                )))
-              : ref.watch(familyGraphProvider(userId));
-          final effectiveViewerId = groupInfo?.nodeId ?? userId;
-          final relativesMap = {
-            for (final r in relativesAsync.value!) r.id: r,
-          };
-          relationshipLabels = {
-            for (final r in visible)
-              r.id: getRelationshipLabel(
-                relative: r,
-                viewerId: effectiveViewerId,
-                graph: graph,
-                relativesMap: relativesMap,
-              ),
-          };
-        }
-      },
-    );
+      // Build perspective-aware relationship labels from family graph
+      final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+      final graph = groupInfo != null
+          ? ref.watch(sharedFamilyGraphProvider((
+              groupId: groupInfo.groupId,
+              viewerNodeId: groupInfo.nodeId,
+            )))
+          : ref.watch(familyGraphProvider(userId));
+      final effectiveViewerId = groupInfo?.nodeId ?? userId;
+
+      // Full raw relatives for relativesMap (labels need parent/sibling context)
+      final rawAsync = groupInfo != null
+          ? ref.watch(groupRelativesStreamProvider(groupInfo.groupId))
+          : ref.watch(relativesStreamProvider(userId));
+      final allRelatives = rawAsync.valueOrNull ?? filteredRelatives;
+      final relativesMap = {for (final r in allRelatives) r.id: r};
+
+      relationshipLabels = {
+        for (final r in filteredRelatives)
+          r.id: getRelationshipLabel(
+            relative: r,
+            viewerId: effectiveViewerId,
+            graph: graph,
+            relativesMap: relativesMap,
+          ),
+      };
+    }
 
     // Update provider cache when data is available
     if (filteredRelatives != null) _providerRelatives = filteredRelatives;

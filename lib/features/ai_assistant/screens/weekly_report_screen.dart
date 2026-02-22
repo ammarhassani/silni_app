@@ -16,6 +16,7 @@ import '../../../shared/models/relative_model.dart';
 import '../../../shared/widgets/glass_pill_title.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../gamification/providers/stats_provider.dart';
+import '../../home/providers/home_providers.dart';
 import '../providers/ai_chat_provider.dart';
 import '../widgets/markdown_styles.dart';
 
@@ -108,7 +109,7 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen>
 
     try {
       final aiService = ref.read(aiServiceProvider);
-      final relatives = ref.read(aiRelativesProvider).valueOrNull ?? [];
+      final relatives = ref.read(viewerFilteredRelativesProvider).valueOrNull ?? [];
 
       if (relatives.isEmpty) {
         setState(() {
@@ -227,7 +228,7 @@ $personality
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
     final statsAsync = ref.watch(detailedStatsProvider);
-    final relativesAsync = ref.watch(aiRelativesProvider);
+    final relativesAsync = ref.watch(viewerFilteredRelativesProvider);
 
     return Scaffold(
       body: Stack(
