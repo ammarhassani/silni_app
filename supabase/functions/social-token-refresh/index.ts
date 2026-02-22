@@ -22,6 +22,7 @@ interface SocialAccount {
   access_token_encrypted: string;
   refresh_token_encrypted: string | null;
   token_expires_at: string;
+  status: string;
 }
 
 interface RefreshResult {
@@ -49,6 +50,7 @@ serve(async (req) => {
 
     // Environment variables for OAuth providers
     const twitterClientId = Deno.env.get("TWITTER_CLIENT_ID")!;
+    const twitterClientSecret = Deno.env.get("TWITTER_CLIENT_SECRET")!;
     const facebookAppId = Deno.env.get("FACEBOOK_APP_ID")!;
     const facebookAppSecret = Deno.env.get("FACEBOOK_APP_SECRET")!;
 
@@ -62,14 +64,14 @@ serve(async (req) => {
       `Checking for tokens expiring between now and ${twentyFourHoursFromNow.toISOString()}`
     );
 
-    // Fetch connected accounts with tokens expiring within 24 hours
+    // Fetch accounts that need refresh: connected with expiring tokens, OR expired with refresh tokens
     const { data: accounts, error: fetchError } = await supabase
       .from("social_accounts")
       .select(
-        "id, platform, access_token_encrypted, refresh_token_encrypted, token_expires_at"
+        "id, platform, access_token_encrypted, refresh_token_encrypted, token_expires_at, status"
       )
-      .eq("status", "connected")
-      .lte("token_expires_at", twentyFourHoursFromNow.toISOString())
+      .in("status", ["connected", "expired"])
+      .not("refresh_token_encrypted", "is", null)
       .returns<SocialAccount[]>();
 
     if (fetchError) {
@@ -108,7 +110,8 @@ serve(async (req) => {
             result = await refreshTwitterToken(
               supabase,
               account,
-              twitterClientId
+              twitterClientId,
+              twitterClientSecret
             );
             break;
           case "instagram":
@@ -190,10 +193,11 @@ serve(async (req) => {
 async function refreshTwitterToken(
   supabase: ReturnType<typeof createClient>,
   account: SocialAccount,
-  clientId: string
+  clientId: string,
+  clientSecret: string
 ): Promise<RefreshResult> {
   console.log(
-    `Refreshing Twitter token for account ${account.id}`
+    `Refreshing Twitter token for account ${account.id} (status: ${account.status})`
   );
 
   if (!account.refresh_token_encrypted) {
@@ -210,10 +214,14 @@ async function refreshTwitterToken(
   }
 
   try {
+    // Use Basic auth (client_id:client_secret) — required for confidential clients
+    const basicAuth = btoa(`${clientId}:${clientSecret}`);
+
     const response = await fetch("https://api.twitter.com/2/oauth2/token", {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
+        "Authorization": `Basic ${basicAuth}`,
       },
       body: new URLSearchParams({
         grant_type: "refresh_token",
@@ -247,6 +255,7 @@ async function refreshTwitterToken(
         access_token_encrypted: data.access_token,
         refresh_token_encrypted: data.refresh_token,
         token_expires_at: newExpiresAt,
+        status: "connected",
         updated_at: new Date().toISOString(),
       })
       .eq("id", account.id);
@@ -265,7 +274,7 @@ async function refreshTwitterToken(
     }
 
     console.log(
-      `Twitter token refreshed for account ${account.id}, new expiry: ${newExpiresAt}`
+      `Twitter token refreshed for account ${account.id}, new expiry: ${newExpiresAt} (was ${account.status})`
     );
     return { accountId: account.id, platform: "twitter", success: true };
   } catch (error) {
@@ -339,6 +348,7 @@ async function refreshInstagramToken(
       .update({
         access_token_encrypted: data.access_token,
         token_expires_at: newExpiresAt,
+        status: "connected",
         updated_at: new Date().toISOString(),
       })
       .eq("id", account.id);

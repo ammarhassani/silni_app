@@ -28,6 +28,7 @@ interface SocialPost {
     access_token_encrypted: string;
     refresh_token_encrypted: string | null;
     platform_user_id: string | null;
+    token_expires_at: string | null;
   };
 }
 
@@ -49,114 +50,19 @@ function composePostText(post: SocialPost): string {
 }
 
 /**
- * RFC 3986 percent-encode a string (required for OAuth 1.0a signatures).
- */
-function percentEncode(str: string): string {
-  return encodeURIComponent(str)
-    .replace(/!/g, "%21")
-    .replace(/\*/g, "%2A")
-    .replace(/'/g, "%27")
-    .replace(/\(/g, "%28")
-    .replace(/\)/g, "%29");
-}
-
-/**
- * Generate OAuth 1.0a Authorization header for Twitter API.
- */
-async function generateOAuth1Header(
-  method: string,
-  url: string,
-  consumerKey: string,
-  consumerSecret: string,
-  accessToken: string,
-  accessTokenSecret: string,
-): Promise<string> {
-  const timestamp = Math.floor(Date.now() / 1000).toString();
-  const nonceArray = new Uint8Array(16);
-  crypto.getRandomValues(nonceArray);
-  const nonce = Array.from(nonceArray, (b) => b.toString(16).padStart(2, "0")).join("");
-
-  const oauthParams: Record<string, string> = {
-    oauth_consumer_key: consumerKey,
-    oauth_nonce: nonce,
-    oauth_signature_method: "HMAC-SHA1",
-    oauth_timestamp: timestamp,
-    oauth_token: accessToken,
-    oauth_version: "1.0",
-  };
-
-  // Sort parameters and create parameter string
-  const sortedParams = Object.entries(oauthParams)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([k, v]) => `${percentEncode(k)}=${percentEncode(v)}`)
-    .join("&");
-
-  // Create signature base string
-  const signatureBase = [
-    method.toUpperCase(),
-    percentEncode(url),
-    percentEncode(sortedParams),
-  ].join("&");
-
-  // Create signing key
-  const signingKey = `${percentEncode(consumerSecret)}&${percentEncode(accessTokenSecret)}`;
-
-  // HMAC-SHA1 sign
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(signingKey),
-    { name: "HMAC", hash: "SHA-1" },
-    false,
-    ["sign"],
-  );
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(signatureBase));
-  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signature)));
-
-  oauthParams.oauth_signature = signatureB64;
-
-  // Build header string
-  const headerString = Object.entries(oauthParams)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([k, v]) => `${percentEncode(k)}="${percentEncode(v)}"`)
-    .join(", ");
-
-  return `OAuth ${headerString}`;
-}
-
-/**
- * Publish a post to Twitter (X) using the v2 API with OAuth 1.0a.
+ * Publish a post to Twitter (X) using the v2 API with OAuth 2.0 Bearer token.
  */
 async function publishToTwitter(
   text: string,
   accessToken: string,
-  accessTokenSecret: string | null,
 ): Promise<PublishResult> {
   try {
-    const consumerKey = Deno.env.get("TWITTER_CONSUMER_KEY");
-    const consumerSecret = Deno.env.get("TWITTER_CONSUMER_SECRET");
-
-    if (!consumerKey || !consumerSecret || !accessTokenSecret) {
-      return {
-        success: false,
-        error_message: "Twitter OAuth 1.0a credentials not configured",
-      };
-    }
-
     const twitterUrl = "https://api.twitter.com/2/tweets";
-    const authHeader = await generateOAuth1Header(
-      "POST",
-      twitterUrl,
-      consumerKey,
-      consumerSecret,
-      accessToken,
-      accessTokenSecret,
-    );
 
     const response = await fetch(twitterUrl, {
       method: "POST",
       headers: {
-        "Authorization": authHeader,
+        "Authorization": `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ text }),
@@ -287,6 +193,65 @@ async function publishToInstagram(
   }
 }
 
+/**
+ * Attempt to refresh an expired Twitter token inline using the refresh_token grant.
+ * Returns the new access token on success, or null on failure.
+ */
+async function refreshTwitterTokenInline(
+  supabase: ReturnType<typeof createClient>,
+  accountId: string,
+  refreshToken: string,
+): Promise<string | null> {
+  const clientId = Deno.env.get("TWITTER_CLIENT_ID");
+  const clientSecret = Deno.env.get("TWITTER_CLIENT_SECRET");
+  if (!clientId || !clientSecret) {
+    console.error("Missing TWITTER_CLIENT_ID or TWITTER_CLIENT_SECRET for inline refresh");
+    return null;
+  }
+
+  try {
+    const basicAuth = btoa(`${clientId}:${clientSecret}`);
+    const response = await fetch("https://api.twitter.com/2/oauth2/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Authorization": `Basic ${basicAuth}`,
+      },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+        client_id: clientId,
+      }).toString(),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Inline Twitter refresh failed (${response.status}):`, errorText);
+      return null;
+    }
+
+    const data = await response.json();
+    const newExpiresAt = new Date(Date.now() + data.expires_in * 1000).toISOString();
+
+    await supabase
+      .from("social_accounts")
+      .update({
+        access_token_encrypted: data.access_token,
+        refresh_token_encrypted: data.refresh_token,
+        token_expires_at: newExpiresAt,
+        status: "connected",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", accountId);
+
+    console.log(`Inline refresh succeeded for account ${accountId}, new expiry: ${newExpiresAt}`);
+    return data.access_token;
+  } catch (error) {
+    console.error(`Inline refresh error for account ${accountId}:`, error);
+    return null;
+  }
+}
+
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
@@ -331,7 +296,8 @@ serve(async (req) => {
           status,
           access_token_encrypted,
           refresh_token_encrypted,
-          platform_user_id
+          platform_user_id,
+          token_expires_at
         )
       `,
       )
@@ -374,10 +340,10 @@ serve(async (req) => {
         `\nProcessing post ${post.id} for platform: ${post.platform}`,
       );
 
-      // Check if account is connected
-      if (!account || account.status !== "connected") {
+      // Check if account exists
+      if (!account) {
         console.error(
-          `Post ${post.id}: No connected account found for account_id ${post.account_id}`,
+          `Post ${post.id}: No account found for account_id ${post.account_id}`,
         );
 
         await supabase
@@ -392,8 +358,48 @@ serve(async (req) => {
         continue;
       }
 
-      // Get access token
-      const accessToken = account.access_token_encrypted;
+      // Check if token is expired or about to expire (within 5 min)
+      let accessToken = account.access_token_encrypted;
+      const tokenExpired = account.status === "expired" ||
+        (account.token_expires_at &&
+          new Date(account.token_expires_at).getTime() < Date.now() + 5 * 60 * 1000);
+
+      if (tokenExpired && account.platform === "twitter" && account.refresh_token_encrypted) {
+        console.log(`Post ${post.id}: Token expired/expiring, attempting inline refresh...`);
+        const newToken = await refreshTwitterTokenInline(
+          supabase,
+          account.id,
+          account.refresh_token_encrypted,
+        );
+        if (newToken) {
+          accessToken = newToken;
+        } else {
+          console.error(`Post ${post.id}: Inline refresh failed`);
+          await supabase
+            .from("social_posts")
+            .update({
+              status: "failed",
+              error_message: "Token expired and refresh failed",
+            })
+            .eq("id", post.id);
+          failedCount++;
+          continue;
+        }
+      } else if (tokenExpired) {
+        console.error(
+          `Post ${post.id}: Account ${account.id} token expired, no refresh available`,
+        );
+        await supabase
+          .from("social_posts")
+          .update({
+            status: "failed",
+            error_message: "Account token expired",
+          })
+          .eq("id", post.id);
+        failedCount++;
+        continue;
+      }
+
       if (!accessToken) {
         console.error(
           `Post ${post.id}: No access token for account ${account.id}`,
@@ -421,7 +427,7 @@ serve(async (req) => {
 
       // Publish based on platform
       if (post.platform === "twitter") {
-        result = await publishToTwitter(composedText, accessToken, account.refresh_token_encrypted);
+        result = await publishToTwitter(composedText, accessToken);
       } else if (post.platform === "instagram") {
         const igAccountId = account.platform_user_id;
         if (!igAccountId) {
