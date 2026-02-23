@@ -34,8 +34,8 @@ class SessionPaywallInterstitial {
 
     final skipCount = prefs.getInt(skipCountKey) ?? 0;
 
-    // After 5 skips, reduce frequency to every 5th open
-    final interval = skipCount >= 5 ? 5 : 3;
+    // After 5 skips, reduce frequency to every 10th open
+    final interval = skipCount >= 5 ? 10 : 7;
 
     if (openCount % interval != 0) return;
 
@@ -151,7 +151,7 @@ class _PaywallSheet extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             _FeatureRow(
               icon: LucideIcons.bell,
-              text: 'تذكيرات ذكية بلا حدود',
+              text: 'تذكيرات بلا حدود لكل أقاربك',
               delay: 350.ms,
             ),
             const SizedBox(height: AppSpacing.md),
