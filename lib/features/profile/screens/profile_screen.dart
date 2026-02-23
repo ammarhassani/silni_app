@@ -12,6 +12,7 @@ import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/services/session_persistence_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/services/error_handler_service.dart';
+import '../../../shared/widgets/persistent_bottom_nav.dart';
 import '../widgets/widgets.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/message_widget.dart';
@@ -159,7 +160,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
               ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
+              SliverToBoxAdapter(child: SizedBox(height: PersistentBottomNav.totalHeight)),
             ],
           ),
         ),
