@@ -149,6 +149,25 @@ class FamilyGraph {
   })  : _adjacency = adjacency,
         _reverseAdjacency = reverseAdjacency;
 
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! FamilyGraph) return false;
+    if (other.userId != userId) return false;
+    if (other.edges.length != edges.length) return false;
+    // FamilyEdge already has == based on (fromId, toId, type)
+    final edgeSet = edges.toSet();
+    final otherSet = other.edges.toSet();
+    // Set-length check guards against duplicates within a single list
+    return edgeSet.length == otherSet.length && edgeSet.containsAll(otherSet);
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        userId,
+        Object.hashAllUnordered(edges),
+      );
+
   // ---------------------------------------------------------------------------
   // Query helpers
   // ---------------------------------------------------------------------------
