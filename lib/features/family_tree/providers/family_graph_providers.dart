@@ -131,6 +131,15 @@ final userFamilyGroupProvider =
 /// Used to determine which tree nodes should display a "linked member" badge.
 final groupMemberNodeIdsProvider =
     StreamProvider.autoDispose.family<Set<String>, String>((ref, groupId) {
+  final link = ref.keepAlive();
+  Timer? timer;
+
+  ref.onDispose(() => timer?.cancel());
+  ref.onCancel(() {
+    timer = Timer(_cacheTimeout, () => link.close());
+  });
+  ref.onResume(() => timer?.cancel());
+
   return SupabaseConfig.client
       .from('family_group_members')
       .stream(primaryKey: ['id'])
