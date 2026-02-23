@@ -24,8 +24,8 @@ import '../../premium_onboarding/screens/premium_onboarding_screen.dart';
 import '../providers/home_providers.dart';
 import '../widgets/widgets.dart';
 import '../../../shared/widgets/message_widget.dart';
-import '../../../shared/utils/relationship_label_helper.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
+import '../providers/relationship_labels_provider.dart';
 import '../../../shared/widgets/persistent_bottom_nav.dart';
 import '../../../core/providers/subscription_provider.dart';
 import '../../../shared/widgets/session_paywall_interstitial.dart';
@@ -312,18 +312,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // Check if user is in a family group for shared relatives
     final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
 
-    // Watch family graph for perspective-shifting labels
-    // Use shared graph when in a group, personal graph otherwise
-    final graph = groupInfo != null
-        ? ref.watch(sharedFamilyGraphProvider((
-            groupId: groupInfo.groupId,
-            viewerNodeId: groupInfo.nodeId,
-          )))
-        : ref.watch(familyGraphProvider(userId));
-
-    // For label computation, use the viewer's node ID when in a group
-    final effectiveViewerId = groupInfo?.nodeId ?? userId;
-
     // Rahim-scoped + self-node-filtered relatives via central provider
     final relativesAsync = ref.watch(viewerFilteredRelativesProvider);
 
@@ -337,20 +325,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ? ref.watch(groupTodayContactedRelativesProvider(groupInfo.groupId))
         : ref.watch(todayContactedRelativesProvider(userId));
 
-    // Build relationship labels map when graph data is available
-    final relationshipLabels = relativesAsync.whenData((relatives) {
-      if (graph == null) return <String, String>{};
-      final relativesMap = {for (final r in relatives) r.id: r};
-      return {
-        for (final r in relatives)
-          r.id: getRelationshipLabel(
-            relative: r,
-            viewerId: effectiveViewerId,
-            graph: graph,
-            relativesMap: relativesMap,
-          ),
-      };
-    }).valueOrNull;
+    // Centralized relationship labels — only recomputes when graph/relatives change
+    final relationshipLabels = ref.watch(relationshipLabelsProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
