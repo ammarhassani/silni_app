@@ -16,6 +16,7 @@ import '../../../shared/widgets/share_bottom_sheet.dart';
 import '../../../shared/widgets/share_cards/wrapped_share_card.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
+import '../../subscription/screens/paywall_screen.dart';
 import 'badges_screen.dart';
 import '../../../shared/widgets/message_widget.dart';
 import '../../../shared/widgets/persistent_bottom_nav.dart';
@@ -213,8 +214,17 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                                 icon: Icons.leaderboard_rounded,
                                 color:
                                     themeColors.streakFire.colors.first,
-                                onTap: () =>
-                                    context.push(AppRoutes.leaderboard),
+                                onTap: () {
+                                  if (ref.read(isMaxProvider)) {
+                                    context.push(AppRoutes.leaderboard);
+                                  } else {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => const PaywallScreen(),
+                                      ),
+                                    );
+                                  }
+                                },
                                 themeColors: themeColors,
                                 delay: 1,
                               ),
@@ -223,8 +233,17 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                                 subtitle: 'تفاصيل تقدمك',
                                 icon: Icons.analytics_rounded,
                                 color: themeColors.primary,
-                                onTap: () => context
-                                    .push(AppRoutes.detailedStats),
+                                onTap: () {
+                                  if (ref.read(isMaxProvider)) {
+                                    context.push(AppRoutes.detailedStats);
+                                  } else {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => const PaywallScreen(),
+                                      ),
+                                    );
+                                  }
+                                },
                                 themeColors: themeColors,
                                 delay: 2,
                               ),
