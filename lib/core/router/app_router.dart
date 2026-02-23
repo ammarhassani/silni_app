@@ -14,7 +14,6 @@ import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/signup_screen.dart';
 import '../../features/auth/screens/email_verification_screen.dart';
-import '../../features/auth/screens/reset_password_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/relatives/screens/relatives_screen.dart';
 import '../../features/relatives/screens/relative_detail_screen.dart';
@@ -154,13 +153,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) =>
             _buildPageWithTransition(context, state, const EmailVerificationScreen()),
       ),
-      GoRoute(
-        path: AppRoutes.resetPassword,
-        name: 'resetPassword',
-        pageBuilder: (context, state) =>
-            _buildPageWithTransition(context, state, const ResetPasswordScreen()),
-      ),
-
       // Main App Routes
       GoRoute(
         path: AppRoutes.home,

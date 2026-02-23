@@ -7,7 +7,6 @@ class AppRoutes {
   static const String login = '/login';
   static const String signup = '/signup';
   static const String emailVerification = '/email-verification';
-  static const String resetPassword = '/reset-password';
 
   /// Routes that don't require authentication
   static const Set<String> publicRoutes = {
@@ -16,7 +15,6 @@ class AppRoutes {
     login,
     signup,
     emailVerification,
-    resetPassword,
     joinFamilyGroup,
     joinShortLink,
   };
@@ -74,7 +72,6 @@ class AppRoutes {
   static const String yearlyWrapped = '/yearly-wrapped';
 
   // Family group routes
-  static const String familyGroups = '/family-groups';
   static const String familyGroupDetail = '/family-group';
   static const String createFamilyGroup = '/create-family-group';
   static const String joinFamilyGroup = '/join-family-group';

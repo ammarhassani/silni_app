@@ -18,7 +18,6 @@ import 'core/config/env/env_validator.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
-import 'core/router/app_routes.dart';
 import 'core/router/navigation_service.dart';
 import 'core/providers/gamification_events_provider.dart';
 import 'core/services/sync_service.dart';
@@ -905,28 +904,10 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
 
       if (event == AuthChangeEvent.passwordRecovery) {
         logger.info(
-          'Password recovery event detected - navigating to reset screen',
+          'Password recovery event detected - Supabase handles reset via redirect',
           category: LogCategory.auth,
           tag: 'main',
         );
-
-        // Delay navigation slightly to ensure router is ready
-        Future.delayed(const Duration(milliseconds: 100), () {
-          final context = NavigationService.currentContext;
-          if (context != null) {
-            NavigationService.navigateTo(AppRoutes.resetPassword);
-          } else {
-            logger.warning(
-              'Navigation context not ready, retrying...',
-              category: LogCategory.auth,
-              tag: 'main',
-            );
-            // Retry after a longer delay
-            Future.delayed(const Duration(milliseconds: 500), () {
-              NavigationService.navigateTo(AppRoutes.resetPassword);
-            });
-          }
-        });
       }
     });
   }

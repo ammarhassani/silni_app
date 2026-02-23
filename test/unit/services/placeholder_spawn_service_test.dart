@@ -1,7 +1,5 @@
-import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:silni_app/features/family_tree/models/family_graph.dart';
-import 'package:silni_app/features/family_tree/models/placeholder_node.dart';
 import 'package:silni_app/features/family_tree/services/placeholder_spawn_service.dart';
 import 'package:silni_app/shared/models/relative_model.dart';
 
@@ -63,13 +61,6 @@ final _paternalAunt = _makeRelative(
   type: RelationshipType.aunt,
   gender: Gender.female,
   side: FamilySide.paternal,
-);
-
-final _maternalAunt = _makeRelative(
-  id: 'aunt-mat-id',
-  type: RelationshipType.aunt,
-  gender: Gender.female,
-  side: FamilySide.maternal,
 );
 
 final _paternalGrandfather = _makeRelative(
