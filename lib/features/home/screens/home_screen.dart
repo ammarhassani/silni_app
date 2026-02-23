@@ -5,17 +5,13 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/models/gamification_event.dart';
-import '../../../core/providers/gamification_events_provider.dart';
 import '../../../core/providers/ai_preload_provider.dart';
-import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
 import '../../../shared/widgets/floating_points_overlay.dart';
 import '../../../shared/widgets/level_up_modal.dart';
 import '../../../shared/widgets/badge_unlock_modal.dart';
 import '../../../shared/widgets/streak_milestone_modal.dart';
-import '../../../shared/widgets/error_widgets.dart';
 import '../../../shared/models/hadith_model.dart';
-import '../../../shared/providers/interactions_provider.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/providers/realtime_provider.dart';
@@ -24,8 +20,6 @@ import '../../premium_onboarding/screens/premium_onboarding_screen.dart';
 import '../providers/home_providers.dart';
 import '../widgets/widgets.dart';
 import '../../../shared/widgets/message_widget.dart';
-import '../../family_tree/providers/family_graph_providers.dart';
-import '../providers/relationship_labels_provider.dart';
 import '../../../shared/widgets/persistent_bottom_nav.dart';
 import '../../../core/providers/subscription_provider.dart';
 import '../../../shared/widgets/session_paywall_interstitial.dart';
@@ -283,50 +277,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     final themeColors = ref.watch(themeColorsProvider);
 
-    // Listen to gamification events
-    ref.listen<AsyncValue<GamificationEvent>>(
-      gamificationEventsStreamProvider,
-      (previous, next) {
-        next.whenData((event) {
-          if (event.userId != userId) return;
-
-          final appLifecycleState = WidgetsBinding.instance.lifecycleState;
-          final isInForeground =
-              appLifecycleState == null ||
-              appLifecycleState == AppLifecycleState.resumed;
-
-          if (isInForeground) {
-            _processGamificationEvent(event);
-          } else {
-            _pendingEvents.add(event);
-          }
-        });
-      },
-    );
-
+    // Side-effect providers — no widget output, but must stay in HomeScreen
     ref.watch(autoRealtimeSubscriptionsProvider);
-
-    // Preload AI data in background for faster AI feature access
     ref.watch(aiAutoPreloadProvider);
-
-    // Check if user is in a family group for shared relatives
-    final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
-
-    // Rahim-scoped + self-node-filtered relatives via central provider
-    final relativesAsync = ref.watch(viewerFilteredRelativesProvider);
-
-    // Use shared interactions when in a group, personal otherwise
-    final todayInteractionsAsync = groupInfo != null
-        ? ref.watch(groupTodayInteractionsStreamProvider(groupInfo.groupId))
-        : ref.watch(todayInteractionsStreamProvider(userId));
-    final schedulesAsync = ref.watch(reminderSchedulesStreamProvider(userId));
-    // Use shared contacted status when in a group
-    final todayContactedAsync = groupInfo != null
-        ? ref.watch(groupTodayContactedRelativesProvider(groupInfo.groupId))
-        : ref.watch(todayContactedRelativesProvider(userId));
-
-    // Centralized relationship labels — only recomputes when graph/relatives change
-    final relationshipLabels = ref.watch(relationshipLabelsProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -334,6 +287,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       floatingActionButton: null,
       body: Stack(
         children: [
+          // Gamification event listener (invisible)
+          GamificationListener(
+            onEvent: (event) {
+              final appLifecycleState =
+                  WidgetsBinding.instance.lifecycleState;
+              final isInForeground = appLifecycleState == null ||
+                  appLifecycleState == AppLifecycleState.resumed;
+              if (isInForeground) {
+                _processGamificationEvent(event);
+              } else {
+                _pendingEvents.add(event);
+              }
+            },
+          ),
+
           // Confetti overlay
           Align(
             alignment: Alignment.topCenter,
@@ -369,138 +337,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Islamic greeting header
                     HomeHeaderWidget(
                       displayName: displayName,
                       userId: userId,
                     ),
                     const SizedBox(height: AppSpacing.sm),
-
-                    // Premium upgrade banner (free users only)
                     const PremiumUpgradeBanner(),
                     const SizedBox(height: AppSpacing.sm),
-
-                    // Top banner (promotional/announcements)
                     const MessageWidget(position: 'home_top'),
                     const SizedBox(height: AppSpacing.sm),
-
-                    // Screen-based messages (MOTD, modals, announcements)
                     const MessageWidget(screenPath: '/home'),
                     const SizedBox(height: AppSpacing.md),
-
-                    // Hadith/Islamic reminder
                     IslamicReminderWidget(
                       hadith: _dailyHadith,
                       isLoading: _isLoadingHadith,
                     ),
                     const SizedBox(height: AppSpacing.md),
-
-                    // Daily priority contact card (muted for now)
-                    // DailyPriorityCard(userId: userId),
-                    // const SizedBox(height: AppSpacing.md),
-
-                    // Occasion messages card (shows before Eid/Ramadan/etc.)
                     OccasionCard(userId: userId),
                     const SizedBox(height: AppSpacing.md),
-
-                    // Proactive insight (local, all users)
                     ProactiveInsightCard(userId: userId),
                     const SizedBox(height: AppSpacing.md),
-
-                    // Quick Actions
                     const QuickActionsWidget(),
                     const SizedBox(height: AppSpacing.lg),
-
-                    // Family members circle avatars
-                    relativesAsync.when(
-                      data: (relatives) => FamilyCirclesWidget(
-                        relatives: relatives,
-                        relationshipLabels: relationshipLabels,
-                      ),
-                      loading: () => const FamilyCirclesSkeleton(),
-                      error: (error, _) => InlineErrorWidget(
-                        message: 'فشل في تحميل بيانات العائلة',
-                        onRetry: () => ref.invalidate(viewerFilteredRelativesProvider),
-                      ),
-                    ),
+                    const FamilyCirclesSection(),
                     const SizedBox(height: AppSpacing.md),
-
-                    // AI Priority Contacts (MAX only)
                     AIPriorityContactsWidget(userId: userId),
                     const SizedBox(height: AppSpacing.md),
-
-                    // TODO: Frequency carousel temporarily disabled
-                    // relativesAsync.when(
-                    //   data: (relatives) => schedulesAsync.when(
-                    //     data: (schedules) => FrequencyCarousel(
-                    //       relatives: relatives,
-                    //       schedules: schedules,
-                    //     ),
-                    //     loading: () => const FrequencyCarouselSkeleton(),
-                    //     error: (_, _) => const SizedBox.shrink(),
-                    //   ),
-                    //   loading: () => const FrequencyCarouselSkeleton(),
-                    //   error: (_, _) => const SizedBox.shrink(),
-                    // ),
-
-                    // Due Reminders Card
-                    relativesAsync.when(
-                      data: (relatives) => schedulesAsync.when(
-                        data: (schedules) => DueRemindersCard(
-                          userId: userId,
-                          relatives: relatives,
-                          schedules: schedules,
-                          contactedSet: todayContactedAsync.valueOrNull ?? <String>{},
-                          relationshipLabels: relationshipLabels,
-                        ),
-                        loading: () => const DueRemindersCardSkeleton(),
-                        error: (_, _) => const SizedBox.shrink(),
-                      ),
-                      loading: () => const DueRemindersCardSkeleton(),
-                      error: (_, _) => const SizedBox.shrink(),
-                    ),
+                    const DueRemindersSection(),
                     const SizedBox(height: AppSpacing.lg),
-
-                    // Today's connections
-                    relativesAsync.when(
-                      data: (relatives) => todayInteractionsAsync.when(
-                        data: (interactions) => TodaysActivityWidget(
-                          interactions: interactions,
-                          relatives: relatives,
-                        ),
-                        loading: () => const TodaysActivitySkeleton(),
-                        error: (error, _) => InlineErrorWidget(
-                          message: 'فشل في تحميل نشاط اليوم',
-                          onRetry: () {
-                            if (groupInfo != null) {
-                              ref.invalidate(groupTodayInteractionsStreamProvider(groupInfo.groupId));
-                            } else {
-                              ref.invalidate(todayInteractionsStreamProvider(userId));
-                            }
-                          },
-                          compact: true,
-                        ),
-                      ),
-                      loading: () => const TodaysActivitySkeleton(),
-                      error: (_, _) => const SizedBox.shrink(),
-                    ),
+                    const TodaysActivitySection(),
                     const SizedBox(height: AppSpacing.md),
-
-                    // AI Daily Insight (MAX only)
                     const AIInsightCard(),
                     const SizedBox(height: AppSpacing.md),
-
-                    // Setup reminders prompt
-                    schedulesAsync.when(
-                      data: (schedules) => SetupRemindersPrompt(
-                        hasReminders: schedules.isNotEmpty,
-                      ),
-                      loading: () => const SizedBox.shrink(),
-                      error: (_, _) => const SizedBox.shrink(),
-                    ),
+                    const SetupRemindersSection(),
                     const SizedBox(height: AppSpacing.md),
-
-                    // Bottom banner (tips/promotions)
                     const MessageWidget(position: 'home_bottom'),
                     SizedBox(height: PersistentBottomNav.totalHeight),
                   ],
