@@ -64,11 +64,13 @@ final detailedStatsProvider = FutureProvider.autoDispose<DetailedStats>((ref) as
       .eq('id', user.id)
       .single();
 
-  // Load interaction counts by type
+  // Load interaction counts by type (last 6 months only)
+  final sixMonthsAgo = DateTime.now().subtract(const Duration(days: 180));
   final interactionsResponse = await SupabaseConfig.client
       .from('interactions')
       .select('type, relative_id, date')
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .gte('date', sixMonthsAgo.toIso8601String());
 
   final Map<InteractionType, int> counts = {};
   final Map<String, int> relativeCounts = {};
@@ -97,8 +99,7 @@ final detailedStatsProvider = FutureProvider.autoDispose<DetailedStats>((ref) as
       .gte('date', sevenDaysAgo.toIso8601String())
       .order('date', ascending: true);
 
-  // Load monthly data (last 6 months)
-  final sixMonthsAgo = DateTime.now().subtract(const Duration(days: 180));
+  // Load monthly data (last 6 months — reuses sixMonthsAgo from above)
   final monthlyResponse = await SupabaseConfig.client
       .from('interactions')
       .select('date')
