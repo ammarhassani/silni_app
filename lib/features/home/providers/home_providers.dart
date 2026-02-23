@@ -171,13 +171,13 @@ final reminderSchedulesStreamProvider =
   return repository.watchSchedules(userId);
 });
 
-/// Stream provider for group-wide today's interactions.
+/// Base stream for group-wide today's interactions.
 ///
-/// Shows interactions logged by ANY group member for relatives in the family group.
-/// Enables "family awareness" - see that your brother called Dad yesterday.
-/// Requires the shared_interactions_rls migration to be applied.
-final groupTodayInteractionsStreamProvider =
-    StreamProvider.autoDispose.family<List<Interaction>, String>((ref, groupId) {
+/// Single Supabase real-time subscription for all today's interactions visible
+/// via RLS in this group. Both interaction list and contacted-set providers
+/// derive from this, avoiding duplicate WebSocket channels.
+final _groupTodayInteractionsBaseProvider =
+    StreamProvider.autoDispose.family<List<Map<String, dynamic>>, String>((ref, groupId) {
   final link = ref.keepAlive();
   Timer? timer;
 
@@ -187,44 +187,22 @@ final groupTodayInteractionsStreamProvider =
   });
   ref.onResume(() => timer?.cancel());
 
-  // Use rahim-scoped IDs when available, fall back to full group
-  final rahimScope = ref.watch(rahimVisibleRelativeIdsProvider);
-  final groupRelativeIds = rahimScope ?? (ref
-      .watch(groupRelativesStreamProvider(groupId))
-      .valueOrNull
-      ?.map((r) => r.id)
-      .toSet() ?? <String>{});
-
   final now = DateTime.now();
   final startOfDay = DateTime(now.year, now.month, now.day);
 
-  // Stream interactions visible via RLS, then filter to visible relatives
   return SupabaseConfig.client
       .from('interactions')
       .stream(primaryKey: ['id'])
       .gte('date', startOfDay.toUtc().toIso8601String())
-      .order('date', ascending: false)
-      .map((data) => data
-          .map((json) => Interaction.fromJson(json))
-          .where((i) => groupRelativeIds.contains(i.relativeId))
-          .toList());
+      .order('date', ascending: false);
 });
 
-/// Stream provider for group-wide contacted relatives today.
+/// Group today's interactions as typed models, filtered to rahim-visible relatives.
 ///
-/// Returns the set of relative IDs that have been contacted today by ANY group member.
-final groupTodayContactedRelativesProvider =
-    StreamProvider.autoDispose.family<Set<String>, String>((ref, groupId) {
-  final link = ref.keepAlive();
-  Timer? timer;
-
-  ref.onDispose(() => timer?.cancel());
-  ref.onCancel(() {
-    timer = Timer(_cacheTimeout, () => link.close());
-  });
-  ref.onResume(() => timer?.cancel());
-
-  // Use rahim-scoped IDs when available, fall back to full group
+/// Derives from [_groupTodayInteractionsBaseProvider] to share a single
+/// WebSocket subscription with [groupTodayContactedRelativesProvider].
+final groupTodayInteractionsStreamProvider =
+    Provider.autoDispose.family<AsyncValue<List<Interaction>>, String>((ref, groupId) {
   final rahimScope = ref.watch(rahimVisibleRelativeIdsProvider);
   final groupRelativeIds = rahimScope ?? (ref
       .watch(groupRelativesStreamProvider(groupId))
@@ -232,20 +210,35 @@ final groupTodayContactedRelativesProvider =
       ?.map((r) => r.id)
       .toSet() ?? <String>{});
 
-  final now = DateTime.now();
-  final startOfDay = DateTime(now.year, now.month, now.day);
+  return ref.watch(_groupTodayInteractionsBaseProvider(groupId)).whenData((data) {
+    return data
+        .map((json) => Interaction.fromJson(json))
+        .where((i) => groupRelativeIds.contains(i.relativeId))
+        .toList();
+  });
+});
 
-  return SupabaseConfig.client
-      .from('interactions')
-      .stream(primaryKey: ['id'])
-      .gte('date', startOfDay.toUtc().toIso8601String())
-      .map((data) {
-        return data
-            .map((i) => i['relative_id'] as String?)
-            .where((id) => id != null && id.isNotEmpty && groupRelativeIds.contains(id))
-            .cast<String>()
-            .toSet();
-      });
+/// Group today's contacted relative IDs, derived from the same base stream.
+///
+/// Returns the set of relative IDs that have been contacted today by ANY
+/// group member. Shares the same WebSocket subscription as
+/// [groupTodayInteractionsStreamProvider] via [_groupTodayInteractionsBaseProvider].
+final groupTodayContactedRelativesProvider =
+    Provider.autoDispose.family<AsyncValue<Set<String>>, String>((ref, groupId) {
+  final rahimScope = ref.watch(rahimVisibleRelativeIdsProvider);
+  final groupRelativeIds = rahimScope ?? (ref
+      .watch(groupRelativesStreamProvider(groupId))
+      .valueOrNull
+      ?.map((r) => r.id)
+      .toSet() ?? <String>{});
+
+  return ref.watch(_groupTodayInteractionsBaseProvider(groupId)).whenData((data) {
+    return data
+        .map((i) => i['relative_id'] as String?)
+        .where((id) => id != null && id.isNotEmpty && groupRelativeIds.contains(id))
+        .cast<String>()
+        .toSet();
+  });
 });
 
 /// Provider for family group leaderboard stats.
