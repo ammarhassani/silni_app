@@ -43,6 +43,7 @@ class GlassBottomSheet extends ConsumerWidget {
       isScrollControlled: true,
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * maxHeightFraction,
+        maxWidth: 600,
       ),
       builder: builder,
     );

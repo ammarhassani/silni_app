@@ -115,7 +115,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 child: _isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : ListView(
-                  padding: const EdgeInsets.all(AppSpacing.md),
+                  padding: const EdgeInsets.only(
+                    top: AppSpacing.md,
+                    left: AppSpacing.md,
+                    right: AppSpacing.md,
+                    bottom: AppSpacing.xxl,
+                  ),
                   children: [
                     // In-App Messages
                     const MessageWidget(screenPath: '/notifications'),

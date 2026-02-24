@@ -124,15 +124,15 @@ class _QuickLogFaceState extends ConsumerState<_QuickLogFace> {
                 showFavoriteBadge: false,
               ),
               const SizedBox(height: AppSpacing.xs),
-              SizedBox(
-                width: 70,
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 80),
                 child: Text(
                   widget.relative.fullName,
                   style: AppTypography.labelSmall.copyWith(
                     color: widget.themeColors.textSecondary,
                   ),
                   textAlign: TextAlign.center,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),

@@ -242,7 +242,12 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                                   ),
                                 )
                               : ListView.builder(
-                                  padding: const EdgeInsets.all(AppSpacing.md),
+                                  padding: const EdgeInsets.only(
+                                    top: AppSpacing.md,
+                                    left: AppSpacing.md,
+                                    right: AppSpacing.md,
+                                    bottom: AppSpacing.xxl,
+                                  ),
                                   itemCount: _leaderboardData.length,
                                   itemBuilder: (context, index) {
                                     final userData = _leaderboardData[index];

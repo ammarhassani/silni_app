@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -172,13 +173,6 @@ void main() async {
     // Don't rethrow - let app start so we can see logs
   }
 
-  // Initialize home screen widget (app group for iOS shared UserDefaults)
-  try {
-    await HomeWidgetService.initialize();
-  } catch (_) {
-    // Non-critical — widget may not be available on all platforms
-  }
-
   // Initialize Hive for local caching (offline support)
   logger.info(
     'Initializing Hive for local caching...',
@@ -210,30 +204,6 @@ void main() async {
     tag: 'Connectivity',
   );
   connectivityService.initialize();
-
-  // Initialize sync service (offline queue + background sync)
-  logger.info(
-    'Initializing sync service...',
-    category: LogCategory.service,
-    tag: 'Sync',
-  );
-  try {
-    await SyncService.instance.initialize();
-    logger.info(
-      'Sync service initialized successfully',
-      category: LogCategory.service,
-      tag: 'Sync',
-    );
-  } catch (e, stackTrace) {
-    logger.error(
-      'Sync service initialization failed',
-      category: LogCategory.service,
-      tag: 'Sync',
-      metadata: {'error': e.toString()},
-      stackTrace: stackTrace,
-    );
-    // Don't rethrow - app can work without sync
-  }
 
   // Initialize Firebase for FCM (push notifications only)
   logger.info(
@@ -313,31 +283,6 @@ void main() async {
     // Don't rethrow - app can work without push notifications
   }
 
-  // Initialize unified notification service (FCM + local notifications)
-  logger.info(
-    'Initializing notification services...',
-    category: LogCategory.service,
-    tag: 'Notifications',
-  );
-  try {
-    final unifiedNotifications = UnifiedNotificationService();
-    await unifiedNotifications.initialize();
-    logger.info(
-      'Notification services initialized successfully',
-      category: LogCategory.service,
-      tag: 'Notifications',
-    );
-  } catch (e, stackTrace) {
-    logger.error(
-      'Notification services initialization failed',
-      category: LogCategory.service,
-      tag: 'Notifications',
-      metadata: {'error': e.toString()},
-      stackTrace: stackTrace,
-    );
-    // Don't rethrow - app can work without notifications
-  }
-
   // Initialize subscription service (RevenueCat)
   // Only pass userId if Supabase is initialized and user is authenticated
   logger.info(
@@ -367,261 +312,9 @@ void main() async {
     // Don't rethrow - app can work without subscriptions (defaults to free tier)
   }
 
-  // Initialize feature config service (dynamic feature gating from admin panel)
-  logger.info(
-    'Loading feature configuration from admin panel...',
-    category: LogCategory.service,
-    tag: 'FeatureConfig',
-  );
-  try {
-    await FeatureConfigService.instance.refresh();
-    logger.info(
-      'Feature configuration loaded successfully',
-      category: LogCategory.service,
-      tag: 'FeatureConfig',
-    );
-  } catch (e) {
-    logger.warning(
-      'Feature configuration loading failed - using hardcoded defaults',
-      category: LogCategory.service,
-      tag: 'FeatureConfig',
-      metadata: {'error': e.toString()},
-    );
-    // Don't rethrow - app falls back to hardcoded feature config
-  }
-
-  // ========================================
-  // CACHE CONFIGURATION - Load cache durations first
-  // ========================================
-  logger.info(
-    'Loading cache configuration...',
-    category: LogCategory.service,
-    tag: 'CacheConfig',
-  );
-  try {
-    await CacheConfigService().initialize();
-    logger.info(
-      'Cache configuration loaded successfully',
-      category: LogCategory.service,
-      tag: 'CacheConfig',
-    );
-  } catch (e) {
-    logger.warning(
-      'Cache configuration loading failed - using defaults',
-      category: LogCategory.service,
-      tag: 'CacheConfig',
-      metadata: {'error': e.toString()},
-    );
-  }
-
-  // ========================================
-  // AI CONFIGURATION - Load from admin panel
-  // ========================================
-  logger.info(
-    'Loading AI configuration from admin panel...',
-    category: LogCategory.service,
-    tag: 'AIConfig',
-  );
-  try {
-    await AIConfigService.instance.initialize();
-    logger.info(
-      'AI configuration loaded successfully',
-      category: LogCategory.service,
-      tag: 'AIConfig',
-    );
-  } catch (e) {
-    logger.warning(
-      'AI configuration loading failed - using hardcoded defaults',
-      category: LogCategory.service,
-      tag: 'AIConfig',
-      metadata: {'error': e.toString()},
-    );
-    // Don't rethrow - app falls back to hardcoded AI config
-  }
-
-  // Load gamification configuration from admin panel
-  logger.info(
-    'Loading gamification configuration from admin panel...',
-    category: LogCategory.service,
-    tag: 'GamificationConfig',
-  );
-  try {
-    await GamificationConfigService.instance.initialize();
-    logger.info(
-      'Gamification configuration loaded successfully',
-      category: LogCategory.service,
-      tag: 'GamificationConfig',
-    );
-  } catch (e) {
-    logger.warning(
-      'Gamification configuration loading failed - using hardcoded defaults',
-      category: LogCategory.service,
-      tag: 'GamificationConfig',
-      metadata: {'error': e.toString()},
-    );
-    // Don't rethrow - app falls back to hardcoded gamification config
-  }
-
-  // Load content configuration from admin panel (banners, hadith, quotes, MOTD)
-  logger.info(
-    'Loading content configuration from admin panel...',
-    category: LogCategory.service,
-    tag: 'ContentConfig',
-  );
-  try {
-    await ContentConfigService.instance.refresh();
-    logger.info(
-      'Content configuration loaded successfully',
-      category: LogCategory.service,
-      tag: 'ContentConfig',
-    );
-  } catch (e) {
-    logger.warning(
-      'Content configuration loading failed - using hardcoded defaults',
-      category: LogCategory.service,
-      tag: 'ContentConfig',
-      metadata: {'error': e.toString()},
-    );
-    // Don't rethrow - app falls back to hardcoded content
-  }
-
-  // Load notification configuration from admin panel (templates, time slots)
-  logger.info(
-    'Loading notification configuration from admin panel...',
-    category: LogCategory.service,
-    tag: 'NotificationConfig',
-  );
-  try {
-    await NotificationConfigService.instance.refresh();
-    logger.info(
-      'Notification configuration loaded successfully',
-      category: LogCategory.service,
-      tag: 'NotificationConfig',
-    );
-  } catch (e) {
-    logger.warning(
-      'Notification configuration loading failed - using hardcoded defaults',
-      category: LogCategory.service,
-      tag: 'NotificationConfig',
-      metadata: {'error': e.toString()},
-    );
-    // Don't rethrow - app falls back to hardcoded notification config
-  }
-
-  // Load design configuration from admin panel (colors, themes, animations)
-  logger.info(
-    'Loading design configuration from admin panel...',
-    category: LogCategory.service,
-    tag: 'DesignConfig',
-  );
-  try {
-    await DesignConfigService.instance.initialize();
-    logger.info(
-      'Design configuration loaded successfully',
-      category: LogCategory.service,
-      tag: 'DesignConfig',
-    );
-  } catch (e) {
-    logger.warning(
-      'Design configuration loading failed - using hardcoded defaults',
-      category: LogCategory.service,
-      tag: 'DesignConfig',
-      metadata: {'error': e.toString()},
-    );
-    // Don't rethrow - app falls back to hardcoded design config
-  }
-
-  // Load app routes configuration from admin panel (for banners/MOTD action routes)
-  logger.info(
-    'Loading app routes configuration from admin panel...',
-    category: LogCategory.service,
-    tag: 'AppRoutesConfig',
-  );
-  try {
-    await AppRoutesConfigService.instance.initialize();
-    logger.info(
-      'App routes configuration loaded successfully',
-      category: LogCategory.service,
-      tag: 'AppRoutesConfig',
-    );
-  } catch (e) {
-    logger.warning(
-      'App routes configuration loading failed - using hardcoded defaults',
-      category: LogCategory.service,
-      tag: 'AppRoutesConfig',
-      metadata: {'error': e.toString()},
-    );
-    // Don't rethrow - app falls back to hardcoded routes
-  }
-
-  // Initialize unified message service (replaces MOTD, Banners, In-App Messages)
-  logger.info(
-    'Initializing unified message service...',
-    category: LogCategory.service,
-    tag: 'Messages',
-  );
-  try {
-    await MessageService.instance.initialize();
-    logger.info(
-      'Unified message service initialized',
-      category: LogCategory.service,
-      tag: 'Messages',
-    );
-  } catch (e) {
-    logger.warning(
-      'Unified message service initialization failed',
-      category: LogCategory.service,
-      tag: 'Messages',
-      metadata: {'error': e.toString()},
-    );
-    // Don't rethrow - app works without messages
-  }
-
-  // Initialize UI strings service (remote-controlled strings from admin panel)
-  logger.info(
-    'Initializing UI strings service...',
-    category: LogCategory.service,
-    tag: 'UIStrings',
-  );
-  try {
-    await UIStringsService.instance.initialize();
-    logger.info(
-      'UI strings service initialized',
-      category: LogCategory.service,
-      tag: 'UIStrings',
-    );
-  } catch (e) {
-    logger.warning(
-      'UI strings service initialization failed - using hardcoded strings',
-      category: LogCategory.service,
-      tag: 'UIStrings',
-      metadata: {'error': e.toString()},
-    );
-    // Don't rethrow - app falls back to hardcoded strings
-  }
-
-  // Initialize onboarding config service (remote-controlled onboarding from admin panel)
-  logger.info(
-    'Initializing onboarding config service...',
-    category: LogCategory.service,
-    tag: 'OnboardingConfig',
-  );
-  try {
-    await OnboardingConfigService.instance.initialize();
-    logger.info(
-      'Onboarding config service initialized',
-      category: LogCategory.service,
-      tag: 'OnboardingConfig',
-    );
-  } catch (e) {
-    logger.warning(
-      'Onboarding config service initialization failed - using hardcoded onboarding',
-      category: LogCategory.service,
-      tag: 'OnboardingConfig',
-      metadata: {'error': e.toString()},
-    );
-    // Don't rethrow - app falls back to hardcoded onboarding
-  }
+  // Defer non-critical config services — all have hardcoded fallback defaults.
+  // They load in parallel while the splash screen plays, saving ~2-3s of startup.
+  unawaited(_initDeferredServices(logger));
 
   // Configure global error handlers with device context
   logger.info(
@@ -750,6 +443,48 @@ void main() async {
       );
       return runApp(const ProviderScope(child: SilniApp()));
     },
+  );
+}
+
+/// Non-critical services deferred to run in parallel while the splash screen
+/// plays. All of these have hardcoded fallback defaults, so the app works
+/// correctly even if they haven't finished loading yet.
+Future<void> _initDeferredServices(AppLoggerService logger) async {
+  Future<void> init(Future<void> Function() fn, String tag) async {
+    try {
+      await fn();
+      logger.info('$tag loaded', category: LogCategory.service, tag: tag);
+    } catch (e) {
+      logger.warning(
+        '$tag failed - using defaults',
+        category: LogCategory.service,
+        tag: tag,
+        metadata: {'error': e.toString()},
+      );
+    }
+  }
+
+  await Future.wait([
+    init(() => HomeWidgetService.initialize(), 'HomeWidget'),
+    init(() => SyncService.instance.initialize(), 'Sync'),
+    init(() => UnifiedNotificationService().initialize(), 'Notifications'),
+    init(() => FeatureConfigService.instance.refresh(), 'FeatureConfig'),
+    init(() => CacheConfigService().initialize(), 'CacheConfig'),
+    init(() => AIConfigService.instance.initialize(), 'AIConfig'),
+    init(() => GamificationConfigService.instance.initialize(), 'GamificationConfig'),
+    init(() => ContentConfigService.instance.refresh(), 'ContentConfig'),
+    init(() => NotificationConfigService.instance.refresh(), 'NotificationConfig'),
+    init(() => DesignConfigService.instance.initialize(), 'DesignConfig'),
+    init(() => AppRoutesConfigService.instance.initialize(), 'AppRoutesConfig'),
+    init(() => MessageService.instance.initialize(), 'Messages'),
+    init(() => UIStringsService.instance.initialize(), 'UIStrings'),
+    init(() => OnboardingConfigService.instance.initialize(), 'OnboardingConfig'),
+  ]);
+
+  logger.info(
+    'All deferred services initialized',
+    category: LogCategory.lifecycle,
+    tag: 'main',
   );
 }
 

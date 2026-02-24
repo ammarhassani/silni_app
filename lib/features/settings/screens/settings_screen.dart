@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:in_app_review/in_app_review.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../shared/services/auth_service.dart';
 import '../../../core/constants/app_spacing.dart';
@@ -43,7 +45,7 @@ class SettingsScreen extends ConsumerWidget {
                   top: 56,
                   left: AppSpacing.md,
                   right: AppSpacing.md,
-                  bottom: PersistentBottomNav.totalHeight,
+                  bottom: PersistentBottomNav.totalHeight + AppSpacing.md,
                 ),
                 children: [
                   // In-App Messages
@@ -120,6 +122,66 @@ class SettingsScreen extends ConsumerWidget {
                         size: 20,
                       ),
                       onTap: () => _showChangePasswordDialog(context, ref),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  // Invite a friend
+                  GlassCard(
+                    child: Builder(
+                      builder: (ctx) => ListTile(
+                        leading: Icon(Icons.person_add_alt_1_rounded, color: themeColors.textOnGradient),
+                        title: Text(
+                          'دعوة صديق',
+                          style: AppTypography.titleMedium.copyWith(
+                            color: themeColors.textOnGradient,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.share_rounded,
+                          color: themeColors.textOnGradient.withValues(alpha: 0.5),
+                          size: 20,
+                        ),
+                        onTap: () {
+                          final box = ctx.findRenderObject() as RenderBox;
+                          final origin = box.localToGlobal(Offset.zero) & box.size;
+                          Share.share(
+                            'حمّل تطبيق صِلني وصِل رحمك 🌳\n\n'
+                            'iOS: https://apps.apple.com/app/id6738029498\n'
+                            'Android: https://play.google.com/store/apps/details?id=com.silni.app',
+                            sharePositionOrigin: origin,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  // Rate our app
+                  GlassCard(
+                    child: ListTile(
+                      leading: Icon(Icons.star_rate_rounded, color: themeColors.textOnGradient),
+                      title: Text(
+                        'قيّم التطبيق',
+                        style: AppTypography.titleMedium.copyWith(
+                          color: themeColors.textOnGradient,
+                        ),
+                      ),
+                      trailing: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: themeColors.textOnGradient.withValues(alpha: 0.5),
+                        size: 20,
+                      ),
+                      onTap: () async {
+                        final inAppReview = InAppReview.instance;
+                        if (await inAppReview.isAvailable()) {
+                          await inAppReview.requestReview();
+                        } else {
+                          await inAppReview.openStoreListing(
+                            appStoreId: '6738029498',
+                          );
+                        }
+                      },
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),

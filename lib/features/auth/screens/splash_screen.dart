@@ -47,7 +47,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     }
 
     // Wait for animations to play
-    await Future.delayed(const Duration(seconds: 3));
+    await Future.delayed(const Duration(milliseconds: 1500));
+    if (!mounted) return;
     _navigateToNextScreen();
   }
 

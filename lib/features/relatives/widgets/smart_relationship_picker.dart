@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_breakpoints.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../shared/models/relative_model.dart';
@@ -194,8 +195,8 @@ class _SmartRelationshipPickerState extends State<SmartRelationshipPicker> {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: AppBreakpoints.gridColumns(context),
         crossAxisSpacing: AppSpacing.sm,
         mainAxisSpacing: AppSpacing.sm,
         childAspectRatio: 2.2,

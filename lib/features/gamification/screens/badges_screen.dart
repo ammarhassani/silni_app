@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_breakpoints.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/config/supabase_config.dart';
@@ -172,7 +173,12 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
                           ),
                         )
                       : ListView(
-                          padding: const EdgeInsets.all(AppSpacing.md),
+                          padding: const EdgeInsets.only(
+                            top: AppSpacing.md,
+                            left: AppSpacing.md,
+                            right: AppSpacing.md,
+                            bottom: AppSpacing.xxl,
+                          ),
                           children: [
                             _buildBadgeCategory(
                               'أوسمة الإنجاز',
@@ -256,8 +262,8 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: AppBreakpoints.gridColumns(context),
             childAspectRatio: 0.72,
             crossAxisSpacing: AppSpacing.md,
             mainAxisSpacing: AppSpacing.md,

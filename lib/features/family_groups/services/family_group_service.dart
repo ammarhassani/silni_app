@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../shared/models/relative_model.dart';
@@ -119,7 +120,9 @@ class FamilyGroupService {
       // Already has a node — just re-verify edges
       try {
         await FamilySharingService.verifySharedEdges(groupId: group.id);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Edge verification failed (existing node): $e');
+      }
       return group;
     }
 
@@ -207,8 +210,9 @@ class FamilyGroupService {
     // Step 5: Verify and fill any missing edges in the shared graph
     try {
       await FamilySharingService.verifySharedEdges(groupId: group.id);
-    } catch (_) {
+    } catch (e) {
       // Best-effort — don't fail the join if edge verification fails.
+      debugPrint('Edge verification failed (post-join): $e');
     }
 
     // Fire-and-forget join notification to existing members

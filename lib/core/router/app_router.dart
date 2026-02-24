@@ -625,8 +625,13 @@ class _NavigationWrapperState extends ConsumerState<_NavigationWrapper> {
                     onTap: () => ref.read(connectivityServiceProvider).refresh(),
                   ),
                   Expanded(
-                    child: KeyedSubtree(
-                        key: _childKey, child: widget.child),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 600),
+                        child: KeyedSubtree(
+                            key: _childKey, child: widget.child),
+                      ),
+                    ),
                   ),
                 ],
               ),

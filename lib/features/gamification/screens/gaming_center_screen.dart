@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:confetti/confetti.dart';
 import '../../../core/ai/deepseek_ai_service.dart';
 import '../../../core/constants/app_animations.dart';
+import '../../../core/constants/app_breakpoints.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/config/supabase_config.dart';
@@ -190,8 +191,8 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                           ),
                           sliver: SliverGrid(
                             gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: AppBreakpoints.gridColumns(context),
                               childAspectRatio: 1.15,
                               crossAxisSpacing: AppSpacing.md,
                               mainAxisSpacing: AppSpacing.md,

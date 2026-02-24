@@ -22,10 +22,12 @@ class WrappedCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = gradient ?? AppColors.primaryGradient;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final side = (screenWidth - 32).clamp(0.0, 360.0); // 16px padding each side, max 360
 
     return Container(
-      width: 360,
-      height: 360,
+      width: side,
+      height: side,
       decoration: BoxDecoration(
         gradient: bg,
         borderRadius: BorderRadius.circular(24),

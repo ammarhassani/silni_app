@@ -226,12 +226,15 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
               color: _themeColors.glassBackground,
             ),
             child: Center(
-              child: Text(
-                '?',
-                style: TextStyle(
-                  color: _themeColors.textHint,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '?',
+                  style: TextStyle(
+                    color: _themeColors.textHint,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -286,10 +289,13 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
                   )
                 : null,
             alignment: Alignment.center,
-            child: Text(
-              badgeInfo.emoji,
-              style: const TextStyle(fontSize: 16),
-              textAlign: TextAlign.center,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                badgeInfo.emoji,
+                style: const TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
         )

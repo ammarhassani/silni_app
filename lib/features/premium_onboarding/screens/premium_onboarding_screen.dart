@@ -285,7 +285,7 @@ class _PremiumOnboardingScreenState
             OutlinedGradientButton(
               text: OnboardingContent.nextButton,
               onPressed: _nextPage,
-              icon: Icons.arrow_back_rounded, // RTL - back arrow is "next"
+              icon: Icons.arrow_forward_rounded,
             )
                 .animate()
                 .fadeIn(duration: AppAnimations.normal, delay: 100.ms)

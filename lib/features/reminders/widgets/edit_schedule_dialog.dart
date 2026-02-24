@@ -39,8 +39,8 @@ class _EditScheduleBottomSheetState
     super.initState();
     final parts = widget.schedule.time.split(':');
     _selectedTime = TimeOfDay(
-      hour: int.parse(parts[0]),
-      minute: int.parse(parts[1]),
+      hour: parts.isNotEmpty ? (int.tryParse(parts[0]) ?? 9) : 9,
+      minute: parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0,
     );
     _selectedDays = List.from(widget.schedule.customDays ?? []);
     _selectedDayOfMonth = widget.schedule.dayOfMonth;

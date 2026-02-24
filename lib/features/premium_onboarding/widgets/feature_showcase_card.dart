@@ -166,6 +166,6 @@ class _BulletPoint extends StatelessWidget {
     )
         .animate(delay: Duration(milliseconds: 400 + (index * 100)))
         .fadeIn(duration: AppAnimations.normal)
-        .slideX(begin: 0.2, end: 0, curve: Curves.easeOut);
+        .slideX(begin: -0.2, end: 0, curve: Curves.easeOut);
   }
 }

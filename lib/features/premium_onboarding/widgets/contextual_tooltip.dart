@@ -75,7 +75,7 @@ class _ContextualTooltipOverlayState
       return Offset(screenSize.width / 2 - 140, screenSize.height / 2);
     }
 
-    const tooltipWidth = 280.0;
+    final tooltipWidth = (screenSize.width - 32).clamp(0.0, 280.0);
     const tooltipPadding = 16.0;
     const arrowSpace = 12.0;
 
@@ -244,8 +244,9 @@ class _TooltipCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
     return DramaticGlassCard(
-      width: 280,
+      width: (screenWidth - 32).clamp(0, 280),
       gradient: LinearGradient(
         colors: [
           AppColors.premiumGold.withValues(alpha: 0.25),

@@ -32,7 +32,6 @@ class AppRoutes {
     aiScripts,
     aiReport,
     aiMemories,
-    statistics,
     detailedStats,
     leaderboard,
   };

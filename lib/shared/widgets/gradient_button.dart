@@ -149,14 +149,6 @@ class _GradientButtonState extends ConsumerState<GradientButton>
                           mainAxisAlignment: MainAxisAlignment.center,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (widget.icon != null) ...[
-                              Icon(
-                                widget.icon,
-                                color: textColor,
-                                size: AppSpacing.iconMd,
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                            ],
                             Flexible(
                               child: Text(
                                 widget.text,
@@ -172,6 +164,14 @@ class _GradientButtonState extends ConsumerState<GradientButton>
                                 maxLines: 1,
                               ),
                             ),
+                            if (widget.icon != null) ...[
+                              const SizedBox(width: AppSpacing.sm),
+                              Icon(
+                                widget.icon,
+                                color: textColor,
+                                size: AppSpacing.iconMd,
+                              ),
+                            ],
                           ],
                         ),
                 ),
@@ -283,14 +283,6 @@ class OutlinedGradientButton extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (icon != null) ...[
-                        Icon(
-                          icon,
-                          color: textColor,
-                          size: AppSpacing.iconMd,
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                      ],
                       Flexible(
                         child: Text(
                           text,
@@ -301,6 +293,14 @@ class OutlinedGradientButton extends ConsumerWidget {
                           maxLines: 1,
                         ),
                       ),
+                      if (icon != null) ...[
+                        const SizedBox(width: AppSpacing.sm),
+                        Icon(
+                          icon,
+                          color: textColor,
+                          size: AppSpacing.iconMd,
+                        ),
+                      ],
                     ],
                   ),
                 ),

@@ -215,7 +215,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         top: 100, // Clearance for floating header + subtitle
         left: AppSpacing.md,
         right: AppSpacing.md,
-        bottom: AppSpacing.xl,
+        bottom: AppSpacing.xxl,
       ),
       children: [
         // Unscheduled relatives banner

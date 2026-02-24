@@ -9,6 +9,7 @@ import '../../../core/ai/ai_identity.dart';
 import '../../../core/ai/ai_models.dart';
 import '../../../core/ai/deepseek_ai_service.dart';
 import '../../../core/services/ai_config_service.dart';
+import '../../../core/constants/app_breakpoints.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/app_themes.dart';
@@ -397,8 +398,8 @@ class _ScenarioSelectionView extends ConsumerWidget {
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: AppBreakpoints.gridColumns(context),
             crossAxisSpacing: AppSpacing.sm,
             mainAxisSpacing: AppSpacing.sm,
             childAspectRatio: 1.2,

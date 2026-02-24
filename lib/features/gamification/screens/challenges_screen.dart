@@ -224,7 +224,12 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen>
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.only(
+        top: AppSpacing.md,
+        left: AppSpacing.md,
+        right: AppSpacing.md,
+        bottom: AppSpacing.xxl,
+      ),
       itemCount: challenges.length,
       itemBuilder: (context, index) {
         final challenge = challenges[index];

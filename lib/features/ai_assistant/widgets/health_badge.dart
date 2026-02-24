@@ -303,8 +303,8 @@ class HealthDetailCard extends ConsumerWidget {
             style: AppTypography.bodySmall.copyWith(color: themeColors.textSecondary),
           ),
         ),
-        SizedBox(
-          width: 80,
+        Expanded(
+          flex: 3,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(2),
             child: Container(
@@ -327,15 +327,12 @@ class HealthDetailCard extends ConsumerWidget {
           ),
         ),
         const SizedBox(width: AppSpacing.xs),
-        SizedBox(
-          width: 35,
-          child: Text(
-            '${percentage.toInt()}%',
-            style: AppTypography.labelSmall.copyWith(
-              color: themeColors.textSecondary,
-            ),
-            textAlign: TextAlign.end,
+        Text(
+          '${percentage.toInt()}%',
+          style: AppTypography.labelSmall.copyWith(
+            color: themeColors.textSecondary,
           ),
+          textAlign: TextAlign.end,
         ),
       ],
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/constants/app_breakpoints.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_typography.dart';
 import '../../../../core/theme/theme_provider.dart';
@@ -42,7 +43,7 @@ class OverallStatsWidget extends ConsumerWidget {
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
+              crossAxisCount: AppBreakpoints.gridColumns(context),
               childAspectRatio: 1.3,
               crossAxisSpacing: AppSpacing.md,
               mainAxisSpacing: AppSpacing.md,

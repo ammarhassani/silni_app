@@ -1,7 +1,7 @@
 name: silni_app
 description: "A dramatic Islamic family connection tracker with stunning UI/UX"
 publish_to: 'none'
-version: 2.0.0+36
+version: 2.0.1+37
 
 environment:
   sdk: ^3.10.1
@@ -93,6 +93,7 @@ dependencies:
   url_launcher: ^6.3.1
   package_info_plus: ^8.1.2
   timezone: ^0.9.4
+  in_app_review: ^2.0.10
 
   # Environment Configuration (type-safe, compile-time)
   envied: ^1.1.1

@@ -92,7 +92,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               children: [
                 // Skip button
                 Align(
-                  alignment: Alignment.topLeft,
+                  alignment: AlignmentDirectional.topStart,
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     child: Semantics(
@@ -146,7 +146,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     dramatic: true,
                     icon: _currentPage == _pages.length - 1
                         ? Icons.rocket_launch_rounded
-                        : Icons.arrow_back_rounded,
+                        : Icons.arrow_forward_rounded,
                   ),
                 ),
               ],

@@ -23,6 +23,7 @@ import '../../../shared/widgets/message_widget.dart';
 import '../../../shared/widgets/persistent_bottom_nav.dart';
 import '../../../core/providers/subscription_provider.dart';
 import '../../../shared/widgets/session_paywall_interstitial.dart';
+import '../../../shared/widgets/in_app_rate_prompt.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -56,6 +57,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     _loadDailyHadith();
     _checkPremiumOnboarding();
     _checkSessionPaywall();
+    _checkRatePrompt();
   }
 
   /// Check if premium onboarding should be shown for returning MAX users
@@ -66,6 +68,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       if (shouldShow) {
         PremiumOnboardingScreen.show(context);
       }
+    });
+  }
+
+  /// Show native rate dialog at specific app open milestones
+  void _checkRatePrompt() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      InAppRatePrompt.maybeShow(context, userId: SupabaseConfig.currentUserId);
     });
   }
 

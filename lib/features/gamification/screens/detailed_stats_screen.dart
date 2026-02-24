@@ -141,7 +141,12 @@ class DetailedStatsScreen extends ConsumerWidget {
 
   Widget _buildContent(DetailedStats stats) {
     return ListView(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.only(
+        top: AppSpacing.md,
+        left: AppSpacing.md,
+        right: AppSpacing.md,
+        bottom: AppSpacing.xxl,
+      ),
       children: [
         // Overall stats
         OverallStatsWidget(userStats: stats.userStats),
