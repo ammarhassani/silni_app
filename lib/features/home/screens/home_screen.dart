@@ -7,8 +7,6 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../core/models/gamification_event.dart';
 import '../../../core/providers/ai_preload_provider.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
-import '../../../shared/widgets/floating_points_overlay.dart';
-import '../../../shared/widgets/level_up_modal.dart';
 import '../../../shared/widgets/badge_unlock_modal.dart';
 import '../../../shared/widgets/streak_milestone_modal.dart';
 import '../../../shared/models/hadith_model.dart';
@@ -139,20 +137,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void _processGamificationEvent(GamificationEvent event) {
     switch (event.type) {
       case GamificationEventType.pointsEarned:
-        context.showFloatingPoints(points: event.points ?? 0);
+        // Removed: points overlay no longer shown
         break;
 
       case GamificationEventType.levelUp:
-        _confettiController.play();
-        if (event.newLevel != null) {
-          LevelUpModal.show(
-            context,
-            oldLevel: event.oldLevel ?? event.newLevel! - 1,
-            newLevel: event.newLevel!,
-            currentXP: event.currentXP ?? 0,
-            xpToNextLevel: event.xpToNextLevel ?? 0,
-          );
-        }
+        // Removed: no more level celebrations
         break;
 
       case GamificationEventType.streakMilestone:

@@ -11,7 +11,6 @@ import '../../core/models/gamification_event.dart';
 import '../../core/utils/badge_prestige.dart';
 import '../../core/providers/gamification_events_provider.dart';
 import 'glass_card.dart';
-import 'animated_counter.dart';
 
 /// Widget to display user's gamification stats (points, level, streak, badges)
 class GamificationStatsCard extends ConsumerStatefulWidget {
@@ -91,23 +90,11 @@ class _GamificationStatsCardState extends ConsumerState<GamificationStatsCard> {
     return GlassCard(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _buildStatItem(
-            icon: '⚡',
-            label: 'المستوى',
-            value: '$level',
-            color: themeColors.accent,
-          ),
-          _buildAnimatedStatItem(
-            icon: '🏆',
-            label: 'النقاط',
-            value: points,
-            color: themeColors.primary,
-          ),
-          _buildStatItem(
             icon: '🔥',
-            label: 'السلسلة',
+            label: 'التواصل',
             value: '$currentStreak',
             color: AppColors.streakFire.colors.first,
           ),
@@ -132,84 +119,6 @@ class _GamificationStatsCardState extends ConsumerState<GamificationStatsCard> {
   ) {
     return Column(
       children: [
-        // Level and Points
-        GlassCard(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          gradient: themeColors.primaryGradient,
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Level
-                  Expanded(
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: themeColors.goldenGradient,
-                            boxShadow: [
-                              BoxShadow(
-                                color: themeColors.accent.withValues(alpha: 0.5),
-                                blurRadius: 20,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Text(
-                              '$level',
-                              style: AppTypography.displaySmall.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          'المستوى',
-                          style: AppTypography.titleMedium.copyWith(
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Points
-                  Expanded(
-                    child: Column(
-                      children: [
-                        AnimatedCounter(
-                          value: points,
-                          style: AppTypography.displaySmall.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          glowColor: AppColors.premiumGold,
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          'نقطة',
-                          style: AppTypography.titleMedium.copyWith(
-                            color: Colors.white.withValues(alpha: 0.9),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ).animate().fadeIn().scale(),
-
-        const SizedBox(height: AppSpacing.md),
-
         // Streaks
         Row(
           children: [
@@ -229,7 +138,7 @@ class _GamificationStatsCardState extends ConsumerState<GamificationStatsCard> {
                       ),
                     ),
                     Text(
-                      'يوم متتالي',
+                      'يوم تواصل',
                       style: AppTypography.labelMedium.copyWith(
                         color: Colors.white.withValues(alpha: 0.9),
                       ),
@@ -325,34 +234,6 @@ class _GamificationStatsCardState extends ConsumerState<GamificationStatsCard> {
             color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
-        ),
-        Text(
-          label,
-          style: AppTypography.labelSmall.copyWith(
-            color: Colors.white.withValues(alpha: 0.8),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAnimatedStatItem({
-    required String icon,
-    required String label,
-    required int value,
-    required Color color,
-  }) {
-    return Column(
-      children: [
-        Text(icon, style: const TextStyle(fontSize: 24)),
-        const SizedBox(height: AppSpacing.xs),
-        AnimatedCounter(
-          value: value,
-          style: AppTypography.titleLarge.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-          glowColor: color,
         ),
         Text(
           label,
