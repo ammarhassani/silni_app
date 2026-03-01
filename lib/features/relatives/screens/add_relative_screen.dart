@@ -28,6 +28,7 @@ import '../../../shared/models/relative_model.dart';
 import '../../../core/providers/cache_provider.dart';
 import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/widgets/health_status_picker.dart';
+import '../../../shared/widgets/relative_category_picker.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../family_groups/models/family_group_model.dart';
 import '../../family_groups/providers/family_group_providers.dart';
@@ -65,6 +66,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   bool _addToSharedTree = false; // Whether to add to a shared family tree
   FamilyGroup? _selectedGroup; // The selected family group (if shared)
   FamilySide? _selectedFamilySide; // Paternal or maternal side for extended family
+  RelativeCategory _selectedCategory = RelativeCategory.extended;
 
   final SupabaseStorageService _storageService = SupabaseStorageService();
 
@@ -183,6 +185,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         isFavorite: _isFavorite,
         healthStatus: _healthStatus,
         familySide: _selectedFamilySide,
+        relativeCategory: _selectedCategory,
         createdAt: DateTime.now(),
       );
 
@@ -456,6 +459,15 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
 
                         // Shared family tree toggle
                         _buildSharedTreeToggle(),
+
+                        // Category picker
+                        RelativeCategoryPicker(
+                          selected: _selectedCategory,
+                          onChanged: (value) {
+                            setState(() => _selectedCategory = value);
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.md),
 
                         // Phone with international format
                         IntlPhoneField(

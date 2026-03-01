@@ -18,6 +18,7 @@ import '../../../shared/models/relative_model.dart';
 import '../../../core/providers/cache_provider.dart';
 import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/widgets/health_status_picker.dart';
+import '../../../shared/widgets/relative_category_picker.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../family_tree/models/family_graph.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
@@ -51,6 +52,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
   bool _isFavorite = false;
   int _priority = 2;
   String? _healthStatus;
+  RelativeCategory _selectedCategory = RelativeCategory.extended;
   Relative? _relative;
 
   final SupabaseStorageService _storageService = SupabaseStorageService();
@@ -79,6 +81,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
         _priority = relative.priority;
         _isFavorite = relative.isFavorite;
         _healthStatus = relative.healthStatus;
+        _selectedCategory = relative.relativeCategory;
       });
     }
   }
@@ -159,6 +162,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
         'priority': _priority,
         'is_favorite': _isFavorite,
         'health_status': _healthStatus,
+        'relative_category': _selectedCategory.name,
       });
 
       // Re-infer edges if relationship type changed
@@ -369,6 +373,15 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
 
                         // Relationship picker
                         _buildRelationshipPicker(),
+                        const SizedBox(height: AppSpacing.md),
+
+                        // Category picker
+                        RelativeCategoryPicker(
+                          selected: _selectedCategory,
+                          onChanged: (value) {
+                            setState(() => _selectedCategory = value);
+                          },
+                        ),
                         const SizedBox(height: AppSpacing.md),
 
                         // Phone field
