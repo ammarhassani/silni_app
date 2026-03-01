@@ -169,22 +169,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       case GamificationEventType.streakWarning:
         // Show streak warning notification
         if (mounted) {
-          final warningColor = ref.read(themeColorsProvider).statusWarning;
+          final themeColors = ref.read(themeColorsProvider);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
                 children: [
-                  const Icon(Icons.warning_amber_rounded, color: Colors.white),
+                  const Icon(Icons.favorite_rounded, color: Colors.white),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
-                      '⚠️ تنبيه: سلسلة التواصل على وشك الانقطاع! تواصل مع أحد أقاربك اليوم',
+                      '💛 تذكير: عائلتك تشتاق لك — تواصل بسيط يفرق',
                       style: const TextStyle(color: Colors.white),
                     ),
                   ),
                 ],
               ),
-              backgroundColor: warningColor,
+              backgroundColor: themeColors.statusWarning,
               duration: const Duration(seconds: 5),
               behavior: SnackBarBehavior.floating,
             ),
@@ -193,24 +193,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         break;
 
       case GamificationEventType.streakCritical:
-        // Show critical streak warning with more urgency
+        // Show gentle streak reminder
         if (mounted) {
-          final criticalColor = ref.read(themeColorsProvider).statusError;
+          final themeColors = ref.read(themeColorsProvider);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
                 children: [
-                  const Icon(Icons.error_rounded, color: Colors.white),
+                  const Icon(Icons.favorite_rounded, color: Colors.white),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
-                      '🔥 عاجل: ستفقد سلسلة التواصل خلال ساعات! تواصل الآن',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      '🤍 تذكير بسيط: وقت حلو تتواصل مع أهلك',
+                      style: const TextStyle(color: Colors.white),
                     ),
                   ),
                 ],
               ),
-              backgroundColor: criticalColor,
+              backgroundColor: themeColors.statusWarning,
               duration: const Duration(seconds: 8),
               behavior: SnackBarBehavior.floating,
             ),

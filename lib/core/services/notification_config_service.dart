@@ -123,8 +123,8 @@ class NotificationConfigService {
       ),
       'streak_endangered': NotificationTemplate(
         templateKey: 'streak_endangered',
-        titleAr: 'سلسلتك في خطر! 🔥',
-        bodyAr: 'تبقى {{hours}} ساعات للحفاظ على سلسلة {{streak_days}} يوم',
+        titleAr: 'تذكير بسيط 💛',
+        bodyAr: 'عائلتك تشتاق لك — تواصل بسيط يفرق 🤍',
         category: 'streak',
         variables: ['hours', 'streak_days'],
         sound: 'default',
@@ -132,8 +132,8 @@ class NotificationConfigService {
       ),
       'streak_broken': NotificationTemplate(
         templateKey: 'streak_broken',
-        titleAr: 'انتهت السلسلة 💔',
-        bodyAr: 'للأسف انتهت سلسلتك. ابدأ من جديد!',
+        titleAr: 'مرحبًا بعودتك 🤍',
+        bodyAr: 'عائلتك اشتاقت لك — رسالة بسيطة تفرق',
         category: 'streak',
         variables: [],
         sound: 'default',

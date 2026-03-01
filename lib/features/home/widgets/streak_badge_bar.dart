@@ -327,9 +327,9 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
     final timeRemaining = _getTimeRemaining(deadline);
 
     // Choose emoji based on state
-    final emoji = isEndangered ? '⏳' : '🔥';
+    final emoji = isEndangered ? '💛' : '🔥';
     final glowColor = isCritical
-        ? _themeColors.statusError
+        ? _themeColors.statusWarning
         : (isEndangered ? _themeColors.statusWarning : AppColors.joyfulOrange);
 
     return Row(
@@ -374,34 +374,30 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
             )
             .scale(
               begin: const Offset(1.0, 1.0),
-              end: Offset(isCritical ? 1.15 : 1.1, isCritical ? 1.15 : 1.1),
+              end: const Offset(1.08, 1.08),
               duration: streak > 0
-                  ? (isCritical
-                      ? AppAnimations.fast
-                      : (isEndangered
-                          ? AppAnimations.modal
-                          : AppAnimations.celebration))
+                  ? (isEndangered
+                      ? AppAnimations.celebration
+                      : AppAnimations.celebration)
                   : Duration.zero,
               curve: Curves.easeInOut,
             )
             .then()
             .scale(
-              begin: Offset(isCritical ? 1.15 : 1.1, isCritical ? 1.15 : 1.1),
+              begin: const Offset(1.08, 1.08),
               end: const Offset(1.0, 1.0),
               duration: streak > 0
-                  ? (isCritical
-                      ? AppAnimations.fast
-                      : (isEndangered
-                          ? AppAnimations.modal
-                          : AppAnimations.celebration))
+                  ? (isEndangered
+                      ? AppAnimations.celebration
+                      : AppAnimations.celebration)
                   : Duration.zero,
               curve: Curves.easeInOut,
             )
-            .then(delay: isCritical ? 50.ms : Duration.zero)
+            .then()
             .shake(
-              hz: isCritical ? 4 : 0,
-              offset: Offset(isCritical ? 1.5 : 0, 0),
-              duration: isCritical ? AppAnimations.fast : Duration.zero,
+              hz: 0,
+              offset: const Offset(0, 0),
+              duration: Duration.zero,
             ),
         const SizedBox(width: 4),
         // Streak number

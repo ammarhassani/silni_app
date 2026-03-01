@@ -115,26 +115,26 @@ class _StreakMilestoneModalState extends ConsumerState<StreakMilestoneModal> {
   }
 
   String _getMilestoneMessage() {
-    if (widget.streak >= 500) return 'إنجاز أسطوري! 500 يوم!';
-    if (widget.streak >= 365) return 'سنة كاملة من التواصل المستمر!';
-    if (widget.streak >= 200) return '200 يوم! مثابرة استثنائية!';
-    if (widget.streak >= 100) return '100 يوم متتالٍ! إنجاز رائع!';
-    if (widget.streak >= 50) return '50 يومًا من الالتزام!';
-    if (widget.streak >= 30) return 'شهر كامل من التواصل!';
-    if (widget.streak >= 21) return '21 يومًا! عادة راسخة!';
-    if (widget.streak >= 14) return 'أسبوعان متتاليان!';
-    if (widget.streak >= 10) return '10 أيام متتالية!';
-    if (widget.streak >= 7) return 'أسبوع متتالي رائع!';
-    if (widget.streak >= 3) return 'ثلاثة أيام متتالية!';
-    return 'استمر في التواصل!';
+    if (widget.streak >= 500) return 'ما شاء الله! 500 يوم من حفظ الودّ';
+    if (widget.streak >= 365) return 'سنة كاملة من الحبّ والتواصل!';
+    if (widget.streak >= 200) return '200 يوم! عائلتك محظوظة بك';
+    if (widget.streak >= 100) return '100 يوم من الاهتمام — ما شاء الله!';
+    if (widget.streak >= 50) return '50 يوم من التواصل الجميل!';
+    if (widget.streak >= 30) return 'شهر كامل من صلة الرحم 🤍';
+    if (widget.streak >= 21) return '21 يوم — صار التواصل عادة حلوة!';
+    if (widget.streak >= 14) return 'أسبوعان من الاهتمام المستمر!';
+    if (widget.streak >= 10) return '10 أيام من التواصل الحلو!';
+    if (widget.streak >= 7) return 'أسبوع كامل — بداية جميلة!';
+    if (widget.streak >= 3) return 'ثلاثة أيام متواصلة — استمر!';
+    return 'كل تواصل يصنع فرق 🤍';
   }
 
   String _getEncouragementMessage() {
-    if (widget.streak >= 365) return 'أنت قدوة حقيقية في صلة الرحم';
-    if (widget.streak >= 100) return 'التزامك ملهم للجميع!';
-    if (widget.streak >= 30) return 'ما شاء الله! استمر على هذا النهج';
-    if (widget.streak >= 7) return 'بداية ممتازة! واصل التميز';
-    return 'كل يوم يقربك من هدفك';
+    if (widget.streak >= 365) return 'أنت قدوة في صلة الرحم — جزاك الله خير';
+    if (widget.streak >= 100) return 'عائلتك تحسّ باهتمامك — استمر 🤍';
+    if (widget.streak >= 30) return 'ما شاء الله! التواصل المستمر يقوّي الرابطة';
+    if (widget.streak >= 7) return 'بداية جميلة — كل تواصل يفرق';
+    return 'كل خطوة تقرّبك من أهلك 🤍';
   }
 
   int _getNextMilestone() {
@@ -179,7 +179,7 @@ class _StreakMilestoneModalState extends ConsumerState<StreakMilestoneModal> {
 
               // Title
               Text(
-                'سلسلة مميزة!',
+                'ما شاء الله! 🌟',
                 style: AppTypography.dramatic.copyWith(
                   color: colors.textPrimary,
                 ),
@@ -229,7 +229,7 @@ class _StreakMilestoneModalState extends ConsumerState<StreakMilestoneModal> {
                           ),
                         ),
                         Text(
-                          _arabicConsecutiveWord(widget.streak),
+                          'تواصل',
                           style: AppTypography.bodyMedium.copyWith(
                             color: colors.textSecondary,
                           ),
