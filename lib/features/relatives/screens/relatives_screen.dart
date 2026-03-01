@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -34,6 +35,7 @@ class RelativesScreen extends ConsumerStatefulWidget {
 class _RelativesScreenState extends ConsumerState<RelativesScreen> {
   String _searchQuery = '';
   String _filterType = 'all'; // all, needs_contact, favorites
+  RelativeCategory? _categoryFilter; // null = all categories
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -65,6 +67,11 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
         break;
       default:
         break;
+    }
+
+    // Apply category filter
+    if (_categoryFilter != null) {
+      filtered = filtered.where((r) => r.relativeCategory == _categoryFilter).toList();
     }
 
     return filtered;
@@ -110,6 +117,9 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
 
                     // Filter chips
                     _buildFilterChips(themeColors),
+
+                    // Category filter chips
+                    _buildCategoryFilterChips(themeColors),
 
                     // Relatives list
                     Expanded(
@@ -253,8 +263,68 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
       selected: isSelected,
       child: GestureDetector(
         onTap: () {
+          HapticFeedback.selectionClick();
           setState(() {
             _filterType = value;
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            gradient: isSelected ? LinearGradient(colors: [themeColors.primary, themeColors.primaryLight]) : null,
+            color: isSelected ? null : themeColors.textOnGradient.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            border: Border.all(
+              color: themeColors.textOnGradient.withValues(alpha: isSelected ? 0.5 : 0.3),
+              width: 1.5,
+            ),
+          ),
+          child: Text(
+            label,
+            style: AppTypography.labelMedium.copyWith(
+              color: themeColors.textOnGradient,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryFilterChips(dynamic themeColors) {
+    return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          child: Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              _buildCategoryChip('الكل', null, themeColors),
+              _buildCategoryChip('🏠 أهل البيت', RelativeCategory.household, themeColors),
+              _buildCategoryChip('📞 تواصل دائم', RelativeCategory.extended, themeColors),
+              _buildCategoryChip('🌙 مناسبات', RelativeCategory.distant, themeColors),
+            ],
+          ),
+        )
+        .animate(delay: AppAnimations.modal)
+        .fadeIn(duration: AppAnimations.normal)
+        .slideY(begin: 0.2, end: 0);
+  }
+
+  Widget _buildCategoryChip(String label, RelativeCategory? value, dynamic themeColors) {
+    final isSelected = _categoryFilter == value;
+
+    return Semantics(
+      label: label,
+      button: true,
+      selected: isSelected,
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          setState(() {
+            _categoryFilter = value;
           });
         },
         child: Container(
