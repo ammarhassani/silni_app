@@ -137,8 +137,8 @@ class _PersistentBottomNavState extends ConsumerState<PersistentBottomNav>
         route: AppRoutes.relatives,
       ),
       (
-        icon: Icons.emoji_events_rounded,
-        label: 'الإنجازات',
+        icon: Icons.route_rounded,
+        label: 'رحلتي',
         route: AppRoutes.achievements,
       ),
       (

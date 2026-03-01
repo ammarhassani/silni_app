@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
-import 'package:confetti/confetti.dart';
 import '../../../core/ai/deepseek_ai_service.dart';
 import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_breakpoints.dart';
@@ -24,7 +23,7 @@ import '../../../shared/widgets/persistent_bottom_nav.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
 import '../../home/providers/home_providers.dart';
 
-/// Gaming Center - Main gamification hub with dramatic design
+/// رحلتي (My Journey) - Personal connection journey
 class GamingCenterScreen extends ConsumerStatefulWidget {
   const GamingCenterScreen({super.key});
 
@@ -33,35 +32,14 @@ class GamingCenterScreen extends ConsumerStatefulWidget {
       _GamingCenterScreenState();
 }
 
-class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
-    with TickerProviderStateMixin {
-  late ConfettiController _confettiController;
-  late AnimationController _glowController;
-  late Animation<double> _glowIntensity;
+class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen> {
   Map<String, dynamic>? _userStats;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(
-      duration: const Duration(seconds: 2),
-    );
-    _glowController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 3),
-    )..repeat(reverse: true);
-    _glowIntensity = Tween<double>(begin: 0.3, end: 0.55).animate(
-      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
-    );
     _loadUserStats();
-  }
-
-  @override
-  void dispose() {
-    _confettiController.dispose();
-    _glowController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadUserStats() async {
@@ -121,38 +99,16 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
       backgroundColor: Colors.transparent,
       extendBody: true,
       body: Semantics(
-        label: 'مركز الإنجازات والألعاب',
+        label: 'رحلتي',
         child: Stack(
           children: [
-            // Ambient orbs
-            _buildAmbientOrbs(themeColors),
-
-            // Confetti
-            Align(
-              alignment: Alignment.topCenter,
-              child: ConfettiWidget(
-                confettiController: _confettiController,
-                blastDirectionality: BlastDirectionality.explosive,
-                emissionFrequency: 0.05,
-                numberOfParticles: 30,
-                gravity: 0.1,
-                colors: [
-                  themeColors.levelMax,
-                  themeColors.primary,
-                  themeColors.statusError,
-                  themeColors.accent,
-                  themeColors.secondary,
-                ],
-              ),
-            ),
-
             // Main content
             SafeArea(
               bottom: false,
               child: _isLoading
                   ? const Center(
                       child: PremiumLoadingIndicator(
-                        message: 'جاري تحميل مركز الألعاب...',
+                        message: 'جاري تحميل رحلتي...',
                       ),
                     )
                   : CustomScrollView(
@@ -210,9 +166,9 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                                 delay: 0,
                               ),
                               _buildFeatureCard(
-                                title: 'المتصدرين',
-                                subtitle: 'تنافس مع الجميع',
-                                icon: Icons.leaderboard_rounded,
+                                title: 'نشاط العائلة',
+                                subtitle: 'تواصل العائلة',
+                                icon: Icons.family_restroom_rounded,
                                 color:
                                     themeColors.streakFire.colors.first,
                                 onTap: () {
@@ -230,8 +186,8 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                                 delay: 1,
                               ),
                               _buildFeatureCard(
-                                title: 'الإحصائيات',
-                                subtitle: 'تفاصيل تقدمك',
+                                title: 'رؤى',
+                                subtitle: 'رؤى تواصلك',
                                 icon: Icons.analytics_rounded,
                                 color: themeColors.primary,
                                 onTap: () {
@@ -249,9 +205,9 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                                 delay: 2,
                               ),
                               _buildFeatureCard(
-                                title: 'التحديات',
-                                subtitle: 'تحديات يومية وأسبوعية',
-                                icon: Icons.flag_rounded,
+                                title: 'اقتراحات',
+                                subtitle: 'اقتراحات تواصل',
+                                icon: Icons.lightbulb_outline_rounded,
                                 color: themeColors.secondary,
                                 onTap: () =>
                                     context.push(AppRoutes.challenges),
@@ -298,54 +254,6 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
     );
   }
 
-  // ─── Ambient Orbs ──────────────────────────────────────────
-
-  Widget _buildAmbientOrbs(dynamic themeColors) {
-    return AnimatedBuilder(
-      animation: _glowIntensity,
-      builder: (context, _) => Stack(
-        children: [
-          Positioned(
-            top: -60,
-            right: -40,
-            child: Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    themeColors.levelMax.withValues(
-                        alpha: _glowIntensity.value * 0.4),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 80,
-            left: -50,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    themeColors.primary.withValues(
-                        alpha: _glowIntensity.value * 0.3),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ─── Compact Header ────────────────────────────────────────
 
   Widget _buildCompactHeader(dynamic themeColors) {
@@ -366,28 +274,28 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
       ),
       child: Row(
         children: [
-          // Trophy with glow halo
+          // Journey icon
           Container(
             width: 48,
             height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: themeColors.goldenGradient,
+              gradient: themeColors.primaryGradient,
               boxShadow: [
                 BoxShadow(
-                  color: themeColors.levelMax
+                  color: themeColors.primary
                       .withValues(alpha: 0.3),
                   blurRadius: 10,
                 ),
                 BoxShadow(
-                  color: themeColors.levelMax
+                  color: themeColors.primary
                       .withValues(alpha: 0.12),
                   blurRadius: 20,
                 ),
               ],
             ),
             child: Icon(
-              Icons.emoji_events_rounded,
+              Icons.route_rounded,
               size: 26,
               color: themeColors.textOnGradient,
             ),
@@ -400,7 +308,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'الإنجازات',
+                  'رحلتي',
                   style: AppTypography.headlineSmall.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -410,7 +318,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                         blurRadius: 10,
                       ),
                       Shadow(
-                        color: themeColors.levelMax
+                        color: themeColors.primary
                             .withValues(alpha: 0.4),
                         blurRadius: 20,
                       ),
@@ -418,7 +326,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
                   ),
                 ),
                 Text(
-                  'المستوى $level',
+                  'رحلة تواصلك مع عائلتك',
                   style: AppTypography.bodySmall.copyWith(
                     color: Colors.white.withValues(alpha: 0.9),
                     shadows: [
@@ -482,19 +390,8 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
 
   Widget _buildStatsCard(dynamic themeColors) {
     final stats = _userStats ?? {};
-    final points = stats['points'] ?? 0;
     final currentStreak = stats['current_streak'] ?? 0;
     final badgesCount = (stats['badges'] as List?)?.length ?? 0;
-
-    final config = GamificationConfigService.instance;
-    final level = config.calculateLevel(points);
-    final currentLevelXP = config.getXpForLevel(level);
-    final nextLevelXP = _getNextLevelXP(level);
-    final xpInCurrentLevel = points - currentLevelXP;
-    final xpNeededForNextLevel = nextLevelXP - currentLevelXP;
-    final progress = xpNeededForNextLevel > 0
-        ? (xpInCurrentLevel / xpNeededForNextLevel).clamp(0.0, 1.0)
-        : 1.0;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -503,169 +400,45 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            themeColors.levelMax.withValues(alpha: 0.15),
+            themeColors.primary.withValues(alpha: 0.15),
             Colors.black.withValues(alpha: 0.7),
           ],
         ),
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         border: Border.all(
-          color: themeColors.levelMax.withValues(alpha: 0.3),
+          color: themeColors.primary.withValues(alpha: 0.3),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: themeColors.levelMax.withValues(alpha: 0.2),
+            color: themeColors.primary.withValues(alpha: 0.2),
             blurRadius: 12,
           ),
           BoxShadow(
-            color: themeColors.levelMax.withValues(alpha: 0.1),
+            color: themeColors.primary.withValues(alpha: 0.1),
             blurRadius: 24,
             spreadRadius: 2,
           ),
         ],
       ),
-      child: Column(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          // Stats row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Flexible(
-                child: _buildStatColumn(
-                  icon: Icons.star_rounded,
-                  value: points.toString(),
-                  label: 'النقاط',
-                  color: themeColors.levelMax,
-                ),
-              ),
-              Container(
-                width: 1,
-                height: 44,
-                color: Colors.white.withValues(alpha: 0.15),
-              ),
-              Flexible(
-                child: _buildStatColumn(
-                  icon: Icons.local_fire_department_rounded,
-                  value: currentStreak.toString(),
-                  label: 'السلسلة',
-                  color: themeColors.statusError,
-                ),
-              ),
-              Container(
-                width: 1,
-                height: 44,
-                color: Colors.white.withValues(alpha: 0.15),
-              ),
-              Flexible(
-                child: _buildStatColumn(
-                  icon: Icons.emoji_events_rounded,
-                  value: badgesCount.toString(),
-                  label: 'الأوسمة',
-                  color: themeColors.accent,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: AppSpacing.md),
-
-          // XP Progress section
-          Row(
-            children: [
-              Icon(
-                Icons.trending_up_rounded,
-                color: themeColors.primary,
-                size: 16,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                'تقدمك للمستوى التالي',
-                style: AppTypography.labelSmall.copyWith(
-                  color: Colors.white.withValues(alpha: 0.87),
-                  shadows: [
-                    Shadow(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      blurRadius: 6,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xs),
-
-          // Custom progress bar with glow
-          ClipRRect(
-            borderRadius: BorderRadius.circular(7),
-            child: Container(
-              height: 14,
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(7),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.1),
-                ),
-              ),
-              child: Align(
-                alignment: AlignmentDirectional.centerEnd,
-                child: FractionallySizedBox(
-                  widthFactor: progress,
-                  heightFactor: 1.0,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          themeColors.primaryLight,
-                          themeColors.primary,
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(7),
-                      boxShadow: [
-                        BoxShadow(
-                          color: themeColors.primary
-                              .withValues(alpha: 0.4),
-                          blurRadius: 8,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+          Flexible(
+            child: _buildStatColumn(
+              icon: Icons.local_fire_department_rounded,
+              value: currentStreak.toString(),
+              label: 'السلسلة',
+              color: themeColors.statusError,
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
-
-          // XP labels
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '$points نقطة',
-                style: AppTypography.labelSmall.copyWith(
-                  color: Colors.white.withValues(alpha: 0.87),
-                  shadows: [
-                    Shadow(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      blurRadius: 4,
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                nextLevelXP > points
-                    ? 'بقي ${nextLevelXP - points}'
-                    : 'أقصى مستوى! 🎉',
-                style: AppTypography.labelSmall.copyWith(
-                  color: Colors.white.withValues(alpha: 0.87),
-                  shadows: [
-                    Shadow(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      blurRadius: 4,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          Flexible(
+            child: _buildStatColumn(
+              icon: Icons.emoji_events_rounded,
+              value: badgesCount.toString(),
+              label: 'الأوسمة',
+              color: themeColors.accent,
+            ),
           ),
         ],
       ),
@@ -929,7 +702,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
               ),
               const SizedBox(width: AppSpacing.md),
               Text(
-                'ترتيب العائلة',
+                'نشاط العائلة',
                 style: AppTypography.titleMedium.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -1171,10 +944,10 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
 
   Widget _buildMotivationCard(dynamic themeColors) {
     final motivations = [
-      'استمر في صلة الرحم! 💪',
-      'كل تواصل يقربك من الله ❤️',
-      'عائلتك تفتخر بك! 🌟',
-      'لا تتوقف عن التواصل! 🔥',
+      'صلة الرحم من أجمل العبادات 🤍',
+      'كل تواصل مع عائلتك يصنع فرق ❤️',
+      'عائلتك تقدّر اهتمامك 🌟',
+      'لحظة تواصل واحدة تكفي 💛',
     ];
 
     final randomMotivation =
@@ -1255,14 +1028,4 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen>
         );
   }
 
-  // ─── Helpers ───────────────────────────────────────────────
-
-  int _getNextLevelXP(int level) {
-    final config = GamificationConfigService.instance;
-    final nextLevelXp = config.getXpForLevel(level + 1);
-    if (nextLevelXp == 0 && level >= config.maxLevel) {
-      return config.getXpForLevel(config.maxLevel) + 5000;
-    }
-    return nextLevelXp > 0 ? nextLevelXp : 15000;
-  }
 }
