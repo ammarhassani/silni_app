@@ -2,15 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/config/supabase_config.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/providers/cache_provider.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/services/contact_priority_service.dart';
+import '../../../core/services/one_question_engine.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../../shared/models/relative_model.dart';
+import '../../../shared/widgets/follow_up_question_sheet.dart';
 import '../../../shared/widgets/relative_avatar.dart';
 import '../providers/home_providers.dart';
 
@@ -182,6 +186,36 @@ class _QuickLogFaceState extends ConsumerState<_QuickLogFace> {
           ),
         );
       }
+
+      // Check for follow-up question (delayed)
+      Future.delayed(const Duration(milliseconds: 1500), () async {
+        if (!context.mounted) return;
+        final prefs = await SharedPreferences.getInstance();
+        final question = await OneQuestionEngine.getQuestion(
+          relative: widget.relative,
+          prefs: prefs,
+        );
+        if (question != null && context.mounted) {
+          FollowUpQuestionSheet.show(
+            context,
+            question: question,
+            relativeId: widget.relative.id,
+            onSubmit: (field, answer) async {
+              // Update the relative field in Supabase
+              await SupabaseConfig.client
+                  .from('relatives')
+                  .update({field: answer})
+                  .eq('id', widget.relative.id);
+              // Record the answer
+              await OneQuestionEngine.recordAnswer(
+                relativeId: widget.relative.id,
+                questionKey: question.key,
+                prefs: prefs,
+              );
+            },
+          );
+        }
+      });
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

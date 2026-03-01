@@ -1,3 +1,4 @@
+export 'ai_briefing_card.dart';
 export 'ai_insight_card.dart';
 export 'ai_priority_contacts_widget.dart';
 export 'daily_priority_card.dart';
