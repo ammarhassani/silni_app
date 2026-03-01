@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/providers/cache_provider.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../core/services/contact_priority_service.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/interaction_model.dart';
@@ -12,10 +14,11 @@ import '../../../shared/models/relative_model.dart';
 import '../../../shared/widgets/relative_avatar.dart';
 import '../providers/home_providers.dart';
 
-/// Shows a row of 2-3 avatar faces for one-tap interaction logging.
+/// Shows a row of up to 4 avatar faces for one-tap interaction logging.
 ///
 /// Tapping a face immediately logs a "call" interaction for that relative
-/// and shows a confirmation SnackBar.
+/// and shows a confirmation SnackBar with an optional "add details" link.
+/// Household relatives are excluded (they don't need contact tracking).
 class QuickLogFaces extends ConsumerWidget {
   const QuickLogFaces({
     super.key,
@@ -31,8 +34,12 @@ class QuickLogFaces extends ConsumerWidget {
 
     return relativesAsync.when(
       data: (relatives) {
+        final filteredRelatives = relatives
+            .where(
+                (r) => r.relativeCategory != RelativeCategory.household)
+            .toList();
         final suggestions =
-            ContactPriorityService.getQuickLogSuggestions(relatives, limit: 3);
+            ContactPriorityService.getQuickLogSuggestions(filteredRelatives, limit: 4);
 
         if (suggestions.isEmpty) {
           return const SizedBox.shrink();
@@ -57,7 +64,7 @@ class QuickLogFaces extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
           child: Text(
-            'سجّل تواصل سريع',
+            '⚡ تواصل سريع',
             style: AppTypography.titleSmall.copyWith(
               color: themeColors.textSecondary,
             ),
@@ -160,8 +167,18 @@ class _QuickLogFaceState extends ConsumerState<_QuickLogFace> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('تم تسجيل تواصل مع ${widget.relative.fullName} ✅'),
-            duration: const Duration(seconds: 2),
+            duration: const Duration(seconds: 3),
             behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'إضافة تفاصيل',
+              onPressed: () {
+                if (context.mounted) {
+                  context.push(
+                    '${AppRoutes.relativeDetail}/${widget.relative.id}',
+                  );
+                }
+              },
+            ),
           ),
         );
       }
