@@ -20,6 +20,7 @@ import '../../subscription/screens/paywall_screen.dart';
 import 'badges_screen.dart';
 import '../../../shared/widgets/message_widget.dart';
 import '../../../shared/widgets/persistent_bottom_nav.dart';
+import '../../family_groups/widgets/family_celebration_card.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
 import '../../home/providers/home_providers.dart';
 
@@ -217,6 +218,20 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen> {
                             ]),
                           ),
                         ),
+
+                        // Family celebration stats (conditional)
+                        if (isInGroup)
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.lg,
+                                vertical: AppSpacing.sm,
+                              ),
+                              child: FamilyCelebrationCard(
+                                groupId: groupInfo.groupId,
+                              ),
+                            ),
+                          ),
 
                         // Family leaderboard (conditional)
                         if (isInGroup)
