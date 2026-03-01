@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/services/islamic_calendar_service.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import 'home_providers.dart';
@@ -66,6 +67,19 @@ final aiBriefingProvider = Provider.autoDispose<AsyncValue<AIBriefing?>>((ref) {
         actions: [BriefingAction.call, BriefingAction.message],
         relativeId: r.id,
       );
+    }
+
+    // Priority 1.5: Islamic seasonal (Ramadan, Eid) — skip on Fridays (handled by compound logic)
+    if (!IslamicCalendarService.isJumuah) {
+      final islamicBriefing = IslamicCalendarService.getTodayBriefing();
+      if (islamicBriefing != null) {
+        return AIBriefing(
+          emoji: '🌙',
+          message: islamicBriefing,
+          actions: [],
+          relativeId: null,
+        );
+      }
     }
 
     // Priority 2: Health concern + contact gap compound
