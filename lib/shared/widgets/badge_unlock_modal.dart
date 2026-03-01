@@ -90,7 +90,7 @@ class _BadgeUnlockModalState extends ConsumerState<BadgeUnlockModal> {
                   color: badgeColor.withValues(alpha: 0.15),
                   border: Border.all(
                     color: badgeColor.withValues(alpha: 0.3),
-                    width: 2,
+                    width: 1.5,
                   ),
                 ),
                 child: Center(
@@ -110,7 +110,7 @@ class _BadgeUnlockModalState extends ConsumerState<BadgeUnlockModal> {
 
               // Title
               Text(
-                'وسام جديد!',
+                'أحسنت! 🤍',
                 style: AppTypography.dramatic.copyWith(
                   color: colors.textPrimary,
                 ),

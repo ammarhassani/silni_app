@@ -152,7 +152,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         break;
 
       case GamificationEventType.badgeUnlocked:
-        _confettiController.play();
+        // Subtle celebration — no confetti
         if (event.badgeId != null) {
           BadgeUnlockModal.show(
             context,
