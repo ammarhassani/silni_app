@@ -15,15 +15,18 @@ import '../../subscription/screens/paywall_screen.dart';
 class PremiumUpgradeBanner extends ConsumerWidget {
   const PremiumUpgradeBanner({super.key});
 
-  static const _teaserMessage = 'استمتع بجميع المزايا — جرّب صلني MAX مجاناً';
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isMax = ref.watch(isMaxProvider);
+    final isTrialEligible = ref.watch(isTrialEligibleProvider);
 
     if (isMax) {
       return const SizedBox.shrink();
     }
+
+    final teaserMessage = isTrialEligible
+        ? 'استمتع بجميع المزايا — جرّب صلني MAX مجاناً'
+        : 'الميزات اللي جربتها تنتظرك — ارجع لصلني MAX';
 
     return GestureDetector(
       onTap: () {
@@ -91,7 +94,7 @@ class PremiumUpgradeBanner extends ConsumerWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    _teaserMessage,
+                    teaserMessage,
                     style: AppTypography.bodySmall.copyWith(
                       color: Colors.white70,
                     ),

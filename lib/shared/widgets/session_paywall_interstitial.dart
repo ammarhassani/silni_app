@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
+import '../../core/providers/subscription_provider.dart';
 import '../../features/subscription/screens/paywall_screen.dart';
+import '../utils/trial_helpers.dart';
 
 /// Session-based paywall interstitial shown every 3rd app open (or every 5th after 5 skips).
 ///
@@ -55,13 +58,15 @@ class SessionPaywallInterstitial {
   }
 }
 
-class _PaywallSheet extends StatelessWidget {
+class _PaywallSheet extends ConsumerWidget {
   final Future<void> Function() onSkip;
 
   const _PaywallSheet({required this.onSkip});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isTrialEligible = ref.watch(isTrialEligibleProvider);
+    final introPrice = ref.watch(introPriceProvider);
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Container(
@@ -123,7 +128,9 @@ class _PaywallSheet extends StatelessWidget {
 
             // Headline in gold
             Text(
-              'جرّب صِلني MAX',
+              isTrialEligible
+                  ? 'جرّب صِلني MAX'
+                  : 'عودتك تفرحنا! \u{1F90D}',
               style: AppTypography.headlineSmall.copyWith(
                 color: AppColors.premiumGold,
                 fontWeight: FontWeight.bold,
@@ -134,7 +141,9 @@ class _PaywallSheet extends StatelessWidget {
 
             // Subtitle
             Text(
-              'مجاناً بـ ٠ ريال لمدة ٧ أيام',
+              isTrialEligible
+                  ? 'مجاناً بـ ٠ ريال لمدة ${TrialHelpers.formatDuration(introPrice)}'
+                  : 'الميزات اللي جربتها تنتظرك',
               style: AppTypography.bodyMedium.copyWith(
                 color: Colors.white70,
               ),
@@ -196,7 +205,7 @@ class _PaywallSheet extends StatelessWidget {
                     },
                     child: Center(
                       child: Text(
-                        'ابدأ التجربة',
+                        isTrialEligible ? 'ابدأ التجربة المجانية' : 'عرض الخطط',
                         style: AppTypography.titleMedium.copyWith(
                           color: Colors.black,
                           fontWeight: FontWeight.bold,

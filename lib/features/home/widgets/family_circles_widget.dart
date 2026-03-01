@@ -33,12 +33,33 @@ class FamilyCirclesWidget extends ConsumerWidget {
       return _buildEmptyState(context, themeColors);
     }
 
-    // Sort by creation date (oldest first) so newest appears on LEFT in RTL
-    final sortedByDate = List<Relative>.from(relatives)
-      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    // Group by category
+    final household = relatives
+        .where((r) => r.relativeCategory == RelativeCategory.household)
+        .toList();
+    final extended = relatives
+        .where((r) => r.relativeCategory == RelativeCategory.extended)
+        .toList();
+    final distant = relatives
+        .where((r) => r.relativeCategory == RelativeCategory.distant)
+        .toList();
 
-    // Show first 8 relatives in carousel
-    final displayRelatives = sortedByDate.take(8).toList();
+    // Sort each group by creation date (oldest first, so newest on LEFT in RTL)
+    for (final group in [household, extended, distant]) {
+      group.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    }
+
+    // Only show onAddRelative in the first non-empty section
+    void addRelative() => context.push(AppRoutes.addRelative);
+    bool addButtonAssigned = false;
+
+    VoidCallback? getAddCallback() {
+      if (!addButtonAssigned) {
+        addButtonAssigned = true;
+        return addRelative;
+      }
+      return null;
+    }
 
     return Semantics(
       label: 'قسم العائلة - ${relatives.length} قريب',
@@ -81,17 +102,66 @@ class FamilyCirclesWidget extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          AvatarCarousel(
-            relatives: displayRelatives,
-            onAddRelative: () => context.push(AppRoutes.addRelative),
-            relationshipLabels: relationshipLabels,
-          ),
+
+          // Household section
+          if (household.isNotEmpty) ...[
+            _buildCategoryHeader('\u{1F3E0}', 'أهل البيت', themeColors),
+            const SizedBox(height: AppSpacing.xs),
+            AvatarCarousel(
+              relatives: household.take(8).toList(),
+              onAddRelative: getAddCallback(),
+              relationshipLabels: relationshipLabels,
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+
+          // Extended section
+          if (extended.isNotEmpty) ...[
+            _buildCategoryHeader('\u{1F4DE}', 'تواصل دائم', themeColors),
+            const SizedBox(height: AppSpacing.xs),
+            AvatarCarousel(
+              relatives: extended.take(8).toList(),
+              onAddRelative: getAddCallback(),
+              relationshipLabels: relationshipLabels,
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+
+          // Distant section
+          if (distant.isNotEmpty) ...[
+            _buildCategoryHeader('\u{1F319}', 'مناسبات', themeColors),
+            const SizedBox(height: AppSpacing.xs),
+            AvatarCarousel(
+              relatives: distant.take(8).toList(),
+              onAddRelative: getAddCallback(),
+              relationshipLabels: relationshipLabels,
+            ),
+          ],
         ],
       ),
     )
         .animate(delay: AppAnimations.modal)
         .fadeIn(duration: AppAnimations.normal)
         .slideY(begin: 0.2, end: 0);
+  }
+
+  Widget _buildCategoryHeader(
+      String emoji, String label, dynamic themeColors) {
+    return Padding(
+      padding: const EdgeInsets.only(right: AppSpacing.xs),
+      child: Row(
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 16)),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            label,
+            style: AppTypography.labelMedium.copyWith(
+              color: themeColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildEmptyState(BuildContext context, dynamic themeColors) {

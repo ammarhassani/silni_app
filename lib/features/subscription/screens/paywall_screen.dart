@@ -14,6 +14,7 @@ import '../../../core/services/subscription_service.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_background.dart';
+import '../../../shared/utils/trial_helpers.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../premium_onboarding/providers/onboarding_provider.dart';
 import '../../premium_onboarding/screens/premium_onboarding_screen.dart';
@@ -81,6 +82,12 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     final themeColors = ref.watch(themeColorsProvider);
     final offerings = ref.watch(offeringsProvider);
     final isLoading = ref.watch(subscriptionLoadingProvider);
+    final isTrialEligible = ref.watch(isTrialEligibleProvider);
+    final introPrice = ref.watch(introPriceProvider);
+    final isMax = ref.watch(isMaxProvider);
+
+    // Post-trial: user already used trial, not currently subscribed
+    final isPostTrial = !isTrialEligible && !isMax && !isLoading;
 
     return Scaffold(
       body: Stack(
@@ -90,15 +97,15 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
             child: Column(
               children: [
                 // Header with close button
-                _buildHeader(themeColors),
+                _buildHeader(themeColors, isPostTrial: isPostTrial),
 
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
                     child: Column(
                       children: [
-                        // Trial banner
-                        _buildTrialBanner(themeColors),
+                        // Trial banner (shown for trial-eligible or post-trial users)
+                        _buildTrialBanner(themeColors, isTrialEligible: isTrialEligible, introPrice: introPrice, isPostTrial: isPostTrial),
 
                         const SizedBox(height: AppSpacing.sm),
 
@@ -132,7 +139,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                 ),
 
                 // Purchase button
-                _buildPurchaseButton(themeColors, offerings, isLoading),
+                _buildPurchaseButton(themeColors, offerings, isLoading, isTrialEligible: isTrialEligible, isPostTrial: isPostTrial),
               ],
             ),
           ),
@@ -141,7 +148,11 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     );
   }
 
-  Widget _buildHeader(dynamic themeColors) {
+  Widget _buildHeader(dynamic themeColors, {required bool isPostTrial}) {
+    // For post-trial users without explicit contextHeadline, use loss-framed headline
+    final headline = widget.contextHeadline ??
+        (isPostTrial ? 'ميزات كنت تستخدمها' : 'الاشتراك المميز');
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
       child: Row(
@@ -152,7 +163,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
           ),
           Expanded(
             child: Text(
-              widget.contextHeadline ?? 'الاشتراك المميز',
+              headline,
               style: AppTypography.headlineMedium.copyWith(
                 color: themeColors.textOnGradient,
                 fontWeight: FontWeight.bold,
@@ -168,7 +179,56 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     );
   }
 
-  Widget _buildTrialBanner(dynamic themeColors) {
+  Widget _buildTrialBanner(dynamic themeColors, {required bool isTrialEligible, rc.IntroductoryPrice? introPrice, required bool isPostTrial}) {
+    // Show post-trial banner for users who already used their trial (natural paywall only)
+    if (!isTrialEligible && isPostTrial && widget.featureToUnlock == null) {
+      return GlassCard(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.premiumGold.withValues(alpha: 0.3),
+            AppColors.premiumGoldDark.withValues(alpha: 0.2),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.premiumGold,
+              ),
+              child: const Icon(Icons.star_rounded, color: Colors.white, size: 28),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'لقد جربت واصل — مساعدك الذكي للعائلة',
+                    style: AppTypography.titleMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'استمر بالاستمتاع بالميزات المميزة',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ).animate().fadeIn().slideY(begin: -0.2);
+    }
+
+    if (!isTrialEligible) return const SizedBox.shrink();
+
+    final trialDuration = TrialHelpers.formatDuration(introPrice);
+
     return GlassCard(
       gradient: LinearGradient(
         colors: [
@@ -192,7 +252,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'جرّب MAX مجاناً — ٠ ريال لمدة ٧ أيام',
+                  'جرّب MAX مجاناً — ٠ ريال لمدة $trialDuration',
                   style: AppTypography.titleMedium.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -596,8 +656,20 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   Widget _buildPurchaseButton(
     dynamic themeColors,
     rc.Offerings? offerings,
-    bool isLoading,
-  ) {
+    bool isLoading, {
+    required bool isTrialEligible,
+    required bool isPostTrial,
+  }) {
+    // Determine button text based on user state
+    String buttonText;
+    if (isTrialEligible) {
+      buttonText = 'ابدأ التجربة المجانية';
+    } else if (isPostTrial) {
+      buttonText = 'استمر مع صلني MAX';
+    } else {
+      buttonText = _buildSubscribeText(offerings);
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
@@ -622,13 +694,23 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                 ),
               )
             : Text(
-                'جرّب مجاناً بـ ٠ ريال',
+                buttonText,
                 style: AppTypography.titleMedium.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
       ),
     );
+  }
+
+  String _buildSubscribeText(rc.Offerings? offerings) {
+    final productId = _isAnnual ? SubscriptionProducts.maxAnnual : SubscriptionProducts.maxMonthly;
+    final priceInfo = _getPriceFromOfferings(offerings, productId);
+    if (priceInfo != null) {
+      final period = _isAnnual ? 'سنوياً' : 'شهرياً';
+      return 'اشترك بـ ${priceInfo.priceString}/$period';
+    }
+    return 'اشترك الآن';
   }
 
   Future<void> _purchase(rc.Offerings? offerings) async {
