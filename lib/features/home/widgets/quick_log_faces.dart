@@ -201,17 +201,31 @@ class _QuickLogFaceState extends ConsumerState<_QuickLogFace> {
             question: question,
             relativeId: widget.relative.id,
             onSubmit: (field, answer) async {
-              // Update the relative field in Supabase
-              await SupabaseConfig.client
-                  .from('relatives')
-                  .update({field: answer})
-                  .eq('id', widget.relative.id);
-              // Record the answer
-              await OneQuestionEngine.recordAnswer(
-                relativeId: widget.relative.id,
-                questionKey: question.key,
-                prefs: prefs,
-              );
+              // Whitelist allowed fields to prevent column-name injection
+              const allowedFields = {
+                'interests', 'health_status', 'communication_style',
+                'best_time_to_contact', 'sensitive_topics',
+              };
+              if (!allowedFields.contains(field)) return;
+
+              try {
+                // Array fields need list values
+                const arrayFields = {'interests', 'sensitive_topics'};
+                final value = arrayFields.contains(field) ? [answer] : answer;
+
+                await SupabaseConfig.client
+                    .from('relatives')
+                    .update({field: value})
+                    .eq('id', widget.relative.id);
+                // Record the answer only on success
+                await OneQuestionEngine.recordAnswer(
+                  relativeId: widget.relative.id,
+                  questionKey: question.key,
+                  prefs: prefs,
+                );
+              } catch (_) {
+                // Silently fail — non-critical enrichment
+              }
             },
           );
         }

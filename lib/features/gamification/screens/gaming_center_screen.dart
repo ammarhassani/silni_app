@@ -966,7 +966,7 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen> {
     ];
 
     final randomMotivation =
-        motivations[DateTime.now().second % motivations.length];
+        motivations[DateTime.now().day % motivations.length];
     final heartColor = themeColors.statusError as Color;
 
     return Container(

@@ -19,10 +19,13 @@ class IslamicCalendarService {
   static String? getTodayBriefing() {
     final now = DateTime.now();
 
-    // Friday
+    // Friday — works every year
     if (now.weekday == DateTime.friday) {
       return 'الجمعة يوم مبارك للتواصل مع الأهل 🤍';
     }
+
+    // Hardcoded dates only valid for 2026
+    if (now.year != 2026) return null;
 
     final month = now.month;
     final day = now.day;
@@ -58,6 +61,8 @@ class IslamicCalendarService {
   /// Get the current Islamic season context for AI prompts, or null if none.
   static String? getSeasonContext() {
     final now = DateTime.now();
+    // Hardcoded dates only valid for 2026
+    if (now.year != 2026) return null;
     final month = now.month;
     final day = now.day;
 
