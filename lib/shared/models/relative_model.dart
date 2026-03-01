@@ -1,5 +1,20 @@
 import '../../features/family_tree/models/family_graph.dart';
 
+/// Category for how close a relative is in daily life
+enum RelativeCategory {
+  household,
+  extended,
+  distant;
+
+  static RelativeCategory fromString(String? value) {
+    if (value == null) return RelativeCategory.extended;
+    return RelativeCategory.values.firstWhere(
+      (c) => c.name == value,
+      orElse: () => RelativeCategory.extended,
+    );
+  }
+}
+
 /// Relationship types for relatives
 enum RelationshipType {
   father('father', 'أب', 1),
@@ -203,6 +218,9 @@ class Relative {
   // Family side (paternal/maternal) for extended family disambiguation
   final FamilySide? familySide;
 
+  // Category: household, extended, or distant
+  final RelativeCategory relativeCategory;
+
   // Self node flag — true when this relative represents the user themselves
   final bool isSelf;
 
@@ -258,6 +276,8 @@ class Relative {
     this.lastMeaningfulInteraction,
     // Family side
     this.familySide,
+    // Relative category
+    this.relativeCategory = RelativeCategory.extended,
     // Self node flag
     this.isSelf = false,
     // Shared tree fields
@@ -346,6 +366,8 @@ class Relative {
               orElse: () => FamilySide.paternal,
             )
           : null,
+      // Relative category
+      relativeCategory: RelativeCategory.fromString(json['relative_category'] as String?),
       // Self node flag
       isSelf: json['is_self'] as bool? ?? false,
       // Shared tree fields
@@ -403,6 +425,8 @@ class Relative {
       'last_meaningful_interaction': lastMeaningfulInteraction?.toUtc().toIso8601String(),
       // Family side
       if (familySide != null) 'family_side': familySide!.value,
+      // Relative category
+      'relative_category': relativeCategory.name,
       // Self node flag
       if (isSelf) 'is_self': true,
       // Shared tree fields
@@ -461,6 +485,8 @@ class Relative {
     DateTime? lastMeaningfulInteraction,
     // Family side
     FamilySide? familySide,
+    // Relative category
+    RelativeCategory? relativeCategory,
     // Self node flag
     bool? isSelf,
     // Shared tree fields
@@ -515,6 +541,8 @@ class Relative {
       lastMeaningfulInteraction: lastMeaningfulInteraction ?? this.lastMeaningfulInteraction,
       // Family side
       familySide: familySide ?? this.familySide,
+      // Relative category
+      relativeCategory: relativeCategory ?? this.relativeCategory,
       // Self node flag
       isSelf: isSelf ?? this.isSelf,
       // Shared tree fields
