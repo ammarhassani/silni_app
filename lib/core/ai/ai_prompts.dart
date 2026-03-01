@@ -147,6 +147,7 @@ ${mode.modeInstructions}
 - الاسم: ${relative.fullName}
 - العلاقة: $label
 - الأولوية: ${_getPriorityArabic(relative.priority)}
+- التصنيف: ${_getCategoryArabic(relative.relativeCategory)}
 ''');
 
     if (relative.lastContactDate != null) {
@@ -215,6 +216,14 @@ ${mode.modeInstructions}
     }
 
     return buffer.toString();
+  }
+
+  static String _getCategoryArabic(RelativeCategory category) {
+    return switch (category) {
+      RelativeCategory.household => 'أهل البيت — لا يحتاج تتبع تواصل',
+      RelativeCategory.extended => 'تواصل دائم — يحتاج متابعة منتظمة',
+      RelativeCategory.distant => 'مناسبات — أعياد ومناسبات فقط',
+    };
   }
 
   static String _getPriorityArabic(int priority) {
@@ -345,6 +354,11 @@ ${mode.modeInstructions}
 ## عائلة المستخدم:
 المستخدم لديه ${relatives.length} قريب مسجل في التطبيق.
 
+## أنواع الأقارب:
+- أهل البيت: لا تنبّه على التواصل معهم — ركّز على جودة العلاقة ولحظات مشتركة
+- تواصل دائم: نبّه لو مرت فترة بدون تواصل — اقترح طرق تواصل مناسبة
+- مناسبات: ركّز على المناسبات القادمة والتهاني — لا تضغط على التواصل اليومي
+
 ### ملخص صحة العلاقات:
 - علاقات صحية 🟢: $healthyCount
 - تحتاج اهتمام 🟡: $needsAttentionCount
@@ -428,6 +442,14 @@ ${mode.modeInstructions}
     }
 
     buffer.write('- $healthIcon **${relative.fullName}** ($displayLabel)');
+
+    // Add category label
+    final categoryLabel = switch (relative.relativeCategory) {
+      RelativeCategory.household => '[أهل البيت]',
+      RelativeCategory.extended => '[تواصل دائم]',
+      RelativeCategory.distant => '[مناسبات]',
+    };
+    buffer.write(' $categoryLabel');
 
     final days = relative.daysSinceLastContact;
     if (days != null) {

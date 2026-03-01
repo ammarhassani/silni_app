@@ -395,6 +395,15 @@ class AIContext {
 
     buffer.writeln('## معلومات المستخدم');
     buffer.writeln('- عدد الأقارب: ${relatives.length}');
+
+    // Add category breakdown
+    final householdCount = relatives.where((r) => r.relativeCategory == RelativeCategory.household).length;
+    final extendedCount = relatives.where((r) => r.relativeCategory == RelativeCategory.extended).length;
+    final distantCount = relatives.where((r) => r.relativeCategory == RelativeCategory.distant).length;
+    if (householdCount > 0) buffer.writeln('- أهل البيت: $householdCount');
+    if (extendedCount > 0) buffer.writeln('- تواصل دائم: $extendedCount');
+    if (distantCount > 0) buffer.writeln('- مناسبات: $distantCount');
+
     buffer.writeln('- المستوى: ${gamification.level}');
     buffer.writeln('- النقاط: ${gamification.totalPoints}');
     buffer.writeln('- الشعلات النشطة: $totalActiveStreaks');
