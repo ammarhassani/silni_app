@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/constants/app_animations.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/config/supabase_config.dart';
@@ -15,13 +14,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
 import '../../subscription/screens/paywall_screen.dart';
 
-enum LeaderboardType {
-  points,
-  streak,
-  level,
-}
-
-/// Leaderboard screen showing top users
+/// Family Activity screen showing collective family connection stats
 class LeaderboardScreen extends ConsumerStatefulWidget {
   const LeaderboardScreen({super.key});
 
@@ -29,85 +22,53 @@ class LeaderboardScreen extends ConsumerStatefulWidget {
   ConsumerState<LeaderboardScreen> createState() => _LeaderboardScreenState();
 }
 
-class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  List<Map<String, dynamic>> _leaderboardData = [];
-  Map<String, dynamic>? _currentUserRank;
+class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
+  List<Map<String, dynamic>> _memberActivity = [];
+  int _totalGroupInteractions = 0;
+  int _activeMembersCount = 0;
   bool _isLoading = true;
-  LeaderboardType _selectedType = LeaderboardType.points;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
-        setState(() {
-          _selectedType = LeaderboardType.values[_tabController.index];
-        });
-        _loadLeaderboard();
-      }
-    });
-    _loadLeaderboard();
+    _loadFamilyActivity();
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadLeaderboard() async {
+  Future<void> _loadFamilyActivity() async {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
 
     setState(() => _isLoading = true);
 
     try {
-      String orderColumn;
-      switch (_selectedType) {
-        case LeaderboardType.points:
-          orderColumn = 'points';
-          break;
-        case LeaderboardType.streak:
-          orderColumn = 'current_streak';
-          break;
-        case LeaderboardType.level:
-          orderColumn = 'level';
-          break;
-      }
-
-      // Use RPC to bypass RLS and get all users safely
+      // Get group members with their recent activity (reuse leaderboard RPC but display differently)
       final response = await SupabaseConfig.client.rpc('get_leaderboard', params: {
-        'order_by': orderColumn,
+        'order_by': 'current_streak',
         'result_limit': 50,
       });
 
       final data = List<Map<String, dynamic>>.from(response as List);
 
-      // Find current user's rank
-      final currentUserIndex = data.indexWhere((u) => u['id'] == user.id);
-      Map<String, dynamic>? currentUserRank;
-
-      if (currentUserIndex >= 0) {
-        currentUserRank = {
-          ...data[currentUserIndex],
-        };
+      // Calculate collective stats
+      int totalInteractions = 0;
+      int activeMembers = 0;
+      for (final member in data) {
+        final streak = member['current_streak'] as int? ?? 0;
+        totalInteractions += member['total_interactions'] as int? ?? 0;
+        if (streak > 0) activeMembers++;
       }
 
       if (mounted) {
         setState(() {
-          _leaderboardData = data;
-          _currentUserRank = currentUserRank;
+          _memberActivity = data;
+          _totalGroupInteractions = totalInteractions;
+          _activeMembersCount = activeMembers;
           _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -119,7 +80,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
 
     return Scaffold(
       body: Semantics(
-        label: 'لوحة المتصدرين',
+        label: 'نشاط العائلة',
         child: Stack(
           children: [
             const GradientBackground(animated: true, child: SizedBox.expand()),
@@ -142,32 +103,31 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                         ),
                         const SizedBox(width: AppSpacing.sm),
                         Text(
-                          'لوحة المتصدرين',
+                          'نشاط العائلة',
                           style: AppTypography.headlineMedium.copyWith(
                             color: themeColors.textOnGradient,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const Spacer(),
-                        // Pro badge
                         if (!hasAccess)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
-                                colors: [AppColors.premiumGold, AppColors.premiumGoldDark],
+                                colors: [themeColors.primary, themeColors.primaryLight],
                               ),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.lock, size: 14, color: Colors.black87),
+                                Icon(Icons.lock, size: 14, color: themeColors.textOnGradient),
                                 const SizedBox(width: 4),
                                 Text(
                                   'PRO',
                                   style: AppTypography.labelSmall.copyWith(
-                                    color: Colors.black87,
+                                    color: themeColors.textOnGradient,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -179,7 +139,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                             label: 'تحديث',
                             button: true,
                             child: IconButton(
-                              onPressed: _loadLeaderboard,
+                              onPressed: _loadFamilyActivity,
                               icon: const Icon(Icons.refresh_rounded),
                               color: themeColors.textOnGradient,
                             ),
@@ -188,82 +148,30 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                     ),
                   ),
 
-                  // Show upgrade prompt if no access, otherwise show leaderboard
                   if (!hasAccess)
-                    Expanded(
-                      child: _buildUpgradePrompt(themeColors),
-                    )
-                  else ...[
-                    // Tabs
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                      child: GlassCard(
-                        child: TabBar(
-                          controller: _tabController,
-                          indicatorColor: AppColors.premiumGold,
-                          labelColor: themeColors.textOnGradient,
-                          unselectedLabelColor: themeColors.textOnGradient.withValues(alpha: 0.6),
-                          labelStyle: AppTypography.titleSmall,
-                          tabs: const [
-                            Tab(text: 'النقاط'),
-                            Tab(text: 'السلسلة'),
-                            Tab(text: 'المستوى'),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    // Current user rank
-                    if (_currentUserRank != null)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                        child: _buildUserRankCard(_currentUserRank!, isCurrentUser: true, themeColors: themeColors),
-                      ),
-
-                    const SizedBox(height: AppSpacing.md),
-
-                    // Leaderboard list
+                    Expanded(child: _buildUpgradePrompt(themeColors))
+                  else
                     Expanded(
                       child: _isLoading
                           ? const Center(
                               child: PremiumLoadingIndicator(
-                                message: 'جاري تحميل الترتيب...',
+                                message: 'جاري تحميل نشاط العائلة...',
                               ),
                             )
-                          : _leaderboardData.isEmpty
-                              ? Center(
-                                  child: Text(
-                                    'لا توجد بيانات',
-                                    style: AppTypography.bodyLarge.copyWith(
-                                      color: themeColors.textOnGradient.withValues(alpha: 0.7),
-                                    ),
-                                  ),
-                                )
-                              : ListView.builder(
-                                  padding: const EdgeInsets.only(
-                                    top: AppSpacing.md,
-                                    left: AppSpacing.md,
-                                    right: AppSpacing.md,
-                                    bottom: AppSpacing.xxl,
-                                  ),
-                                  itemCount: _leaderboardData.length,
-                                  itemBuilder: (context, index) {
-                                    final userData = _leaderboardData[index];
-                                    final user = ref.read(currentUserProvider);
-                                    final isCurrentUser = userData['id'] == user?.id;
-
-                                    return _buildLeaderboardItem(
-                                      userData,
-                                      index + 1,
-                                      isCurrentUser,
-                                      themeColors,
-                                    );
-                                  },
-                                ),
+                          : SingleChildScrollView(
+                              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                              child: Column(
+                                children: [
+                                  // Collective stats card
+                                  _buildCollectiveStatsCard(themeColors),
+                                  const SizedBox(height: AppSpacing.md),
+                                  // Member activity list (no ranking)
+                                  _buildMemberActivityList(themeColors),
+                                  const SizedBox(height: AppSpacing.xxl),
+                                ],
+                              ),
+                            ),
                     ),
-                  ],
                 ],
               ),
             ),
@@ -273,83 +181,82 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     );
   }
 
-  Widget _buildUserRankCard(Map<String, dynamic> userData, {required bool isCurrentUser, required dynamic themeColors}) {
+  Widget _buildCollectiveStatsCard(dynamic themeColors) {
     return GlassCard(
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppColors.premiumGold.withValues(alpha: 0.3),
-              AppColors.premiumGoldDark.withValues(alpha: 0.2),
-            ],
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        children: [
+          const Text(
+            '\u{1f90d}',
+            style: TextStyle(fontSize: 40),
           ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            // Rank badge
-            _buildRankBadge(userData['rank'] as int, themeColors),
-            const SizedBox(width: AppSpacing.md),
-
-            // Avatar
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: themeColors.primary,
-              child: Text(
-                _getInitials(userData['full_name'] as String? ?? 'مستخدم'),
-                style: AppTypography.titleMedium.copyWith(
-                  color: themeColors.textOnGradient,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            '\u0639\u0627\u0626\u0644\u062a\u0643\u0645 \u062a\u0648\u0627\u0635\u0644\u062a $_totalGroupInteractions \u0645\u0631\u0629',
+            style: AppTypography.titleLarge.copyWith(
+              color: themeColors.textOnGradient,
+              fontWeight: FontWeight.bold,
             ),
-
-            const SizedBox(width: AppSpacing.md),
-
-            // User info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    userData['full_name'] as String? ?? 'مستخدم',
-                    style: AppTypography.titleMedium.copyWith(
-                      color: themeColors.textOnGradient,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    'ترتيبك',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: themeColors.textOnGradient.withValues(alpha: 0.7),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            '$_activeMembersCount \u0623\u0639\u0636\u0627\u0621 \u064a\u062a\u0648\u0627\u0635\u0644\u0648\u0646 \u062d\u0627\u0644\u064a\u064b\u0627',
+            style: AppTypography.bodyMedium.copyWith(
+              color: themeColors.textOnGradient.withValues(alpha: 0.7),
             ),
-
-            // Score
-            _buildScoreChip(userData, themeColors),
-          ],
-        ),
+          ),
+        ],
       ),
     )
         .animate()
         .fadeIn(duration: AppAnimations.normal)
-        .slideY(begin: -0.2, end: 0, duration: AppAnimations.normal);
+        .slideY(begin: 0.1, end: 0);
   }
 
-  Widget _buildLeaderboardItem(
-    Map<String, dynamic> userData,
-    int rank,
+  Widget _buildMemberActivityList(dynamic themeColors) {
+    if (_memberActivity.isEmpty) {
+      return Center(
+        child: Text(
+          'لا يوجد نشاط حالي',
+          style: AppTypography.bodyLarge.copyWith(
+            color: themeColors.textOnGradient.withValues(alpha: 0.7),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'أعضاء العائلة',
+          style: AppTypography.titleMedium.copyWith(
+            color: themeColors.textOnGradient,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        ...List.generate(_memberActivity.length, (index) {
+          final member = _memberActivity[index];
+          final user = ref.read(currentUserProvider);
+          final isCurrentUser = member['id'] == user?.id;
+
+          return _buildMemberActivityItem(member, isCurrentUser, themeColors, index);
+        }),
+      ],
+    );
+  }
+
+  Widget _buildMemberActivityItem(
+    Map<String, dynamic> member,
     bool isCurrentUser,
     dynamic themeColors,
+    int index,
   ) {
+    final currentStreak = member['current_streak'] as int? ?? 0;
+    final name = member['full_name'] as String? ?? 'عضو';
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: GlassCard(
@@ -368,32 +275,27 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               : null,
           child: Row(
             children: [
-              // Rank badge
-              _buildRankBadge(rank, themeColors),
-              const SizedBox(width: AppSpacing.md),
-
-              // Avatar
+              // Avatar (no rank number)
               CircleAvatar(
                 radius: 20,
-                backgroundColor: _getRankColor(rank).withValues(alpha: 0.3),
+                backgroundColor: themeColors.primary.withValues(alpha: 0.3),
                 child: Text(
-                  _getInitials(userData['full_name'] as String? ?? 'مستخدم'),
+                  _getInitials(name),
                   style: AppTypography.bodyMedium.copyWith(
                     color: themeColors.textOnGradient,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-
               const SizedBox(width: AppSpacing.md),
 
-              // User info
+              // Name
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      userData['full_name'] as String? ?? 'مستخدم',
+                      name,
                       style: AppTypography.bodyMedium.copyWith(
                         color: themeColors.textOnGradient,
                         fontWeight: FontWeight.w600,
@@ -413,122 +315,44 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                 ),
               ),
 
-              // Score
-              _buildScoreChip(userData, themeColors),
+              // Streak chip (no points, no ranking)
+              if (currentStreak > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    color: themeColors.primary.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: themeColors.primary.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('\u{1f525}', style: TextStyle(fontSize: 14)),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$currentStreak يوم',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: themeColors.textOnGradient,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),
       ),
     )
         .animate()
-        .fadeIn(delay: Duration(milliseconds: rank * 30), duration: AppAnimations.normal)
-        .slideX(begin: 0.1, end: 0, delay: Duration(milliseconds: rank * 30), duration: AppAnimations.normal);
-  }
-
-  Widget _buildRankBadge(int rank, dynamic themeColors) {
-    Color badgeColor;
-    Widget? icon;
-
-    if (rank == 1) {
-      badgeColor = AppColors.premiumGold;
-      icon = Icon(Icons.emoji_events_rounded, color: themeColors.textOnGradient, size: 20);
-    } else if (rank == 2) {
-      badgeColor = Colors.grey[400]!;
-      icon = Icon(Icons.emoji_events_rounded, color: themeColors.textOnGradient, size: 18);
-    } else if (rank == 3) {
-      badgeColor = Colors.brown[400]!;
-      icon = Icon(Icons.emoji_events_rounded, color: themeColors.textOnGradient, size: 16);
-    } else {
-      badgeColor = themeColors.textOnGradient.withValues(alpha: 0.2);
-    }
-
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: badgeColor,
-        shape: BoxShape.circle,
-        boxShadow: rank <= 3
-            ? [
-                BoxShadow(
-                  color: badgeColor.withValues(alpha: 0.5),
-                  blurRadius: 8,
-                  spreadRadius: 2,
-                ),
-              ]
-            : null,
-      ),
-      child: Center(
-        child: icon ??
-            Text(
-              '$rank',
-              style: AppTypography.titleSmall.copyWith(
-                color: themeColors.textOnGradient,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-      ),
-    );
-  }
-
-  Widget _buildScoreChip(Map<String, dynamic> userData, dynamic themeColors) {
-    String value;
-    IconData icon;
-    Color color;
-
-    switch (_selectedType) {
-      case LeaderboardType.points:
-        value = '${userData['points'] ?? 0}';
-        icon = Icons.star_rounded;
-        color = AppColors.premiumGold;
-        break;
-      case LeaderboardType.streak:
-        value = '${userData['current_streak'] ?? 0}';
-        icon = Icons.local_fire_department_rounded;
-        color = AppColors.energeticRed;
-        break;
-      case LeaderboardType.level:
-        value = '${userData['level'] ?? 1}';
-        icon = Icons.workspace_premium_rounded;
-        color = themeColors.primary;
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: color.withValues(alpha: 0.5),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(width: AppSpacing.xs),
-          Text(
-            value,
-            style: AppTypography.titleSmall.copyWith(
-              color: themeColors.textOnGradient,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _getRankColor(int rank) {
-    if (rank == 1) return AppColors.premiumGold;
-    if (rank == 2) return Colors.grey[400]!;
-    if (rank == 3) return Colors.brown[400]!;
-    return AppColors.islamicGreenLight;
+        .fadeIn(delay: Duration(milliseconds: index * 50), duration: AppAnimations.normal)
+        .slideX(begin: 0.1, end: 0, delay: Duration(milliseconds: index * 50));
   }
 
   String _getInitials(String name) {
@@ -546,29 +370,28 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Lock icon with glow
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.premiumGold.withValues(alpha: 0.3),
-                    AppColors.premiumGoldDark.withValues(alpha: 0.2),
+                    themeColors.primary.withValues(alpha: 0.3),
+                    themeColors.primaryDark.withValues(alpha: 0.2),
                   ],
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.premiumGold.withValues(alpha: 0.3),
+                    color: themeColors.primary.withValues(alpha: 0.3),
                     blurRadius: 20,
                     spreadRadius: 5,
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.leaderboard_rounded,
+              child: Icon(
+                Icons.family_restroom_rounded,
                 size: 64,
-                color: AppColors.premiumGold,
+                color: themeColors.primary,
               ),
             )
                 .animate(onPlay: (controller) => controller.repeat(reverse: true))
@@ -581,7 +404,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
             const SizedBox(height: AppSpacing.xl),
 
             Text(
-              'لوحة المتصدرين',
+              'نشاط العائلة',
               style: AppTypography.headlineMedium.copyWith(
                 color: themeColors.textOnGradient,
                 fontWeight: FontWeight.bold,
@@ -601,7 +424,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
             const SizedBox(height: AppSpacing.md),
 
             Text(
-              'اشترك في الباقة الاحترافية لمقارنة ترتيبك مع الآخرين',
+              'اشترك لتشوف نشاط تواصل عائلتك',
               style: AppTypography.bodyMedium.copyWith(
                 color: themeColors.textOnGradient.withValues(alpha: 0.6),
               ),
@@ -610,7 +433,6 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
 
             const SizedBox(height: AppSpacing.xl),
 
-            // Upgrade button
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).push(
@@ -623,8 +445,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.premiumGold,
-                foregroundColor: Colors.black,
+                backgroundColor: themeColors.primary,
+                foregroundColor: themeColors.onPrimary,
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.xl,
                   vertical: AppSpacing.md,
