@@ -16,9 +16,9 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 // Max nudges per user per cron run
 const MAX_NUDGES_PER_RUN = 1;
 // Max nudges per user per day
-const MAX_NUDGES_PER_DAY = 3;
+const MAX_NUDGES_PER_DAY = 2;  // Reduced from 3 — less pressure
 // Minimum gap days to even consider nudging
-const MIN_GAP_DAYS = 3;
+const MIN_GAP_DAYS = 5;  // Increased from 3 — more grace period
 // How many recent template_keys to exclude for rotation
 const ROTATION_LOOKBACK = 5;
 
