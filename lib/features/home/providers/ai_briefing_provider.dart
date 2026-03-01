@@ -30,7 +30,6 @@ final aiBriefingProvider = Provider.autoDispose<AsyncValue<AIBriefing?>>((ref) {
   return relativesAsync.whenData((relatives) {
     if (relatives.isEmpty) return null;
 
-    // Priority 1: Upcoming occasion (birthday within 3 days)
     final now = DateTime.now();
     final upcoming = relatives.where((r) {
       if (r.dateOfBirth == null) return false;
@@ -38,9 +37,27 @@ final aiBriefingProvider = Provider.autoDispose<AsyncValue<AIBriefing?>>((ref) {
       return days <= 3;
     }).toList();
 
+    // Priority 1: Upcoming birthday (with or without interests compound)
     if (upcoming.isNotEmpty) {
       final r = upcoming.first;
       final days = _daysUntilBirthday(r.dateOfBirth!, now);
+
+      // Compound: birthday + interests
+      if (days > 0 &&
+          days <= 3 &&
+          r.interests != null &&
+          r.interests!.isNotEmpty) {
+        final interest = r.interests!.first;
+        return AIBriefing(
+          emoji: '🎂',
+          message:
+              'عيد ميلاد ${r.fullName} بعد ${days == 1 ? "يوم" : "$days أيام"} — يحب $interest، وش رايك تفاجئه؟',
+          actions: [BriefingAction.call, BriefingAction.message],
+          relativeId: r.id,
+        );
+      }
+
+      // Simple birthday
       return AIBriefing(
         emoji: '🎂',
         message: days == 0
@@ -51,7 +68,46 @@ final aiBriefingProvider = Provider.autoDispose<AsyncValue<AIBriefing?>>((ref) {
       );
     }
 
-    // Priority 2: Extended relative with longest gap (7+ days)
+    // Priority 2: Health concern + contact gap compound
+    final healthConcern = relatives
+        .where((r) => r.relativeCategory == RelativeCategory.extended)
+        .where((r) => r.healthStatus != null && r.healthStatus!.isNotEmpty)
+        .where((r) => r.lastContactDate != null)
+        .where((r) => now.difference(r.lastContactDate!).inDays >= 4)
+        .toList();
+
+    if (healthConcern.isNotEmpty) {
+      final r = healthConcern.first;
+      final days = now.difference(r.lastContactDate!).inDays;
+      return AIBriefing(
+        emoji: '💚',
+        message:
+            '${r.fullName} ذكر إنه ${r.healthStatus} + لك ${_arabicDays(days)} ما اتصلت — تطمّن عليه',
+        actions: [BriefingAction.call],
+        relativeId: r.id,
+      );
+    }
+
+    // Priority 2.5: Friday suggestion
+    if (now.weekday == DateTime.friday) {
+      final fridayRelative = relatives
+          .where((r) => r.relativeCategory == RelativeCategory.extended)
+          .where((r) => r.lastContactDate != null)
+          .where((r) => now.difference(r.lastContactDate!).inDays >= 3)
+          .toList();
+
+      if (fridayRelative.isNotEmpty) {
+        final r = fridayRelative.first;
+        return AIBriefing(
+          emoji: '🤍',
+          message: 'الجمعة يوم مبارك — وقت حلو تتصل على ${r.fullName}',
+          actions: [BriefingAction.call],
+          relativeId: r.id,
+        );
+      }
+    }
+
+    // Priority 3: Extended relative with longest gap (7+ days)
     final extended = relatives
         .where((r) => r.relativeCategory == RelativeCategory.extended)
         .where((r) => r.lastContactDate != null)
@@ -71,7 +127,7 @@ final aiBriefingProvider = Provider.autoDispose<AsyncValue<AIBriefing?>>((ref) {
       }
     }
 
-    // Priority 3: Household quality suggestion
+    // Priority 4: Household quality suggestion
     final household = relatives
         .where((r) => r.relativeCategory == RelativeCategory.household)
         .toList();
