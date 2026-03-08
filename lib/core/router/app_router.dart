@@ -14,6 +14,7 @@ import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/signup_screen.dart';
 import '../../features/auth/screens/email_verification_screen.dart';
+import '../../features/auth/screens/phone_verification_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/relatives/screens/relatives_screen.dart';
 import '../../features/relatives/screens/relative_detail_screen.dart';
@@ -152,6 +153,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'emailVerification',
         pageBuilder: (context, state) =>
             _buildPageWithTransition(context, state, const EmailVerificationScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.phoneVerification,
+        name: 'phoneVerification',
+        pageBuilder: (context, state) {
+          final returnRoute = state.uri.queryParameters['return'];
+          return _buildPageWithTransition(
+            context,
+            state,
+            PhoneVerificationScreen(returnRoute: returnRoute),
+          );
+        },
       ),
       // Main App Routes
       GoRoute(
