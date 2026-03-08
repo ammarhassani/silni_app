@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
@@ -13,8 +15,11 @@ import '../../auth/providers/auth_provider.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
 import '../../home/providers/home_providers.dart';
 import '../models/family_group_model.dart';
+import '../models/node_invitation_model.dart';
 import '../providers/family_group_providers.dart';
+import '../providers/node_invitation_providers.dart';
 import '../services/family_group_service.dart';
+import '../services/node_invitation_service.dart';
 import '../widgets/family_activity_card.dart';
 import '../widgets/family_activity_feed.dart';
 import '../widgets/family_leaderboard.dart';
@@ -598,6 +603,12 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
               ),
             ),
           ),
+          // Invitations section (admins only)
+          if (isAdmin) ...[
+            const SizedBox(height: AppSpacing.xl),
+            _buildInvitationsSection(themeColors, group),
+          ],
+
           const SizedBox(height: AppSpacing.xl),
 
           // Leave group button
@@ -684,6 +695,274 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildInvitationsSection(
+    ThemeColors themeColors,
+    FamilyGroup group,
+  ) {
+    final invitationsAsync = ref.watch(groupInvitationsProvider(group.id));
+
+    return invitationsAsync.when(
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(AppSpacing.lg),
+          child: PremiumLoadingIndicator(),
+        ),
+      ),
+      error: (error, _) => const SizedBox.shrink(),
+      data: (invitations) {
+        if (invitations.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Section header with count badge
+            Row(
+              children: [
+                Text(
+                  'الدعوات',
+                  style: AppTypography.titleMedium.copyWith(
+                    color: themeColors.onSurface,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: themeColors.onSurface.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                  ),
+                  child: Text(
+                    '${invitations.length}',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: themeColors.onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+
+            // Invitation cards
+            ...invitations.map((invitation) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: _buildInvitationCard(themeColors, group, invitation),
+            )),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildInvitationCard(
+    ThemeColors themeColors,
+    FamilyGroup group,
+    NodeInvitation invitation,
+  ) {
+    final dateFormatted = DateFormat.yMMMd('ar').format(invitation.createdAt);
+
+    // Status chip config
+    final String statusLabel;
+    final Color statusColor;
+    if (invitation.isPending) {
+      statusLabel = 'معلقة';
+      statusColor = themeColors.statusWarning;
+    } else if (invitation.isAccepted) {
+      statusLabel = 'مقبولة';
+      statusColor = themeColors.statusSuccess;
+    } else {
+      statusLabel = 'ملغية';
+      statusColor = themeColors.statusError;
+    }
+
+    return GlassCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row: name + status chip
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      invitation.relativeName ?? 'قريب',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: themeColors.onSurface,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (invitation.relationshipType != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        invitation.relationshipType!,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: themeColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              // Status chip
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: statusColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+
+          // Phone hint + date
+          Row(
+            children: [
+              Icon(
+                Icons.phone_rounded,
+                size: AppSpacing.iconXs,
+                color: themeColors.textSecondary,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                invitation.maskedPhone,
+                style: AppTypography.bodySmall.copyWith(
+                  color: themeColors.textSecondary,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                dateFormatted,
+                style: AppTypography.bodySmall.copyWith(
+                  color: themeColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+
+          // Actions row (pending only)
+          if (invitation.isPending) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // Resend button
+                TextButton.icon(
+                  onPressed: () {
+                    Share.share(
+                      'أضفتك في شجرة عائلتنا على صِلني \u{1F333}\nحمّل التطبيق: https://silniapp.com/download',
+                    );
+                  },
+                  icon: Icon(
+                    Icons.share_rounded,
+                    size: AppSpacing.iconSm,
+                    color: themeColors.onSurface,
+                  ),
+                  label: Text(
+                    'إعادة إرسال',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: themeColors.onSurface,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                // Cancel button
+                TextButton.icon(
+                  onPressed: () => _cancelInvitation(invitation),
+                  icon: Icon(
+                    Icons.cancel_rounded,
+                    size: AppSpacing.iconSm,
+                    color: themeColors.statusError,
+                  ),
+                  label: Text(
+                    'إلغاء',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: themeColors.statusError,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _cancelInvitation(NodeInvitation invitation) async {
+    final themeColors = ref.read(themeColorsProvider);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: themeColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        ),
+        title: Text(
+          'إلغاء الدعوة',
+          style: AppTypography.titleMedium.copyWith(
+            color: themeColors.onSurface,
+          ),
+        ),
+        content: Text(
+          'هل تريد إلغاء دعوة ${invitation.relativeName ?? 'هذا القريب'}؟',
+          style: AppTypography.bodyMedium.copyWith(
+            color: themeColors.onSurface,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'لا',
+              style: TextStyle(color: themeColors.textSecondary),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'إلغاء الدعوة',
+              style: TextStyle(color: themeColors.statusError),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final service = ref.read(nodeInvitationServiceProvider);
+      await service.cancelInvitation(invitation.id);
+      if (mounted) {
+        ref.invalidate(groupInvitationsProvider(invitation.groupId));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم إلغاء الدعوة')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('حدث خطأ أثناء إلغاء الدعوة: $e')),
+        );
+      }
+    }
   }
 
   Widget _buildMembersList(
