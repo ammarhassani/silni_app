@@ -210,7 +210,7 @@ void main() {
         relativeId: 'rel-456',
       );
 
-      expect(link, 'https://silni-31811.web.app/join/ABC123?rid=rel-456');
+      expect(link, 'https://silniapp.com/join/ABC123?rid=rel-456');
     });
 
     test('generateSharedEdges is idempotent (same input = same output)', () {

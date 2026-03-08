@@ -48,7 +48,7 @@ class FamilyGroupService {
   ///
   /// The Flutter web app is deployed here and serves as a fallback
   /// for users who don't have the app installed.
-  static const webDomain = 'silni-31811.web.app';
+  static const webDomain = 'silniapp.com';
 
   /// Generate a shareable invite deep link for a group.
   ///

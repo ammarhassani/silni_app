@@ -64,7 +64,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       // Strip deep link schemes so GoRouter can match paths.
       // Custom scheme: com.silni.app://join/CODE?rid=ID → /join/CODE?rid=ID
-      // HTTPS link: https://silni-31811.web.app/join/CODE?rid=ID → /join/CODE?rid=ID
+      // HTTPS link: https://silniapp.com/join/CODE → /join/CODE
       final fullLocation = state.uri.toString();
       if (fullLocation.startsWith('com.silni.app://')) {
         final uri = Uri.parse(fullLocation);
@@ -73,7 +73,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         final cleanPath = '/$hostPart$pathPart';
         return uri.query.isNotEmpty ? '$cleanPath?${uri.query}' : cleanPath;
       }
-      if (fullLocation.startsWith('https://silni-31811.web.app/')) {
+      if (fullLocation.startsWith('https://silniapp.com/')) {
         final uri = Uri.parse(fullLocation);
         final cleanPath = uri.path; // e.g. "/join/CODE"
         return uri.query.isNotEmpty ? '$cleanPath?${uri.query}' : cleanPath;
