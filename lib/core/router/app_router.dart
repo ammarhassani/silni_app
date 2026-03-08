@@ -36,6 +36,7 @@ import '../../features/gamification/screens/leaderboard_screen.dart';
 import '../../features/gamification/screens/challenges_screen.dart';
 import '../../features/family_groups/screens/create_group_screen.dart';
 import '../../features/family_groups/screens/family_group_screen.dart';
+import '../../features/family_groups/screens/invitation_detail_screen.dart';
 import '../../features/family_groups/screens/join_group_screen.dart';
 import '../../features/wrapped/screens/monthly_wrapped_screen.dart';
 import '../../features/wrapped/screens/yearly_wrapped_screen.dart';
@@ -64,7 +65,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     // Comprehensive auth middleware for all routes
     redirect: (context, state) {
       // Strip deep link schemes so GoRouter can match paths.
-      // Custom scheme: com.silni.app://join/CODE?rid=ID → /join/CODE?rid=ID
+      // Custom scheme: com.silni.app://join/CODE → /join/CODE
       // HTTPS link: https://silniapp.com/join/CODE → /join/CODE
       final fullLocation = state.uri.toString();
       if (fullLocation.startsWith('com.silni.app://')) {
@@ -100,7 +101,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Case 3: Unauthenticated user on protected route - redirect to login
       if (!isAuthenticated && !isPublicRoute) {
         // Save intended destination for post-login redirect.
-        // Include query parameters (e.g. ?rid=...) so they survive the redirect.
+        // Include query parameters so they survive the redirect.
         final fullPath = state.uri.query.isNotEmpty
             ? '${state.matchedLocation}?${state.uri.query}'
             : state.matchedLocation;
@@ -401,24 +402,36 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'joinFamilyGroup',
         pageBuilder: (context, state) {
           final code = state.pathParameters['code']!;
-          final relativeId = state.uri.queryParameters['rid'];
           return _buildPageWithTransition(
             context,
             state,
-            JoinGroupScreen(inviteCode: code, targetRelativeId: relativeId),
+            JoinGroupScreen(inviteCode: code),
           );
         },
       ),
-      // Short alias for deep link: silni.app/join/<code>?rid=<id>
+      // Invitation detail (invitee accepts/declines)
+      GoRoute(
+        path: '${AppRoutes.invitationDetail}/:id',
+        name: 'invitationDetail',
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return _buildPageWithTransition(
+            context,
+            state,
+            InvitationDetailScreen(invitationId: id),
+          );
+        },
+      ),
+
+      // Short alias for deep link: silni.app/join/<code>
       GoRoute(
         path: '/join/:code',
         pageBuilder: (context, state) {
           final code = state.pathParameters['code']!;
-          final relativeId = state.uri.queryParameters['rid'];
           return _buildPageWithTransition(
             context,
             state,
-            JoinGroupScreen(inviteCode: code, targetRelativeId: relativeId),
+            JoinGroupScreen(inviteCode: code),
           );
         },
       ),

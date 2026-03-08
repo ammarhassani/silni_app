@@ -17,17 +17,20 @@ import '../models/family_group_model.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
 import '../providers/family_group_providers.dart';
 import '../services/family_group_service.dart';
+import '../services/node_invitation_service.dart';
 
 /// Screen for joining a family group via invite code.
 ///
 /// Accepts an invite code from the route parameter, looks up the group,
 /// and provides a join button. Handles invalid codes, already-member,
 /// and unauthenticated states.
+///
+/// Public links only add members — node claiming is handled by the
+/// phone-based invitation system.
 class JoinGroupScreen extends ConsumerStatefulWidget {
   final String inviteCode;
-  final String? targetRelativeId;
 
-  const JoinGroupScreen({super.key, required this.inviteCode, this.targetRelativeId});
+  const JoinGroupScreen({super.key, required this.inviteCode});
 
   @override
   ConsumerState<JoinGroupScreen> createState() => _JoinGroupScreenState();
@@ -112,10 +115,8 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
     if (_isJoining) return;
     final user = ref.read(currentUserProvider);
     if (user == null) {
-      // Redirect to login with redirect back to this page (preserve rid param)
-      final ridParam = widget.targetRelativeId != null ? '?rid=${widget.targetRelativeId}' : '';
       final redirectPath = Uri.encodeComponent(
-        '${AppRoutes.joinFamilyGroup}/${widget.inviteCode}$ridParam',
+        '${AppRoutes.joinFamilyGroup}/${widget.inviteCode}',
       );
       context.go('${AppRoutes.login}?redirect=$redirectPath');
       return;
@@ -124,18 +125,9 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
     setState(() => _isJoining = true);
 
     try {
-      // Validate targetRelativeId format — pass null if invalid UUID
-      final validRid = widget.targetRelativeId != null &&
-              RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
-                      caseSensitive: false)
-                  .hasMatch(widget.targetRelativeId!)
-          ? widget.targetRelativeId
-          : null;
-
       final joinedGroup = await FamilyGroupService.joinGroup(
         inviteCode: widget.inviteCode,
         userId: user.id,
-        relativeIdInTree: validRid,
       );
 
       if (mounted) {
@@ -147,7 +139,27 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
         ref.invalidate(relativesStreamProvider(user.id));
         ref.invalidate(todayInteractionsStreamProvider(user.id));
         HapticFeedback.heavyImpact();
-        context.go(AppRoutes.familyTree);
+
+        // Check if user has a pending phone-based invitation for this group
+        try {
+          final invitationService = NodeInvitationService();
+          final pending = await invitationService.getMyPendingInvitations();
+          final matchingInvitation = pending.where(
+            (inv) => inv.groupId == joinedGroup.id,
+          );
+          if (matchingInvitation.isNotEmpty && mounted) {
+            context.go(
+              '${AppRoutes.invitationDetail}/${matchingInvitation.first.id}',
+            );
+            return;
+          }
+        } catch (e) {
+          debugPrint('Failed to check pending invitations: $e');
+        }
+
+        if (mounted) {
+          context.go(AppRoutes.familyTree);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -342,9 +354,8 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
           GradientButton(
             text: 'تسجيل الدخول',
             onPressed: () {
-              final ridParam = widget.targetRelativeId != null ? '?rid=${widget.targetRelativeId}' : '';
               final redirectPath = Uri.encodeComponent(
-                '${AppRoutes.joinFamilyGroup}/${widget.inviteCode}$ridParam',
+                '${AppRoutes.joinFamilyGroup}/${widget.inviteCode}',
               );
               context.go('${AppRoutes.login}?redirect=$redirectPath');
             },

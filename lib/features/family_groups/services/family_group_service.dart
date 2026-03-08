@@ -1,8 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:uuid/uuid.dart';
 import '../../../core/config/supabase_config.dart';
-import '../../../shared/models/relative_model.dart';
-import '../../relatives/services/relationship_inference_service.dart';
 import '../models/family_group_model.dart';
 import 'family_sharing_service.dart';
 
@@ -72,19 +69,14 @@ class FamilyGroupService {
   /// Join a group by invite code.
   ///
   /// Uses the `join_group_by_invite_code` SECURITY DEFINER RPC to validate
-  /// the invite code and insert membership atomically. Then resolves the
-  /// tree node (via [relativeIdInTree], name auto-match, or new self-node)
-  /// and updates the membership row.
-  ///
-  /// This ordering is critical: membership must exist BEFORE creating/claiming
-  /// a tree node, because RLS on `relatives` requires group membership.
+  /// the invite code and insert membership atomically. The new member joins
+  /// as unlinked — node claiming is handled separately by the phone-based
+  /// invitation system.
   ///
   /// Throws if the invite code is invalid.
   static Future<FamilyGroup> joinGroup({
     required String inviteCode,
     required String userId,
-    String? relativeIdInTree,
-    String? joinerDisplayName,
   }) async {
     final client = SupabaseConfig.client;
 
@@ -105,109 +97,7 @@ class FamilyGroupService {
     final group =
         FamilyGroup.fromJson(results.first as Map<String, dynamic>);
 
-    // Step 2: Check if membership already had a tree node (re-join / already member)
-    final membership = await client
-        .from('family_group_members')
-        .select('id, relative_id_in_tree')
-        .eq('group_id', group.id)
-        .eq('user_id', userId)
-        .maybeSingle();
-
-    if (membership == null) return group; // Should not happen after RPC
-
-    final existingNodeId = membership['relative_id_in_tree'] as String?;
-    if (existingNodeId != null) {
-      // Already has a node — just re-verify edges
-      try {
-        await FamilySharingService.verifySharedEdges(groupId: group.id);
-      } catch (e) {
-        debugPrint('Edge verification failed (existing node): $e');
-      }
-      return group;
-    }
-
-    // Step 3: Resolve tree node (membership exists now, so RLS allows writes)
-    String? nodeId = relativeIdInTree;
-
-    // Validate rid if provided: must belong to this group and not be claimed
-    if (nodeId != null) {
-      final ridRelative = await client
-          .from('relatives')
-          .select('id, family_group_id')
-          .eq('id', nodeId)
-          .eq('family_group_id', group.id)
-          .maybeSingle();
-
-      if (ridRelative == null) {
-        nodeId = null; // Invalid rid — fall through to auto-match
-      } else {
-        // Check if already claimed by another member
-        final claimedBy = await client
-            .from('family_group_members')
-            .select('id')
-            .eq('group_id', group.id)
-            .eq('relative_id_in_tree', nodeId)
-            .maybeSingle();
-        if (claimedBy != null) {
-          nodeId = null; // Already claimed — fall through
-        }
-      }
-    }
-
-    if (nodeId == null && relativeIdInTree == null) {
-      // Try to auto-match by display name (only when no rid was provided)
-      final displayName = joinerDisplayName ??
-          client.auth.currentUser?.userMetadata?['full_name'] as String?;
-
-      if (displayName != null && displayName.isNotEmpty) {
-        // Look for an unclaimed, non-self relative with matching name
-        final claimedIds = await client
-            .from('family_group_members')
-            .select('relative_id_in_tree')
-            .eq('group_id', group.id)
-            .not('relative_id_in_tree', 'is', null);
-
-        final excludeIds = claimedIds
-            .map((m) => m['relative_id_in_tree'] as String)
-            .toList();
-
-        var query = client
-            .from('relatives')
-            .select('id')
-            .eq('family_group_id', group.id)
-            .eq('is_archived', false)
-            .eq('is_self', false)
-            .ilike('full_name', displayName);
-
-        if (excludeIds.isNotEmpty) {
-          query = query.not('id', 'in', '(${excludeIds.join(",")})');
-        }
-
-        final matchingRelative =
-            await query.limit(1).maybeSingle();
-
-        if (matchingRelative != null) {
-          nodeId = matchingRelative['id'] as String;
-        }
-      }
-    }
-
-    // If still no node, create a self-node for the joiner
-    nodeId ??= await _createJoinerSelfNode(
-      userId: userId,
-      groupId: group.id,
-      displayName: joinerDisplayName,
-    );
-
-    // Claim the node atomically via SECURITY DEFINER RPC.
-    // This sets is_self=true and links membership → node in one call,
-    // bypassing RLS (joiners don't own the node the admin created).
-    await client.rpc('claim_tree_node', params: {
-      'p_group_id': group.id,
-      'p_node_id': nodeId,
-    });
-
-    // Step 5: Verify and fill any missing edges in the shared graph
+    // Step 2: Verify and fill any missing edges in the shared graph
     try {
       await FamilySharingService.verifySharedEdges(groupId: group.id);
     } catch (e) {
@@ -215,7 +105,7 @@ class FamilyGroupService {
       debugPrint('Edge verification failed (post-join): $e');
     }
 
-    // Fire-and-forget join notification to existing members
+    // Step 3: Fire-and-forget join notification to existing members
     _sendJoinNotification(
       groupId: group.id,
       newUserId: userId,
@@ -223,41 +113,6 @@ class FamilyGroupService {
     );
 
     return group;
-  }
-
-  /// Create a self-node for a joiner who doesn't have a matching relative.
-  static Future<String> _createJoinerSelfNode({
-    required String userId,
-    required String groupId,
-    String? displayName,
-  }) async {
-    final client = SupabaseConfig.client;
-    final user = client.auth.currentUser;
-    final name = displayName ??
-        user?.userMetadata?['full_name'] as String? ??
-        'عضو جديد';
-
-    // Infer gender using dictionary + AI fallback
-    var inferredGender = RelationshipInferenceService.inferGender(name);
-    inferredGender ??= await RelationshipInferenceService.inferGenderWithAI(name);
-    final gender = inferredGender?.value ?? 'male';
-    final avatarType = inferredGender == Gender.female ? 'adult_woman' : 'adult_man';
-
-    final nodeId = const Uuid().v4();
-    await client.from('relatives').insert({
-      'id': nodeId,
-      'user_id': userId,
-      'full_name': name,
-      'relationship_type': 'other',
-      'gender': gender,
-      'priority': 1,
-      'avatar_type': avatarType,
-      'is_self': true,
-      'family_group_id': groupId,
-      'added_by': userId,
-    });
-
-    return nodeId;
   }
 
   /// Fire-and-forget join notification to group members.
