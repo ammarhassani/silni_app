@@ -21,6 +21,8 @@ import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/utils/relationship_label_helper.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../family_groups/services/family_sharing_service.dart';
+import '../../family_groups/services/node_invitation_service.dart';
+import '../../family_groups/providers/node_invitation_providers.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -265,6 +267,29 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
 
+    // Require a family group — no silent creation
+    final group = await FamilySharingService.getUserGroup(user.id);
+    if (group == null) {
+      if (mounted) {
+        UIHelpers.showSnackBar(
+          context,
+          'أنشئ مجموعة عائلية أولاً من شاشة شجرة العائلة',
+        );
+      }
+      return;
+    }
+
+    // Require phone number on the relative
+    if (relative.phoneNumber == null || relative.phoneNumber!.isEmpty) {
+      if (mounted) {
+        UIHelpers.showSnackBar(
+          context,
+          'أضف رقم جوال ${relative.fullName} أولاً لإرسال الدعوة',
+        );
+      }
+      return;
+    }
+
     setState(() => _isInviting = true);
 
     final box = context.findRenderObject() as RenderBox?;
@@ -272,34 +297,19 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
         box != null ? box.localToGlobal(Offset.zero) & box.size : Rect.zero;
 
     try {
-      // Check if user already has a group
-      var group = await FamilySharingService.getUserGroup(user.id);
-
-      if (group == null) {
-        // Auto-create group from personal tree
-        final familyName =
-            user.userMetadata?['family_name'] as String? ?? 'عائلتي';
-        final userGender =
-            Gender.fromString(user.userMetadata?['gender'] as String?);
-
-        group = await FamilySharingService.initializeSharedTree(
-          userId: user.id,
-          familyName: familyName,
-          userDisplayName:
-              user.userMetadata?['display_name'] as String? ?? 'أنا',
-          userGender: userGender,
-        );
-      }
-
-      // Generate invite link with relative ID
-      final link = FamilySharingService.generateInviteLink(
-        inviteCode: group.inviteCode,
+      // Create a node invitation via the invitation service
+      final invitationService = ref.read(nodeInvitationServiceProvider);
+      await invitationService.createInvitation(
+        groupId: group.id,
         relativeId: relative.id,
+        phoneNumber: relative.phoneNumber!,
       );
 
-      // Share via system sheet (WhatsApp preferred)
+      ref.invalidate(groupInvitationsProvider);
+
+      // Share via system sheet with download nudge
       await Share.share(
-        'انضم/ي لعائلتنا في صِلني 🌳\n$link',
+        'أضفتك في شجرة عائلتنا على صِلني 🌳\nحمّل التطبيق: https://silniapp.com/download',
         sharePositionOrigin: shareOrigin,
       );
     } catch (e) {
