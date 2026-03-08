@@ -1598,4 +1598,34 @@ class AuthService {
       return false;
     }
   }
+
+  /// Normalize phone number: strip spaces/dashes, ensure + prefix
+  static String normalizePhone(String phone) {
+    var normalized = phone.replaceAll(RegExp(r'[\s\-()]'), '');
+    if (!normalized.startsWith('+')) {
+      normalized = '+$normalized';
+    }
+    return normalized;
+  }
+
+  /// Update current user's phone (sends OTP for verification)
+  Future<void> updateUserPhone(String phone) async {
+    final normalized = normalizePhone(phone);
+    await _supabase.auth.updateUser(
+      UserAttributes(phone: normalized),
+    );
+  }
+
+  /// Verify phone update OTP
+  Future<AuthResponse> verifyPhoneUpdate({
+    required String phone,
+    required String token,
+  }) async {
+    final normalized = normalizePhone(phone);
+    return await _supabase.auth.verifyOTP(
+      phone: normalized,
+      token: token,
+      type: OtpType.phoneChange,
+    );
+  }
 }
