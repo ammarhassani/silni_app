@@ -86,6 +86,9 @@ class AppRoutes {
   static const String aiScripts = '/ai-scripts';
   static const String aiReport = '/ai-report';
 
+  // Invitation routes
+  static const String invitationDetail = '/invitation';
+
   // Occasion messages
   static const String occasionMessages = '/occasion-messages';
 }

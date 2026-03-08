@@ -303,6 +303,8 @@ class _NotificationHistoryScreenState
         return colors.secondary;
       case 'streak':
         return colors.statusWarning;
+      case 'invitation':
+        return colors.levelMax;
       default:
         return colors.primary;
     }
@@ -361,6 +363,12 @@ class _NotificationHistoryScreenState
       case 'announcement':
         // Stay on current screen or go home
         context.go(AppRoutes.home);
+        break;
+      case 'invitation':
+        final invitationId = notification.data?['invitation_id'] as String?;
+        if (invitationId != null) {
+          context.push('${AppRoutes.invitationDetail}/$invitationId');
+        }
         break;
       default:
         context.go(AppRoutes.home);

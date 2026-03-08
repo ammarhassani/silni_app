@@ -85,6 +85,8 @@ class NotificationHistoryItem {
         return 'إعلان';
       case 'streak':
         return 'نقاط';
+      case 'invitation':
+        return 'دعوة عائلية';
       default:
         return 'إشعار';
     }
@@ -101,6 +103,8 @@ class NotificationHistoryItem {
         return '📢';
       case 'streak':
         return '🔥';
+      case 'invitation':
+        return '🌳';
       default:
         return '📬';
     }
