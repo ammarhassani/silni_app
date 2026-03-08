@@ -204,15 +204,6 @@ void main() {
       expect(edges, isEmpty);
     });
 
-    test('generates invite link with relative ID', () {
-      final link = FamilySharingService.generateInviteLink(
-        inviteCode: 'ABC123',
-        relativeId: 'rel-456',
-      );
-
-      expect(link, 'https://silniapp.com/join/ABC123?rid=rel-456');
-    });
-
     test('generateSharedEdges is idempotent (same input = same output)', () {
       final relatives = [
         makeRelative('dad-1', 'Dad', RelationshipType.father, Gender.male),

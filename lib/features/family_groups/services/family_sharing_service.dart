@@ -442,13 +442,6 @@ class FamilySharingService {
     }
   }
 
-  /// Generate an invite link for a specific relative.
-  static String generateInviteLink({
-    required String inviteCode,
-    required String relativeId,
-  }) {
-    return 'https://${FamilyGroupService.webDomain}/join/$inviteCode?rid=$relativeId';
-  }
 }
 
 /// Extension to add `firstWhereOrNull` without requiring collection package.
