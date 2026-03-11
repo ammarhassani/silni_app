@@ -53,7 +53,7 @@ Map<String, dynamic> _buildStatsContext({
   if (totalActiveDays != null) {
     map['أيام نشطة'] = totalActiveDays;
   }
-  if (peakMonth != null) {
+  if (peakMonth != null && peakMonth >= 1 && peakMonth <= 12) {
     map['أكثر شهر نشاطاً'] = MonthlyWrapped.arabicMonthNames[peakMonth];
     map['تواصلات الشهر الأكثر'] = peakMonthCount;
   }

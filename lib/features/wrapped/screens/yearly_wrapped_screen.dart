@@ -1182,7 +1182,7 @@ class _SharePage extends ConsumerWidget {
                       ),
                   ],
                 ),
-                if (wrapped.peakMonth != null) ...[
+                if (wrapped.peakMonth != null && wrapped.peakMonth! >= 1 && wrapped.peakMonth! <= 12) ...[
                   const SizedBox(height: 8),
                   Text(
                     'شهرك الأقوى: ${MonthlyWrapped.arabicMonthNames[wrapped.peakMonth!]}',

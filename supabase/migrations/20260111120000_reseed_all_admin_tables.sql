@@ -244,9 +244,11 @@ INSERT INTO admin_subscription_tiers (tier_key, display_name_ar, display_name_en
   ('max', 'ماكس', 'MAX', -1, '["unlimited_reminders", "ai_counselor", "advanced_stats", "custom_themes", "family_tree", "export_data"]', false, 2);
 
 DELETE FROM admin_subscription_products WHERE true;
-INSERT INTO admin_subscription_products (product_id, tier_key, display_name_ar, display_name_en, billing_period, price_usd, price_sar, savings_percentage, is_featured, sort_order) VALUES
-  ('max_monthly', 'max', 'اشتراك شهري', 'Monthly', 'monthly', 4.99, 18.99, 0, false, 1),
-  ('max_annual', 'max', 'اشتراك سنوي', 'Annual', 'annual', 39.99, 149.99, 33, true, 2);
+-- Product IDs must match App Store Connect identifiers exactly
+-- Prices are NULL because App Store is the source of truth (dynamic via RevenueCat)
+INSERT INTO admin_subscription_products (product_id, tier_key, display_name_ar, display_name_en, billing_period, price_usd, price_sar, savings_percentage, is_featured, sort_order, revenuecat_package_id, notes) VALUES
+  ('silni_max_monthly', 'max', 'اشتراك شهري', 'Monthly', 'monthly', NULL, NULL, 0, false, 1, 'max_monthly', 'Prices managed by App Store Connect. Use RevenueCat for dynamic pricing.'),
+  ('silni_max_annual', 'max', 'اشتراك سنوي', 'Annual', 'annual', NULL, NULL, 33, true, 2, 'max_annual', 'Prices managed by App Store Connect. Use RevenueCat for dynamic pricing.');
 
 DELETE FROM admin_trial_config WHERE true;
 INSERT INTO admin_trial_config (config_key) VALUES ('default');
