@@ -12,6 +12,7 @@ import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/models/relative_model.dart';
+import '../../../shared/utils/relationship_label_helper.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../core/providers/cache_provider.dart';
 import '../../../shared/providers/interactions_provider.dart';
@@ -391,7 +392,7 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
                     Row(
                       children: [
                         Text(
-                          relative.relationshipType.arabicName,
+                          getSideAwareLabel(relative.relationshipType, relative.familySide, relative.gender),
                           style: AppTypography.bodySmall.copyWith(
                             color: Colors.white.withValues(alpha: 0.7),
                           ),

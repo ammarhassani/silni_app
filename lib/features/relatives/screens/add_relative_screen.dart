@@ -39,7 +39,7 @@ import '../../family_tree/services/family_graph_service.dart';
 import '../../home/providers/home_providers.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../services/relationship_inference_service.dart';
-import '../widgets/smart_relationship_picker.dart';
+import '../../../shared/widgets/flat_relationship_picker.dart';
 
 class AddRelativeScreen extends ConsumerStatefulWidget {
   const AddRelativeScreen({super.key});
@@ -61,7 +61,6 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   bool _isFavorite = false;
   int _priority = 2; // Auto-set based on relationship
   String _phoneNumber = ''; // Store phone number separately
-  AvatarType? _selectedAvatar; // User-selected avatar
   String? _healthStatus; // Health status of the relative
   bool _addToSharedTree = false; // Whether to add to a shared family tree
   FamilyGroup? _selectedGroup; // The selected family group (if shared)
@@ -159,9 +158,8 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         );
       }
 
-      // Use selected avatar or auto-suggest based on relationship
-      final avatarType = _selectedAvatar ??
-          AvatarType.suggestFromRelationship(_selectedRelationship, _selectedGender);
+      // Auto-suggest avatar based on relationship
+      final avatarType = AvatarType.suggestFromRelationship(_selectedRelationship, _selectedGender);
 
       // Create relative
       final relative = Relative(
@@ -312,6 +310,9 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
       // Reset loading state before navigation
       setState(() => _isLoading = false);
 
+      // Invalidate relatives provider so the list refreshes immediately
+      ref.invalidate(relativesStreamProvider(user.id));
+
       // Wait a moment for confetti, then navigate
       await Future.delayed(const Duration(milliseconds: 400));
 
@@ -351,7 +352,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
 
-    // Watch existing relatives to compute smart suggestions
+    // Watch existing relatives for the flat relationship picker
     // Use shared relatives when adding to shared tree, personal otherwise
     final user = ref.watch(currentUserProvider);
     final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
@@ -359,9 +360,6 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         ? ref.watch(groupRelativesStreamProvider(groupInfo.groupId))
         : (user != null ? ref.watch(relativesStreamProvider(user.id)) : null);
     final existingRelatives = relativesAsync?.valueOrNull ?? <Relative>[];
-    final suggestions = RelationshipInferenceService.suggestRelationships(
-      existingRelatives,
-    );
 
     return Stack(
       children: [
@@ -388,9 +386,6 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                         _buildPhotoPicker(),
                         const SizedBox(height: AppSpacing.xl),
 
-                        // Avatar picker
-                        _buildAvatarPicker(),
-                        const SizedBox(height: AppSpacing.xl),
 
                         // Import from contacts button (mobile only)
                         if (!kIsWeb) ...[
@@ -433,26 +428,19 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                         ),
                         const SizedBox(height: AppSpacing.md),
 
-                        // Relationship Type - Smart Picker
-                        SmartRelationshipPicker(
-                          selected: _selectedRelationship,
-                          suggestions: suggestions,
-                          existingRelatives: existingRelatives,
+                        // Relationship Type - Flat Picker
+                        FlatRelationshipPicker(
+                          selectedType: _selectedRelationship,
                           selectedSide: _selectedFamilySide,
-                          onChanged: (value) {
+                          selectedGender: _selectedGender,
+                          existingRelatives: existingRelatives,
+                          onSelectionChanged: (type, side, gender) {
                             setState(() {
-                              _selectedRelationship = value;
-                              // Auto-detect gender based on relationship
-                              _selectedGender =
-                                  RelationshipInferenceService.genderFromRelationship(value);
-                              // Auto-set priority based on relationship closeness
-                              _priority = AvatarType.suggestPriority(value);
-                              // Reset family side when relationship changes
-                              _selectedFamilySide = null;
+                              _selectedRelationship = type;
+                              _selectedFamilySide = side;
+                              if (gender != null) _selectedGender = gender;
+                              _priority = AvatarType.suggestPriority(type);
                             });
-                          },
-                          onSideChanged: (side) {
-                            setState(() => _selectedFamilySide = side);
                           },
                         ),
                         const SizedBox(height: AppSpacing.md),
@@ -926,133 +914,4 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
     );
   }
 
-  Widget _buildAvatarPicker() {
-    // Get auto-suggested avatar
-    final suggestedAvatar = AvatarType.suggestFromRelationship(_selectedRelationship, _selectedGender);
-
-    return GlassCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.face_rounded, color: Colors.white.withValues(alpha: 0.7)),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'اختر الأفاتار',
-                      style: AppTypography.titleMedium.copyWith(color: Colors.white),
-                    ),
-                    Text(
-                      'اختياري - سيتم اقتراح أفاتار تلقائياً',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: Colors.white.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 60,
-              crossAxisSpacing: AppSpacing.sm,
-              mainAxisSpacing: AppSpacing.sm,
-              childAspectRatio: 0.85,
-            ),
-            itemCount: AvatarType.values.length,
-            itemBuilder: (context, index) {
-              final avatar = AvatarType.values[index];
-              final isSelected = _selectedAvatar == avatar;
-              final isSuggested = avatar == suggestedAvatar && _selectedAvatar == null;
-
-              return GestureDetector(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  setState(() {
-                    // Toggle: if already selected, deselect to use auto-suggest
-                    _selectedAvatar = isSelected ? null : avatar;
-                  });
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: isSelected || isSuggested ? AppColors.primaryGradient : null,
-                    color: isSelected || isSuggested ? null : Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                    border: Border.all(
-                      color: isSuggested && !isSelected
-                          ? AppColors.premiumGold
-                          : Colors.white.withValues(alpha: isSelected ? 0.6 : 0.2),
-                      width: isSuggested && !isSelected ? 2 : 1,
-                    ),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: AppColors.islamicGreenPrimary.withValues(alpha: 0.4),
-                              blurRadius: 8,
-                              spreadRadius: 1,
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        avatar.emoji,
-                        style: const TextStyle(fontSize: 28),
-                      ),
-                      if (isSuggested && !isSelected)
-                        Container(
-                          margin: const EdgeInsets.only(top: 2),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 1,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.premiumGold,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'مقترح',
-                            style: AppTypography.labelSmall.copyWith(
-                              color: Colors.white,
-                              fontSize: 8,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ).animate(delay: Duration(milliseconds: 50 * index))
-                .fadeIn(duration: const Duration(milliseconds: 300))
-                .scale(begin: const Offset(0.8, 0.8), end: const Offset(1, 1));
-            },
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            _selectedAvatar != null
-                ? 'الأفاتار المختار: ${_selectedAvatar!.arabicName}'
-                : 'الأفاتار المقترح: ${suggestedAvatar.arabicName}',
-            style: AppTypography.labelSmall.copyWith(
-              color: Colors.white.withValues(alpha: 0.8),
-              fontStyle: FontStyle.italic,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    ).animate()
-      .fadeIn(duration: const Duration(milliseconds: 400))
-      .slideY(begin: 0.1, end: 0);
-  }
 }

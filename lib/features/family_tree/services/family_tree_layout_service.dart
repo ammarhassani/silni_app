@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:ui';
 
 import '../../../shared/models/relative_model.dart';
+import '../../../shared/utils/relationship_label_helper.dart';
 import '../models/family_graph.dart';
 import '../models/placeholder_node.dart';
 import '../models/tree_layout.dart';
@@ -62,7 +63,7 @@ class FamilyTreeLayoutService {
       if (!relative.isArchived) {
         generations[relative.id] = effectiveGraph.containsNode(relative.id)
             ? effectiveGraph.getGeneration(relative.id)
-            : 0;
+            : _generationFromType(relative.relationshipType);
       }
     }
 
@@ -126,6 +127,17 @@ class FamilyTreeLayoutService {
           generations.containsKey(spouseId) &&
           !familySide.containsKey(spouseId)) {
         familySide[spouseId] = familySide[nodeId]!;
+      }
+    }
+
+    // Fill familySide for disconnected relatives (no graph edges) using
+    // the stored familySide on the relative model.
+    for (final r in relatives) {
+      if (familySide.containsKey(r.id)) continue;
+      if (r.familySide == FamilySide.paternal) {
+        familySide[r.id] = _FamilySide.paternal;
+      } else if (r.familySide == FamilySide.maternal) {
+        familySide[r.id] = _FamilySide.maternal;
       }
     }
 
@@ -535,12 +547,15 @@ class FamilyTreeLayoutService {
       final pos = positions[relative.id];
       if (pos == null) continue;
 
-      final label = FamilyGraphService.getLabelForViewer(
+      final graphLabel = FamilyGraphService.getLabelForViewer(
         graph: effectiveGraph,
         viewerId: userId,
         targetId: relative.id,
         relativesMap: relativesMap,
       );
+      final label = graphLabel.isNotEmpty
+          ? graphLabel
+          : getSideAwareLabel(relative.relationshipType, relative.familySide, relative.gender);
 
       nodes.add(LayoutNode(
         id: relative.id,
@@ -1274,6 +1289,27 @@ class FamilyTreeLayoutService {
   // ---------------------------------------------------------------------------
   // Family side helpers
   // ---------------------------------------------------------------------------
+
+  /// Map [RelationshipType] to a default generation when no graph edges exist.
+  static int _generationFromType(RelationshipType type) {
+    switch (type) {
+      case RelationshipType.father:
+      case RelationshipType.mother:
+      case RelationshipType.uncle:
+      case RelationshipType.aunt:
+        return -1;
+      case RelationshipType.grandfather:
+      case RelationshipType.grandmother:
+        return -2;
+      case RelationshipType.son:
+      case RelationshipType.daughter:
+      case RelationshipType.nephew:
+      case RelationshipType.niece:
+        return 1;
+      default:
+        return 0;
+    }
+  }
 
   /// BFS from [startId] through siblings and parents (not children) to mark
   /// all reachable nodes with [side]. Avoids traversing through [excludeId]

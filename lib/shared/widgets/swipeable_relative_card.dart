@@ -10,6 +10,7 @@ import '../../core/theme/app_themes.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../features/ai_assistant/widgets/health_badge.dart';
 import '../models/relative_model.dart';
+import '../utils/relationship_label_helper.dart';
 import 'glass_card.dart';
 
 class SwipeableRelativeCard extends ConsumerWidget {
@@ -99,7 +100,7 @@ class SwipeableRelativeCard extends ConsumerWidget {
   Widget _buildCard(BuildContext context, ThemeColors themeColors) {
     final needsAttention = relative.needsContact;
 
-    final displayLabel = relationshipLabel ?? relative.relationshipType.arabicName;
+    final displayLabel = relationshipLabel ?? getSideAwareLabel(relative.relationshipType, relative.familySide, relative.gender);
 
     return Semantics(
       label: '${relative.fullName}، $displayLabel'
@@ -110,8 +111,8 @@ class SwipeableRelativeCard extends ConsumerWidget {
       child: GestureDetector(
         onTap: onTap,
         child: GlassCard(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
+        margin: const EdgeInsets.only(bottom: 6),
         gradient: needsAttention
             ? LinearGradient(
                 colors: [
@@ -128,8 +129,8 @@ class SwipeableRelativeCard extends ConsumerWidget {
               child: Stack(
                 children: [
                   Container(
-                    width: 60,
-                    height: 60,
+                    width: 50,
+                    height: 50,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: needsAttention
@@ -140,9 +141,8 @@ class SwipeableRelativeCard extends ConsumerWidget {
                           color: (needsAttention
                                   ? AppColors.joyfulOrange
                                   : themeColors.primary)
-                              .withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          spreadRadius: 1,
+                              .withValues(alpha: 0.2),
+                          blurRadius: 6,
                         ),
                       ],
                     ),
@@ -151,8 +151,8 @@ class SwipeableRelativeCard extends ConsumerWidget {
                             child: CachedNetworkImage(
                               imageUrl: relative.photoUrl!,
                               fit: BoxFit.cover,
-                              width: 60,
-                              height: 60,
+                              width: 50,
+                              height: 50,
                               placeholder: (context, url) => _buildDefaultAvatar(),
                               errorWidget: (context, url, error) => _buildDefaultAvatar(),
                             ),
@@ -165,16 +165,16 @@ class SwipeableRelativeCard extends ConsumerWidget {
                     top: 0,
                     right: 0,
                     child: Container(
-                      width: 18,
-                      height: 18,
+                      width: 16,
+                      height: 16,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: AppColors.joyfulOrange,
-                        border: Border.all(color: themeColors.surface, width: 2),
+                        border: Border.all(color: themeColors.surface, width: 1.5),
                       ),
                       child: Icon(
                         Icons.warning_rounded,
-                        size: 10,
+                        size: 9,
                         color: themeColors.onPrimary,
                       ),
                     ),
@@ -185,16 +185,16 @@ class SwipeableRelativeCard extends ConsumerWidget {
                     bottom: 0,
                     left: 0,
                     child: Container(
-                      width: 18,
-                      height: 18,
+                      width: 16,
+                      height: 16,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: AppColors.goldenGradient,
-                        border: Border.all(color: themeColors.surface, width: 2),
+                        border: Border.all(color: themeColors.surface, width: 1.5),
                       ),
                       child: Icon(
                         Icons.star_rounded,
-                        size: 10,
+                        size: 9,
                         color: themeColors.onPrimary,
                       ),
                     ),
@@ -203,12 +203,12 @@ class SwipeableRelativeCard extends ConsumerWidget {
                 Positioned(
                   bottom: 0,
                   right: 0,
-                  child: HealthBadge(relative: relative, size: 14),
+                  child: HealthBadge(relative: relative, size: 13),
                 ),
               ],
             ),
           ),
-            const SizedBox(width: AppSpacing.md),
+            const SizedBox(width: AppSpacing.sm),
 
             // Details
             Expanded(
@@ -220,9 +220,9 @@ class SwipeableRelativeCard extends ConsumerWidget {
                       Expanded(
                         child: Text(
                           relative.fullName,
-                          style: AppTypography.titleMedium.copyWith(
+                          style: AppTypography.bodyLarge.copyWith(
                             color: themeColors.textPrimary,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -231,8 +231,8 @@ class SwipeableRelativeCard extends ConsumerWidget {
                       if (relative.priority == 1)
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
+                            horizontal: 6,
+                            vertical: 1,
                           ),
                           decoration: BoxDecoration(
                             gradient: AppColors.goldenGradient,
@@ -243,33 +243,34 @@ class SwipeableRelativeCard extends ConsumerWidget {
                             style: AppTypography.labelSmall.copyWith(
                               color: themeColors.onPrimary,
                               fontWeight: FontWeight.bold,
+                              fontSize: 10,
                             ),
                           ),
                         ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    displayLabel,
-                    style: AppTypography.bodySmall.copyWith(
-                      color: themeColors.textSecondary,
-                    ),
-                  ),
-                  if (needsAttention) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Text(
+                        displayLabel,
+                        style: AppTypography.labelSmall.copyWith(
+                          color: themeColors.textSecondary,
+                        ),
+                      ),
+                      if (needsAttention) ...[
+                        const SizedBox(width: 6),
                         Icon(
                           Icons.schedule_rounded,
-                          size: 14,
+                          size: 12,
                           color: AppColors.joyfulOrange,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 2),
                         Flexible(
                           child: Text(
                             relative.daysSinceLastContact != null
-                                ? 'آخر تواصل منذ ${relative.daysSinceLastContact} يوم'
-                                : 'لم يتم التواصل بعد',
+                                ? 'منذ ${relative.daysSinceLastContact} يوم'
+                                : 'لم يتم التواصل',
                             style: AppTypography.labelSmall.copyWith(
                               color: AppColors.joyfulOrange,
                             ),
@@ -278,8 +279,8 @@ class SwipeableRelativeCard extends ConsumerWidget {
                           ),
                         ),
                       ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -288,7 +289,7 @@ class SwipeableRelativeCard extends ConsumerWidget {
             Icon(
               Icons.arrow_forward_ios_rounded,
               color: themeColors.textHint,
-              size: 16,
+              size: 14,
             ),
           ],
         ),
@@ -301,7 +302,7 @@ class SwipeableRelativeCard extends ConsumerWidget {
     return Center(
       child: Text(
         relative.displayEmoji,
-        style: const TextStyle(fontSize: 28),
+        style: const TextStyle(fontSize: 24),
       ),
     );
   }

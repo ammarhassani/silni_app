@@ -10,6 +10,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
+import '../../../shared/utils/relationship_label_helper.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../providers/home_providers.dart';
 
@@ -465,7 +466,7 @@ class _DueRelativeCard extends StatelessWidget {
                       children: [
                         Flexible(
                           child: Text(
-                            relationshipLabel ?? relative.relationshipType.arabicName,
+                            relationshipLabel ?? getSideAwareLabel(relative.relationshipType, relative.familySide, relative.gender),
                             style: AppTypography.bodySmall.copyWith(
                               color: themeColors.textSecondary,
                             ),

@@ -8,6 +8,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/models/relative_model.dart';
+import '../../../shared/utils/relationship_label_helper.dart';
 import '../../../shared/widgets/glass_card.dart';
 
 /// Compact schedule card with swipe actions for edit/delete
@@ -296,7 +297,7 @@ class _CompactScheduleCardState extends ConsumerState<CompactScheduleCard> {
                         ),
                         Text(
                           widget.relationshipLabels?[relative.id] ??
-                              relative.relationshipType.arabicName,
+                              getSideAwareLabel(relative.relationshipType, relative.familySide, relative.gender),
                           style: AppTypography.labelSmall.copyWith(
                             color: themeColors.textSecondary,
                           ),

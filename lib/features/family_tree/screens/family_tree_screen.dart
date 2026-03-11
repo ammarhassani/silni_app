@@ -30,7 +30,7 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../core/models/subscription_tier.dart';
 import '../../../core/providers/subscription_provider.dart';
 import '../../relatives/services/relationship_inference_service.dart';
-import '../../relatives/widgets/smart_relationship_picker.dart';
+import '../../../shared/widgets/flat_relationship_picker.dart';
 import '../../subscription/screens/paywall_screen.dart';
 import '../../family_groups/services/family_group_service.dart';
 import '../../family_groups/services/family_sharing_service.dart';
@@ -695,11 +695,9 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
 
     final relatives =
         ref.read(relativesStreamProvider(userId)).valueOrNull ?? <Relative>[];
-    final suggestions =
-        RelationshipInferenceService.suggestRelationships(relatives);
-
     RelationshipType? selectedType;
     FamilySide? selectedSide;
+    Gender? selectedGender;
 
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
@@ -728,16 +726,17 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                   ),
                   Flexible(
                     child: SingleChildScrollView(
-                      child: SmartRelationshipPicker(
-                        selected: selectedType ?? (suggestions.isNotEmpty ? suggestions.first : RelationshipType.other),
-                        suggestions: suggestions,
-                        existingRelatives: relatives,
+                      child: FlatRelationshipPicker(
+                        selectedType: selectedType ?? RelationshipType.other,
                         selectedSide: selectedSide,
-                        onChanged: (type) {
-                          setSheetState(() => selectedType = type);
-                        },
-                        onSideChanged: (side) {
-                          setSheetState(() => selectedSide = side);
+                        selectedGender: selectedGender,
+                        existingRelatives: relatives,
+                        onSelectionChanged: (type, side, gender) {
+                          setSheetState(() {
+                            selectedType = type;
+                            selectedSide = side;
+                            selectedGender = gender;
+                          });
                         },
                       ),
                     ),
@@ -776,7 +775,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
 
     if (confirmed != true || !mounted) return;
 
-    final chosenType = selectedType ?? (suggestions.isNotEmpty ? suggestions.first : RelationshipType.other);
+    final chosenType = selectedType ?? RelationshipType.other;
     final chosenSide = selectedSide;
 
     // Open contact picker
@@ -797,7 +796,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     if (fullName.trim().isEmpty) return;
 
     // Build a synthetic PlaceholderNode to reuse existing creation logic
-    final gender = RelationshipInferenceService.inferGender(fullName.trim());
+    final gender = selectedGender ?? RelationshipInferenceService.inferGender(fullName.trim());
     final placeholder = PlaceholderNode(
       id: 'fab-manual',
       type: chosenType,

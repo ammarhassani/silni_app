@@ -8,6 +8,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/models/relative_model.dart';
+import '../../../shared/utils/relationship_label_helper.dart';
 import '../../../shared/services/reminder_schedules_service.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/glass_bottom_sheet.dart';
@@ -337,7 +338,7 @@ class _RelativeRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      label ?? relative.relationshipType.arabicName,
+                      label ?? getSideAwareLabel(relative.relationshipType, relative.familySide, relative.gender),
                       style: AppTypography.bodySmall.copyWith(
                         color: Colors.white.withValues(alpha: 0.6),
                       ),

@@ -10,6 +10,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/relative_model.dart';
+import '../../../shared/utils/relationship_label_helper.dart';
 import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/services/reminder_schedules_service.dart';
 import '../../../shared/utils/ui_helpers.dart';
@@ -329,7 +330,7 @@ class _AddToScheduleSheetState extends ConsumerState<_AddToScheduleSheet> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  widget.relative.relationshipType.arabicName,
+                  getSideAwareLabel(widget.relative.relationshipType, widget.relative.familySide, widget.relative.gender),
                   style: AppTypography.bodySmall.copyWith(
                     color: Colors.white54,
                   ),

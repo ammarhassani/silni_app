@@ -8,6 +8,7 @@ import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_themes.dart';
 import '../../../../shared/widgets/relative_avatar.dart';
 import '../../../../shared/models/relative_model.dart';
+import '../../../../shared/utils/relationship_label_helper.dart';
 import '../../../ai_assistant/widgets/health_badge.dart';
 import 'relative_streak_badge.dart';
 
@@ -103,7 +104,7 @@ class RelativeHeaderWidget extends ConsumerWidget {
               borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             ),
             child: Text(
-              relationshipLabel ?? relative.relationshipType.arabicName,
+              relationshipLabel ?? getSideAwareLabel(relative.relationshipType, relative.familySide, relative.gender),
               style: AppTypography.titleMedium.copyWith(color: themeColors.onPrimary),
             ),
           ),

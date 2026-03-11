@@ -23,6 +23,8 @@ import '../../auth/providers/auth_provider.dart';
 import '../../family_groups/services/family_sharing_service.dart';
 import '../../family_groups/services/node_invitation_service.dart';
 import '../../family_groups/providers/node_invitation_providers.dart';
+import '../../family_groups/models/node_invitation_model.dart';
+import '../../../core/constants/app_colors.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -135,49 +137,12 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                     ),
                   ),
 
-                  // Invite to family tree
+                  // Invite to family tree or show invitation status badge
                   if (!relative.isSelf)
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                        child: GestureDetector(
-                          onTap: _isInviting ? null : () => _inviteRelative(relative),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.3),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                if (_isInviting)
-                                  const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                else
-                                  const Icon(Icons.share_rounded, color: Colors.white, size: 20),
-                                const SizedBox(width: AppSpacing.sm),
-                                Text(
-                                  relative.gender == Gender.female ? 'ادعيها لصِلني' : 'ادعيه لصِلني',
-                                  style: AppTypography.labelLarge.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                        child: _buildInviteOrBadge(relative, groupInfo),
                       ),
                     ),
 
@@ -261,6 +226,112 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
 
   void _scrollToDetails() {
     HapticFeedback.lightImpact();
+  }
+
+  Widget _buildInviteOrBadge(
+    Relative relative,
+    ({String groupId, String? nodeId})? groupInfo,
+  ) {
+    // If user is in a group, check for an existing invitation
+    if (groupInfo != null) {
+      final invitationAsync = ref.watch(relativeInvitationProvider((
+        groupId: groupInfo.groupId,
+        relativeId: relative.id,
+      )));
+
+      final invitation = invitationAsync.valueOrNull;
+      if (invitation != null &&
+          (invitation.status == 'pending' || invitation.status == 'accepted')) {
+        return Center(child: _buildInvitationBadge(invitation));
+      }
+    }
+
+    // No invitation exists — show the invite button
+    return _buildInviteButton(relative);
+  }
+
+  Widget _buildInviteButton(Relative relative) {
+    return GestureDetector(
+      onTap: _isInviting ? null : () => _inviteRelative(relative),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (_isInviting)
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            else
+              const Icon(Icons.share_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              relative.gender == Gender.female ? 'ادعيها لصِلني' : 'ادعيه لصِلني',
+              style: AppTypography.labelLarge.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInvitationBadge(NodeInvitation invitation) {
+    final Color badgeColor;
+    final String label;
+    final IconData icon;
+
+    switch (invitation.status) {
+      case 'pending':
+        badgeColor = AppColors.premiumGold;
+        label = 'دعوة معلقة';
+        icon = Icons.hourglass_top_rounded;
+      case 'accepted':
+        badgeColor = AppColors.calmBlue;
+        label = 'انضم للمجموعة';
+        icon = Icons.check_circle_rounded;
+      default:
+        return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: badgeColor.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: badgeColor),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: badgeColor,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _inviteRelative(Relative relative) async {
@@ -571,7 +642,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'صلة القرابة: ${relative.relationshipType.arabicName}',
+                'صلة القرابة: ${getSideAwareLabel(relative.relationshipType, relative.familySide, relative.gender)}',
                 style: AppTypography.bodyMedium.copyWith(
                   color: themeColors.textOnGradient.withValues(alpha: 0.7),
                   fontWeight: FontWeight.bold,

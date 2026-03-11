@@ -674,8 +674,8 @@ class FamilyGraphService {
       }
     }
 
-    // Fallback: use person's full name (not arabicName which is generic)
-    return target?.fullName ?? 'قريب';
+    // Fallback: return empty so callers fall back to arabicName
+    return '';
   }
 
   /// Resolve uncle/aunt label from stored [FamilySide] and gender.

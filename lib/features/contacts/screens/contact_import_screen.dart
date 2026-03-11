@@ -279,6 +279,7 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
             gender: contactWithRel.gender,
             phoneNumber: phoneNumber,
             avatarType: avatarType,
+            familySide: contactWithRel.familySide,
             notes: contactWithRel
                 .customRelationship, // Store custom relationship in notes
             createdAt: DateTime.now(),

@@ -10,16 +10,8 @@ import '../../core/theme/theme_provider.dart';
 import '../../core/theme/app_themes.dart';
 import '../../features/family_tree/models/family_graph.dart';
 import 'glass_card.dart';
+import 'flat_relationship_picker.dart';
 import '../../features/relatives/services/relationship_inference_service.dart';
-
-/// Relationship types that require a "which side?" follow-up question.
-const _extendedFamilyTypes = {
-  RelationshipType.uncle,
-  RelationshipType.aunt,
-  RelationshipType.cousin,
-  RelationshipType.grandfather,
-  RelationshipType.grandmother,
-};
 
 /// Data class for contact with relationship specification
 class ContactWithRelationship {
@@ -89,31 +81,6 @@ class _RelationshipSpecificationDialogState
         gender: detectedGender,
       );
     }).toList();
-  }
-
-  void _updateGender(int index, Gender? gender) {
-    setState(() {
-      _contactsWithRelationship[index].gender = gender;
-    });
-  }
-
-  void _updateRelationshipType(int index, RelationshipType type) {
-    setState(() {
-      _contactsWithRelationship[index].relationshipType = type;
-      // Auto-set gender based on relationship type
-      _contactsWithRelationship[index].gender = RelationshipInferenceService.resolveGender(
-        relationshipType: type,
-        fullName: _contactsWithRelationship[index].contact.displayName,
-      );
-      // Reset family side when relationship changes
-      _contactsWithRelationship[index].familySide = null;
-    });
-  }
-
-  void _updateFamilySide(int index, FamilySide? side) {
-    setState(() {
-      _contactsWithRelationship[index].familySide = side;
-    });
   }
 
   void _updateCustomRelationship(int index, String customRelationship) {
@@ -274,41 +241,19 @@ class _RelationshipSpecificationDialogState
           const SizedBox(height: AppSpacing.md),
 
           // Relationship type selector
-          Text(
-            'صلة القرابة:',
-            style: AppTypography.bodySmall.copyWith(
-              color: Colors.white.withValues(alpha: 0.9),
-            ),
+          FlatRelationshipPicker(
+            selectedType: relationshipType,
+            selectedSide: contactWithRel.familySide,
+            selectedGender: gender,
+            existingRelatives: const [],
+            onSelectionChanged: (type, side, pickerGender) {
+              setState(() {
+                _contactsWithRelationship[index].relationshipType = type;
+                _contactsWithRelationship[index].familySide = side;
+                _contactsWithRelationship[index].gender = pickerGender;
+              });
+            },
           ),
-          const SizedBox(height: AppSpacing.xs),
-          _buildRelationshipSelector(index, relationshipType, themeColors),
-
-          // "Which side?" selector for extended family types
-          if (_extendedFamilyTypes.contains(relationshipType)) ...[
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'من طرف أبوك ولا أمك؟',
-              style: AppTypography.bodySmall.copyWith(
-                color: Colors.white.withValues(alpha: 0.9),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            _buildFamilySideSelector(index, contactWithRel.familySide, themeColors),
-          ],
-
-          // Gender selector - only show for gender-neutral relationships (cousin, other)
-          if (relationshipType == RelationshipType.cousin ||
-              relationshipType == RelationshipType.other) ...[
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'الجنس:',
-              style: AppTypography.bodySmall.copyWith(
-                color: Colors.white.withValues(alpha: 0.9),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            _buildGenderSelector(index, gender, themeColors),
-          ],
 
           // Custom relationship field (if "other" is selected)
           if (relationshipType == RelationshipType.other) ...[
@@ -348,250 +293,6 @@ class _RelationshipSpecificationDialogState
         ],
       ),
     ).animate(delay: Duration(milliseconds: 100 * index)).fadeIn().slideX();
-  }
-
-  Widget _buildRelationshipSelector(
-    int index,
-    RelationshipType currentType,
-    ThemeColors themeColors,
-  ) {
-    return Wrap(
-      spacing: AppSpacing.xs,
-      runSpacing: AppSpacing.xs,
-      children: RelationshipType.values.map((type) {
-        final isSelected = type == currentType;
-        return GestureDetector(
-          onTap: () => _updateRelationshipType(index, type),
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: AppSpacing.xs,
-            ),
-            decoration: BoxDecoration(
-              gradient: isSelected ? themeColors.primaryGradient : null,
-              color: isSelected ? null : Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-              border: Border.all(
-                color: isSelected
-                    ? Colors.transparent
-                    : Colors.white.withValues(alpha: 0.3),
-                width: 1,
-              ),
-            ),
-            child: Text(
-              type == RelationshipType.other
-                  ? 'أخرى'
-                  : _getRelationshipArabicName(type),
-              style: AppTypography.bodySmall.copyWith(
-                color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.8),
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildGenderSelector(
-    int index,
-    Gender? currentGender,
-    ThemeColors themeColors,
-  ) {
-    return Row(
-      children: [
-        Expanded(
-          child: GestureDetector(
-            onTap: () => _updateGender(
-              index,
-              currentGender == Gender.male ? null : Gender.male,
-            ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: AppSpacing.xs,
-              ),
-              decoration: BoxDecoration(
-                gradient: currentGender == Gender.male
-                    ? themeColors.primaryGradient
-                    : null,
-                color: currentGender == Gender.male
-                    ? null
-                    : Colors.white.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                border: Border.all(
-                  color: currentGender == Gender.male
-                      ? Colors.transparent
-                      : Colors.white.withValues(alpha: 0.3),
-                  width: 1,
-                ),
-              ),
-              child: Text(
-                'ذكر',
-                style: AppTypography.bodySmall.copyWith(
-                  color: currentGender == Gender.male
-                      ? Colors.white
-                      : Colors.white.withValues(alpha: 0.8),
-                  fontWeight: currentGender == Gender.male
-                      ? FontWeight.bold
-                      : FontWeight.normal,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.xs),
-        Expanded(
-          child: GestureDetector(
-            onTap: () => _updateGender(
-              index,
-              currentGender == Gender.female ? null : Gender.female,
-            ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: AppSpacing.xs,
-              ),
-              decoration: BoxDecoration(
-                gradient: currentGender == Gender.female
-                    ? themeColors.primaryGradient
-                    : null,
-                color: currentGender == Gender.female
-                    ? null
-                    : Colors.white.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                border: Border.all(
-                  color: currentGender == Gender.female
-                      ? Colors.transparent
-                      : Colors.white.withValues(alpha: 0.3),
-                  width: 1,
-                ),
-              ),
-              child: Text(
-                'أنثى',
-                style: AppTypography.bodySmall.copyWith(
-                  color: currentGender == Gender.female
-                      ? Colors.white
-                      : Colors.white.withValues(alpha: 0.8),
-                  fontWeight: currentGender == Gender.female
-                      ? FontWeight.bold
-                      : FontWeight.normal,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFamilySideSelector(
-    int index,
-    FamilySide? currentSide,
-    ThemeColors themeColors,
-  ) {
-    return Row(
-      children: [
-        Expanded(
-          child: GestureDetector(
-            onTap: () => _updateFamilySide(
-              index,
-              currentSide == FamilySide.paternal ? null : FamilySide.paternal,
-            ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: AppSpacing.xs,
-              ),
-              decoration: BoxDecoration(
-                gradient: currentSide == FamilySide.paternal
-                    ? themeColors.primaryGradient
-                    : null,
-                color: currentSide == FamilySide.paternal
-                    ? null
-                    : Colors.white.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                border: Border.all(
-                  color: currentSide == FamilySide.paternal
-                      ? Colors.transparent
-                      : Colors.white.withValues(alpha: 0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('👨', style: TextStyle(fontSize: 16)),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(
-                    'طرف أبوي',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: currentSide == FamilySide.paternal
-                          ? Colors.white
-                          : Colors.white.withValues(alpha: 0.8),
-                      fontWeight: currentSide == FamilySide.paternal
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.xs),
-        Expanded(
-          child: GestureDetector(
-            onTap: () => _updateFamilySide(
-              index,
-              currentSide == FamilySide.maternal ? null : FamilySide.maternal,
-            ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: AppSpacing.xs,
-              ),
-              decoration: BoxDecoration(
-                gradient: currentSide == FamilySide.maternal
-                    ? themeColors.primaryGradient
-                    : null,
-                color: currentSide == FamilySide.maternal
-                    ? null
-                    : Colors.white.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                border: Border.all(
-                  color: currentSide == FamilySide.maternal
-                      ? Colors.transparent
-                      : Colors.white.withValues(alpha: 0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('👩', style: TextStyle(fontSize: 16)),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(
-                    'طرف أمي',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: currentSide == FamilySide.maternal
-                          ? Colors.white
-                          : Colors.white.withValues(alpha: 0.8),
-                      fontWeight: currentSide == FamilySide.maternal
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
   }
 
   Widget _buildActions(ThemeColors themeColors) {
@@ -651,40 +352,4 @@ class _RelationshipSpecificationDialogState
     );
   }
 
-  String _getRelationshipArabicName(RelationshipType type) {
-    switch (type) {
-      case RelationshipType.father:
-        return 'أب';
-      case RelationshipType.mother:
-        return 'أم';
-      case RelationshipType.brother:
-        return 'أخ';
-      case RelationshipType.sister:
-        return 'أخت';
-      case RelationshipType.son:
-        return 'ابن';
-      case RelationshipType.daughter:
-        return 'ابنة';
-      case RelationshipType.husband:
-        return 'زوج';
-      case RelationshipType.wife:
-        return 'زوجة';
-      case RelationshipType.grandfather:
-        return 'جد';
-      case RelationshipType.grandmother:
-        return 'جدة';
-      case RelationshipType.uncle:
-        return 'عم';
-      case RelationshipType.aunt:
-        return 'عمة/خالة';
-      case RelationshipType.cousin:
-        return 'ابن/ابنة عم/خال';
-      case RelationshipType.nephew:
-        return 'ابن أخ/أخت';
-      case RelationshipType.niece:
-        return 'ابنة أخ/أخت';
-      case RelationshipType.other:
-        return 'أخرى';
-    }
-  }
 }
