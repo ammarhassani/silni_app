@@ -121,6 +121,32 @@ final aiBriefingProvider = Provider.autoDispose<AsyncValue<AIBriefing?>>((ref) {
       }
     }
 
+    // Priority 2.75: Pattern + occasion compound
+    // Distant relative with upcoming birthday AND long contact gap → great excuse to reconnect
+    final distantWithOccasion = relatives
+        .where((r) => r.relativeCategory == RelativeCategory.distant)
+        .where((r) => r.dateOfBirth != null)
+        .where((r) {
+      final days = _daysUntilBirthday(r.dateOfBirth!, now);
+      return days > 0 && days <= 14; // Upcoming in next 2 weeks
+    }).toList();
+
+    if (distantWithOccasion.isNotEmpty) {
+      final r = distantWithOccasion.first;
+      final birthdayDays = _daysUntilBirthday(r.dateOfBirth!, now);
+      final hasGap = r.lastContactDate == null ||
+          now.difference(r.lastContactDate!).inDays >= 14;
+      if (hasGap) {
+        return AIBriefing(
+          emoji: '🎁',
+          message:
+              'عيد ميلاد ${r.fullName} بعد ${birthdayDays == 1 ? "يوم" : "$birthdayDays يوم"} — فرصة حلوة تتواصل معه',
+          actions: [BriefingAction.call, BriefingAction.message],
+          relativeId: r.id,
+        );
+      }
+    }
+
     // Priority 3: Extended relative with longest gap (7+ days)
     final extended = relatives
         .where((r) => r.relativeCategory == RelativeCategory.extended)

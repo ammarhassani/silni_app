@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../shared/models/relative_model.dart';
+import '../config/env/app_environment.dart';
 import '../services/ai_config_service.dart';
 import '../services/app_logger_service.dart';
 import 'ai_models.dart';
@@ -24,6 +26,11 @@ class DeepSeekAIService implements AIService {
   factory DeepSeekAIService() => _instance ??= DeepSeekAIService._internal();
   DeepSeekAIService._internal();
 
+  /// Build the edge function URL for direct HTTP calls (used for SSE streaming)
+  Uri get _edgeFunctionUrl => Uri.parse(
+        '${AppEnvironment.supabaseUrl}/functions/v1/$_edgeFunctionName',
+      );
+
   @override
   Stream<AIStreamChunk> streamChatCompletion({
     required List<ChatMessage> messages,
@@ -32,30 +39,117 @@ class DeepSeekAIService implements AIService {
     int maxTokens = 2048,
   }) async* {
     try {
-      // For now, use non-streaming and yield the result
-      // TODO: Implement SSE streaming when edge function is ready
-      final response = await getChatCompletion(
-        messages: messages,
-        systemPrompt: systemPrompt,
-        temperature: temperature,
-        maxTokens: maxTokens,
-      );
-
-      // Simulate GPT-like streaming by yielding word by word
-      final words = _tokenizeForStreaming(response);
-      for (final word in words) {
-        yield AIStreamChunk(content: word);
-        // Variable delay based on content
-        final delay = _getStreamingDelay(word);
-        await Future.delayed(Duration(milliseconds: delay));
+      final accessToken = _supabase.auth.currentSession?.accessToken;
+      if (accessToken == null) {
+        yield AIStreamChunk(
+          content: '',
+          isDone: true,
+          error: 'يرجى تسجيل الدخول مرة أخرى.',
+        );
+        return;
       }
 
-      yield AIStreamChunk(content: '', isDone: true);
+      final formattedMessages = [
+        {'role': 'system', 'content': systemPrompt},
+        ...messages.map((m) => m.toApiFormat()),
+      ];
+
+      // Use http package for streaming POST request
+      final request = http.Request('POST', _edgeFunctionUrl);
+      request.headers['Authorization'] = 'Bearer $accessToken';
+      request.headers['Content-Type'] = 'application/json';
+      request.headers['apikey'] = AppEnvironment.supabaseAnonKey;
+      request.body = jsonEncode({
+        'messages': formattedMessages,
+        'temperature': temperature,
+        'max_tokens': maxTokens,
+        'stream': true,
+      });
+
+      final client = http.Client();
+      try {
+        final streamedResponse = await client.send(request).timeout(
+              const Duration(seconds: 90),
+              onTimeout: () => throw AIServiceException(
+                'انتهت مهلة الاتصال. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.',
+                code: 'TIMEOUT',
+              ),
+            );
+
+        // Handle non-200 responses
+        if (streamedResponse.statusCode != 200) {
+          final body = await streamedResponse.stream.bytesToString();
+          _logger.error(
+            'SSE stream error: ${streamedResponse.statusCode}',
+            category: LogCategory.network,
+            tag: 'DeepSeekAIService',
+            metadata: {'status': streamedResponse.statusCode, 'body': body},
+          );
+          yield AIStreamChunk(
+            content: '',
+            isDone: true,
+            error: _getErrorMessage(streamedResponse.statusCode),
+          );
+          return;
+        }
+
+        // Parse SSE stream
+        String buffer = '';
+        await for (final bytes in streamedResponse.stream) {
+          buffer += utf8.decode(bytes);
+
+          // Process complete SSE lines
+          while (buffer.contains('\n')) {
+            final newlineIndex = buffer.indexOf('\n');
+            final line = buffer.substring(0, newlineIndex).trim();
+            buffer = buffer.substring(newlineIndex + 1);
+
+            if (line.isEmpty || line.startsWith(':')) continue;
+
+            if (line.startsWith('data: ')) {
+              final data = line.substring(6);
+
+              if (data == '[DONE]') {
+                yield AIStreamChunk(content: '', isDone: true);
+                return;
+              }
+
+              try {
+                final parsed = jsonDecode(data) as Map<String, dynamic>;
+                if (parsed.containsKey('error')) {
+                  yield AIStreamChunk(
+                    content: '',
+                    isDone: true,
+                    error: parsed['error'] as String? ??
+                        'حدث خطأ غير متوقع.',
+                  );
+                  return;
+                }
+                final content = parsed['content'] as String?;
+                if (content != null && content.isNotEmpty) {
+                  yield AIStreamChunk(content: content);
+                }
+              } catch (_) {
+                // Skip malformed JSON chunks
+              }
+            }
+          }
+        }
+
+        // If we exit the stream without [DONE], send the done signal
+        yield AIStreamChunk(content: '', isDone: true);
+      } finally {
+        client.close();
+      }
     } on AIServiceException catch (e) {
-      // Use the user-friendly message from AIServiceException
       yield AIStreamChunk(content: '', isDone: true, error: e.message);
     } catch (e) {
-      // Fallback for unexpected errors
+      _logger.error(
+        'Stream error',
+        category: LogCategory.network,
+        tag: 'DeepSeekAIService',
+        metadata: {'error': e.toString()},
+      );
       yield AIStreamChunk(
         content: '',
         isDone: true,
@@ -564,56 +658,6 @@ class DeepSeekAIService implements AIService {
   @override
   void dispose() {
     // Nothing to dispose currently
-  }
-
-  /// Tokenize text for natural streaming (word by word with punctuation)
-  List<String> _tokenizeForStreaming(String text) {
-    final tokens = <String>[];
-    final buffer = StringBuffer();
-
-    for (var i = 0; i < text.length; i++) {
-      final char = text[i];
-
-      if (char == ' ') {
-        if (buffer.isNotEmpty) {
-          tokens.add(buffer.toString());
-          buffer.clear();
-        }
-        tokens.add(' ');
-      } else if (_isPunctuation(char)) {
-        if (buffer.isNotEmpty) {
-          tokens.add(buffer.toString());
-          buffer.clear();
-        }
-        tokens.add(char);
-      } else if (char == '\n') {
-        if (buffer.isNotEmpty) {
-          tokens.add(buffer.toString());
-          buffer.clear();
-        }
-        tokens.add('\n');
-      } else {
-        buffer.write(char);
-      }
-    }
-
-    if (buffer.isNotEmpty) {
-      tokens.add(buffer.toString());
-    }
-
-    return tokens;
-  }
-
-  /// Check if character is punctuation
-  bool _isPunctuation(String char) {
-    return ['.', '،', '؟', '!', ':', '؛', '-', '*', '#', ')', '(', '"', '\'']
-        .contains(char);
-  }
-
-  /// Get variable delay for natural typing effect (ultra-fast, ChatGPT-like)
-  /// Uses dynamic config from admin panel with fallback
-  int _getStreamingDelay(String token) {
-    return AIConfigService.instance.streamingConfig.getDelayForToken(token);
   }
 
   @override

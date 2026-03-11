@@ -3,6 +3,7 @@
 
 import '../../shared/models/relative_model.dart';
 import '../services/ai_config_service.dart';
+import '../services/islamic_calendar_service.dart';
 import 'ai_context_engine.dart';
 import 'ai_identity.dart';
 import 'ai_models.dart';
@@ -358,7 +359,7 @@ ${mode.modeInstructions}
 - أهل البيت: لا تنبّه على التواصل معهم — ركّز على جودة العلاقة ولحظات مشتركة
 - تواصل دائم: نبّه لو مرت فترة بدون تواصل — اقترح طرق تواصل مناسبة
 - مناسبات: ركّز على المناسبات القادمة والتهاني — لا تضغط على التواصل اليومي
-
+${IslamicCalendarService.getSeasonContext() != null ? '\n## السياق الموسمي:\n${IslamicCalendarService.getSeasonContext()}\n' : ''}
 ### ملخص صحة العلاقات:
 - علاقات صحية 🟢: $healthyCount
 - تحتاج اهتمام 🟡: $needsAttentionCount

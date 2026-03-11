@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../features/relatives/services/relationship_inference_service.dart';
 import '../../shared/models/relative_model.dart';
 
 /// Progressive fact-gathering engine.
@@ -7,10 +8,12 @@ class OneQuestionEngine {
   static const _prefsKey = 'one_question_';
   static const _maxQuestionsPerWeek = 4;
 
-  /// Returns a follow-up question for this relative, or null if not appropriate
+  /// Returns a follow-up question for this relative, or null if not appropriate.
+  /// [displayName] overrides fullName in question text (e.g. "عمك منصور" instead of "عمي منصور").
   static Future<FollowUpQuestion?> getQuestion({
     required Relative relative,
     required SharedPreferences prefs,
+    String? displayName,
   }) async {
     // Check rate limit: max 4 questions per week
     final weekCount = prefs.getInt('${_prefsKey}week_count') ?? 0;
@@ -32,34 +35,51 @@ class OneQuestionEngine {
 
     // Pick question based on what we DON'T know yet
     final asked = prefs.getStringList('${_prefsKey}asked_${relative.id}') ?? [];
-    return _pickQuestion(relative, asked);
+    return _pickQuestion(relative, asked, displayName ?? relative.fullName);
   }
 
-  static FollowUpQuestion? _pickQuestion(Relative relative, List<String> asked) {
+  static FollowUpQuestion? _pickQuestion(Relative relative, List<String> asked, String name) {
+    // Resolve gender using the app's 3-step priority chain:
+    // relationship type → stored gender → name inference
+    final resolvedGender = RelationshipInferenceService.resolveGender(
+      relationshipType: relative.relationshipType,
+      storedGender: relative.gender,
+      fullName: relative.fullName,
+    );
+    final isMale = resolvedGender != Gender.female; // null → male (app convention)
+
+    // Gender-conditional verb forms (same pattern as proactive_insight_service)
+    final likes = isMale ? 'يحبه' : 'تحبه';
+    final does = isMale ? 'يسوّيه' : 'تسوّيه';
+    final prefers = isMale ? 'يفضل' : 'تفضل';
+    final upsets = isMale ? 'يزعل' : 'تزعل';
+    final pronoun = isMale ? 'تكلمته' : 'تكلمتها';
+    final freeTime = isMale ? 'فراغه' : 'فراغها';
+
     final questions = <String, FollowUpQuestion>{
       'interests': FollowUpQuestion(
         key: 'interests',
-        text: 'وش الشي اللي يحبه ${relative.fullName} يسوّيه بوقت فراغه؟',
+        text: 'وش الشي اللي $likes $name $does بوقت $freeTime؟',
         field: 'interests',
       ),
       'health': FollowUpQuestion(
         key: 'health',
-        text: 'كيف صحة ${relative.fullName} هالفترة؟',
+        text: 'كيف صحة $name هالفترة؟',
         field: 'health_status',
       ),
       'communication_style': FollowUpQuestion(
         key: 'communication_style',
-        text: '${relative.fullName} يفضل الاتصال ولا الرسائل؟',
+        text: '$name $prefers الاتصال ولا الرسائل؟',
         field: 'communication_style',
       ),
       'best_time': FollowUpQuestion(
         key: 'best_time',
-        text: 'متى أحسن وقت تتواصل مع ${relative.fullName}؟',
+        text: 'متى أحسن وقت تتواصل مع $name؟',
         field: 'best_time_to_contact',
       ),
       'sensitive_topics': FollowUpQuestion(
         key: 'sensitive_topics',
-        text: 'فيه شي يزعل ${relative.fullName} لو تكلمته عنه؟',
+        text: 'فيه شي $upsets $name لو $pronoun عنه؟',
         field: 'sensitive_topics',
       ),
     };

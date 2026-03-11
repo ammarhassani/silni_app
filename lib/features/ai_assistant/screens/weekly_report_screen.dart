@@ -13,6 +13,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/relative_model.dart';
+import '../../../shared/utils/relationship_label_helper.dart';
 import '../../../shared/widgets/glass_pill_title.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../gamification/providers/stats_provider.dart';
@@ -92,16 +93,6 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen>
     await _generateAIInsights();
   }
 
-  /// Convert first-person possessive label (عمي) to second-person (عمك).
-  static String _toSecondPerson(String label) {
-    if (label == 'أبي') return 'والدك';
-    if (label == 'أخي') return 'أخوك';
-    if (label.endsWith('ي')) {
-      return '${label.substring(0, label.length - 1)}ك';
-    }
-    return label;
-  }
-
   Future<void> _generateAIInsights() async {
     if (!_isGeneratingReport && mounted) {
       setState(() => _isGeneratingReport = true);
@@ -126,7 +117,7 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen>
       final labels = ref.read(perspectiveLabelsProvider);
       final relativesContext = relatives.take(10).map((r) {
         final firstPerson = labels[r.id] ?? r.relationshipType.arabicName;
-        final label = _toSecondPerson(firstPerson);
+        final label = toSecondPerson(firstPerson);
         final lastContact = r.lastContactDate;
         final daysSince = lastContact != null
             ? DateTime.now().difference(lastContact).inDays

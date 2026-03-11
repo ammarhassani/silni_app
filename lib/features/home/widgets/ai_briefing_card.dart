@@ -90,7 +90,30 @@ class AIBriefingCard extends ConsumerWidget {
               duration: AppAnimations.modal,
             );
       },
-      loading: () => const SizedBox.shrink(),
+      loading: () => GlassCard(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          children: [
+            Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                color: themeColors.textSecondary.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Container(
+              width: 80,
+              height: 14,
+              decoration: BoxDecoration(
+                color: themeColors.textSecondary.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ],
+        ),
+      ),
       error: (_, _) => const SizedBox.shrink(),
     );
   }

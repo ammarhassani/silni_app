@@ -1,5 +1,6 @@
 // DeepSeek API Proxy Edge Function
 // Securely proxies requests to DeepSeek API with rate limiting
+// Supports both streaming (SSE) and non-streaming (JSON) responses
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -109,14 +110,24 @@ serve(async (req: Request) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Check subscription status for rate limit tier
-    // Query 'users' table for 'subscription_status' column
-    // App syncs MAX tier as 'premium' to the database
-    const { data: userData, error: userError } = await serviceClient
-      .from("users")
-      .select("subscription_status")
-      .eq("id", user.id)
-      .single();
+    // Run subscription check and rate limit check in PARALLEL
+    const today = new Date().toISOString().split("T")[0];
+    const [userResult, rateResult] = await Promise.all([
+      serviceClient
+        .from("users")
+        .select("subscription_status")
+        .eq("id", user.id)
+        .single(),
+      serviceClient
+        .from("ai_rate_limits")
+        .select("request_count")
+        .eq("user_id", user.id)
+        .eq("date", today)
+        .single(),
+    ]);
+
+    const { data: userData, error: userError } = userResult;
+    const { data: rateData } = rateResult;
 
     // Debug: log the query result
     console.log("[DEBUG] User query result:", {
@@ -136,18 +147,6 @@ serve(async (req: Request) => {
 
     // Free users: 0 requests (blocked at server level), Premium users: 200
     const rateLimit = isPremium ? RATE_LIMIT_PREMIUM : RATE_LIMIT_FREE;
-
-    console.log("[DEBUG] Rate limit set to:", rateLimit);
-
-    // Check rate limiting
-    const today = new Date().toISOString().split("T")[0];
-    const { data: rateData } = await serviceClient
-      .from("ai_rate_limits")
-      .select("request_count")
-      .eq("user_id", user.id)
-      .eq("date", today)
-      .single();
-
     const currentCount = rateData?.request_count || 0;
 
     console.log("[DEBUG] Rate check:", {
@@ -173,6 +172,19 @@ serve(async (req: Request) => {
       );
     }
 
+    // Increment rate limit counter BEFORE the API call (prevents races during streaming)
+    await serviceClient.from("ai_rate_limits").upsert(
+      {
+        user_id: user.id,
+        date: today,
+        request_count: currentCount + 1,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,date" }
+    );
+
+    const wantStream = body.stream === true;
+
     // Make request to DeepSeek API
     const response = await fetch(DEEPSEEK_URL, {
       method: "POST",
@@ -185,7 +197,7 @@ serve(async (req: Request) => {
         messages: body.messages,
         temperature: body.temperature ?? 0.7,
         max_tokens: body.max_tokens ?? 2048,
-        stream: false, // Non-streaming for now
+        stream: wantStream,
       }),
     });
 
@@ -205,21 +217,95 @@ serve(async (req: Request) => {
       );
     }
 
+    // --- STREAMING PATH ---
+    if (wantStream) {
+      // Pipe DeepSeek's SSE stream through to the client
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
+
+      const readable = new ReadableStream({
+        async start(controller) {
+          const reader = response.body!.getReader();
+          let buffer = "";
+
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              buffer += decoder.decode(value, { stream: true });
+
+              // Process complete SSE lines
+              const lines = buffer.split("\n");
+              // Keep the last (possibly incomplete) line in the buffer
+              buffer = lines.pop() || "";
+
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || trimmed.startsWith(":")) continue;
+
+                if (trimmed.startsWith("data: ")) {
+                  const data = trimmed.slice(6);
+
+                  if (data === "[DONE]") {
+                    controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                    controller.close();
+                    return;
+                  }
+
+                  try {
+                    const parsed = JSON.parse(data);
+                    const content = parsed.choices?.[0]?.delta?.content;
+                    if (content) {
+                      // Forward just the content text as a simple SSE event
+                      controller.enqueue(
+                        encoder.encode(`data: ${JSON.stringify({ content })}\n\n`)
+                      );
+                    }
+                  } catch {
+                    // Skip malformed JSON chunks
+                  }
+                }
+              }
+            }
+
+            // Flush any remaining buffer
+            if (buffer.trim()) {
+              const trimmed = buffer.trim();
+              if (trimmed.startsWith("data: ") && trimmed.slice(6) === "[DONE]") {
+                controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+              }
+            }
+
+            controller.close();
+          } catch (err) {
+            console.error("Stream processing error:", err);
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ error: "Stream interrupted" })}\n\n`
+              )
+            );
+            controller.close();
+          }
+        },
+      });
+
+      return new Response(readable, {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+        status: 200,
+      });
+    }
+
+    // --- NON-STREAMING PATH (unchanged for non-chat features) ---
     const data = await response.json();
 
     // Extract content from response
     const content = data.choices?.[0]?.message?.content ?? "";
-
-    // Update rate limit counter (upsert to handle first request of the day)
-    await serviceClient.from("ai_rate_limits").upsert(
-      {
-        user_id: user.id,
-        date: today,
-        request_count: currentCount + 1,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,date" }
-    );
 
     return new Response(
       JSON.stringify({

@@ -186,6 +186,10 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
   final RefreshHistoryCallback? _onHistoryChanged;
   final _uuid = const Uuid();
 
+  /// Counter for throttling memory extraction (every 3 assistant messages)
+  int _assistantMessagesSinceExtraction = 0;
+  static const int _memoryExtractionInterval = 3;
+
   AIChatNotifier({
     required AIService aiService,
     required ChatHistoryService chatHistoryService,
@@ -488,10 +492,13 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
           // Save assistant message (async)
           _saveMessageAsync(assistantMessage);
 
-          // Only extract memories if AI actually responded with content
+          // Only extract memories every N assistant messages to reduce API calls
           if (fullContent.trim().isNotEmpty && fullContent.length > 20) {
-            // Extract and save memories from this conversation turn (async, non-blocking)
-            _extractAndSaveMemoriesAsync();
+            _assistantMessagesSinceExtraction++;
+            if (_assistantMessagesSinceExtraction >= _memoryExtractionInterval) {
+              _assistantMessagesSinceExtraction = 0;
+              _extractAndSaveMemoriesAsync();
+            }
           }
         }
       }
@@ -859,6 +866,7 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
 
   /// Clear the current conversation
   void clearConversation() {
+    _assistantMessagesSinceExtraction = 0;
     state = const AIChatState();
   }
 

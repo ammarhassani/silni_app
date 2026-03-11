@@ -108,6 +108,7 @@ class AIPreloadService {
   }
 
   /// Preload relationship analyses for priority relatives (at-risk or needs attention)
+  /// Runs all analyses in parallel for faster preloading.
   Future<void> _preloadPriorityAnalyses(List<Relative> relatives) async {
     // Only preload for top 5 priority relatives
     final priorityRelatives = relatives
@@ -117,16 +118,18 @@ class AIPreloadService {
         .take(5)
         .toList();
 
-    for (final relative in priorityRelatives) {
-      try {
-        final analysis = await _aiService.analyzeRelationship(
-          relative: relative,
-        );
-        _cachedAnalyses[relative.id] = analysis;
-      } catch (e) {
-        // Silent fail - continue with next relative
-      }
-    }
+    await Future.wait(
+      priorityRelatives.map((relative) async {
+        try {
+          final analysis = await _aiService.analyzeRelationship(
+            relative: relative,
+          );
+          _cachedAnalyses[relative.id] = analysis;
+        } catch (e) {
+          // Silent fail - continue with other relatives
+        }
+      }),
+    );
   }
 
   /// Preload analysis for a specific relative
