@@ -71,6 +71,26 @@ final trialDaysRemainingProvider = Provider<int>((ref) {
   );
 });
 
+/// Provider for trial eligibility (whether user can start a free trial)
+final isTrialEligibleProvider = Provider<bool>((ref) {
+  final stateAsync = ref.watch(subscriptionStateProvider);
+  return stateAsync.when(
+    data: (state) => state.isTrialEligible,
+    loading: () => false,
+    error: (_, _) => false,
+  );
+});
+
+/// Provider for introductory price info from StoreProduct
+final introPriceProvider = Provider<rc.IntroductoryPrice?>((ref) {
+  final stateAsync = ref.watch(subscriptionStateProvider);
+  return stateAsync.when(
+    data: (state) => state.introPrice,
+    loading: () => null,
+    error: (_, _) => null,
+  );
+});
+
 /// Provider for available offerings
 final offeringsProvider = Provider<rc.Offerings?>((ref) {
   final stateAsync = ref.watch(subscriptionStateProvider);

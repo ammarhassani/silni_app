@@ -34,6 +34,12 @@ class SubscriptionState {
   /// Raw customer info from RevenueCat
   final rc.CustomerInfo? customerInfo;
 
+  /// Whether user is eligible for introductory offer / free trial (from RevenueCat)
+  final bool isTrialEligible;
+
+  /// Introductory price info from StoreProduct (null if no intro offer exists)
+  final rc.IntroductoryPrice? introPrice;
+
   const SubscriptionState({
     this.tier = SubscriptionTier.free,
     this.isActive = false,
@@ -45,6 +51,8 @@ class SubscriptionState {
     this.isLoading = true,
     this.error,
     this.customerInfo,
+    this.isTrialEligible = false,
+    this.introPrice,
   });
 
   /// Create initial loading state
@@ -82,9 +90,12 @@ class SubscriptionState {
     bool? isLoading,
     String? error,
     rc.CustomerInfo? customerInfo,
+    bool? isTrialEligible,
+    rc.IntroductoryPrice? introPrice,
     bool clearError = false,
     bool clearExpiration = false,
     bool clearProductId = false,
+    bool clearIntroPrice = false,
   }) {
     return SubscriptionState(
       tier: tier ?? this.tier,
@@ -97,6 +108,8 @@ class SubscriptionState {
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
       customerInfo: customerInfo ?? this.customerInfo,
+      isTrialEligible: isTrialEligible ?? this.isTrialEligible,
+      introPrice: clearIntroPrice ? null : (introPrice ?? this.introPrice),
     );
   }
 
@@ -174,7 +187,8 @@ class SubscriptionState {
         other.trialDaysRemaining == trialDaysRemaining &&
         other.productId == productId &&
         other.isLoading == isLoading &&
-        other.error == error;
+        other.error == error &&
+        other.isTrialEligible == isTrialEligible;
   }
 
   @override
@@ -188,6 +202,7 @@ class SubscriptionState {
       productId,
       isLoading,
       error,
+      isTrialEligible,
     );
   }
 }

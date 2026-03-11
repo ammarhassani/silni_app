@@ -199,8 +199,14 @@ class SubscriptionService {
     try {
       _updateState(_currentState.copyWith(isLoading: true, clearError: true));
 
-      final customerInfo = await rc.Purchases.getCustomerInfo();
-      final offerings = await rc.Purchases.getOfferings();
+      final results = await Future.wait([
+        rc.Purchases.getCustomerInfo(),
+        rc.Purchases.getOfferings(),
+        _checkTrialEligibility(),
+      ]);
+      final customerInfo = results[0] as rc.CustomerInfo;
+      final offerings = results[1] as rc.Offerings;
+      final eligibility = results[2] as Map<String, rc.IntroEligibility>;
 
       _logger.info(
         'Offerings fetched',
@@ -214,7 +220,7 @@ class SubscriptionService {
         },
       );
 
-      _processCustomerInfo(customerInfo, offerings);
+      _processCustomerInfo(customerInfo, offerings, eligibility);
     } catch (e, stackTrace) {
       _logger.error(
         'Failed to refresh subscription status from RevenueCat',
@@ -278,10 +284,32 @@ class SubscriptionService {
       category: LogCategory.service,
       tag: 'SubscriptionService',
     );
+    // No eligibility param — preserves existing eligibility from _currentState
     _processCustomerInfo(customerInfo, _currentState.offerings);
   }
 
-  void _processCustomerInfo(rc.CustomerInfo customerInfo, rc.Offerings? offerings) {
+  /// Check trial/intro offer eligibility for all product IDs (iOS only)
+  Future<Map<String, rc.IntroEligibility>> _checkTrialEligibility() async {
+    try {
+      return await rc.Purchases.checkTrialOrIntroductoryPriceEligibility(
+        SubscriptionProducts.allProductIds.toList(),
+      );
+    } catch (e) {
+      _logger.warning(
+        'Failed to check trial eligibility',
+        category: LogCategory.service,
+        tag: 'SubscriptionService',
+        metadata: {'error': e.toString()},
+      );
+      return {};
+    }
+  }
+
+  void _processCustomerInfo(
+    rc.CustomerInfo customerInfo,
+    rc.Offerings? offerings, [
+    Map<String, rc.IntroEligibility>? eligibility,
+  ]) {
     final entitlements = customerInfo.entitlements.active;
 
     // Debug: Log all active entitlements
@@ -325,6 +353,28 @@ class SubscriptionService {
     final isActive = tier != SubscriptionTier.free &&
         (expirationDate == null || expirationDate.isAfter(DateTime.now()));
 
+    // Determine trial eligibility from RevenueCat
+    // If eligibility was not provided (e.g. listener callback), preserve current state
+    bool isTrialEligible;
+    rc.IntroductoryPrice? introPrice;
+    if (eligibility != null) {
+      isTrialEligible = eligibility.values.any(
+        (e) => e.status == rc.IntroEligibilityStatus.introEligibilityStatusEligible,
+      );
+      // Extract intro price from the first product that has one
+      if (offerings?.current != null) {
+        for (final pkg in offerings!.current!.availablePackages) {
+          if (pkg.storeProduct.introductoryPrice != null) {
+            introPrice = pkg.storeProduct.introductoryPrice;
+            break;
+          }
+        }
+      }
+    } else {
+      isTrialEligible = _currentState.isTrialEligible;
+      introPrice = _currentState.introPrice;
+    }
+
     final newState = SubscriptionState(
       tier: tier,
       isActive: isActive,
@@ -335,6 +385,8 @@ class SubscriptionService {
       offerings: offerings,
       isLoading: false,
       customerInfo: customerInfo,
+      isTrialEligible: isTrialEligible,
+      introPrice: introPrice,
     );
 
     // Log tier change

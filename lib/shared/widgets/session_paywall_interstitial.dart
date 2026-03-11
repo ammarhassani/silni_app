@@ -129,8 +129,8 @@ class _PaywallSheet extends ConsumerWidget {
             // Headline in gold
             Text(
               isTrialEligible
-                  ? 'جرّب صِلني MAX'
-                  : 'عودتك تفرحنا! \u{1F90D}',
+                  ? 'جرّب صِلني MAX مجاناً'
+                  : 'نفتقدك في MAX!',
               style: AppTypography.headlineSmall.copyWith(
                 color: AppColors.premiumGold,
                 fontWeight: FontWeight.bold,
@@ -142,8 +142,8 @@ class _PaywallSheet extends ConsumerWidget {
             // Subtitle
             Text(
               isTrialEligible
-                  ? 'مجاناً بـ ٠ ريال لمدة ${TrialHelpers.formatDuration(introPrice)}'
-                  : 'الميزات اللي جربتها تنتظرك',
+                  ? '٠ ريال لمدة ${TrialHelpers.formatDuration(introPrice)} — بدون التزام'
+                  : 'الميزات اللي جربتها لا تزال بانتظارك',
               style: AppTypography.bodyMedium.copyWith(
                 color: Colors.white70,
               ),
@@ -205,7 +205,7 @@ class _PaywallSheet extends ConsumerWidget {
                     },
                     child: Center(
                       child: Text(
-                        isTrialEligible ? 'ابدأ التجربة المجانية' : 'عرض الخطط',
+                        isTrialEligible ? 'ابدأ التجربة المجانية' : 'ارجع لـ MAX',
                         style: AppTypography.titleMedium.copyWith(
                           color: Colors.black,
                           fontWeight: FontWeight.bold,
