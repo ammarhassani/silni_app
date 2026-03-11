@@ -7,6 +7,7 @@ import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/router/app_routes.dart';
 import '../models/relative_model.dart';
+import '../utils/relationship_label_helper.dart';
 import 'dart:math' as math;
 
 class AvatarCarousel extends StatefulWidget {
@@ -128,7 +129,10 @@ class _AvatarCarouselState extends State<AvatarCarousel> {
   }
 
   Widget _buildRelativeAvatar(Relative relative) {
-    final needsAttention = relative.needsContact;
+    // Household relatives don't need contact tracking — suppress attention indicators
+    final needsAttention =
+        relative.relativeCategory != RelativeCategory.household &&
+            relative.needsContact;
 
     return GestureDetector(
       onTap: () {
@@ -270,12 +274,13 @@ class _AvatarCarouselState extends State<AvatarCarousel> {
             ),
           ),
 
-          // Relationship
+          // Relationship + category-specific subtitle
           SizedBox(
             width: 90,
             child: Text(
-              widget.relationshipLabels?[relative.id] ??
-                  relative.relationshipType.arabicName,
+              _categorySubtitle(relative) ??
+                  widget.relationshipLabels?[relative.id] ??
+                  getSideAwareLabel(relative.relationshipType, relative.familySide, relative.gender),
               style: AppTypography.labelSmall.copyWith(
                 color: Colors.white.withValues(alpha: 0.7),
               ),
@@ -287,6 +292,44 @@ class _AvatarCarouselState extends State<AvatarCarousel> {
         ],
       ),
     );
+  }
+
+  /// Category-specific subtitle: household shows relationship label,
+  /// extended shows days since contact, distant shows next occasion.
+  String? _categorySubtitle(Relative relative) {
+    switch (relative.relativeCategory) {
+      case RelativeCategory.household:
+        // Show relationship label — no contact tracking
+        return widget.relationshipLabels?[relative.id] ??
+            getSideAwareLabel(relative.relationshipType, relative.familySide, relative.gender);
+      case RelativeCategory.extended:
+        // Show days since last contact
+        if (relative.lastContactDate != null) {
+          final days =
+              DateTime.now().difference(relative.lastContactDate!).inDays;
+          if (days == 0) return 'تواصلت اليوم';
+          if (days == 1) return 'أمس';
+          if (days == 2) return 'قبل يومين';
+          if (days <= 10) return 'قبل $days أيام';
+          return 'قبل $days يوم';
+        }
+        return null; // Fall through to relationship label
+      case RelativeCategory.distant:
+        // Show next birthday if available
+        if (relative.dateOfBirth != null) {
+          final now = DateTime.now();
+          var next = DateTime(now.year, relative.dateOfBirth!.month,
+              relative.dateOfBirth!.day);
+          if (next.isBefore(now)) {
+            next = DateTime(now.year + 1, relative.dateOfBirth!.month,
+                relative.dateOfBirth!.day);
+          }
+          final days = next.difference(DateTime(now.year, now.month, now.day)).inDays;
+          if (days == 0) return 'عيد ميلاده اليوم! 🎂';
+          if (days <= 30) return 'عيد ميلاده بعد $days يوم';
+        }
+        return null;
+    }
   }
 
   Widget _buildAddButton() {

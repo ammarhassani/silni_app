@@ -17,12 +17,14 @@ import '../../premium_onboarding/providers/onboarding_provider.dart';
 import '../../premium_onboarding/screens/premium_onboarding_screen.dart';
 import '../providers/home_providers.dart';
 import '../widgets/widgets.dart';
-import '../widgets/quick_log_faces.dart';
 import '../../../shared/widgets/message_widget.dart';
 import '../../../shared/widgets/persistent_bottom_nav.dart';
 import '../../../core/providers/subscription_provider.dart';
 import '../../../shared/widgets/session_paywall_interstitial.dart';
 import '../../../shared/widgets/in_app_rate_prompt.dart';
+import '../../family_groups/widgets/family_activity_feed.dart';
+import '../../family_groups/widgets/family_celebration_card.dart';
+import '../../family_tree/providers/family_graph_providers.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -78,9 +80,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     });
   }
 
-  /// Show session-based paywall interstitial for free users every few app opens
+  /// Show session-based paywall interstitial for free users every few app opens.
+  /// Waits for subscription state to load before checking — avoids showing
+  /// paywall to MAX users while subscription is still loading.
   void _checkSessionPaywall() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      // Wait for subscription state to resolve (avoid loading → free default)
+      await ref.read(subscriptionStateProvider.future);
       if (!mounted) return;
       final isMax = ref.read(isMaxProvider);
       if (!isMax) {
@@ -281,6 +288,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     ref.watch(autoRealtimeSubscriptionsProvider);
     ref.watch(aiAutoPreloadProvider);
 
+    // Family group info (for activity feed + celebration card)
+    final groupId = ref.watch(userFamilyGroupProvider).valueOrNull?.groupId;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
@@ -346,18 +356,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     const SizedBox(height: AppSpacing.sm),
                     const MessageWidget(screenPath: '/home'),
                     const SizedBox(height: AppSpacing.sm),
-                    const AIBriefingCard(),
-                    const SizedBox(height: AppSpacing.md),
-                    QuickLogFaces(userId: userId),
-                    const SizedBox(height: AppSpacing.md),
                     IslamicReminderWidget(
                       hadith: _dailyHadith,
                       isLoading: _isLoadingHadith,
                     ),
                     const SizedBox(height: AppSpacing.md),
+                    const QuickActionsWidget(),
+                    const SizedBox(height: AppSpacing.md),
+                    const AIBriefingCard(),
+                    const SizedBox(height: AppSpacing.md),
                     OccasionCard(userId: userId),
                     const SizedBox(height: AppSpacing.md),
                     const FamilyCirclesSection(),
+                    if (groupId != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      FamilyActivityFeed(groupId: groupId),
+                      const SizedBox(height: AppSpacing.md),
+                      FamilyCelebrationCard(groupId: groupId),
+                    ],
                     const SizedBox(height: AppSpacing.md),
                     const DueRemindersSection(),
                     const SizedBox(height: AppSpacing.lg),

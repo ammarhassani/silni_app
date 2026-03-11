@@ -100,26 +100,20 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
               bottom: false,
               child: Column(
                   children: [
-                    // Header
+                    // Header + Search (compact)
                     _buildHeader(context, themeColors),
-
-                    // In-App Messages
-                    const Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                        vertical: AppSpacing.sm,
-                      ),
-                      child: MessageWidget(screenPath: '/relatives'),
-                    ),
 
                     // Search bar
                     _buildSearchBar(themeColors),
 
-                    // Filter chips
-                    _buildFilterChips(themeColors),
+                    // Combined filter chips (single scrollable row)
+                    _buildCombinedFilters(themeColors),
 
-                    // Category filter chips
-                    _buildCategoryFilterChips(themeColors),
+                    // In-App Messages (minimal padding)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      child: MessageWidget(screenPath: '/relatives'),
+                    ),
 
                     // Relatives list
                     Expanded(
@@ -164,10 +158,10 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
   Widget _buildHeader(BuildContext context, dynamic themeColors) {
     return Padding(
           padding: const EdgeInsets.only(
-            top: AppSpacing.sm,
+            top: AppSpacing.xs,
             left: AppSpacing.md,
             right: AppSpacing.md,
-            bottom: AppSpacing.sm,
+            bottom: AppSpacing.xs,
           ),
           child: Row(
             children: [
@@ -236,117 +230,79 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
         .slideX(begin: 0.2, end: 0);
   }
 
-  Widget _buildFilterChips(dynamic themeColors) {
+  Widget _buildCombinedFilters(dynamic themeColors) {
     return Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+          child: SizedBox(
+          height: 40,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             children: [
-              _buildFilterChip('الكل', 'all', themeColors),
-              _buildFilterChip('يحتاجون تواصل', 'needs_contact', themeColors),
-              _buildFilterChip('المفضلة', 'favorites', themeColors),
+              // Type filters
+              _buildChip('الكل', isSelected: _filterType == 'all' && _categoryFilter == null, onTap: () {
+                setState(() { _filterType = 'all'; _categoryFilter = null; });
+              }, themeColors: themeColors),
+              const SizedBox(width: 8),
+              _buildChip('يحتاجون تواصل', isSelected: _filterType == 'needs_contact', onTap: () {
+                setState(() { _filterType = _filterType == 'needs_contact' ? 'all' : 'needs_contact'; });
+              }, themeColors: themeColors),
+              const SizedBox(width: 8),
+              _buildChip('المفضلة', isSelected: _filterType == 'favorites', onTap: () {
+                setState(() { _filterType = _filterType == 'favorites' ? 'all' : 'favorites'; });
+              }, themeColors: themeColors),
+              const SizedBox(width: 12),
+              // Divider
+              Center(
+                child: Container(
+                  width: 1,
+                  height: 20,
+                  color: themeColors.textOnGradient.withValues(alpha: 0.2),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Category filters
+              _buildChip('🏠 أهل البيت', isSelected: _categoryFilter == RelativeCategory.household, onTap: () {
+                setState(() { _categoryFilter = _categoryFilter == RelativeCategory.household ? null : RelativeCategory.household; });
+              }, themeColors: themeColors),
+              const SizedBox(width: 8),
+              _buildChip('📞 ممتدة', isSelected: _categoryFilter == RelativeCategory.extended, onTap: () {
+                setState(() { _categoryFilter = _categoryFilter == RelativeCategory.extended ? null : RelativeCategory.extended; });
+              }, themeColors: themeColors),
+              const SizedBox(width: 8),
+              _buildChip('🌙 مناسبات', isSelected: _categoryFilter == RelativeCategory.distant, onTap: () {
+                setState(() { _categoryFilter = _categoryFilter == RelativeCategory.distant ? null : RelativeCategory.distant; });
+              }, themeColors: themeColors),
+              const SizedBox(width: AppSpacing.md),
             ],
-          ),
-        )
-        .animate(delay: AppAnimations.modal)
-        .fadeIn(duration: AppAnimations.normal)
-        .slideY(begin: 0.2, end: 0);
-  }
-
-  Widget _buildFilterChip(String label, String value, dynamic themeColors) {
-    final isSelected = _filterType == value;
-
-    return Semantics(
-      label: label,
-      button: true,
-      selected: isSelected,
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          setState(() {
-            _filterType = value;
-          });
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            gradient: isSelected ? LinearGradient(colors: [themeColors.primary, themeColors.primaryLight]) : null,
-            color: isSelected ? null : themeColors.textOnGradient.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            border: Border.all(
-              color: themeColors.textOnGradient.withValues(alpha: isSelected ? 0.5 : 0.3),
-              width: 1.5,
-            ),
-          ),
-          child: Text(
-            label,
-            style: AppTypography.labelMedium.copyWith(
-              color: themeColors.textOnGradient,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryFilterChips(dynamic themeColors) {
-    return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          child: Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              _buildCategoryChip('الكل', null, themeColors),
-              _buildCategoryChip('🏠 أهل البيت', RelativeCategory.household, themeColors),
-              _buildCategoryChip('📞 تواصل دائم', RelativeCategory.extended, themeColors),
-              _buildCategoryChip('🌙 مناسبات', RelativeCategory.distant, themeColors),
-            ],
-          ),
         )
         .animate(delay: AppAnimations.modal)
-        .fadeIn(duration: AppAnimations.normal)
-        .slideY(begin: 0.2, end: 0);
+        .fadeIn(duration: AppAnimations.normal);
   }
 
-  Widget _buildCategoryChip(String label, RelativeCategory? value, dynamic themeColors) {
-    final isSelected = _categoryFilter == value;
-
-    return Semantics(
-      label: label,
-      button: true,
-      selected: isSelected,
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          setState(() {
-            _categoryFilter = value;
-          });
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
+  Widget _buildChip(String label, {required bool isSelected, required VoidCallback onTap, required dynamic themeColors}) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: isSelected ? LinearGradient(colors: [themeColors.primary, themeColors.primaryLight]) : null,
+          color: isSelected ? null : themeColors.textOnGradient.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          border: Border.all(
+            color: themeColors.textOnGradient.withValues(alpha: isSelected ? 0.5 : 0.15),
           ),
-          decoration: BoxDecoration(
-            gradient: isSelected ? LinearGradient(colors: [themeColors.primary, themeColors.primaryLight]) : null,
-            color: isSelected ? null : themeColors.textOnGradient.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            border: Border.all(
-              color: themeColors.textOnGradient.withValues(alpha: isSelected ? 0.5 : 0.3),
-              width: 1.5,
-            ),
-          ),
-          child: Text(
-            label,
-            style: AppTypography.labelMedium.copyWith(
-              color: themeColors.textOnGradient,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
+        ),
+        child: Text(
+          label,
+          style: AppTypography.labelSmall.copyWith(
+            color: themeColors.textOnGradient,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),
       ),
