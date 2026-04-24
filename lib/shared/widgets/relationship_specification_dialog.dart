@@ -11,6 +11,7 @@ import '../../core/theme/app_themes.dart';
 import '../../features/family_tree/models/family_graph.dart';
 import 'glass_card.dart';
 import 'flat_relationship_picker.dart';
+import 'relative_category_picker.dart';
 import '../../features/relatives/services/relationship_inference_service.dart';
 
 /// Data class for contact with relationship specification
@@ -20,6 +21,7 @@ class ContactWithRelationship {
   Gender? gender;
   String? customRelationship;
   FamilySide? familySide;
+  RelativeCategory relativeCategory;
 
   ContactWithRelationship({
     required this.contact,
@@ -27,6 +29,7 @@ class ContactWithRelationship {
     this.gender,
     this.customRelationship,
     this.familySide,
+    this.relativeCategory = RelativeCategory.extended,
   });
 }
 
@@ -252,6 +255,15 @@ class _RelationshipSpecificationDialogState
                 _contactsWithRelationship[index].familySide = side;
                 _contactsWithRelationship[index].gender = pickerGender;
               });
+            },
+          ),
+
+          // Category picker
+          const SizedBox(height: AppSpacing.md),
+          RelativeCategoryPicker(
+            selected: contactWithRel.relativeCategory,
+            onChanged: (category) {
+              setState(() => _contactsWithRelationship[index].relativeCategory = category);
             },
           ),
 

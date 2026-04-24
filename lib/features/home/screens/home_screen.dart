@@ -72,9 +72,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     });
   }
 
-  /// Show native rate dialog at specific app open milestones
+  /// Show native rate dialog at specific app open milestones.
+  /// Delayed 3s so the home screen finishes all animations before the
+  /// native iOS dialog appears — prevents Flutter gesture arena from
+  /// blocking taps on the dialog buttons.
   void _checkRatePrompt() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.delayed(const Duration(seconds: 3), () {
       if (!mounted) return;
       InAppRatePrompt.maybeShow(context, userId: SupabaseConfig.currentUserId);
     });
@@ -361,9 +364,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       isLoading: _isLoadingHadith,
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    const QuickActionsWidget(),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            height: 1,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.transparent,
+                                  AppColors.premiumGold.withValues(alpha: 0.35),
+                                  AppColors.premiumGold.withValues(alpha: 0.6),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Container(
+                            height: 1,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppColors.premiumGold.withValues(alpha: 0.6),
+                                  AppColors.premiumGold.withValues(alpha: 0.35),
+                                  Colors.transparent,
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: AppSpacing.md),
-                    const AIBriefingCard(),
+                    const QuickActionsWidget(),
                     const SizedBox(height: AppSpacing.md),
                     OccasionCard(userId: userId),
                     const SizedBox(height: AppSpacing.md),

@@ -486,6 +486,44 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
         ) ??
         false;
 
+    if (isAdmin) {
+      return DefaultTabController(
+        length: 2,
+        child: Column(
+          children: [
+            TabBar(
+              tabs: const [
+                Tab(text: 'المجموعة'),
+                Tab(text: 'الدعوات'),
+              ],
+              labelColor: themeColors.onSurface,
+              unselectedLabelColor: themeColors.onSurface.withValues(alpha: 0.5),
+              indicatorColor: themeColors.onSurface,
+              dividerColor: Colors.transparent,
+              labelStyle: AppTypography.labelLarge,
+            ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _buildMainTab(themeColors, membersAsync, group, isAdmin),
+                  _buildInvitationsTab(themeColors, group),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return _buildMainTab(themeColors, membersAsync, group, isAdmin);
+  }
+
+  Widget _buildMainTab(
+    ThemeColors themeColors,
+    AsyncValue<List<FamilyGroupMember>> membersAsync,
+    FamilyGroup group,
+    bool isAdmin,
+  ) {
     return RefreshIndicator(
       onRefresh: () async {
         _invalidateAllProviders();
@@ -499,163 +537,116 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
           children: [
             // Group info card
             GlassCard(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.family_restroom_rounded,
-                  size: AppSpacing.iconXl,
-                  color: themeColors.onSurface,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  group.name,
-                  style: AppTypography.titleLarge.copyWith(
-                    color: themeColors.onSurface,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-
-          // Family activity stats
-          FamilyActivityCard(
-            groupId: widget.groupId,
-            familyName: group.name,
-          ),
-          const SizedBox(height: AppSpacing.md),
-
-          // Family activity feed
-          FamilyActivityFeed(groupId: widget.groupId),
-          const SizedBox(height: AppSpacing.md),
-
-          // Invite link card (admins only)
-          if (isAdmin) ...[
-            InviteLinkCard(
-              inviteCode: group.inviteCode,
-              isAdmin: true,
-              onRotate: () async {
-                try {
-                  final newCode = await FamilyGroupService.rotateInviteCode(group.id);
-                  if (mounted) {
-                    setState(() {
-                      _group = group.copyWith(inviteCode: newCode);
-                    });
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('حدث خطأ أثناء تجديد الرابط: $e')),
-                    );
-                  }
-                }
-              },
-            ),
-            const SizedBox(height: AppSpacing.md),
-          ],
-
-          // Weekly leaderboard (hide when only 1 member)
-          if (membersAsync.valueOrNull != null && membersAsync.valueOrNull!.length > 1) ...[
-            FamilyLeaderboard(groupId: widget.groupId),
-            const SizedBox(height: AppSpacing.md),
-          ],
-
-          // Members section
-          Text(
-            'الأعضاء',
-            style: AppTypography.titleMedium.copyWith(
-              color: themeColors.onSurface,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-
-          membersAsync.when(
-            data: (members) =>
-                _buildMembersList(themeColors, members, isAdmin),
-            loading: () => const Center(
-              child: Padding(
-                padding: EdgeInsets.all(AppSpacing.lg),
-                child: PremiumLoadingIndicator(),
-              ),
-            ),
-            error: (error, _) => GlassCard(
               padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(
                 children: [
-                  Text(
-                    'حدث خطأ في تحميل الأعضاء',
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: themeColors.onSurface,
-                    ),
-                    textAlign: TextAlign.center,
+                  Icon(
+                    Icons.family_restroom_rounded,
+                    size: AppSpacing.iconXl,
+                    color: themeColors.onSurface,
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  TextButton.icon(
-                    onPressed: () => ref.invalidate(groupMembersProvider(widget.groupId)),
-                    icon: Icon(Icons.refresh_rounded, color: themeColors.onSurface),
-                    label: Text(
-                      'إعادة المحاولة',
-                      style: TextStyle(color: themeColors.onSurface),
+                  Text(
+                    group.name,
+                    style: AppTypography.titleLarge.copyWith(
+                      color: themeColors.onSurface,
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-          // Invitations section (admins only)
-          if (isAdmin) ...[
-            const SizedBox(height: AppSpacing.xl),
-            _buildInvitationsSection(themeColors, group),
-          ],
+            const SizedBox(height: AppSpacing.md),
 
-          const SizedBox(height: AppSpacing.xl),
-
-          // Leave group button
-          GlassCard(
-            onTap: _isLeaving ? null : _leaveGroup,
-            semanticsLabel: 'غادر المجموعة',
-            padding: const EdgeInsets.symmetric(
-              vertical: AppSpacing.md,
-              horizontal: AppSpacing.md,
+            // Family activity stats
+            FamilyActivityCard(
+              groupId: widget.groupId,
+              familyName: group.name,
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (_isLeaving)
-                  SizedBox(
-                    width: AppSpacing.iconSm,
-                    height: AppSpacing.iconSm,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        themeColors.statusError,
+            const SizedBox(height: AppSpacing.md),
+
+            // Family activity feed
+            FamilyActivityFeed(groupId: widget.groupId),
+            const SizedBox(height: AppSpacing.md),
+
+            // Invite link card (admins only)
+            if (isAdmin) ...[
+              InviteLinkCard(
+                inviteCode: group.inviteCode,
+                isAdmin: true,
+                onRotate: () async {
+                  try {
+                    final newCode = await FamilyGroupService.rotateInviteCode(group.id);
+                    if (mounted) {
+                      setState(() {
+                        _group = group.copyWith(inviteCode: newCode);
+                      });
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('حدث خطأ أثناء تجديد الرابط: $e')),
+                      );
+                    }
+                  }
+                },
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+
+            // Weekly leaderboard (hide when only 1 member)
+            if (membersAsync.valueOrNull != null && membersAsync.valueOrNull!.length > 1) ...[
+              FamilyLeaderboard(groupId: widget.groupId),
+              const SizedBox(height: AppSpacing.md),
+            ],
+
+            // Members section
+            Text(
+              'الأعضاء',
+              style: AppTypography.titleMedium.copyWith(
+                color: themeColors.onSurface,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+
+            membersAsync.when(
+              data: (members) => _buildMembersList(themeColors, members, isAdmin),
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(AppSpacing.lg),
+                  child: PremiumLoadingIndicator(),
+                ),
+              ),
+              error: (error, _) => GlassCard(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  children: [
+                    Text(
+                      'حدث خطأ في تحميل الأعضاء',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: themeColors.onSurface,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    TextButton.icon(
+                      onPressed: () => ref.invalidate(groupMembersProvider(widget.groupId)),
+                      icon: Icon(Icons.refresh_rounded, color: themeColors.onSurface),
+                      label: Text(
+                        'إعادة المحاولة',
+                        style: TextStyle(color: themeColors.onSurface),
                       ),
                     ),
-                  )
-                else
-                  Icon(
-                    Icons.exit_to_app_rounded,
-                    size: AppSpacing.iconMd,
-                    color: themeColors.statusError,
-                  ),
-                const SizedBox(width: AppSpacing.sm),
-                Text(
-                  'غادر المجموعة',
-                  style: AppTypography.labelLarge.copyWith(
-                    color: themeColors.statusError,
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
 
-          // Delete group button (admin only)
-          if (isAdmin) ...[
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.xl),
+
+            // Leave group button
             GlassCard(
-              onTap: _isDeleting ? null : _deleteGroup,
-              semanticsLabel: 'حذف المجموعة',
+              onTap: _isLeaving ? null : _leaveGroup,
+              semanticsLabel: 'غادر المجموعة',
               padding: const EdgeInsets.symmetric(
                 vertical: AppSpacing.md,
                 horizontal: AppSpacing.md,
@@ -663,7 +654,7 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  if (_isDeleting)
+                  if (_isLeaving)
                     SizedBox(
                       width: AppSpacing.iconSm,
                       height: AppSpacing.iconSm,
@@ -676,13 +667,13 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
                     )
                   else
                     Icon(
-                      Icons.delete_forever_rounded,
+                      Icons.exit_to_app_rounded,
                       size: AppSpacing.iconMd,
                       color: themeColors.statusError,
                     ),
                   const SizedBox(width: AppSpacing.sm),
                   Text(
-                    'حذف المجموعة',
+                    'غادر المجموعة',
                     style: AppTypography.labelLarge.copyWith(
                       color: themeColors.statusError,
                     ),
@@ -690,69 +681,102 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
                 ],
               ),
             ),
+
+            // Delete group button (admin only)
+            if (isAdmin) ...[
+              const SizedBox(height: AppSpacing.sm),
+              GlassCard(
+                onTap: _isDeleting ? null : _deleteGroup,
+                semanticsLabel: 'حذف المجموعة',
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacing.md,
+                  horizontal: AppSpacing.md,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_isDeleting)
+                      SizedBox(
+                        width: AppSpacing.iconSm,
+                        height: AppSpacing.iconSm,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            themeColors.statusError,
+                          ),
+                        ),
+                      )
+                    else
+                      Icon(
+                        Icons.delete_forever_rounded,
+                        size: AppSpacing.iconMd,
+                        color: themeColors.statusError,
+                      ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      'حذف المجموعة',
+                      style: AppTypography.labelLarge.copyWith(
+                        color: themeColors.statusError,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
-        ],
         ),
       ),
     );
   }
 
-  Widget _buildInvitationsSection(
-    ThemeColors themeColors,
-    FamilyGroup group,
-  ) {
+  Widget _buildInvitationsTab(ThemeColors themeColors, FamilyGroup group) {
     final invitationsAsync = ref.watch(groupInvitationsProvider(group.id));
 
     return invitationsAsync.when(
-      loading: () => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
-          child: PremiumLoadingIndicator(),
+      loading: () => const Center(child: PremiumLoadingIndicator()),
+      error: (e, _) => Center(
+        child: Text(
+          'حدث خطأ في تحميل الدعوات',
+          style: AppTypography.bodyMedium.copyWith(color: themeColors.onSurface),
         ),
       ),
-      error: (error, _) => const SizedBox.shrink(),
       data: (invitations) {
-        if (invitations.isEmpty) return const SizedBox.shrink();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Section header with count badge
-            Row(
+        if (invitations.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                Icon(
+                  Icons.mail_outline_rounded,
+                  size: 64,
+                  color: themeColors.onSurface.withValues(alpha: 0.3),
+                ),
+                const SizedBox(height: AppSpacing.md),
                 Text(
-                  'الدعوات',
-                  style: AppTypography.titleMedium.copyWith(
-                    color: themeColors.onSurface,
+                  'لا توجد دعوات',
+                  style: AppTypography.bodyLarge.copyWith(
+                    color: themeColors.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.xs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: themeColors.onSurface.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                  ),
-                  child: Text(
-                    '${invitations.length}',
-                    style: AppTypography.labelSmall.copyWith(
-                      color: themeColors.onSurface,
-                    ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'ادعُ أفراد عائلتك من شجرة العائلة',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: themeColors.onSurface.withValues(alpha: 0.4),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.sm),
+          );
+        }
 
-            // Invitation cards
-            ...invitations.map((invitation) => Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: _buildInvitationCard(themeColors, group, invitation),
-            )),
-          ],
+        return ListView.builder(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          itemCount: invitations.length,
+          itemBuilder: (_, i) => Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: _buildInvitationCard(themeColors, group, invitations[i]),
+          ),
         );
       },
     );

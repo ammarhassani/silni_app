@@ -43,6 +43,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       description: 'كسب النقاط والشارات والإنجازات\nمع كل تواصل مع عائلتك',
       gradient: AppColors.streakFire,
     ),
+    OnboardingPage(
+      icon: Icons.hub_rounded,
+      title: 'ثلاث دوائر للتواصل',
+      description: '🏠 أهل البيت — تواصل يومي\n📞 تواصل دائم — متابعة أسبوعية\n🌙 مناسبات — أعياد وأفراح',
+      gradient: AppColors.primaryGradient,
+    ),
   ];
 
   @override

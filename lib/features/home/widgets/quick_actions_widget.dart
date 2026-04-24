@@ -23,14 +23,6 @@ class QuickActionsWidget extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'إجراءات سريعة',
-            style: AppTypography.headlineSmall.copyWith(
-              color: themeColors.textPrimary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
           Row(
             children: [
               Expanded(
@@ -102,7 +94,10 @@ class _QuickActionCard extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: GlassCard(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -112,54 +107,51 @@ class _QuickActionCard extends StatelessWidget {
             ],
           ),
           semanticsLabel: title,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              // Hero icon container with full gradient + glow
               Container(
-                width: 72,
-                height: 72,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: gradient,
                   boxShadow: [
-                    // Primary shadow
                     BoxShadow(
-                      color: gradientColors.first.withValues(alpha: 0.5),
-                      blurRadius: 20,
-                      spreadRadius: 2,
-                      offset: const Offset(0, 4),
-                    ),
-                    // Outer glow
-                    BoxShadow(
-                      color: gradientColors.first.withValues(alpha: 0.3),
-                      blurRadius: 30,
-                      spreadRadius: 0,
+                      color: gradientColors.first.withValues(alpha: 0.45),
+                      blurRadius: 12,
+                      offset: const Offset(0, 3),
                     ),
                   ],
                 ),
                 child: Center(
-                  child: Icon(icon, color: Colors.white, size: 40),
+                  child: Icon(icon, color: Colors.white, size: 22),
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                title,
-                style: AppTypography.titleLarge.copyWith(
-                  color: themeColors.textOnGradient,
-                  fontWeight: FontWeight.bold,
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTypography.titleSmall.copyWith(
+                        color: themeColors.textOnGradient,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      subtitle,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: themeColors.textOnGradient.withValues(alpha: 0.7),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                subtitle,
-                style: AppTypography.bodyMedium.copyWith(
-                  color: themeColors.textOnGradient.withValues(alpha: 0.85),
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -234,13 +226,16 @@ class _FamilyTreeHeroCard extends StatelessWidget {
 
               // Main content
               Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
                 child: Row(
                   children: [
                     // Tree icon with golden ring
                     Container(
-                      width: 64,
-                      height: 64,
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: const LinearGradient(
@@ -254,8 +249,7 @@ class _FamilyTreeHeroCard extends StatelessWidget {
                         boxShadow: [
                           BoxShadow(
                             color: AppColors.premiumGold.withValues(alpha: 0.4),
-                            blurRadius: 16,
-                            spreadRadius: 1,
+                            blurRadius: 10,
                           ),
                         ],
                       ),
@@ -263,31 +257,31 @@ class _FamilyTreeHeroCard extends StatelessWidget {
                         child: Icon(
                           Icons.account_tree_rounded,
                           color: Colors.white,
-                          size: 32,
+                          size: 22,
                         ),
                       ),
                     ),
 
-                    const SizedBox(width: AppSpacing.md),
+                    const SizedBox(width: AppSpacing.sm),
 
                     // Text
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             'شجرة العائلة',
-                            style: AppTypography.titleLarge.copyWith(
+                            style: AppTypography.titleSmall.copyWith(
                               color: themeColors.textOnGradient,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 4),
                           Text(
                             'اكتشف روابط عائلتك',
-                            style: AppTypography.bodyMedium.copyWith(
+                            style: AppTypography.labelSmall.copyWith(
                               color: themeColors.textOnGradient
-                                  .withValues(alpha: 0.8),
+                                  .withValues(alpha: 0.7),
                             ),
                           ),
                         ],
@@ -295,18 +289,10 @@ class _FamilyTreeHeroCard extends StatelessWidget {
                     ),
 
                     // Arrow
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white.withValues(alpha: 0.12),
-                      ),
-                      child: Icon(
-                        Icons.arrow_back_ios_rounded,
-                        color: themeColors.textOnGradient.withValues(alpha: 0.9),
-                        size: 18,
-                      ),
+                    Icon(
+                      Icons.arrow_back_ios_rounded,
+                      color: themeColors.textOnGradient.withValues(alpha: 0.5),
+                      size: 16,
                     ),
                   ],
                 ),

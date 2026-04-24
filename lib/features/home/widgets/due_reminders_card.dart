@@ -95,6 +95,7 @@ class DueRemindersCard extends ConsumerWidget {
           ],
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Icon(
               Icons.notifications_none,
@@ -107,6 +108,7 @@ class DueRemindersCard extends ConsumerWidget {
               style: AppTypography.titleMedium.copyWith(
                 color: themeColors.textPrimary,
               ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
@@ -117,25 +119,27 @@ class DueRemindersCard extends ConsumerWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.md),
-            Semantics(
-              label: 'إضافة تذكير',
-              button: true,
-              child: GestureDetector(
-                onTap: () => context.push(AppRoutes.reminders),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    color: themeColors.primary.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  ),
-                  child: Text(
-                    'إضافة تذكير',
-                    style: AppTypography.labelMedium.copyWith(
-                      color: themeColors.textPrimary,
-                      fontWeight: FontWeight.w600,
+            Center(
+              child: Semantics(
+                label: 'إضافة تذكير',
+                button: true,
+                child: GestureDetector(
+                  onTap: () => context.push(AppRoutes.reminders),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
+                    decoration: BoxDecoration(
+                      color: themeColors.primary.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    ),
+                    child: Text(
+                      'إضافة تذكير',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: themeColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),

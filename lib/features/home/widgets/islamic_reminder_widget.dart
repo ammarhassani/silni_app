@@ -50,101 +50,84 @@ class IslamicReminderWidget extends ConsumerWidget {
             AppColors.premiumGold.withValues(alpha: 0.2),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: themeColors.goldenGradient,
-                  ),
-                  child: const Center(
-                    child: Text('📿', style: TextStyle(fontSize: 24)),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        hadith!.type == HadithType.hadith
-                            ? 'حديث اليوم'
-                            : 'قول العلماء',
-                        style: AppTypography.labelMedium.copyWith(
-                          color: AppColors.premiumGold,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      if (hadith!.formattedSource.isNotEmpty)
-                        Text(
-                          hadith!.formattedSource,
-                          style: AppTypography.labelSmall.copyWith(
-                            color: themeColors.textSecondary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Gold accent bar
+              Container(
+                width: 3,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppColors.premiumGold,
+                      AppColors.premiumGoldDark,
                     ],
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-
-            // Hadith text
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: themeColors.glassBackground,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                border: Border.all(
-                  color: AppColors.premiumGold.withValues(alpha: 0.3),
-                  width: 1,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              child: Text(
-                hadith!.arabicText,
-                style: AppTypography.titleMedium.copyWith(
-                  color: themeColors.textPrimary,
-                  height: 1.8,
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.justify,
-              ),
-            ),
-
-            // Reference
-            if (hadith!.reference.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Row(
-                children: [
-                  Icon(
-                    Icons.book,
-                    size: 14,
-                    color: themeColors.textHint,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Flexible(
-                    child: Text(
-                      hadith!.reference,
-                      style: AppTypography.labelSmall.copyWith(
-                        color: themeColors.textHint,
-                        fontStyle: FontStyle.italic,
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.premiumGold.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            hadith!.type == HadithType.hadith
+                                ? 'حديث اليوم'
+                                : 'قول العلماء',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: AppColors.premiumGold,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ),
+                        if (hadith!.formattedSource.isNotEmpty) ...[
+                          const SizedBox(width: AppSpacing.xs),
+                          Flexible(
+                            child: Text(
+                              hadith!.formattedSource,
+                              style: AppTypography.labelSmall.copyWith(
+                                color: themeColors.textSecondary,
+                                fontSize: 10,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      hadith!.arabicText,
+                      style: AppTypography.bodySmall.copyWith(
+                        color: themeColors.textPrimary,
+                        height: 1.6,
                       ),
-                      maxLines: 1,
+                      textAlign: TextAlign.justify,
+                      maxLines: 4,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
-          ],
+          ),
         ),
       ),
     )

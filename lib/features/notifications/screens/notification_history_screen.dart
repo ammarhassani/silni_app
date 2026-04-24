@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
@@ -159,6 +160,10 @@ class _NotificationHistoryScreenState
     final service = ref.read(notificationHistoryServiceProvider);
     final isUnread = !notification.isRead;
 
+    if (notification.notificationType == 'invitation') {
+      return _buildInvitationNotificationCard(context, notification, themeColors, service);
+    }
+
     return Dismissible(
       key: Key(notification.id),
       direction: DismissDirection.endToStart,
@@ -286,6 +291,148 @@ class _NotificationHistoryScreenState
                   ),
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInvitationNotificationCard(
+    BuildContext context,
+    NotificationHistoryItem notification,
+    ThemeColors themeColors,
+    NotificationHistoryService service,
+  ) {
+    final isUnread = !notification.isRead;
+
+    return Dismissible(
+      key: Key(notification.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: themeColors.statusError.withValues(alpha: 0.8),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Icon(Icons.delete_outline, color: themeColors.onPrimary),
+      ),
+      onDismissed: (_) async {
+        await service.deleteNotification(notification.id);
+        final userId = ref.read(currentUserProvider)?.id ?? '';
+        ref.invalidate(notificationHistoryStreamProvider(userId));
+        ref.invalidate(unreadNotificationCountProvider(userId));
+      },
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+        child: GestureDetector(
+          onTap: () => _handleNotificationTap(notification, service),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: AppColors.primaryGradient,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            ),
+            padding: const EdgeInsets.all(1.5),
+            child: Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd - 1.5),
+              ),
+              child: Row(
+                children: [
+                  // Gradient icon container
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.family_restroom_rounded,
+                        size: 26,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                notification.title,
+                                style: AppTypography.titleMedium.copyWith(
+                                  fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
+                                  color: Colors.white,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (isUnread)
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          notification.body,
+                          style: AppTypography.bodySmall.copyWith(
+                            color: Colors.white.withValues(alpha: isUnread ? 0.9 : 0.7),
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '🌳 دعوة عائلية',
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              _formatTime(notification.sentAt),
+                              style: AppTypography.labelSmall.copyWith(
+                                color: Colors.white.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 14,
+                    color: Colors.white.withValues(alpha: 0.5),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

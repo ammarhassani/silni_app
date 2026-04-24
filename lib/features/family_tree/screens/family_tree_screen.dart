@@ -70,7 +70,6 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   bool _hasMigratedRelatives = false;
 
   String _familyName = 'شجرة العائلة';
-  bool _isEditingName = false;
   final _nameController = TextEditingController();
 
   OverlayEntry? _nodeOverlay;
@@ -185,13 +184,9 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
 
   Future<void> _saveFamilyName(String name) async {
     final trimmed = name.trim();
-    if (trimmed.isEmpty) {
-      setState(() => _isEditingName = false);
-      return;
-    }
+    if (trimmed.isEmpty) return;
     setState(() {
       _familyName = trimmed;
-      _isEditingName = false;
     });
     await SupabaseConfig.client.auth.updateUser(
       UserAttributes(data: {'family_name': trimmed}),
@@ -492,17 +487,6 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
       ),
-      decoration: BoxDecoration(
-        // Semi-transparent dark scrim for WCAG2 contrast on all themes
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.black.withValues(alpha: 0.3),
-            Colors.black.withValues(alpha: 0.0),
-          ],
-        ),
-      ),
       child: Row(
         children: [
           Semantics(
@@ -521,43 +505,10 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: _isEditingName
-                ? TextField(
-                    controller: _nameController,
-                    autofocus: true,
-                    cursorColor: themeColors.textOnGradient,
-                    style: AppTypography.headlineMedium.copyWith(
-                      color: themeColors.textOnGradient,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    decoration: InputDecoration(
-                      filled: false,
-                      border: InputBorder.none,
-                      hintText: 'شجرة العائلة',
-                      hintStyle: AppTypography.headlineMedium.copyWith(
-                        color: (themeColors.textOnGradient as Color)
-                            .withValues(alpha: 0.6),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: _saveFamilyName,
-                    onTapOutside: (_) =>
-                        _saveFamilyName(_nameController.text),
-                  )
-                : GestureDetector(
-                    onTap: () {
-                      if (groupInfo != null) {
-                        // Navigate to group details (like WhatsApp)
-                        context.push('${AppRoutes.familyGroupDetail}/${groupInfo.groupId}');
-                      } else {
-                        // Enable editing for personal tree
-                        setState(() {
-                          _nameController.text = _familyName;
-                          _isEditingName = true;
-                        });
-                      }
-                    },
+            child: groupInfo != null
+                ? GestureDetector(
+                    onTap: () => context.push(
+                        '${AppRoutes.familyGroupDetail}/${groupInfo.groupId}'),
                     child: Row(
                       children: [
                         Flexible(
@@ -573,14 +524,22 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                         ),
                         const SizedBox(width: AppSpacing.xs),
                         Icon(
-                          groupInfo != null
-                              ? Icons.chevron_right_rounded
-                              : Icons.edit_rounded,
-                          size: groupInfo != null ? 24 : 16,
+                          Icons.chevron_right_rounded,
+                          size: 24,
                           color: themeColors.textOnGradient,
                         ),
                       ],
                     ),
+                  )
+                : Text(
+                    _familyName,
+                    style: AppTypography.headlineMedium.copyWith(
+                      color: themeColors.textOnGradient,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
           ),
           Semantics(

@@ -44,15 +44,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
   }
 
   void _prefillGroupName() {
-    final user = ref.read(currentUserProvider);
-    if (user == null) return;
-    final familyName = user.userMetadata?['family_name'] as String?;
-    final fullName = user.userMetadata?['full_name'] as String?;
-    if (familyName != null && familyName.isNotEmpty) {
-      _nameController.text = familyName;
-    } else if (fullName != null && fullName.isNotEmpty) {
-      _nameController.text = 'عائلة $fullName';
-    }
+    // Intentionally left empty — user should type their own group name
   }
 
   @override
@@ -142,38 +134,41 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     left: AppSpacing.md,
                     right: AppSpacing.md,
                   ),
-                  child: Row(
-                    children: [
-                      if (_currentStep < 2)
-                        IconButton(
-                          onPressed: () {
-                            if (_currentStep > 0) {
-                              _previousStep();
-                            } else if (context.canPop()) {
-                              context.pop();
-                            } else {
-                              context.go(AppRoutes.home);
-                            }
-                          },
-                          tooltip: 'العودة',
-                          icon: Icon(
-                            Icons.arrow_back_ios_rounded,
-                            color: themeColors.onSurface,
+                  child: Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Row(
+                      children: [
+                        if (_currentStep < 2)
+                          IconButton(
+                            onPressed: () {
+                              if (_currentStep > 0) {
+                                _previousStep();
+                              } else if (context.canPop()) {
+                                context.pop();
+                              } else {
+                                context.go(AppRoutes.home);
+                              }
+                            },
+                            tooltip: 'العودة',
+                            icon: Icon(
+                              Icons.arrow_back_ios_rounded,
+                              color: themeColors.onSurface,
+                            ),
+                          )
+                        else
+                          const SizedBox(width: AppSpacing.iconXl),
+                        Expanded(
+                          child: Text(
+                            'إنشاء مجموعة عائلية',
+                            style: AppTypography.headlineSmall.copyWith(
+                              color: themeColors.onSurface,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                        )
-                      else
-                        const SizedBox(width: AppSpacing.iconXl),
-                      Expanded(
-                        child: Text(
-                          'إنشاء مجموعة عائلية',
-                          style: AppTypography.headlineSmall.copyWith(
-                            color: themeColors.onSurface,
-                          ),
-                          textAlign: TextAlign.center,
                         ),
-                      ),
-                      const SizedBox(width: AppSpacing.iconXl),
-                    ],
+                        const SizedBox(width: AppSpacing.iconXl),
+                      ],
+                    ),
                   ),
                 ),
 
@@ -284,9 +279,11 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                   hintStyle: AppTypography.bodyMedium.copyWith(
                     color: Colors.white.withValues(alpha: 0.5),
                   ),
-                  border: InputBorder.none,
                   filled: true,
                   fillColor: Colors.transparent,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
                   prefixIcon: Icon(
                     Icons.group_rounded,
                     color: Colors.white.withValues(alpha: 0.7),
@@ -315,7 +312,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
             GradientButton(
               text: 'التالي',
               onPressed: _nextStep,
-              icon: Icons.arrow_back_rounded,
+              icon: Icons.arrow_forward_rounded,
             ),
           ],
         ),

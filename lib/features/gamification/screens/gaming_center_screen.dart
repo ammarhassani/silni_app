@@ -245,17 +245,6 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen> {
                             ),
                           ),
 
-                        // Motivation card
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                              vertical: AppSpacing.sm,
-                            ),
-                            child: _buildMotivationCard(themeColors),
-                          ),
-                        ),
-
                         SliverToBoxAdapter(
                           child: SizedBox(
                               height: PersistentBottomNav.totalHeight),
@@ -953,94 +942,6 @@ class _GamingCenterScreenState extends ConsumerState<GamingCenterScreen> {
         ],
       ),
     );
-  }
-
-  // ─── Motivation Card ───────────────────────────────────────
-
-  Widget _buildMotivationCard(dynamic themeColors) {
-    final motivations = [
-      'صلة الرحم من أجمل العبادات 🤍',
-      'كل تواصل مع عائلتك يصنع فرق ❤️',
-      'عائلتك تقدّر اهتمامك 🌟',
-      'لحظة تواصل واحدة تكفي 💛',
-    ];
-
-    final randomMotivation =
-        motivations[DateTime.now().day % motivations.length];
-    final heartColor = themeColors.statusError as Color;
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            (themeColors.secondary as Color)
-                .withValues(alpha: 0.3),
-            Colors.black.withValues(alpha: 0.7),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(
-          color: heartColor.withValues(alpha: 0.25),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: heartColor.withValues(alpha: 0.15),
-            blurRadius: 12,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: heartColor.withValues(alpha: 0.2),
-              boxShadow: [
-                BoxShadow(
-                  color: heartColor.withValues(alpha: 0.4),
-                  blurRadius: 10,
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.favorite_rounded,
-              color: heartColor,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Text(
-              randomMotivation,
-              style: AppTypography.titleSmall.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                shadows: [
-                  Shadow(
-                    color: Colors.black.withValues(alpha: 0.6),
-                    blurRadius: 8,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    )
-        .animate(delay: AppAnimations.slow)
-        .fadeIn(duration: AppAnimations.dramatic)
-        .slideY(begin: 0.15, end: 0)
-        .then()
-        .shimmer(
-          duration: AppAnimations.loop,
-          delay: AppAnimations.loop,
-          color: heartColor.withValues(alpha: 0.08),
-        );
   }
 
 }

@@ -216,12 +216,12 @@ class _FlatRelationshipPickerState extends State<FlatRelationshipPicker> {
       children: [
         // Category tabs — horizontal scrollable
         SizedBox(
-          height: 40,
+          height: 34,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
             itemCount: visible.length,
-            separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.xs),
+            separatorBuilder: (context, index) => const SizedBox(width: AppSpacing.xs),
             itemBuilder: (context, index) {
               final (sectionIndex, section) = visible[index];
               final isActive = sectionIndex == _activeTabIndex;
@@ -237,7 +237,7 @@ class _FlatRelationshipPickerState extends State<FlatRelationshipPicker> {
                   duration: AppAnimations.fast,
                   curve: AppAnimations.toggleCurve,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
+                    horizontal: 10,
                     vertical: AppSpacing.xs,
                   ),
                   decoration: BoxDecoration(
@@ -251,8 +251,8 @@ class _FlatRelationshipPickerState extends State<FlatRelationshipPicker> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(section.icon, style: const TextStyle(fontSize: 16)),
-                      const SizedBox(width: 4),
+                      Text(section.icon, style: const TextStyle(fontSize: 13)),
+                      const SizedBox(width: 3),
                       Text(
                         section.header,
                         style: AppTypography.labelSmall.copyWith(
@@ -274,10 +274,10 @@ class _FlatRelationshipPickerState extends State<FlatRelationshipPicker> {
         GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 3,
-          crossAxisSpacing: AppSpacing.sm,
-          mainAxisSpacing: AppSpacing.sm,
-          childAspectRatio: 1.3,
+          crossAxisCount: 4,
+          crossAxisSpacing: AppSpacing.xs,
+          mainAxisSpacing: AppSpacing.xs,
+          childAspectRatio: 1.1,
           children: [
             for (final (i, entry) in activeEntries.indexed)
               _RelationshipCard(
@@ -320,7 +320,7 @@ class _RelationshipCard extends StatelessWidget {
         curve: AppAnimations.toggleCurve,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.xs,
-          vertical: AppSpacing.sm,
+          vertical: AppSpacing.xs,
         ),
         decoration: BoxDecoration(
           gradient: isSelected ? AppColors.primaryGradient : null,
@@ -347,7 +347,7 @@ class _RelationshipCard extends StatelessWidget {
           children: [
             Text(
               entry.emoji,
-              style: TextStyle(fontSize: isSelected ? 26 : 22),
+              style: TextStyle(fontSize: isSelected ? 22 : 20),
             ),
             const SizedBox(height: 4),
             Text(

@@ -222,9 +222,11 @@ class FamilyTreeLayoutService {
       _resolveOverlaps(group, positions, horizontalSpacing * 0.95);
     }
 
-    // ── 4b. Position user's siblings as compact cluster under parents ──
-    // Siblings (children of user's parents + explicit siblingOf) form a
-    // tight centered group WITH the user, not a wide spine row.
+    // ── 4b. Position user's siblings adjacent to user+spouse cluster ──
+    // User and spouse are already placed by the spine algorithm — do NOT
+    // move them. Place siblings to the right of the user+spouse cluster.
+    // This keeps the parent node directly above the user after step 8's
+    // centering shift instead of being pushed to one side.
     final userSiblingIds = <String>{};
     for (final parentId in effectiveGraph.getParents(userId)) {
       for (final child in effectiveGraph.getChildren(parentId)) {
@@ -239,54 +241,33 @@ class FamilyTreeLayoutService {
     userSiblingIds.removeWhere((id) => positions.containsKey(id));
 
     if (userSiblingIds.isNotEmpty) {
-      // Build group: couple (male LEFT, female RIGHT) then siblings.
-      // When no spouse exists, reserve a grid slot for the placeholder
-      // so siblings don't crowd the user's spouse position.
       final hasSpouseOnSpine =
           userSpouse != null && spine.contains(userSpouse);
-      const spouseSlot = '__spouse_slot__';
-      final allEntries = <String>[];
-      if (hasSpouseOnSpine) {
-        final isUserMale = userGender == Gender.male || userGender == null;
-        if (isUserMale) {
-          allEntries.addAll([userId, userSpouse]);
-        } else {
-          allEntries.addAll([userSpouse, userId]);
-        }
-      } else {
-        allEntries.add(userId);
-        allEntries.add(spouseSlot); // reserve grid slot for placeholder
-      }
-      allEntries.addAll(userSiblingIds);
+      final sibs = userSiblingIds.toList();
+      _orderSideBranchNodes(sibs, effectiveGraph, relativesMap, goRight: true);
 
-      // Center under parents.
-      double parentCenterX = positions[userId]!.dx;
-      final parentPositions = effectiveGraph
-          .getParents(userId)
-          .where((p) => positions.containsKey(p))
-          .map((p) => positions[p]!.dx)
-          .toList();
-      if (parentPositions.isNotEmpty) {
-        parentCenterX =
-            parentPositions.reduce((a, b) => a + b) / parentPositions.length;
-      }
-
-      // Grid: user + (spouse or gap) + siblings centered under parents.
-      final cols = min(allEntries.length, 3);
       final tightH = horizontalSpacing * 0.95;
       final tightV = verticalSpacing * 0.85;
-      final totalW = (cols - 1) * tightH;
-      final startX = parentCenterX - totalW / 2;
 
-      for (int i = 0; i < allEntries.length; i++) {
-        if (allEntries[i] == spouseSlot) continue; // skip dummy
-        final col = i % cols;
-        final row = i ~/ cols;
-        positions[allEntries[i]] = Offset(
-          startX + col * tightH,
-          userGenY + row * tightV,
-        );
+      // Find the rightmost edge of the user+spouse cluster.
+      // When no spouse is present yet, skip a slot for the spouse placeholder
+      // so siblings don't overlap with where the placeholder will appear.
+      double clusterRightX = positions[userId]!.dx;
+      if (hasSpouseOnSpine && positions.containsKey(userSpouse)) {
+        clusterRightX = max(clusterRightX, positions[userSpouse]!.dx);
+      } else {
+        clusterRightX += tightH; // leave gap for spouse placeholder
       }
+
+      _positionAsGrid(
+        nodeIds: sibs,
+        anchor: Offset(clusterRightX + tightH, userGenY),
+        goRight: true,
+        colSpacing: tightH,
+        rowSpacing: tightV,
+        maxCols: 3,
+        positions: positions,
+      );
     }
 
     // ── 5. Position side branches as 2D grids ──

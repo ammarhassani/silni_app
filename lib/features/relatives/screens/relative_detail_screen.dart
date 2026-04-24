@@ -19,14 +19,7 @@ import '../../home/providers/home_providers.dart';
 import '../widgets/detail/widgets.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/utils/relationship_label_helper.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../../family_groups/services/family_sharing_service.dart';
-import '../../family_groups/services/node_invitation_service.dart';
-import '../../family_groups/providers/node_invitation_providers.dart';
-import '../../family_groups/models/node_invitation_model.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
-import 'package:share_plus/share_plus.dart';
 
 /// Provider for watching a single relative (cache-first)
 final relativeDetailProvider =
@@ -49,7 +42,6 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
   final AuthService _authService = AuthService();
 
   bool _isLoggingInteraction = false;
-  bool _isInviting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -137,15 +129,6 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                     ),
                   ),
 
-                  // Invite to family tree or show invitation status badge
-                  if (!relative.isSelf)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                        child: _buildInviteOrBadge(relative, groupInfo),
-                      ),
-                    ),
-
                   // Stats card
                   SliverToBoxAdapter(
                     child: Padding(
@@ -226,174 +209,6 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
 
   void _scrollToDetails() {
     HapticFeedback.lightImpact();
-  }
-
-  Widget _buildInviteOrBadge(
-    Relative relative,
-    ({String groupId, String? nodeId})? groupInfo,
-  ) {
-    // If user is in a group, check for an existing invitation
-    if (groupInfo != null) {
-      final invitationAsync = ref.watch(relativeInvitationProvider((
-        groupId: groupInfo.groupId,
-        relativeId: relative.id,
-      )));
-
-      final invitation = invitationAsync.valueOrNull;
-      if (invitation != null &&
-          (invitation.status == 'pending' || invitation.status == 'accepted')) {
-        return Center(child: _buildInvitationBadge(invitation));
-      }
-    }
-
-    // No invitation exists — show the invite button
-    return _buildInviteButton(relative);
-  }
-
-  Widget _buildInviteButton(Relative relative) {
-    return GestureDetector(
-      onTap: _isInviting ? null : () => _inviteRelative(relative),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (_isInviting)
-              const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            else
-              const Icon(Icons.share_rounded, color: Colors.white, size: 20),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              relative.gender == Gender.female ? 'ادعيها لصِلني' : 'ادعيه لصِلني',
-              style: AppTypography.labelLarge.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInvitationBadge(NodeInvitation invitation) {
-    final Color badgeColor;
-    final String label;
-    final IconData icon;
-
-    switch (invitation.status) {
-      case 'pending':
-        badgeColor = AppColors.premiumGold;
-        label = 'دعوة معلقة';
-        icon = Icons.hourglass_top_rounded;
-      case 'accepted':
-        badgeColor = AppColors.calmBlue;
-        label = 'انضم للمجموعة';
-        icon = Icons.check_circle_rounded;
-      default:
-        return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: badgeColor.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: badgeColor),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              color: badgeColor,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _inviteRelative(Relative relative) async {
-    final user = ref.read(currentUserProvider);
-    if (user == null) return;
-
-    // Require a family group — no silent creation
-    final group = await FamilySharingService.getUserGroup(user.id);
-    if (group == null) {
-      if (mounted) {
-        UIHelpers.showSnackBar(
-          context,
-          'أنشئ مجموعة عائلية أولاً من شاشة شجرة العائلة',
-        );
-      }
-      return;
-    }
-
-    // Require phone number on the relative
-    if (relative.phoneNumber == null || relative.phoneNumber!.isEmpty) {
-      if (mounted) {
-        UIHelpers.showSnackBar(
-          context,
-          'أضف رقم جوال ${relative.fullName} أولاً لإرسال الدعوة',
-        );
-      }
-      return;
-    }
-
-    setState(() => _isInviting = true);
-
-    final box = context.findRenderObject() as RenderBox?;
-    final shareOrigin =
-        box != null ? box.localToGlobal(Offset.zero) & box.size : Rect.zero;
-
-    try {
-      // Create a node invitation via the invitation service
-      final invitationService = ref.read(nodeInvitationServiceProvider);
-      await invitationService.createInvitation(
-        groupId: group.id,
-        relativeId: relative.id,
-        phoneNumber: relative.phoneNumber!,
-      );
-
-      ref.invalidate(groupInvitationsProvider);
-
-      // Share via system sheet with download nudge
-      await Share.share(
-        'أضفتك في شجرة عائلتنا على صِلني 🌳\nحمّل التطبيق: https://silniapp.com/download',
-        sharePositionOrigin: shareOrigin,
-      );
-    } catch (e) {
-      if (mounted) {
-        UIHelpers.showSnackBar(
-          context,
-          'حدث خطأ أثناء إنشاء الدعوة',
-          isError: true,
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isInviting = false);
-    }
   }
 
   /// Show dialog to log a visit, gift, or event interaction

@@ -280,6 +280,7 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
             phoneNumber: phoneNumber,
             avatarType: avatarType,
             familySide: contactWithRel.familySide,
+            relativeCategory: contactWithRel.relativeCategory,
             notes: contactWithRel
                 .customRelationship, // Store custom relationship in notes
             createdAt: DateTime.now(),

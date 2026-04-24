@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -27,9 +28,11 @@ import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../core/providers/cache_provider.dart';
 import '../../../shared/services/supabase_storage_service.dart';
+import '../../../shared/services/contacts_import_service.dart';
 import '../../../shared/widgets/health_status_picker.dart';
 import '../../../shared/widgets/relative_category_picker.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../contacts/screens/contact_import_screen.dart';
 import '../../family_groups/models/family_group_model.dart';
 import '../../family_groups/providers/family_group_providers.dart';
 import '../../family_groups/services/shared_tree_service.dart';
@@ -51,14 +54,13 @@ class AddRelativeScreen extends ConsumerStatefulWidget {
 class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
   final _notesController = TextEditingController();
 
   RelationshipType _selectedRelationship = RelationshipType.brother;
   Gender? _selectedGender;
   XFile? _selectedImage;
   bool _isLoading = false;
-  bool _isFavorite = false;
+  final bool _isFavorite = false;
   int _priority = 2; // Auto-set based on relationship
   String _phoneNumber = ''; // Store phone number separately
   String? _healthStatus; // Health status of the relative
@@ -66,6 +68,12 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   FamilyGroup? _selectedGroup; // The selected family group (if shared)
   FamilySide? _selectedFamilySide; // Paternal or maternal side for extended family
   RelativeCategory _selectedCategory = RelativeCategory.extended;
+
+  // Contact import state
+  Contact? _selectedContact;
+  bool _manualExpanded = false;
+  Key _phoneFieldKey = UniqueKey();
+  String _phoneInitial = '';
 
   final SupabaseStorageService _storageService = SupabaseStorageService();
 
@@ -104,7 +112,6 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   void dispose() {
     _nameController.removeListener(_onNameChanged);
     _nameController.dispose();
-    _emailController.dispose();
     _notesController.dispose();
     _confettiController.dispose();
     super.dispose();
@@ -120,14 +127,46 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   }
 
   Future<void> _importFromContacts() async {
-    if (kIsWeb) {
-      _showMessage('Contact import is only available on mobile devices');
-      return;
-    }
+    if (kIsWeb) return;
+    final contact = await Navigator.of(context).push<Contact>(
+      MaterialPageRoute(
+        builder: (_) => const ContactImportScreen(singleSelect: true),
+      ),
+    );
+    if (contact == null || !mounted) return;
+    _onContactSelected(contact);
+  }
 
-    // Navigate to contact import screen
-    if (!mounted) return;
-    context.push(AppRoutes.importContacts);
+  void _onContactSelected(Contact contact) {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+
+    final suggested = ContactsImportService().createSuggestedRelative(
+      userId: user.id,
+      contact: contact,
+    );
+
+    final rawPhone = contact.phones.isNotEmpty
+        ? contact.phones.first.number
+        : '';
+
+    setState(() {
+      _selectedContact = contact;
+      _nameController.text = contact.displayName;
+      _phoneInitial = rawPhone;
+      _phoneNumber = rawPhone;
+      _phoneFieldKey = UniqueKey();
+      if (suggested['relationship_type'] != null) {
+        _selectedRelationship = suggested['relationship_type'] as RelationshipType;
+      }
+      if (suggested['gender'] != null) {
+        _selectedGender = suggested['gender'] as Gender?;
+      }
+      if (suggested['priority'] != null) {
+        _priority = suggested['priority'] as int;
+      }
+      _manualExpanded = true;
+    });
   }
 
   Future<void> _saveRelative() async {
@@ -172,9 +211,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         phoneNumber: _phoneNumber.trim().isEmpty
             ? null
             : _phoneNumber.trim(),
-        email: _emailController.text.trim().isEmpty
-            ? null
-            : _emailController.text.trim(),
+        email: null,
         notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
@@ -361,6 +398,8 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         : (user != null ? ref.watch(relativesStreamProvider(user.id)) : null);
     final existingRelatives = relativesAsync?.valueOrNull ?? <Relative>[];
 
+    final showForm = _manualExpanded || _selectedContact != null;
+
     return Stack(
       children: [
         Scaffold(
@@ -372,190 +411,235 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                   // Header
                   _buildHeader(themeColors),
 
-                  // Form
+                  // Content
                   Expanded(
                     child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Photo picker
-                        _buildPhotoPicker(),
-                        const SizedBox(height: AppSpacing.xl),
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // ── Primary CTA: Contact import ──
+                          if (!kIsWeb) ...[
+                            _buildContactImportCard(themeColors),
+                            const SizedBox(height: AppSpacing.md),
 
+                            // OR divider
+                            if (!showForm) ...[
+                              Row(
+                                children: [
+                                  Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.2))),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                                    child: Text(
+                                      'أو',
+                                      style: AppTypography.bodySmall.copyWith(
+                                        color: Colors.white.withValues(alpha: 0.5),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.2))),
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.md),
 
-                        // Import from contacts button (mobile only)
-                        if (!kIsWeb) ...[
-                          OutlinedGradientButton(
-                            text: 'استيراد من جهات الاتصال',
-                            onPressed: _importFromContacts,
-                            icon: Icons.contacts_rounded,
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          Row(
-                            children: [
-                              Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.3))),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                                child: Text(
-                                  'أو أدخل يدوياً',
-                                  style: AppTypography.bodySmall.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.7),
+                              // Manual toggle row
+                              GestureDetector(
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  setState(() => _manualExpanded = true);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.md,
+                                    vertical: AppSpacing.sm,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.07),
+                                    borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.15),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.edit_rounded,
+                                        color: Colors.white.withValues(alpha: 0.6),
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: AppSpacing.sm),
+                                      Expanded(
+                                        child: Text(
+                                          'إضافة يدوياً',
+                                          style: AppTypography.bodyMedium.copyWith(
+                                            color: Colors.white.withValues(alpha: 0.7),
+                                          ),
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.keyboard_arrow_down_rounded,
+                                        color: Colors.white.withValues(alpha: 0.5),
+                                        size: 22,
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                              Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.3))),
                             ],
+                          ],
+
+                          // ── Expandable form ──
+                          AnimatedSize(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                            child: showForm
+                                ? Form(
+                                    key: _formKey,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        if (!kIsWeb) const SizedBox(height: AppSpacing.md),
+
+                                        // Selected contact chip (if came from contacts)
+                                        if (_selectedContact != null) ...[
+                                          _buildContactChip(themeColors),
+                                          const SizedBox(height: AppSpacing.md),
+                                        ],
+
+                                        // Photo picker
+                                        _buildPhotoPicker(),
+                                        const SizedBox(height: AppSpacing.md),
+
+                                        // Name
+                                        _buildTextField(
+                                          controller: _nameController,
+                                          label: 'الاسم الكامل',
+                                          hint: 'مثال: محمد أحمد',
+                                          icon: Icons.person,
+                                          validator: (value) {
+                                            if (value == null || value.isEmpty) {
+                                              return 'الرجاء إدخال الاسم';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                        const SizedBox(height: AppSpacing.md),
+
+                                        // Relationship picker
+                                        FlatRelationshipPicker(
+                                          selectedType: _selectedRelationship,
+                                          selectedSide: _selectedFamilySide,
+                                          selectedGender: _selectedGender,
+                                          existingRelatives: existingRelatives,
+                                          onSelectionChanged: (type, side, gender) {
+                                            setState(() {
+                                              _selectedRelationship = type;
+                                              _selectedFamilySide = side;
+                                              if (gender != null) _selectedGender = gender;
+                                              _priority = AvatarType.suggestPriority(type);
+                                            });
+                                          },
+                                        ),
+                                        const SizedBox(height: AppSpacing.md),
+
+                                        // Shared tree toggle
+                                        _buildSharedTreeToggle(),
+
+                                        // Category picker
+                                        RelativeCategoryPicker(
+                                          selected: _selectedCategory,
+                                          onChanged: (value) {
+                                            setState(() => _selectedCategory = value);
+                                          },
+                                        ),
+                                        const SizedBox(height: AppSpacing.md),
+
+                                        // Phone
+                                        IntlPhoneField(
+                                          key: _phoneFieldKey,
+                                          initialValue: _phoneInitial,
+                                          decoration: InputDecoration(
+                                            labelText: 'رقم الهاتف (اختياري)',
+                                            labelStyle: AppTypography.bodyMedium.copyWith(
+                                              color: Colors.white.withValues(alpha: 0.9),
+                                            ),
+                                            hintText: '50 123 4567',
+                                            hintStyle: AppTypography.bodyMedium.copyWith(
+                                              color: Colors.white.withValues(alpha: 0.5),
+                                            ),
+                                            filled: true,
+                                            fillColor: Colors.white.withValues(alpha: 0.1),
+                                            prefixIcon: const Icon(Icons.phone, color: Colors.white70),
+                                            border: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                                              borderSide: BorderSide.none,
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                                              borderSide: BorderSide(
+                                                color: Colors.white.withValues(alpha: 0.2),
+                                              ),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                                              borderSide: const BorderSide(
+                                                color: AppColors.islamicGreenPrimary,
+                                                width: 2,
+                                              ),
+                                            ),
+                                          ),
+                                          initialCountryCode: 'SA',
+                                          style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+                                          dropdownTextStyle: AppTypography.bodyMedium.copyWith(color: Colors.white),
+                                          dropdownIcon: const Icon(Icons.arrow_drop_down, color: Colors.white70),
+                                          flagsButtonPadding: const EdgeInsets.only(left: 8),
+                                          onChanged: (phone) {
+                                            _phoneNumber = phone.completeNumber;
+                                          },
+                                        ),
+                                        const SizedBox(height: AppSpacing.md),
+
+                                        // Health status
+                                        HealthStatusPicker(
+                                          selectedStatus: _healthStatus,
+                                          onStatusChanged: (status) {
+                                            setState(() => _healthStatus = status);
+                                          },
+                                        ),
+                                        const SizedBox(height: AppSpacing.md),
+
+                                        // Notes
+                                        _buildTextField(
+                                          controller: _notesController,
+                                          label: 'ملاحظات (اختياري)',
+                                          hint: 'أي معلومات إضافية...',
+                                          icon: Icons.note,
+                                          maxLines: 3,
+                                        ),
+                                        const SizedBox(height: AppSpacing.xxxl),
+
+                                        // Save button
+                                        GradientButton(
+                                          text: 'حفظ القريب',
+                                          onPressed: _saveRelative,
+                                          isLoading: _isLoading,
+                                          icon: Icons.save_rounded,
+                                        ),
+                                        const SizedBox(height: AppSpacing.xl),
+                                      ],
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
                           ),
-                          const SizedBox(height: AppSpacing.md),
                         ],
-
-                        // Name
-                        _buildTextField(
-                          controller: _nameController,
-                          label: 'الاسم الكامل',
-                          hint: 'مثال: محمد أحمد',
-                          icon: Icons.person,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'الرجاء إدخال الاسم';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-
-                        // Relationship Type - Flat Picker
-                        FlatRelationshipPicker(
-                          selectedType: _selectedRelationship,
-                          selectedSide: _selectedFamilySide,
-                          selectedGender: _selectedGender,
-                          existingRelatives: existingRelatives,
-                          onSelectionChanged: (type, side, gender) {
-                            setState(() {
-                              _selectedRelationship = type;
-                              _selectedFamilySide = side;
-                              if (gender != null) _selectedGender = gender;
-                              _priority = AvatarType.suggestPriority(type);
-                            });
-                          },
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-
-                        // Shared family tree toggle
-                        _buildSharedTreeToggle(),
-
-                        // Category picker
-                        RelativeCategoryPicker(
-                          selected: _selectedCategory,
-                          onChanged: (value) {
-                            setState(() => _selectedCategory = value);
-                          },
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-
-                        // Phone with international format
-                        IntlPhoneField(
-                          decoration: InputDecoration(
-                            labelText: 'رقم الهاتف (اختياري)',
-                            labelStyle: AppTypography.bodyMedium.copyWith(
-                              color: Colors.white.withValues(alpha: 0.9),
-                            ),
-                            hintText: '50 123 4567',
-                            hintStyle: AppTypography.bodyMedium.copyWith(
-                              color: Colors.white.withValues(alpha: 0.5),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white.withValues(alpha: 0.1),
-                            prefixIcon: const Icon(Icons.phone, color: Colors.white70),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                              borderSide: BorderSide.none,
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                              borderSide: BorderSide(
-                                color: Colors.white.withValues(alpha: 0.2),
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                              borderSide: const BorderSide(
-                                color: AppColors.islamicGreenPrimary,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                          initialCountryCode: 'SA', // Saudi Arabia as default
-                          style: AppTypography.bodyMedium.copyWith(color: Colors.white),
-                          dropdownTextStyle: AppTypography.bodyMedium.copyWith(color: Colors.white),
-                          dropdownIcon: const Icon(Icons.arrow_drop_down, color: Colors.white70),
-                          flagsButtonPadding: const EdgeInsets.only(left: 8),
-                          onChanged: (phone) {
-                            setState(() {
-                              _phoneNumber = phone.completeNumber;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-
-                        // Email
-                        _buildTextField(
-                          controller: _emailController,
-                          label: 'البريد الإلكتروني (اختياري)',
-                          hint: 'example@email.com',
-                          icon: Icons.email,
-                          keyboardType: TextInputType.emailAddress,
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-
-                        // Priority
-                        _buildPriorityPicker(),
-                        const SizedBox(height: AppSpacing.md),
-
-                        // Favorite toggle
-                        _buildFavoriteToggle(),
-                        const SizedBox(height: AppSpacing.md),
-
-                        // Health status
-                        HealthStatusPicker(
-                          selectedStatus: _healthStatus,
-                          onStatusChanged: (status) {
-                            setState(() => _healthStatus = status);
-                          },
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-
-                        // Notes
-                        _buildTextField(
-                          controller: _notesController,
-                          label: 'ملاحظات (اختياري)',
-                          hint: 'أي معلومات إضافية...',
-                          icon: Icons.note,
-                          maxLines: 3,
-                        ),
-                        const SizedBox(height: AppSpacing.xxxl),
-
-                        // Save button
-                        GradientButton(
-                          text: 'حفظ القريب',
-                          onPressed: _saveRelative,
-                          isLoading: _isLoading,
-                          icon: Icons.save_rounded,
-                        ),
-                        const SizedBox(height: AppSpacing.xl),
-                      ],
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
         ),
         // Confetti widget positioned at the top center
         Align(
@@ -658,6 +742,145 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         .fadeIn();
   }
 
+  Widget _buildContactImportCard(dynamic themeColors) {
+    final hasContact = _selectedContact != null;
+    return GestureDetector(
+      onTap: _importFromContacts,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+            colors: [
+              Colors.white.withValues(alpha: 0.13),
+              Colors.white.withValues(alpha: 0.06),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+          border: Border.all(
+            color: hasContact
+                ? AppColors.islamicGreenPrimary.withValues(alpha: 0.5)
+                : Colors.white.withValues(alpha: 0.2),
+            width: hasContact ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: themeColors.primaryGradient,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: themeColors.primary.withValues(alpha: 0.4),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.contacts_rounded,
+                color: Colors.white,
+                size: 26,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'اختر من جهات الاتصال',
+                    style: AppTypography.titleMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    hasContact
+                        ? 'اضغط لتغيير جهة الاتصال'
+                        : 'أسرع طريقة لإضافة قريب',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: Colors.white.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: Colors.white.withValues(alpha: 0.4),
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContactChip(dynamic themeColors) {
+    final contact = _selectedContact!;
+    final initials = contact.displayName.isNotEmpty
+        ? contact.displayName.trim().split(' ').take(2).map((w) => w[0]).join()
+        : '?';
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.islamicGreenPrimary.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: Border.all(
+          color: AppColors.islamicGreenPrimary.withValues(alpha: 0.4),
+        ),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: AppColors.islamicGreenPrimary.withValues(alpha: 0.3),
+            child: Text(
+              initials,
+              style: AppTypography.labelSmall.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  contact.displayName,
+                  style: AppTypography.labelMedium.copyWith(color: Colors.white),
+                ),
+                if (contact.phones.isNotEmpty)
+                  Text(
+                    contact.phones.first.number,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: Colors.white.withValues(alpha: 0.6),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Icon(
+            Icons.check_circle_rounded,
+            color: AppColors.islamicGreenPrimary,
+            size: 20,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -693,111 +916,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
     );
   }
 
-  Widget _buildPriorityPicker() {
-    return GlassCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.priority_high, color: Colors.white.withValues(alpha: 0.7)),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'الأولوية',
-                      style: AppTypography.titleMedium.copyWith(color: Colors.white),
-                    ),
-                    Text(
-                      'تم ضبطها تلقائياً حسب صلة القرابة',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: Colors.white.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: _buildPriorityOption(1, 'عالية', '🔥'),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _buildPriorityOption(2, 'متوسطة', '⭐'),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _buildPriorityOption(3, 'منخفضة', '📌'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildPriorityOption(int priority, String label, String emoji) {
-    final isSelected = priority == _priority;
-    return GestureDetector(
-      onTap: () => setState(() => _priority = priority),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          gradient: isSelected ? AppColors.primaryGradient : null,
-          color: isSelected ? null : Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: isSelected ? 0.5 : 0.3),
-          ),
-        ),
-        child: Column(
-          children: [
-            Text(
-              emoji,
-              style: const TextStyle(fontSize: 24),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: AppTypography.labelSmall.copyWith(
-                color: Colors.white,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFavoriteToggle() {
-    return GlassCard(
-      child: Row(
-        children: [
-          Icon(Icons.star, color: Colors.white.withValues(alpha: 0.7)),
-          const SizedBox(width: AppSpacing.sm),
-          Text(
-            'إضافة للمفضلة',
-            style: AppTypography.titleMedium.copyWith(color: Colors.white),
-          ),
-          const Spacer(),
-          Switch(
-            value: _isFavorite,
-            onChanged: (value) => setState(() => _isFavorite = value),
-            activeTrackColor: AppColors.premiumGold.withValues(alpha: 0.5),
-            activeThumbColor: AppColors.premiumGold,
-          ),
-        ],
-      ),
-    );
-  }
 
   /// Builds the shared family tree toggle + group dropdown.
   ///
