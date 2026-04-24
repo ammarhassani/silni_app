@@ -28,13 +28,8 @@ class AppRoutes {
   /// Routes that require MAX subscription
   static const Set<String> premiumRoutes = {
     aiChat,
-    aiMessages,
-    aiAnalysis,
     aiScripts,
     aiReport,
-    aiMemories,
-    detailedStats,
-    leaderboard,
   };
 
   /// Check if a route requires premium subscription
@@ -46,7 +41,6 @@ class AppRoutes {
   static const String home = '/home';
   static const String relatives = '/relatives';
   static const String relativeDetail = '/relative';
-  static const String achievements = '/achievements';
   static const String statistics = '/statistics';
   static const String settings = '/settings';
 
@@ -61,15 +55,8 @@ class AppRoutes {
   static const String notifications = '/notifications';
   static const String notificationHistory = '/notification-history';
 
-  // Gamification routes
-  static const String badges = '/badges';
-  static const String detailedStats = '/detailed-stats';
-  static const String leaderboard = '/leaderboard';
-  static const String challenges = '/challenges';
-
   // Wrapped routes
   static const String monthlyWrapped = '/monthly-wrapped';
-  static const String yearlyWrapped = '/yearly-wrapped';
 
   // Family group routes
   static const String familyGroupDetail = '/family-group';
@@ -80,9 +67,6 @@ class AppRoutes {
   // AI routes
   static const String aiHub = '/ai-hub';
   static const String aiChat = '/ai-chat';
-  static const String aiMemories = '/ai-memories';
-  static const String aiMessages = '/ai-messages';
-  static const String aiAnalysis = '/ai-analysis';
   static const String aiScripts = '/ai-scripts';
   static const String aiReport = '/ai-report';
 

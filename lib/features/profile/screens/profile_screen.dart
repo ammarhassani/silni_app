@@ -135,11 +135,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                   child: ProfileActionsWidget(
                     themeColors: themeColors,
-                    onChangePassword: () => showChangePasswordDialog(
-                      context: context,
-                      ref: ref,
-                      themeColors: themeColors,
-                    ),
                     onPrivacySettings: () {
                       UIHelpers.showSnackBar(
                         context,

@@ -82,24 +82,13 @@ class ContextualTips {
       actionRoute: AppRoutes.aiChat,
     ),
     ContextualTip(
-      id: 'ai_hub_messages',
-      screenRoute: AppRoutes.aiHub,
-      targetKey: 'ai_messages_card',
-      titleArabic: 'كاتب الرسائل',
-      bodyArabic: 'دع الذكاء الاصطناعي يكتب لك رسائل جميلة للمناسبات',
-      position: TooltipPosition.below,
-      priority: 2,
-      actionLabel: 'جربه الآن',
-      actionRoute: AppRoutes.aiMessages,
-    ),
-    ContextualTip(
       id: 'ai_hub_scripts',
       screenRoute: AppRoutes.aiHub,
       targetKey: 'ai_scripts_card',
       titleArabic: 'سيناريوهات التواصل',
       bodyArabic: 'سيناريوهات جاهزة لبدء المحادثات مع أقاربك',
       position: TooltipPosition.below,
-      priority: 3,
+      priority: 2,
     ),
   ];
 
@@ -144,27 +133,12 @@ class ContextualTips {
     ),
   ];
 
-  /// Tips for Leaderboard screen
-  static const List<ContextualTip> leaderboardTips = [
-    ContextualTip(
-      id: 'leaderboard_intro',
-      screenRoute: AppRoutes.leaderboard,
-      targetKey: 'leaderboard_list',
-      titleArabic: 'لوحة المتصدرين',
-      bodyArabic: 'تنافس مع الآخرين وتصدر قائمة أكثر الواصلين',
-      position: TooltipPosition.center,
-      priority: 1,
-      showSpotlight: false,
-    ),
-  ];
-
   /// All tips organized by screen
   static Map<String, List<ContextualTip>> get tipsByScreen => {
         AppRoutes.aiHub: aiHubTips,
         AppRoutes.home: homeTips,
         AppRoutes.reminders: remindersTips,
         AppRoutes.familyTree: familyTreeTips,
-        AppRoutes.leaderboard: leaderboardTips,
       };
 
   /// Get tips for a specific screen
@@ -178,7 +152,6 @@ class ContextualTips {
         ...homeTips,
         ...remindersTips,
         ...familyTreeTips,
-        ...leaderboardTips,
       ];
 
   /// Get a specific tip by ID

@@ -1,8 +1,6 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/pattern_animation_provider.dart';
-import '../../core/services/gyroscope_service.dart';
 import '../../core/theme/app_themes.dart';
 import 'islamic_pattern_background.dart';
 import 'pattern_animation_controller.dart';
@@ -34,7 +32,6 @@ class _AnimatedIslamicPatternBackgroundState
     extends ConsumerState<AnimatedIslamicPatternBackground>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   PatternAnimationController? _animationController;
-  StreamSubscription<GyroscopeData>? _gyroscopeSubscription;
   PatternAnimationSettings? _lastSettings;
 
   @override
@@ -54,7 +51,6 @@ class _AnimatedIslamicPatternBackgroundState
         vsync: this,
         settings: settings,
       );
-      _setupGyroscope(settings);
     }
   }
 
@@ -67,41 +63,14 @@ class _AnimatedIslamicPatternBackgroundState
     _animationController!.updateScrollParallax(widget.scrollController!.offset);
   }
 
-  void _setupGyroscope(PatternAnimationSettings settings) {
-    if (!settings.gyroscopeEnabled) return;
-
-    final gyroService = GyroscopeService.instance;
-    if (!gyroService.isAvailable) return;
-
-    gyroService.startListening();
-    _gyroscopeSubscription = gyroService.stream?.listen((data) {
-      _animationController?.updateGyroscopeParallax(data.x, data.y);
-    });
-  }
-
-  void _stopGyroscope() {
-    _gyroscopeSubscription?.cancel();
-    _gyroscopeSubscription = null;
-    // Only access GyroscopeService if it was already initialized
-    // (avoids creating a new instance with its 2-second availability check timer)
-    if (GyroscopeService.hasInstance) {
-      GyroscopeService.instance.stopListening();
-    }
-  }
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Battery efficiency: pause when backgrounded
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
       _animationController?.pause();
-      _stopGyroscope();
     } else if (state == AppLifecycleState.resumed) {
       _animationController?.resume();
-      final settings = ref.read(patternAnimationProvider);
-      if (settings.gyroscopeEnabled) {
-        _setupGyroscope(settings);
-      }
     }
   }
 
@@ -120,7 +89,6 @@ class _AnimatedIslamicPatternBackgroundState
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     widget.scrollController?.removeListener(_onScroll);
-    _stopGyroscope();
     _animationController?.dispose();
     super.dispose();
   }
@@ -204,13 +172,6 @@ class _AnimatedIslamicPatternBackgroundState
     // Update existing controller
     if (_animationController != null) {
       _animationController!.updateSettings(newSettings);
-    }
-
-    // Handle gyroscope toggle
-    if (newSettings.gyroscopeEnabled && !(_lastSettings?.gyroscopeEnabled ?? false)) {
-      _setupGyroscope(newSettings);
-    } else if (!newSettings.gyroscopeEnabled && (_lastSettings?.gyroscopeEnabled ?? false)) {
-      _stopGyroscope();
     }
 
     // Dispose controller if no longer needed

@@ -384,13 +384,9 @@ class FeatureConfigService {
     // MAX-only features
     const maxFeatures = {
       'ai_chat',
-      'message_composer',
       'communication_scripts',
-      'relationship_analysis',
-      'smart_reminders_ai',
       'weekly_reports',
       'advanced_analytics',
-      'leaderboard',
       'data_export',
       'unlimited_reminders',
     };

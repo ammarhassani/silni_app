@@ -40,9 +40,6 @@ class PatternAnimationConstants {
   /// Maximum pixel offset for scroll-based parallax
   static const double parallaxMaxOffset = 20.0;
 
-  /// Maximum pixel offset for gyroscope-based parallax
-  static const double gyroscopeMaxOffset = 15.0;
-
   /// Parallax scroll multiplier (offset = scroll * multiplier)
   static const double parallaxScrollMultiplier = 0.1;
 
@@ -77,9 +74,6 @@ class PatternAnimationConstants {
 
   /// Reduced opacity when app is backgrounded or in low power mode
   static const double lowPowerOpacity = 0.05;
-
-  /// Gyroscope sampling period (20Hz for smooth parallax)
-  static const Duration gyroscopeSamplingPeriod = Duration(milliseconds: 50);
 
   // ============ CURVES ============
 

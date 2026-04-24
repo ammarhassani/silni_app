@@ -42,13 +42,11 @@ class PaywallContext {
       FeatureIds.aiChat => 'احصل على مساعد ذكي لعلاقاتك',
       FeatureIds.unlimitedReminders => 'لا تنسَ أحداً — تذكيرات بلا حدود',
       FeatureIds.advancedAnalytics => 'اعرف من تواصلت معه ومن نسيته',
-      FeatureIds.leaderboard => 'تنافس مع عائلتك في صلة الرحم',
       FeatureIds.familyTree => 'شاهد شجرة عائلتك التفاعلية',
-      FeatureIds.messageComposer => 'رسائل ذكية لكل مناسبة',
-      FeatureIds.relationshipAnalysis => 'تحليل شامل لعلاقاتك العائلية',
       FeatureIds.weeklyReports => 'تقارير أسبوعية عن تواصلك',
       FeatureIds.occasionMessages => 'رسائل مناسبات بالذكاء الاصطناعي',
       FeatureIds.communicationScripts => 'نصوص جاهزة للتواصل مع أقاربك',
+      FeatureIds.dataExport => 'صدّر بياناتك بصيغة JSON',
       _ => null,
     };
   }

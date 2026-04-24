@@ -84,28 +84,7 @@ class OnboardingSteps {
       isPrimary: true,
     ),
 
-    // 2. Message Composer
-    OnboardingStep(
-      id: 'message_composer',
-      titleArabic: 'كاتب الرسائل',
-      descriptionArabic: 'رسائل جميلة بضغطة زر\nللمناسبات والتهاني',
-      icon: Icons.edit_note_rounded,
-      gradient: LinearGradient(
-        colors: [Color(0xFFD4AF37), Color(0xFFFFD700)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      featureId: 'message_composer',
-      routePath: AppRoutes.aiMessages,
-      bulletPoints: [
-        'رسائل للأعياد والمناسبات',
-        'تهاني مخصصة لكل قريب',
-        'صياغة راقية ومؤثرة',
-      ],
-      isPrimary: true,
-    ),
-
-    // 3. Communication Scripts
+    // 2. Communication Scripts
     OnboardingStep(
       id: 'communication_scripts',
       titleArabic: 'سيناريوهات التواصل',
@@ -126,52 +105,11 @@ class OnboardingSteps {
       isPrimary: true,
     ),
 
-    // 4. Relationship Analysis
-    OnboardingStep(
-      id: 'relationship_analysis',
-      titleArabic: 'تحليل العلاقات',
-      descriptionArabic: 'اكتشف صحة علاقاتك\nوكيف تحسّنها',
-      icon: Icons.insights_rounded,
-      gradient: LinearGradient(
-        colors: [Color(0xFF00BCD4), Color(0xFF4DD0E1)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      featureId: 'relationship_analysis',
-      routePath: AppRoutes.aiAnalysis,
-      bulletPoints: [
-        'تحليل شامل لعلاقاتك',
-        'توصيات للتحسين',
-        'متابعة التقدم',
-      ],
-      isPrimary: true,
-    ),
   ];
 
   /// Other premium features (shown after AI features)
   static const List<OnboardingStep> otherFeatures = [
-    // 5. Smart Reminders
-    OnboardingStep(
-      id: 'smart_reminders_ai',
-      titleArabic: 'التذكيرات الذكية',
-      descriptionArabic: 'تذكيرات مخصصة بالذكاء الاصطناعي\nفي الوقت المناسب',
-      icon: Icons.notifications_active_rounded,
-      gradient: LinearGradient(
-        colors: [Color(0xFFFF6B35), Color(0xFFFFD60A)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      featureId: 'smart_reminders_ai',
-      routePath: AppRoutes.reminders,
-      bulletPoints: [
-        'تذكيرات غير محدودة',
-        'توقيت ذكي لكل قريب',
-        'اقتراحات مخصصة',
-      ],
-      isPrimary: false,
-    ),
-
-    // 6. Weekly Reports
+    // Weekly Reports
     OnboardingStep(
       id: 'weekly_reports',
       titleArabic: 'التقارير الأسبوعية',

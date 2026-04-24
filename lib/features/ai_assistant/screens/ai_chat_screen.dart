@@ -14,7 +14,6 @@ import '../../../core/ai/ai_models.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../providers/ai_chat_provider.dart';
 import '../services/ai_mode_detector.dart';
-import '../../../core/router/app_routes.dart';
 import '../widgets/chat_message_bubble.dart';
 import '../widgets/conversation_message.dart';
 import '../widgets/chat_history_drawer.dart';
@@ -147,7 +146,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
                 Center(
                   child: MemorySavedIndicator(
                     count: chatState.memorySavedCount,
-                    onTap: () => context.push(AppRoutes.aiMemories),
+                    onTap: () => ref.read(aiChatProvider.notifier).clearMemoryIndicator(),
                     onDismiss: () => ref.read(aiChatProvider.notifier).clearMemoryIndicator(),
                   ),
                 ),
@@ -205,15 +204,6 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
         ),
       ),
       actions: [
-        Semantics(
-          label: 'ذاكرة ${AIIdentity.name}',
-          button: true,
-          child: IconButton(
-            icon: Icon(Icons.psychology_outlined, color: themeColors.textOnGradient.withValues(alpha: 0.7)),
-            onPressed: () => context.push(AppRoutes.aiMemories),
-            tooltip: 'ذاكرة ${AIIdentity.name}',
-          ),
-        ),
         Semantics(
           label: 'المحادثات السابقة',
           button: true,

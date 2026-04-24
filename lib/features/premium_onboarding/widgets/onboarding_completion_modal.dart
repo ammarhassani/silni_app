@@ -208,11 +208,7 @@ class _OnboardingCompletionModalState
                         onTap: () => _navigateToFeature(AppRoutes.aiChat),
                       ),
                       _QuickActionButton(
-                        step: OnboardingSteps.aiFeatures[1], // Message Composer
-                        onTap: () => _navigateToFeature(AppRoutes.aiMessages),
-                      ),
-                      _QuickActionButton(
-                        step: OnboardingSteps.aiFeatures[2], // Scripts
+                        step: OnboardingSteps.aiFeatures[1], // Scripts
                         onTap: () => _navigateToFeature(AppRoutes.aiScripts),
                       ),
                     ],

@@ -18,7 +18,6 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/providers/cache_provider.dart';
 import '../../../core/router/app_routes.dart';
-import '../../../core/services/auto_reminder_service.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/models/relative_model.dart';
@@ -1184,14 +1183,6 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       } catch (edgeError) {
         debugPrint('Non-critical: edge persistence failed: $edgeError');
       }
-
-      // Auto-create reminder (fire-and-forget)
-      unawaited(AutoReminderService.createAutoReminder(
-        userId: userId,
-        relativeId: createdId,
-        relationshipType: placeholder.type,
-        remindersRepository: ref.read(reminderSchedulesRepositoryProvider),
-      ));
 
       // Invalidate providers to refresh tree immediately after creation.
       // The Supabase .stream() realtime also picks up changes, but

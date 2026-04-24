@@ -19,7 +19,6 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/errors/app_errors.dart';
-import '../../../core/services/auto_reminder_service.dart';
 import '../../../core/services/error_handler_service.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -322,15 +321,6 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         );
       }
 
-      // Fire-and-forget: auto-create a reminder based on relationship type.
-      // This runs in the background and never blocks the UI or throws.
-      unawaited(AutoReminderService.createAutoReminder(
-        userId: user.id,
-        relativeId: createdRelativeId,
-        relationshipType: _selectedRelationship,
-        remindersRepository: ref.read(reminderSchedulesRepositoryProvider),
-      ));
-
       if (!mounted) return;
 
       // 🎉 Celebration! Trigger confetti and haptic feedback
@@ -340,7 +330,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
       // Show success message
       UIHelpers.showSnackBar(
         context,
-        'تم حفظ ${relative.fullName} بنجاح! 🎉',
+        'تم إضافة ${relative.fullName} بنجاح',
         backgroundColor: AppColors.islamicGreenPrimary,
       );
 

@@ -309,26 +309,11 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen>
         ),
         const SizedBox(height: AppSpacing.sm),
 
-        // Row 2: الرسائل + سيناريوهات
+        // Row 2: سيناريوهات + التقرير
         SizedBox(
           height: 100,
           child: Row(
             children: [
-              Expanded(
-                child: _buildFeatureCard(
-                  icon: Icons.edit_note_rounded,
-                  title: 'الرسائل',
-                  subtitle: 'كتابة رسائل مميزة',
-                  color1: const Color(0xFF1565C0),
-                  color2: const Color(0xFF42A5F5),
-                  patternType: _PatternType.diagonalLines,
-                  featureId: FeatureIds.messageComposer,
-                  route: 'messages',
-                  delay: 100,
-                  themeColors: themeColors,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: _buildFeatureCard(
                   icon: Icons.psychology_rounded,
@@ -340,30 +325,6 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen>
                   featureId: FeatureIds.communicationScripts,
                   route: 'scripts',
                   delay: 200,
-                  themeColors: themeColors,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-
-        // Row 3: تحليل العلاقات + التقرير
-        SizedBox(
-          height: 100,
-          child: Row(
-            children: [
-              Expanded(
-                child: _buildFeatureCard(
-                  icon: Icons.favorite_rounded,
-                  title: 'تحليل العلاقات',
-                  subtitle: 'نصائح ذكية',
-                  color1: const Color(0xFFC2185B),
-                  color2: const Color(0xFFF48FB1),
-                  patternType: _PatternType.connectedDots,
-                  featureId: FeatureIds.relationshipAnalysis,
-                  route: 'analysis',
-                  delay: 300,
                   themeColors: themeColors,
                 ),
               ),
@@ -859,12 +820,8 @@ class _AIHubScreenState extends ConsumerState<AIHubScreen>
     switch (feature) {
       case 'counselor':
         context.push(AppRoutes.aiChat);
-      case 'messages':
-        context.push(AppRoutes.aiMessages);
       case 'scripts':
         context.push(AppRoutes.aiScripts);
-      case 'analysis':
-        context.push(AppRoutes.aiAnalysis);
       case 'report':
         context.push(AppRoutes.aiReport);
       default:

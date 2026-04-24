@@ -6,7 +6,6 @@ import '../../../../core/constants/app_typography.dart';
 import '../../../../core/theme/theme_provider.dart';
 import '../../../../core/utils/badge_prestige.dart';
 import '../../../../shared/widgets/glass_card.dart';
-import '../../screens/badges_screen.dart';
 
 /// Grid widget showcasing user achievements/badges
 class AchievementsShowcase extends ConsumerWidget {
@@ -48,9 +47,7 @@ class AchievementsShowcase extends ConsumerWidget {
       );
     }
 
-    final hasMore = achievements.length > _maxDisplayed;
     final displayedAchievements = achievements.take(_maxDisplayed).toList();
-    final remainingCount = achievements.length - _maxDisplayed;
 
     return GlassCard(
       child: Padding(
@@ -138,37 +135,6 @@ class AchievementsShowcase extends ConsumerWidget {
                 );
               }).toList(),
             ),
-            if (hasMore) ...[
-              const SizedBox(height: AppSpacing.md),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (context) => const BadgesScreen(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 18,
-                  ),
-                  label: Text(
-                    'عرض $remainingCount إنجازات أخرى',
-                    style: AppTypography.bodyMedium.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  style: TextButton.styleFrom(
-                    foregroundColor: themeColors.secondary,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.sm,
-                    ),
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       ),

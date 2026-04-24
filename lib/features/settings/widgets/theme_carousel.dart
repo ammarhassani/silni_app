@@ -6,14 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
-import '../../../core/models/subscription_tier.dart';
-import '../../../core/providers/subscription_provider.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../core/theme/dynamic_theme.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/glass_bottom_sheet.dart';
 import '../../../shared/widgets/glass_card.dart';
-import '../../subscription/screens/paywall_screen.dart';
 
 /// Dramatic glass button for the settings page.
 ///
@@ -239,8 +236,8 @@ class _ThemeCarouselState extends ConsumerState<ThemeCarousel> {
   @override
   Widget build(BuildContext context) {
     final themes = ref.watch(dynamicThemesProvider);
-    final hasThemeAccess =
-        ref.watch(featureAccessProvider(FeatureIds.customThemes));
+    // Themes are free for all tiers — paywall removed per founder decision.
+    const hasThemeAccess = true;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -284,19 +281,6 @@ class _ThemeCarouselState extends ConsumerState<ThemeCarousel> {
   }
 
   void _onThemeTap(DynamicTheme theme, bool isLocked) {
-    if (isLocked) {
-      HapticFeedback.lightImpact();
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => PaywallScreen(
-            featureToUnlock: FeatureIds.customThemes,
-            contextHeadline: PaywallContext.headlineForFeature(FeatureIds.customThemes),
-          ),
-        ),
-      );
-      return;
-    }
-
     // Only apply if different from current
     if (theme.key != widget.currentThemeKey) {
       HapticFeedback.heavyImpact();

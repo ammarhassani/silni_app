@@ -10,14 +10,12 @@ class ProfileActionsWidget extends StatelessWidget {
   const ProfileActionsWidget({
     super.key,
     required this.themeColors,
-    required this.onChangePassword,
     required this.onPrivacySettings,
     required this.onExportData,
     required this.onDeleteAccount,
   });
 
   final ThemeColors themeColors;
-  final VoidCallback onChangePassword;
   final VoidCallback onPrivacySettings;
   final VoidCallback onExportData;
   final VoidCallback onDeleteAccount;
@@ -26,27 +24,6 @@ class ProfileActionsWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        GlassCard(
-          child: ListTile(
-            leading: Icon(Icons.lock_outline, color: themeColors.accent),
-            title: Text(
-              'تغيير كلمة المرور',
-              style: AppTypography.titleMedium.copyWith(color: Colors.white),
-            ),
-            trailing: Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: Colors.white.withValues(alpha: 0.5),
-              size: 20,
-            ),
-            onTap: () {
-              HapticFeedback.lightImpact();
-              onChangePassword();
-            },
-            // Semantics for ListTile are handled by default but can be enhanced
-            // No explicit wrapper needed as ListTile is already semantic
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
         GlassCard(
           child: ListTile(
             leading: Icon(Icons.shield_outlined, color: themeColors.accent),

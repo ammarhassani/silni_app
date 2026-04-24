@@ -234,9 +234,9 @@ class _AIInsightBlurredTeaser extends ConsumerWidget {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => PaywallScreen(
-              featureToUnlock: FeatureIds.relationshipAnalysis,
+              featureToUnlock: FeatureIds.aiChat,
               contextHeadline: PaywallContext.headlineForFeature(
-                FeatureIds.relationshipAnalysis,
+                FeatureIds.aiChat,
               ),
             ),
           ),

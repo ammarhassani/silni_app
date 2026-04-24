@@ -29,7 +29,7 @@ class PatternAnimationController extends ChangeNotifier {
   final List<_RippleAnimation> _ripples = [];
   Offset? _currentTouchPosition;
 
-  // Parallax state (from scroll or gyroscope)
+  // Parallax state (from scroll)
   Offset _parallaxOffset = Offset.zero;
 
   // Track if controllers are initialized
@@ -120,11 +120,11 @@ class PatternAnimationController extends ChangeNotifier {
     return _shimmerController.value;
   }
 
-  /// Current parallax offset (combined scroll + gyro + flow)
+  /// Current parallax offset (combined scroll + flow)
   Offset get parallaxOffset {
     var offset = verticalFlowOffset;
 
-    if (_settings.parallaxEnabled || _settings.gyroscopeEnabled) {
+    if (_settings.parallaxEnabled) {
       offset += _parallaxOffset * _settings.animationIntensity;
     }
 
@@ -206,19 +206,6 @@ class PatternAnimationController extends ChangeNotifier {
     _parallaxOffset = Offset(
       0,
       (-scrollOffset * multiplier).clamp(-maxOffset, maxOffset),
-    );
-    notifyListeners();
-  }
-
-  /// Update parallax offset from gyroscope data
-  void updateGyroscopeParallax(double x, double y) {
-    if (!_settings.gyroscopeEnabled || _isDisposed) return;
-
-    final maxOffset = PatternAnimationConstants.gyroscopeMaxOffset;
-
-    _parallaxOffset = Offset(
-      (x * maxOffset).clamp(-maxOffset, maxOffset),
-      (y * maxOffset).clamp(-maxOffset, maxOffset),
     );
     notifyListeners();
   }

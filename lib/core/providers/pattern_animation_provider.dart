@@ -22,9 +22,6 @@ class PatternAnimationSettings {
   /// Enable touch ripple effect
   final bool touchRippleEnabled;
 
-  /// Enable gyroscope-based parallax
-  final bool gyroscopeEnabled;
-
   /// Enable touch follow glow effect
   final bool followTouchEnabled;
 
@@ -37,7 +34,6 @@ class PatternAnimationSettings {
     this.parallaxEnabled = true,
     this.shimmerEnabled = false, // Off by default (battery consideration)
     this.touchRippleEnabled = true,
-    this.gyroscopeEnabled = false, // Off by default (requires sensor)
     this.followTouchEnabled = true,
     this.animationIntensity = 0.7,
   });
@@ -52,7 +48,7 @@ class PatternAnimationSettings {
 
   /// Check if master animations are enabled (for fallback to static)
   bool get isAnimationEnabled =>
-      hasAnyAnimationEnabled || hasTouchEffectsEnabled || gyroscopeEnabled;
+      hasAnyAnimationEnabled || hasTouchEffectsEnabled;
 
   PatternAnimationSettings copyWith({
     bool? rotationEnabled,
@@ -60,7 +56,6 @@ class PatternAnimationSettings {
     bool? parallaxEnabled,
     bool? shimmerEnabled,
     bool? touchRippleEnabled,
-    bool? gyroscopeEnabled,
     bool? followTouchEnabled,
     double? animationIntensity,
   }) {
@@ -70,7 +65,6 @@ class PatternAnimationSettings {
       parallaxEnabled: parallaxEnabled ?? this.parallaxEnabled,
       shimmerEnabled: shimmerEnabled ?? this.shimmerEnabled,
       touchRippleEnabled: touchRippleEnabled ?? this.touchRippleEnabled,
-      gyroscopeEnabled: gyroscopeEnabled ?? this.gyroscopeEnabled,
       followTouchEnabled: followTouchEnabled ?? this.followTouchEnabled,
       animationIntensity: animationIntensity ?? this.animationIntensity,
     );
@@ -83,7 +77,6 @@ class PatternAnimationSettings {
         'parallaxEnabled': parallaxEnabled,
         'shimmerEnabled': shimmerEnabled,
         'touchRippleEnabled': touchRippleEnabled,
-        'gyroscopeEnabled': gyroscopeEnabled,
         'followTouchEnabled': followTouchEnabled,
         'animationIntensity': animationIntensity,
       };
@@ -96,7 +89,6 @@ class PatternAnimationSettings {
       parallaxEnabled: json['parallaxEnabled'] as bool? ?? true,
       shimmerEnabled: json['shimmerEnabled'] as bool? ?? false,
       touchRippleEnabled: json['touchRippleEnabled'] as bool? ?? true,
-      gyroscopeEnabled: json['gyroscopeEnabled'] as bool? ?? false,
       followTouchEnabled: json['followTouchEnabled'] as bool? ?? true,
       animationIntensity: (json['animationIntensity'] as num?)?.toDouble() ?? 0.7,
     );
@@ -112,7 +104,6 @@ class PatternAnimationSettings {
           parallaxEnabled == other.parallaxEnabled &&
           shimmerEnabled == other.shimmerEnabled &&
           touchRippleEnabled == other.touchRippleEnabled &&
-          gyroscopeEnabled == other.gyroscopeEnabled &&
           followTouchEnabled == other.followTouchEnabled &&
           animationIntensity == other.animationIntensity;
 
@@ -123,7 +114,6 @@ class PatternAnimationSettings {
         parallaxEnabled,
         shimmerEnabled,
         touchRippleEnabled,
-        gyroscopeEnabled,
         followTouchEnabled,
         animationIntensity,
       );
@@ -156,7 +146,6 @@ class PatternAnimationNotifier extends StateNotifier<PatternAnimationSettings> {
           parallaxEnabled: prefs.getBool('${_prefsKey}_parallax') ?? adminDefaults.parallaxEnabled,
           shimmerEnabled: prefs.getBool('${_prefsKey}_shimmer') ?? adminDefaults.shimmerEnabled,
           touchRippleEnabled: prefs.getBool('${_prefsKey}_touchRipple') ?? adminDefaults.touchRippleEnabled,
-          gyroscopeEnabled: prefs.getBool('${_prefsKey}_gyroscope') ?? adminDefaults.gyroscopeEnabled,
           followTouchEnabled: prefs.getBool('${_prefsKey}_followTouch') ?? adminDefaults.followTouchEnabled,
           animationIntensity: prefs.getDouble('${_prefsKey}_intensity') ?? adminDefaults.animationIntensity,
         );
@@ -188,7 +177,6 @@ class PatternAnimationNotifier extends StateNotifier<PatternAnimationSettings> {
       parallaxEnabled: config.isPatternEnabledByDefault('parallax'),
       shimmerEnabled: config.isPatternEnabledByDefault('shimmer'),
       touchRippleEnabled: config.isPatternEnabledByDefault('touch_ripple'),
-      gyroscopeEnabled: config.isPatternEnabledByDefault('gyroscope'),
       followTouchEnabled: config.isPatternEnabledByDefault('follow_touch'),
       animationIntensity: config.getPatternDefaultIntensity('rotation'),
     );
@@ -204,7 +192,6 @@ class PatternAnimationNotifier extends StateNotifier<PatternAnimationSettings> {
       await prefs.setBool('${_prefsKey}_parallax', state.parallaxEnabled);
       await prefs.setBool('${_prefsKey}_shimmer', state.shimmerEnabled);
       await prefs.setBool('${_prefsKey}_touchRipple', state.touchRippleEnabled);
-      await prefs.setBool('${_prefsKey}_gyroscope', state.gyroscopeEnabled);
       await prefs.setBool('${_prefsKey}_followTouch', state.followTouchEnabled);
       await prefs.setDouble('${_prefsKey}_intensity', state.animationIntensity);
     } catch (e) {
@@ -253,12 +240,6 @@ class PatternAnimationNotifier extends StateNotifier<PatternAnimationSettings> {
     _saveSettings();
   }
 
-  /// Toggle gyroscope parallax
-  void toggleGyroscope() {
-    state = state.copyWith(gyroscopeEnabled: !state.gyroscopeEnabled);
-    _saveSettings();
-  }
-
   /// Toggle follow touch glow
   void toggleFollowTouch() {
     state = state.copyWith(followTouchEnabled: !state.followTouchEnabled);
@@ -279,7 +260,6 @@ class PatternAnimationNotifier extends StateNotifier<PatternAnimationSettings> {
       parallaxEnabled: true,
       shimmerEnabled: true,
       touchRippleEnabled: true,
-      gyroscopeEnabled: true,
       followTouchEnabled: true,
       animationIntensity: 0.7,
     );
@@ -294,7 +274,6 @@ class PatternAnimationNotifier extends StateNotifier<PatternAnimationSettings> {
       parallaxEnabled: false,
       shimmerEnabled: false,
       touchRippleEnabled: false,
-      gyroscopeEnabled: false,
       followTouchEnabled: false,
       animationIntensity: 0.7,
     );

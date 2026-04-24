@@ -29,21 +29,12 @@ import '../../features/profile/screens/profile_screen.dart';
 import '../../features/contacts/screens/contact_import_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/notifications/screens/notification_history_screen.dart';
-import '../../features/gamification/screens/gaming_center_screen.dart';
-import '../../features/gamification/screens/badges_screen.dart';
-import '../../features/gamification/screens/detailed_stats_screen.dart';
-import '../../features/gamification/screens/leaderboard_screen.dart';
-import '../../features/gamification/screens/challenges_screen.dart';
 import '../../features/family_groups/screens/create_group_screen.dart';
 import '../../features/family_groups/screens/family_group_screen.dart';
 import '../../features/family_groups/screens/invitation_detail_screen.dart';
 import '../../features/family_groups/screens/join_group_screen.dart';
 import '../../features/wrapped/screens/monthly_wrapped_screen.dart';
-import '../../features/wrapped/screens/yearly_wrapped_screen.dart';
 import '../../features/ai_assistant/screens/ai_chat_screen.dart';
-import '../../features/ai_assistant/screens/memory_viewer_screen.dart';
-import '../../features/ai_assistant/screens/message_composer_screen.dart';
-import '../../features/ai_assistant/screens/relationship_analysis_screen.dart';
 import '../../features/ai_assistant/screens/communication_scripts_screen.dart';
 import '../../features/ai_assistant/screens/occasion_messages_screen.dart';
 import '../../features/ai_assistant/screens/weekly_report_screen.dart';
@@ -213,17 +204,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
 
-      // Achievements Route
-      GoRoute(
-        path: AppRoutes.achievements,
-        name: 'achievements',
-        pageBuilder: (context, state) => _buildPageWithNavigation(
-          context,
-          state,
-          const GamingCenterScreen(),
-        ),
-      ),
-
       // Reminders Routes
       GoRoute(
         path: AppRoutes.reminders,
@@ -311,35 +291,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
-      // Gamification Routes
-      GoRoute(
-        path: AppRoutes.badges,
-        name: 'badges',
-        pageBuilder: (context, state) =>
-            _buildPageWithTransition(context, state, const BadgesScreen()),
-      ),
-      GoRoute(
-        path: AppRoutes.detailedStats,
-        name: 'detailedStats',
-        pageBuilder: (context, state) => _buildPageWithTransition(
-          context,
-          state,
-          const DetailedStatsScreen(),
-        ),
-      ),
-      GoRoute(
-        path: AppRoutes.leaderboard,
-        name: 'leaderboard',
-        pageBuilder: (context, state) =>
-            _buildPageWithTransition(context, state, const LeaderboardScreen()),
-      ),
-      GoRoute(
-        path: AppRoutes.challenges,
-        name: 'challenges',
-        pageBuilder: (context, state) =>
-            _buildPageWithTransition(context, state, const ChallengesScreen()),
-      ),
-
       // Wrapped Routes
       GoRoute(
         path: AppRoutes.monthlyWrapped,
@@ -354,23 +305,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             context,
             state,
             MonthlyWrappedScreen(month: month),
-          );
-        },
-      ),
-
-      // Yearly Wrapped Route
-      GoRoute(
-        path: AppRoutes.yearlyWrapped,
-        name: 'yearlyWrapped',
-        pageBuilder: (context, state) {
-          final yearParam = state.uri.queryParameters['year'];
-          final year = yearParam != null
-              ? int.tryParse(yearParam) ?? DateTime.now().year
-              : DateTime.now().year;
-          return _buildPageWithTransition(
-            context,
-            state,
-            YearlyWrappedScreen(year: year),
           );
         },
       ),
@@ -454,37 +388,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             AIChatScreen(relativeId: relativeId),
           );
         },
-      ),
-      GoRoute(
-        path: AppRoutes.aiMemories,
-        name: 'aiMemories',
-        pageBuilder: (context, state) => _buildPageWithTransition(
-          context,
-          state,
-          const MemoryViewerScreen(),
-        ),
-      ),
-      GoRoute(
-        path: AppRoutes.aiMessages,
-        name: 'aiMessages',
-        pageBuilder: (context, state) {
-          final relativeId = state.uri.queryParameters['relativeId'];
-          return _buildPageWithTransition(
-            context,
-            state,
-            MessageComposerScreen(initialRelativeId: relativeId),
-          );
-        },
-      ),
-      // AI Analysis Route
-      GoRoute(
-        path: AppRoutes.aiAnalysis,
-        name: 'aiAnalysis',
-        pageBuilder: (context, state) => _buildPageWithTransition(
-          context,
-          state,
-          const RelationshipAnalysisScreen(),
-        ),
       ),
       // Communication Scripts Route
       GoRoute(

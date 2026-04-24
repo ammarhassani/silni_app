@@ -137,19 +137,19 @@ class _PersistentBottomNavState extends ConsumerState<PersistentBottomNav>
         route: AppRoutes.relatives,
       ),
       (
-        icon: Icons.route_rounded,
-        label: 'رحلتي',
-        route: AppRoutes.achievements,
+        icon: Icons.notifications_active_rounded,
+        label: 'التذكيرات',
+        route: AppRoutes.reminders,
       ),
       (
         icon: Icons.smart_toy_rounded,
         label: AIIdentity.name,
-        route: AppRoutes.statistics,
+        route: AppRoutes.aiHub,
       ),
       (
-        icon: Icons.settings_rounded,
-        label: 'الإعدادات',
-        route: AppRoutes.settings,
+        icon: Icons.person_rounded,
+        label: 'الملف الشخصي',
+        route: AppRoutes.profile,
       ),
     ];
 
@@ -275,46 +275,27 @@ class _PersistentBottomNavState extends ConsumerState<PersistentBottomNav>
     final router = GoRouter.of(context);
     final location = router.routeInformationProvider.value.uri.toString();
 
-    // Use location-based matching for accurate state detection
     if (location.startsWith(AppRoutes.home)) {
       return 0;
     }
-    if (location.startsWith(AppRoutes.relatives)) {
+    if (location.startsWith(AppRoutes.relatives) ||
+        location.startsWith('${AppRoutes.relativeDetail}/') ||
+        location.startsWith('${AppRoutes.editRelative}/') ||
+        location.startsWith(AppRoutes.addRelative)) {
       return 1;
     }
-    if (location.startsWith(AppRoutes.achievements)) {
+    if (location.startsWith(AppRoutes.reminders)) {
       return 2;
     }
-    if (location.startsWith(AppRoutes.statistics)) {
+    if (location.startsWith(AppRoutes.aiHub) ||
+        location.startsWith(AppRoutes.aiChat) ||
+        location.startsWith(AppRoutes.aiScripts) ||
+        location.startsWith(AppRoutes.aiReport)) {
       return 3;
     }
-    if (location.startsWith(AppRoutes.settings)) {
+    if (location.startsWith(AppRoutes.profile) ||
+        location.startsWith(AppRoutes.settings)) {
       return 4;
-    }
-
-    // Check for parent routes (for subpages, show parent as active)
-    if (location.startsWith('${AppRoutes.relativeDetail}/')) {
-      return 1; // Show relatives tab for relative detail pages
-    }
-    if (location.startsWith('${AppRoutes.editRelative}/')) {
-      return 1; // Show relatives tab for edit relative pages
-    }
-    if (location.startsWith(AppRoutes.addRelative)) {
-      return 1; // Show relatives tab for add relative page
-    }
-
-    // Profile is a subpage of settings, so it should show settings tab as parent
-    if (location.startsWith(AppRoutes.profile)) {
-      return 4;
-    }
-
-    // Special handling for other routes that don't have navigation
-    if (location.startsWith(AppRoutes.importContacts) ||
-        location.startsWith(AppRoutes.notifications) ||
-        location.startsWith('${AppRoutes.badges}/') ||
-        location.startsWith('${AppRoutes.detailedStats}/') ||
-        location.startsWith('${AppRoutes.leaderboard}/')) {
-      return 0; // Show home tab for routes without navigation
     }
 
     return 0; // Default to home

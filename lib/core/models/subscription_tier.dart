@@ -140,16 +140,12 @@ class FeatureIds {
 
   // AI Features (MAX only)
   static const String aiChat = 'ai_chat';
-  static const String messageComposer = 'message_composer';
   static const String communicationScripts = 'communication_scripts';
-  static const String relationshipAnalysis = 'relationship_analysis';
-  static const String smartRemindersAI = 'smart_reminders_ai';
   static const String weeklyReports = 'weekly_reports';
   static const String occasionMessages = 'occasion_messages';
 
   // Other MAX Features
   static const String advancedAnalytics = 'advanced_analytics';
-  static const String leaderboard = 'leaderboard';
   static const String dataExport = 'data_export';
   static const String unlimitedReminders = 'unlimited_reminders';
 
@@ -167,14 +163,10 @@ class FeatureIds {
     return switch (featureId) {
       // MAX tier features - All AI features
       aiChat => SubscriptionTier.max,
-      messageComposer => SubscriptionTier.max,
       communicationScripts => SubscriptionTier.max,
-      relationshipAnalysis => SubscriptionTier.max,
-      smartRemindersAI => SubscriptionTier.max,
       weeklyReports => SubscriptionTier.max,
       occasionMessages => SubscriptionTier.max,
       advancedAnalytics => SubscriptionTier.max,
-      leaderboard => SubscriptionTier.max,
       dataExport => SubscriptionTier.max,
       unlimitedReminders => SubscriptionTier.max,
       // Default is free (includes customThemes, familyTree)
