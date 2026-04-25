@@ -67,6 +67,28 @@ jobs:
 
           echo "Coverage check passed!"
 
+  migrations-fk-discipline:
+    name: Migrations FK discipline
+    # Lints new supabase/migrations/*.sql files for FKs to user-id columns
+    # that lack an explicit ON DELETE clause. See DATABASE_AUDIT.md C2 for
+    # the bug class. Runs --diff-only against the PR base so the historical
+    # debt documented in the audit doesn't fail every PR.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # need full history for git diff against base
+
+      - name: Check FKs in changed migrations
+        run: |
+          BASE_REF="${{ github.base_ref }}"
+          if [ -n "$BASE_REF" ]; then
+            BASE_REF="origin/$BASE_REF"
+          else
+            BASE_REF="HEAD~1"
+          fi
+          bash scripts/check_migrations_for_missing_on_delete.sh --diff-only "$BASE_REF"
+
   build-android:
     name: Build Android
     runs-on: ubuntu-latest

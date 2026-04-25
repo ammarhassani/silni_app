@@ -1,5 +1,49 @@
 # Development Workflow
 
+## Database migration rules
+
+Migrations live in `supabase/migrations/*.sql` and are applied in
+filename order. They are the source of truth for the schema; the
+`legacy/` directory is historical only and is not applied to fresh
+deploys (see [DATABASE_AUDIT.md](DATABASE_AUDIT.md) for the full
+inventory of issues we are working through).
+
+- Every FK to `auth.users` or `public.users` MUST include an explicit
+  `ON DELETE` clause:
+  - `ON DELETE CASCADE` — dependent rows have no value without the user
+    (relatives, interactions, reminders, streaks).
+  - `ON DELETE SET NULL` — dependent rows are historical or audit
+    records that should outlive the user (admin_audit_log, social
+    invitation history).
+  - `ON DELETE RESTRICT` or `NO ACTION` — only with explicit reasoning
+    written into a comment above the constraint. The expected use case
+    is "we want the application layer to clean this up first via an
+    atomic RPC."
+- Migrations are append-only. Don't edit existing migrations. Write a
+  new one. The CI history is what's actually been applied to staging
+  and prod; rewriting it desyncs us from reality.
+- New migrations should use `CREATE TABLE IF NOT EXISTS`,
+  `CREATE OR REPLACE FUNCTION`, `ADD COLUMN IF NOT EXISTS`, and
+  similar idempotent forms wherever possible. They should be safe to
+  run against any environment state.
+- The CI job `migrations-fk-discipline` runs
+  `scripts/check_migrations_for_missing_on_delete.sh` against any
+  migration files added or changed in a PR. It's bounded to one bug
+  class (the FK / ON DELETE gap that caused the delete-account
+  incident); don't expand it into a general SQL linter without
+  scoping that as its own task.
+
+If you need to make a destructive schema change (drop column, drop
+table, change FK target), write the migration in two halves:
+
+1. First migration: add the new shape, copy data, but keep the old
+   shape live.
+2. Ship and verify in staging.
+3. Second migration: drop the old shape.
+
+This pattern is the only safe way to roll back without data loss if
+the new shape has a bug.
+
 ## Branch Strategy
 
 | Branch | Environment | Purpose |
