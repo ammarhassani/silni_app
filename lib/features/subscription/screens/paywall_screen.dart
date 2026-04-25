@@ -572,12 +572,13 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
           const SizedBox(height: AppSpacing.md),
           const Divider(color: Colors.white24),
           const SizedBox(height: AppSpacing.sm),
-          // Key features
+          // Key features — five real, working features.
+          // customThemes is free post-Phase-0; smartRemindersAI was deleted;
+          // Message Composer and Relationship Analysis screens were deleted.
           _buildFeatureItem('مساعد الذكاء الاصطناعي'),
-          _buildFeatureItem('كتابة الرسائل الذكية'),
-          _buildFeatureItem('تحليل العلاقات'),
+          _buildFeatureItem('سيناريوهات التواصل'),
+          _buildFeatureItem('التقرير الأسبوعي'),
           _buildFeatureItem('تذكيرات غير محدودة'),
-          _buildFeatureItem('إحصائيات متقدمة'),
           _buildFeatureItem('تصدير البيانات'),
         ],
       ),
