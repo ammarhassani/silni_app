@@ -17,9 +17,9 @@ import '../../../shared/utils/relationship_label_helper.dart';
 import '../../../shared/widgets/ai_generated_badge.dart';
 import '../../../shared/widgets/glass_pill_title.dart';
 import '../../../shared/widgets/gradient_background.dart';
-import '../../gamification/providers/stats_provider.dart';
 import '../../home/providers/home_providers.dart';
 import '../providers/ai_chat_provider.dart';
+import '../providers/weekly_report_stats_provider.dart';
 import '../widgets/markdown_styles.dart';
 
 /// Weekly AI Report Screen

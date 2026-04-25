@@ -3,7 +3,12 @@ import '../../../core/config/supabase_config.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../auth/providers/auth_provider.dart';
 
-/// Model for detailed statistics data
+/// Aggregated stats consumed by the Weekly Report screen.
+///
+/// Lifted from the (now-deleted) gamification stats_provider during Phase 2
+/// cleanup. Weekly Report only reads `userStats['current_streak']` and
+/// `recentActivity` — the other fields are kept for now since the existing
+/// query already aggregates them and removing them changes no behavior.
 class DetailedStats {
   final Map<String, dynamic> userStats;
   final Map<InteractionType, int> interactionCounts;
@@ -34,7 +39,6 @@ class DetailedStats {
   );
 }
 
-/// Parse badges from database (can be strings or maps)
 List<Map<String, dynamic>> _parseBadges(dynamic badges) {
   if (badges == null) return [];
   if (badges is! List) return [];
@@ -50,12 +54,12 @@ List<Map<String, dynamic>> _parseBadges(dynamic badges) {
   }).toList();
 }
 
-/// Provider for loading detailed statistics
-final detailedStatsProvider = FutureProvider.autoDispose<DetailedStats>((ref) async {
+/// Provider for loading detailed statistics for the Weekly Report.
+final detailedStatsProvider =
+    FutureProvider.autoDispose<DetailedStats>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user == null) return DetailedStats.empty;
 
-  // Load user stats
   final userResponse = await SupabaseConfig.client
       .from('users')
       .select(
@@ -64,7 +68,6 @@ final detailedStatsProvider = FutureProvider.autoDispose<DetailedStats>((ref) as
       .eq('id', user.id)
       .single();
 
-  // Load interaction counts by type (last 6 months only)
   final sixMonthsAgo = DateTime.now().subtract(const Duration(days: 180));
   final interactionsResponse = await SupabaseConfig.client
       .from('interactions')
@@ -90,7 +93,6 @@ final detailedStatsProvider = FutureProvider.autoDispose<DetailedStats>((ref) as
     hourlyPatterns[hour] = (hourlyPatterns[hour] ?? 0) + 1;
   }
 
-  // Load recent activity (last 7 days)
   final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
   final recentResponse = await SupabaseConfig.client
       .from('interactions')
@@ -99,7 +101,6 @@ final detailedStatsProvider = FutureProvider.autoDispose<DetailedStats>((ref) as
       .gte('date', sevenDaysAgo.toIso8601String())
       .order('date', ascending: true);
 
-  // Load monthly data (last 6 months — reuses sixMonthsAgo from above)
   final monthlyResponse = await SupabaseConfig.client
       .from('interactions')
       .select('date')
@@ -107,7 +108,6 @@ final detailedStatsProvider = FutureProvider.autoDispose<DetailedStats>((ref) as
       .gte('date', sixMonthsAgo.toIso8601String())
       .order('date', ascending: true);
 
-  // Process monthly data
   final Map<String, int> monthlyCounts = {};
   for (final row in (monthlyResponse as List)) {
     final date = DateTime.parse(row['date'] as String);
@@ -116,16 +116,13 @@ final detailedStatsProvider = FutureProvider.autoDispose<DetailedStats>((ref) as
     monthlyCounts[monthKey] = (monthlyCounts[monthKey] ?? 0) + 1;
   }
 
-  // Get top relatives with names
   final topRelativesData = <Map<String, dynamic>>[];
   if (relativeCounts.isNotEmpty) {
     final sortedRelatives = relativeCounts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    final topRelativeIds = sortedRelatives
-        .take(5)
-        .map((e) => e.key)
-        .toList();
+    final topRelativeIds =
+        sortedRelatives.take(5).map((e) => e.key).toList();
 
     if (topRelativeIds.isNotEmpty) {
       final relativesResponse = await SupabaseConfig.client

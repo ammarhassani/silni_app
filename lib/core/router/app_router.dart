@@ -23,7 +23,7 @@ import '../../features/relatives/screens/edit_relative_screen.dart';
 import '../../features/reminders/screens/reminders_screen.dart';
 import '../../features/reminders/screens/reminders_due_screen.dart';
 import '../../features/family_tree/screens/family_tree_screen.dart';
-import '../../features/statistics/screens/statistics_screen.dart';
+import '../../features/ai_assistant/screens/ai_hub_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/contacts/screens/contact_import_screen.dart';
@@ -245,12 +245,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             _buildPageWithTransition(context, state, const FamilyTreeScreen()),
       ),
 
-      // Statistics Routes
+      // /statistics is a legacy alias for the AI Hub — kept for deep links
+      // referenced by notification handlers (notification_history, FCM, etc.).
       GoRoute(
         path: AppRoutes.statistics,
         name: 'statistics',
         pageBuilder: (context, state) =>
-            _buildPageWithNavigation(context, state, const StatisticsScreen()),
+            _buildPageWithNavigation(context, state, const AIHubScreen()),
       ),
 
       // Settings Routes
