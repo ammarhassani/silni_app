@@ -1,8 +1,8 @@
 # GHOST TABLES RECONNAISSANCE — Wave 2 halt gate
 
-**Date:** 2026-04-26
+**Date:** 2026-04-26 (initial recon) / 2026-04-26 (Wave 1.5 verification update — see bottom of file)
 **Trigger:** Wave 2 plan reconnaissance task ("List any tables that exist on prod but have no corresponding `CREATE TABLE` in any migration").
-**Result:** **HALT.** Six tables exist on prod but are not defined in any migration. Five are core data-model tables that the app actively uses. This is bigger drift than just the chat tables.
+**Result:** **HALT.** **Wave 1.5 verification against the 80-table prod inventory expanded the ghost list from 6 to 14.** Five of the eight new ghosts are critical-path or cross-feature; three are cleanup candidates. Detail at the bottom.
 
 ## TL;DR
 
@@ -138,3 +138,65 @@ ORDER BY table_name;
 2. Compare the second query's output against the migration-defined inventory in this file (the 68 tables I listed at the top of the recon). If any table appears on prod that's not in either the migration list or the 6-ghost list above, that's another ghost we need to deal with before any drops.
 
 3. If the recon checks out (only the 6 known ghosts, no extras), authorize Wave 1.5 capture for the 5 core tables. I'll write the dump helper and the capture migration in a follow-up session.
+
+---
+
+# Wave 1.5 verification update (2026-04-26)
+
+The CTO ran the full prod table inventory in Supabase Studio and shared the 80-table list. I diffed it against `CREATE TABLE` statements across every migration. The 6-ghost finding was **not exhaustive**.
+
+## The full ghost list — 14 tables
+
+### Already known (6) — from initial reconnaissance
+
+| Table | Severity | Disposition |
+|---|---|---|
+| `users` | CRITICAL — 11 Dart files | Wave 1.5 capture |
+| `relatives` | CRITICAL — 11 Dart files | Wave 1.5 capture |
+| `interactions` | CRITICAL — 12 Dart files | Wave 1.5 capture |
+| `reminder_schedules` | CRITICAL | Wave 1.5 capture |
+| `fcm_tokens` | needs CTO call — see below | Wave 1.5 capture OR Wave 2 drop |
+| `hadith` | true orphan — app uses `admin_hadith` | Wave 2 drop |
+
+### Newly surfaced (8)
+
+| Table | Evidence | Disposition |
+|---|---|---|
+| `notification_history` | **CRITICAL.** Used by `lib/main.dart:712,721` (writes), `data_export_service.dart:308`, `notification_history_service.dart`, `notification_history_screen.dart`. Edge functions reference it (`send-announcement`, `send-push-notification`). | Wave 1.5 capture |
+| `notification_tokens` | **CRITICAL.** Used by `fcm_notification_service.dart:284,630` (FCM upserts). One migration adds an INDEX on it (`20260123000002_add_performance_indexes.sql`) but no migration creates the table. | Wave 1.5 capture |
+| `admin_announcements` | **ACTIVE.** `20251231500001_fix_admin_announcements.sql` does ALTER TABLE assuming it exists, but no migration creates it. | Wave 1.5 capture |
+| `challenge_streaks` | Zero references anywhere — no Dart, no migrations, no edge functions, no seeds. | Wave 2 drop candidate |
+| `daily_challenges` | Same — zero references. | Wave 2 drop candidate |
+| `gifts` | Zero references in app/migrations. The string "gifts" appears in `20251222_add_ai_fields_to_relatives.sql` but only as the column name `disliked_gifts` on relatives — not the table. | Wave 2 drop candidate |
+| `wisdom_entries` | Zero references anywhere. | Wave 2 drop candidate |
+| `occasions` | Zero references in app. The string "occasions" appears in migrations but only as `admin_message_occasions` (different table) and column comments. The `occasions` table itself is unreferenced. | Wave 2 drop candidate |
+
+## fcm_tokens vs notification_tokens — the duplication question
+
+The CTO call I most need clarity on. Two tables on prod with overlapping purpose:
+
+- **`fcm_tokens`** — defined in `legacy/schema.sql`; `fcm_tokens.user_id REFERENCES users(id) ON DELETE CASCADE`. Zero references in current `lib/`. Likely populated by an older version of FCM service code, now superseded.
+- **`notification_tokens`** — not defined in any migration, used by `fcm_notification_service.dart` (the current FCM code path). One migration (`20260123000002_add_performance_indexes.sql`) adds a `user_id` index on it, confirming the table is supposed to exist.
+
+This is duplicate-table drift caused by a rename that was done in app code without a migration. **Recommendation:**
+1. Capture `notification_tokens` (the live one) in Wave 1.5.
+2. Drop `fcm_tokens` in Wave 2 along with the other true orphans — but only after confirming on prod that `fcm_tokens` is empty (or that any rows it contains have already been migrated to `notification_tokens`). Query: `SELECT COUNT(*) FROM fcm_tokens;` and compare with `SELECT COUNT(*) FROM notification_tokens WHERE platform IN ('ios', 'android')`.
+
+If `fcm_tokens` has rows that aren't in `notification_tokens`, that's data-migration territory and needs CTO authorization separately.
+
+## Reverse-drift check (admin_banners, admin_motd) — RESOLVED, false positive
+
+The diff also surfaced two tables that ARE in migrations but NOT on prod: `admin_banners` and `admin_motd`. **This is expected, not drift:**
+
+- Both were created in `20251230100000_admin_panel_phase1.sql`.
+- Both were intentionally consolidated into `admin_in_app_messages` via `20260102000000_unified_messages.sql`.
+- Both were explicitly dropped via `20260102200000_cleanup_old_messages.sql` (`DROP TABLE IF EXISTS admin_motd CASCADE` + `DROP TABLE IF EXISTS admin_banners CASCADE`). `admin_banners` is dropped a second time in `20260107000000_cleanup_deprecated.sql` — belt and suspenders.
+
+A fresh `supabase db reset` correctly produces a database with `admin_in_app_messages` and without the two old tables. No action needed.
+
+## Updated CTO asks
+
+1. **Authorize Wave 1.5 capture for 7 critical tables**: `users`, `relatives`, `interactions`, `reminder_schedules`, `fcm_tokens`, `notification_history`, `notification_tokens`, `admin_announcements`. (That's 8 if `fcm_tokens` is in scope; 7 if it goes to the Wave 2 drop list.)
+2. **Decide `fcm_tokens` disposition** based on whether any data needs migrating to `notification_tokens`.
+3. **Authorize Wave 2 expanded drop list**: original (`hadith`, social_*, admin_challenges, admin_memory_categories, admin_ai_memory_config, ai_memories) PLUS `challenge_streaks`, `daily_challenges`, `gifts`, `wisdom_entries`, `occasions`. Verify the four "zero references anywhere" tables are truly empty on prod first via `SELECT COUNT(*) FROM challenge_streaks;` etc.
+4. **Wave 2 destructive tasks remain blocked** until Wave 1.5 captures all critical tables.
