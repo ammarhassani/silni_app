@@ -28,7 +28,7 @@ import 'shared/widgets/logger_host.dart'; // In-app logger
 import 'core/services/app_logger_service.dart'; // Logger service
 import 'shared/services/fcm_notification_service.dart';
 import 'shared/services/unified_notification_service.dart';
-import 'core/services/analytics_service.dart';
+import 'core/services/analytics.dart';
 import 'core/services/performance_monitoring_service.dart';
 import 'core/services/app_health_service.dart';
 import 'core/services/subscription_service.dart';

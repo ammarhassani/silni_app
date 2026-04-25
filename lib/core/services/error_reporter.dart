@@ -293,6 +293,35 @@ class ErrorHandlerService {
     );
   }
 
+  // =====================================================
+  // CANONICAL REPORTING API (per Phase 3 plan)
+  // =====================================================
+
+  /// Report an error. Aliased to reportError for canonical naming;
+  /// existing call sites keep working.
+  Future<void> report(
+    dynamic error, {
+    StackTrace? stackTrace,
+    String? tag,
+    Map<String, dynamic>? context,
+    bool fatal = false,
+  }) =>
+      reportError(
+        error,
+        stackTrace: stackTrace,
+        tag: tag,
+        context: context,
+        fatal: fatal,
+      );
+
+  /// Add a context breadcrumb. Aliased to addErrorBreadcrumb.
+  void breadcrumb(
+    String message, {
+    Map<String, dynamic>? data,
+    SentryLevel level = SentryLevel.error,
+  }) =>
+      addErrorBreadcrumb(message, data: data, level: level);
+
   /// Get the appropriate log category for an error
   LogCategory _getLogCategory(AppError error) {
     if (error is AuthError) return LogCategory.auth;

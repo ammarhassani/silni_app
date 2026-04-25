@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:silni_app/core/services/error_handler_service.dart';
+import 'package:silni_app/core/services/error_reporter.dart';
 
 /// Unit tests for RPC exception → Arabic message mapping.
 ///

@@ -21,7 +21,7 @@ import '../providers/auth_provider.dart';
 import '../../../core/services/app_logger_service.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/errors/app_errors.dart';
-import '../../../core/services/error_handler_service.dart';
+import '../../../core/services/error_reporter.dart';
 import '../widgets/social_login_button.dart';
 import '../widgets/name_prompt_dialog.dart';
 import '../../../shared/utils/ui_helpers.dart';

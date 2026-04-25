@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'analytics_service.dart';
+import 'analytics.dart';
 import 'app_logger_service.dart';
 
 /// Memory usage thresholds in MB

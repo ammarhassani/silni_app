@@ -3,7 +3,7 @@ import '../config/supabase_config.dart';
 import '../../shared/models/interaction_model.dart';
 import '../models/gamification_event.dart';
 import '../providers/gamification_events_provider.dart';
-import 'analytics_service.dart';
+import 'analytics.dart';
 import 'gamification_config_service.dart';
 
 /// Service for managing gamification features

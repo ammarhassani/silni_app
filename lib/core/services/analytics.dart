@@ -187,6 +187,27 @@ class AnalyticsService {
   }
 
   // =====================================================
+  // CANONICAL TRACKING API (per Phase 3 plan)
+  // =====================================================
+
+  /// Generic event tracking. Prefer this for new call sites; the typed
+  /// `log*` methods above are domain helpers that wrap this internally.
+  Future<void> trackEvent(
+    String name, {
+    Map<String, Object>? parameters,
+  }) async {
+    try {
+      await _safeAnalytics?.logEvent(name: name, parameters: parameters);
+    } catch (_) {
+      // Silently fail - analytics is not critical
+    }
+  }
+
+  /// Generic screen tracking. Aliased to logScreenView so existing
+  /// observers and call sites keep working.
+  Future<void> trackScreen(String screenName) => logScreenView(screenName);
+
+  // =====================================================
   // GAMIFICATION EVENTS
   // =====================================================
 

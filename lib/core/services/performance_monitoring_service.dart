@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'analytics_service.dart';
+import 'analytics.dart';
 import 'app_logger_service.dart';
 
 /// Pre-defined trace names for critical performance paths

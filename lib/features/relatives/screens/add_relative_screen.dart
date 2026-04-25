@@ -19,7 +19,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/errors/app_errors.dart';
-import '../../../core/services/error_handler_service.dart';
+import '../../../core/services/error_reporter.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/glass_pill_title.dart';

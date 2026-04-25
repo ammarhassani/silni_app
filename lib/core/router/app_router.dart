@@ -41,7 +41,7 @@ import '../../features/ai_assistant/screens/weekly_report_screen.dart';
 import '../../features/ai_assistant/services/occasion_message_service.dart';
 import 'app_routes.dart';
 import 'navigation_service.dart';
-import '../services/analytics_service.dart';
+import '../services/analytics.dart';
 import 'performance_navigator_observer.dart';
 import '../../shared/widgets/persistent_bottom_nav.dart';
 

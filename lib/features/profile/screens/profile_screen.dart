@@ -14,7 +14,7 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/services/session_persistence_service.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../../core/services/error_handler_service.dart';
+import '../../../core/services/error_reporter.dart';
 import '../../../shared/widgets/persistent_bottom_nav.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
 import '../widgets/widgets.dart';

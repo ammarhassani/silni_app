@@ -4,7 +4,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:silni_app/core/services/analytics_service.dart';
+import 'package:silni_app/core/services/analytics.dart';
 import 'package:silni_app/core/providers/gamification_events_provider.dart';
 import 'package:silni_app/core/models/gamification_event.dart';
 

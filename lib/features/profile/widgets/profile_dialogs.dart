@@ -7,7 +7,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_themes.dart';
-import '../../../core/services/error_handler_service.dart';
+import '../../../core/services/error_reporter.dart';
 import '../../../shared/providers/data_export_provider.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/data_export_dialog.dart';

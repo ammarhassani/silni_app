@@ -15,7 +15,7 @@ import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../../shared/services/auth_service.dart';
-import '../../../core/services/error_handler_service.dart';
+import '../../../core/services/error_reporter.dart';
 import '../../../core/providers/subscription_provider.dart';
 import '../../home/providers/home_providers.dart';
 import '../widgets/detail/widgets.dart';

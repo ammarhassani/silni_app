@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:silni_app/core/errors/app_errors.dart';
-import 'package:silni_app/core/services/error_handler_service.dart';
+import 'package:silni_app/core/services/error_reporter.dart';
 
 void main() {
   late ErrorHandlerService errorHandler;
