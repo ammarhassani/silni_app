@@ -13,8 +13,6 @@ import '../../../shared/models/hadith_model.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/providers/realtime_provider.dart';
-import '../../premium_onboarding/providers/onboarding_provider.dart';
-import '../../premium_onboarding/screens/premium_onboarding_screen.dart';
 import '../providers/home_providers.dart';
 import '../widgets/widgets.dart';
 import '../../../shared/widgets/message_widget.dart';
@@ -53,18 +51,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
 
     _loadDailyHadith();
-    _checkPremiumOnboarding();
-  }
-
-  /// Check if premium onboarding should be shown for returning MAX users
-  void _checkPremiumOnboarding() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final shouldShow = ref.read(shouldShowOnboardingProvider);
-      if (shouldShow) {
-        PremiumOnboardingScreen.show(context);
-      }
-    });
+    // Premium onboarding intentionally NOT triggered from home — per Phase 3
+    // it shows only once, immediately after the first MAX purchase, never on
+    // subsequent app opens regardless of completion state.
   }
 
   @override

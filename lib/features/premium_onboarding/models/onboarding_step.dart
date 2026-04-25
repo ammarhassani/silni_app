@@ -57,11 +57,14 @@ class OnboardingStep {
   int get hashCode => id.hashCode;
 }
 
-/// Predefined onboarding steps for AI features (prioritized first)
+/// Predefined onboarding steps for premium features.
+///
+/// Phase 3 plan: exactly 3 steps. Communication Scripts is still a feature
+/// but doesn't get its own onboarding step — discoverable from the AI Hub.
 class OnboardingSteps {
   OnboardingSteps._();
 
-  /// AI Features - shown first in onboarding
+  /// AI Features — shown first.
   static const List<OnboardingStep> aiFeatures = [
     // 1. AI Counselor
     OnboardingStep(
@@ -83,36 +86,35 @@ class OnboardingSteps {
       ],
       isPrimary: true,
     ),
+  ];
 
-    // 2. Communication Scripts
+  /// Other premium features.
+  static const List<OnboardingStep> otherFeatures = [
+    // 2. Unlimited Reminders
     OnboardingStep(
-      id: 'communication_scripts',
-      titleArabic: 'سيناريوهات التواصل',
-      descriptionArabic: 'كيف تبدأ المحادثة؟\nسيناريوهات جاهزة لكل موقف',
-      icon: Icons.record_voice_over_rounded,
+      id: 'unlimited_reminders',
+      titleArabic: 'تذكيرات غير محدودة',
+      descriptionArabic: 'سجّل أي عدد من التذكيرات\nليوصلك الله بأهلك في وقتها',
+      icon: Icons.notifications_active_rounded,
       gradient: LinearGradient(
-        colors: [Color(0xFF6A5ACD), Color(0xFF9370DB)],
+        colors: [Color(0xFFFF6B35), Color(0xFFFFD60A)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
-      featureId: 'communication_scripts',
-      routePath: AppRoutes.aiScripts,
+      featureId: 'unlimited_reminders',
+      routePath: AppRoutes.reminders,
       bulletPoints: [
-        'بداية محادثات سلسة',
-        'التعامل مع المواقف الحرجة',
-        'إصلاح العلاقات المتوترة',
+        'بلا حد على عدد التذكيرات',
+        'يومية وأسبوعية وشهرية',
+        'إشعارات في الوقت المناسب',
       ],
-      isPrimary: true,
+      isPrimary: false,
     ),
 
-  ];
-
-  /// Other premium features (shown after AI features)
-  static const List<OnboardingStep> otherFeatures = [
-    // Weekly Reports
+    // 3. Weekly Reports
     OnboardingStep(
       id: 'weekly_reports',
-      titleArabic: 'التقارير الأسبوعية',
+      titleArabic: 'التقرير الأسبوعي',
       descriptionArabic: 'ملخص أسبوعي لتواصلك\nمع عائلتك',
       icon: Icons.assessment_rounded,
       gradient: LinearGradient(
@@ -131,7 +133,7 @@ class OnboardingSteps {
     ),
   ];
 
-  /// All onboarding steps in order (AI features first)
+  /// All onboarding steps in order.
   static List<OnboardingStep> get allSteps => [
         ...aiFeatures,
         ...otherFeatures,
