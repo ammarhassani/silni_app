@@ -19,9 +19,6 @@ import '../providers/home_providers.dart';
 import '../widgets/widgets.dart';
 import '../../../shared/widgets/message_widget.dart';
 import '../../../shared/widgets/persistent_bottom_nav.dart';
-import '../../../core/providers/subscription_provider.dart';
-import '../../../shared/widgets/session_paywall_interstitial.dart';
-import '../../../shared/widgets/in_app_rate_prompt.dart';
 import '../../family_groups/widgets/family_activity_feed.dart';
 import '../../family_groups/widgets/family_celebration_card.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
@@ -57,8 +54,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     _loadDailyHadith();
     _checkPremiumOnboarding();
-    _checkSessionPaywall();
-    _checkRatePrompt();
   }
 
   /// Check if premium onboarding should be shown for returning MAX users
@@ -68,33 +63,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       final shouldShow = ref.read(shouldShowOnboardingProvider);
       if (shouldShow) {
         PremiumOnboardingScreen.show(context);
-      }
-    });
-  }
-
-  /// Show native rate dialog at specific app open milestones.
-  /// Delayed 3s so the home screen finishes all animations before the
-  /// native iOS dialog appears — prevents Flutter gesture arena from
-  /// blocking taps on the dialog buttons.
-  void _checkRatePrompt() {
-    Future.delayed(const Duration(seconds: 3), () {
-      if (!mounted) return;
-      InAppRatePrompt.maybeShow(context, userId: SupabaseConfig.currentUserId);
-    });
-  }
-
-  /// Show session-based paywall interstitial for free users every few app opens.
-  /// Waits for subscription state to load before checking — avoids showing
-  /// paywall to MAX users while subscription is still loading.
-  void _checkSessionPaywall() {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      // Wait for subscription state to resolve (avoid loading → free default)
-      await ref.read(subscriptionStateProvider.future);
-      if (!mounted) return;
-      final isMax = ref.read(isMaxProvider);
-      if (!isMax) {
-        SessionPaywallInterstitial.maybeShow(context, userId: SupabaseConfig.currentUserId);
       }
     });
   }

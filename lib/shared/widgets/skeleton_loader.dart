@@ -233,35 +233,6 @@ class HadithSkeletonLoader extends ConsumerWidget {
   }
 }
 
-/// Skeleton loader for FrequencyCarousel (tomorrow/yesterday reminders)
-class FrequencyCarouselSkeleton extends StatelessWidget {
-  const FrequencyCarouselSkeleton({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: 'جاري تحميل التذكيرات',
-      child: SizedBox(
-        height: 80,
-        child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          itemCount: 4,
-          itemBuilder: (context, index) {
-            return Padding(
-              padding: const EdgeInsets.only(right: AppSpacing.sm),
-              child: SkeletonLoader(
-                width: 100,
-                height: 70,
-                borderRadius: AppSpacing.radiusMd,
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
 /// Skeleton loader for DueRemindersCard
 class DueRemindersCardSkeleton extends ConsumerWidget {
   const DueRemindersCardSkeleton({super.key});
