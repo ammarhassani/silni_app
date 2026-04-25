@@ -23,8 +23,14 @@ import '../../subscription/screens/paywall_screen.dart';
 /// For MAX subscribers: horizontal layout with glowing badge,
 /// gradient "MAX" text, breathing glow border, and shimmer sweep.
 /// For free users: static card with grey badge and upgrade CTA.
+///
+/// [compact] true: render a slim status row when MAX (no breathing border,
+/// no shimmer, no upgrade-CTA buttons). The free path always shows the full
+/// card with its CTA — those users still need the upgrade affordance.
 class SubscriptionCard extends ConsumerStatefulWidget {
-  const SubscriptionCard({super.key});
+  const SubscriptionCard({super.key, this.compact = false});
+
+  final bool compact;
 
   @override
   ConsumerState<SubscriptionCard> createState() => _SubscriptionCardState();
@@ -82,12 +88,115 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
       return _buildFreeCard(themeColors);
     }
 
+    if (widget.compact) {
+      return _buildMaxStatusRow(
+        themeColors: themeColors,
+        isTrialActive: isTrialActive,
+        trialDays: trialDays,
+        expirationDate: expirationDate,
+      );
+    }
+
     return _buildMaxCard(
       themeColors: themeColors,
       currentTier: currentTier,
       isTrialActive: isTrialActive,
       trialDays: trialDays,
       expirationDate: expirationDate,
+    );
+  }
+
+  // ── MAX / Slim status row (compact mode) ─────────────────────────
+
+  Widget _buildMaxStatusRow({
+    required dynamic themeColors,
+    required bool isTrialActive,
+    required int trialDays,
+    required DateTime? expirationDate,
+  }) {
+    final subtitle = isTrialActive
+        ? 'تجربة مجانية — متبقي $trialDays أيام'
+        : (expirationDate != null
+            ? 'يجدّد ${_formatDate(expirationDate)}'
+            : 'مفعّل');
+
+    return GlassCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.premiumGoldDark, AppColors.premiumGold],
+              ),
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.workspace_premium,
+                color: Colors.black87,
+                size: 18,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'الاشتراك',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: themeColors.textOnGradient,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    ShaderMask(
+                      shaderCallback: (bounds) =>
+                          AppColors.goldenGradient.createShader(bounds),
+                      child: Text(
+                        'MAX',
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  subtitle,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: themeColors.textOnGradient.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => _openSubscriptionManagement(context),
+            child: Text(
+              'إدارة',
+              style: AppTypography.labelMedium.copyWith(
+                color: AppColors.premiumGold,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

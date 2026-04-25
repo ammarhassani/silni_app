@@ -17,6 +17,7 @@ import '../../../shared/widgets/message_widget.dart';
 import '../../../shared/widgets/glass_pill_title.dart';
 import '../../../shared/widgets/persistent_bottom_nav.dart';
 import '../../../core/config/env/env.dart';
+import '../../../core/providers/subscription_provider.dart';
 import '../widgets/subscription_card.dart';
 import '../widgets/theme_carousel.dart';
 
@@ -51,161 +52,99 @@ class SettingsScreen extends ConsumerWidget {
                   // In-App Messages
                   const MessageWidget(screenPath: '/settings'),
                   const SizedBox(height: AppSpacing.md),
-                  // Subscription Card
-                  const SubscriptionCard(),
-                  const SizedBox(height: AppSpacing.md),
 
-                  // Theme Selector — compact button that opens carousel
+                  // ── الحساب (Account) ────────────────────────────
+                  _buildSectionHeader('الحساب', themeColors),
+                  _buildSettingsTile(
+                    icon: Icons.person,
+                    title: 'الملف الشخصي',
+                    themeColors: themeColors,
+                    onTap: () => context.push(AppRoutes.profile),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildSettingsTile(
+                    icon: Icons.lock_outline,
+                    title: 'تغيير كلمة المرور',
+                    themeColors: themeColors,
+                    onTap: () => _showChangePasswordDialog(context, ref),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildSettingsTile(
+                    icon: Icons.logout,
+                    title: 'تسجيل الخروج',
+                    themeColors: themeColors,
+                    showChevron: false,
+                    onTap: () async {
+                      final userId =
+                          Supabase.instance.client.auth.currentUser?.id;
+                      final authService = ref.read(authServiceProvider);
+                      await authService.signOut();
+                      clearUserSessionFromWidget(
+                        ref,
+                        previousUserId: userId,
+                      );
+                      if (context.mounted) {
+                        context.go(AppRoutes.login);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // ── التطبيق (App) ───────────────────────────────
+                  _buildSectionHeader('التطبيق', themeColors),
                   const ThemePickerButton(),
                   const SizedBox(height: AppSpacing.sm),
-
-                  // Profile
-                  GlassCard(
-                    child: ListTile(
-                      leading: Icon(Icons.person, color: themeColors.textOnGradient),
-                      title: Text(
-                        'الملف الشخصي',
-                        style: AppTypography.titleMedium.copyWith(
-                          color: themeColors.textOnGradient,
-                        ),
-                      ),
-                      trailing: Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        color: themeColors.textOnGradient.withValues(alpha: 0.5),
-                        size: 20,
-                      ),
+                  _buildSettingsTile(
+                    icon: Icons.notifications,
+                    title: 'الإشعارات',
+                    themeColors: themeColors,
+                    onTap: () => context.push(AppRoutes.notifications),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Builder(
+                    builder: (ctx) => _buildSettingsTile(
+                      icon: Icons.person_add_alt_1_rounded,
+                      title: 'دعوة صديق',
+                      trailingIcon: Icons.share_rounded,
+                      themeColors: themeColors,
                       onTap: () {
-                        context.push(AppRoutes.profile);
+                        final box = ctx.findRenderObject() as RenderBox;
+                        final origin =
+                            box.localToGlobal(Offset.zero) & box.size;
+                        Share.share(
+                          'حمّل تطبيق صِلني وصِل رحمك 🌳\n\n'
+                          'iOS: https://apps.apple.com/app/id6738029498\n'
+                          'Android: https://play.google.com/store/apps/details?id=com.silni.app',
+                          sharePositionOrigin: origin,
+                        );
                       },
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-
-                  // Notifications
-                  GlassCard(
-                    child: ListTile(
-                      leading: Icon(
-                        Icons.notifications,
-                        color: themeColors.textOnGradient,
-                      ),
-                      title: Text(
-                        'الإشعارات',
-                        style: AppTypography.titleMedium.copyWith(
-                          color: themeColors.textOnGradient,
-                        ),
-                      ),
-                      trailing: Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        color: themeColors.textOnGradient.withValues(alpha: 0.5),
-                        size: 20,
-                      ),
-                      onTap: () {
-                        context.push(AppRoutes.notifications);
-                      },
-                    ),
+                  _buildSettingsTile(
+                    icon: Icons.star_rate_rounded,
+                    title: 'قيّم التطبيق',
+                    themeColors: themeColors,
+                    onTap: () async {
+                      final inAppReview = InAppReview.instance;
+                      if (await inAppReview.isAvailable()) {
+                        await inAppReview.requestReview();
+                      } else {
+                        await inAppReview.openStoreListing(
+                          appStoreId: '6738029498',
+                        );
+                      }
+                    },
                   ),
-                  const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: AppSpacing.lg),
 
-                  // Change Password
-                  GlassCard(
-                    child: ListTile(
-                      leading: Icon(Icons.lock_outline, color: themeColors.textOnGradient),
-                      title: Text(
-                        'تغيير كلمة المرور',
-                        style: AppTypography.titleMedium.copyWith(
-                          color: themeColors.textOnGradient,
-                        ),
-                      ),
-                      trailing: Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        color: themeColors.textOnGradient.withValues(alpha: 0.5),
-                        size: 20,
-                      ),
-                      onTap: () => _showChangePasswordDialog(context, ref),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-
-                  // Invite a friend
-                  GlassCard(
-                    child: Builder(
-                      builder: (ctx) => ListTile(
-                        leading: Icon(Icons.person_add_alt_1_rounded, color: themeColors.textOnGradient),
-                        title: Text(
-                          'دعوة صديق',
-                          style: AppTypography.titleMedium.copyWith(
-                            color: themeColors.textOnGradient,
-                          ),
-                        ),
-                        trailing: Icon(
-                          Icons.share_rounded,
-                          color: themeColors.textOnGradient.withValues(alpha: 0.5),
-                          size: 20,
-                        ),
-                        onTap: () {
-                          final box = ctx.findRenderObject() as RenderBox;
-                          final origin = box.localToGlobal(Offset.zero) & box.size;
-                          Share.share(
-                            'حمّل تطبيق صِلني وصِل رحمك 🌳\n\n'
-                            'iOS: https://apps.apple.com/app/id6738029498\n'
-                            'Android: https://play.google.com/store/apps/details?id=com.silni.app',
-                            sharePositionOrigin: origin,
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-
-                  // Rate our app
-                  GlassCard(
-                    child: ListTile(
-                      leading: Icon(Icons.star_rate_rounded, color: themeColors.textOnGradient),
-                      title: Text(
-                        'قيّم التطبيق',
-                        style: AppTypography.titleMedium.copyWith(
-                          color: themeColors.textOnGradient,
-                        ),
-                      ),
-                      trailing: Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        color: themeColors.textOnGradient.withValues(alpha: 0.5),
-                        size: 20,
-                      ),
-                      onTap: () async {
-                        final inAppReview = InAppReview.instance;
-                        if (await inAppReview.isAvailable()) {
-                          await inAppReview.requestReview();
-                        } else {
-                          await inAppReview.openStoreListing(
-                            appStoreId: '6738029498',
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-
-                  // Logout
-                  GlassCard(
-                    child: ListTile(
-                      leading: Icon(Icons.logout, color: themeColors.textOnGradient),
-                      title: Text(
-                        'تسجيل الخروج',
-                        style: AppTypography.titleMedium.copyWith(
-                          color: themeColors.textOnGradient,
-                        ),
-                      ),
-                      onTap: () async {
-                        final userId = Supabase.instance.client.auth.currentUser?.id;
-                        final authService = ref.read(authServiceProvider);
-                        await authService.signOut();
-                        clearUserSessionFromWidget(ref, previousUserId: userId);
-                        if (context.mounted) {
-                          context.go(AppRoutes.login);
-                        }
-                      },
-                    ),
+                  // ── الاشتراك (Subscription) ─────────────────────
+                  _buildSectionHeader('الاشتراك', themeColors),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final isMax = ref.watch(isMaxProvider);
+                      return SubscriptionCard(compact: isMax);
+                    },
                   ),
 
                   // Environment badge for admin user
@@ -221,6 +160,54 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// Build a section header label for the three grouped settings sections.
+  Widget _buildSectionHeader(String title, dynamic themeColors) {
+    return Padding(
+      padding: const EdgeInsets.only(
+        right: AppSpacing.sm,
+        bottom: AppSpacing.sm,
+      ),
+      child: Text(
+        title,
+        style: AppTypography.labelLarge.copyWith(
+          color: themeColors.textOnGradient.withValues(alpha: 0.55),
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+
+  /// Build a consistent settings tile. Reduces the previous row duplication.
+  Widget _buildSettingsTile({
+    required IconData icon,
+    required String title,
+    required dynamic themeColors,
+    required VoidCallback onTap,
+    IconData trailingIcon = Icons.arrow_forward_ios_rounded,
+    bool showChevron = true,
+  }) {
+    return GlassCard(
+      child: ListTile(
+        leading: Icon(icon, color: themeColors.textOnGradient),
+        title: Text(
+          title,
+          style: AppTypography.titleMedium.copyWith(
+            color: themeColors.textOnGradient,
+          ),
+        ),
+        trailing: showChevron
+            ? Icon(
+                trailingIcon,
+                color: themeColors.textOnGradient.withValues(alpha: 0.5),
+                size: 20,
+              )
+            : null,
+        onTap: onTap,
       ),
     );
   }
