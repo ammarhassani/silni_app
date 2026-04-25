@@ -15,6 +15,7 @@ import '../../../shared/widgets/swipeable_relative_card.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
 import '../../../core/providers/cache_provider.dart';
+import '../../../core/providers/relative_streak_provider.dart';
 import '../../../core/router/app_routes.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../home/providers/home_providers.dart';
@@ -340,6 +341,15 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
       };
     }
 
+    // One-shot stream of all relative streaks → map for O(1) lookup per card.
+    final streaks = ref
+            .watch(allRelativeStreaksStreamProvider(userId))
+            .valueOrNull ??
+        const [];
+    final streaksByRelative = <String, int>{
+      for (final s in streaks) s.relativeId: s.currentStreak,
+    };
+
     // Group relatives by relationship priority
     final Map<int, List<Relative>> grouped = {};
     for (final relative in relatives) {
@@ -354,17 +364,28 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
       ),
       itemCount: relatives.length,
       itemBuilder: (context, index) {
-        return _buildRelativeCard(relatives[index], index, userId, labelsMap);
+        return _buildRelativeCard(
+          relatives[index],
+          index,
+          userId,
+          labelsMap,
+          streaksByRelative[relatives[index].id],
+        );
       },
     );
   }
 
-  Widget _buildRelativeCard(Relative relative, int index, String userId, Map<String, String>? labelsMap) {
-    // userId is now passed from parent - no more O(n) rebuilds!
-
+  Widget _buildRelativeCard(
+    Relative relative,
+    int index,
+    String userId,
+    Map<String, String>? labelsMap,
+    int? streakDays,
+  ) {
     return SwipeableRelativeCard(
           relative: relative,
           relationshipLabel: labelsMap?[relative.id],
+          streakDays: streakDays,
           onTap: () {
             context.push('${AppRoutes.relativeDetail}/${relative.id}');
           },

@@ -345,15 +345,21 @@ class FamilySharingService {
 
   /// Ensure user's relatives are in their group.
   ///
-  /// On first-time setup (no self-node yet), migrates personal relatives
-  /// into the group and creates a self-node. On subsequent calls, only
+  /// On first-time setup (no self-node yet), creates a self-node and optionally
+  /// migrates personal relatives into the group. On subsequent calls, only
   /// ensures edges are up-to-date — personal relatives are NOT re-migrated
   /// to prevent cleaned-up duplicates from reappearing.
+  ///
+  /// [migrateRelatives] gates the personal-relatives migration step. When
+  /// false, the self-node is created but personal relatives stay separate.
+  /// Defaults to true to preserve historical behavior for callers that don't
+  /// surface a choice (e.g., admin first-create flow inside `initializeSharedTree`).
   static Future<void> ensureRelativesInGroup({
     required String userId,
     required String groupId,
     String? userDisplayName,
     Gender? userGender,
+    bool migrateRelatives = true,
   }) async {
     final client = SupabaseConfig.client;
 
@@ -373,11 +379,13 @@ class FamilySharingService {
     //    same from_id/to_id/edge_type triggers group-level unique index).
     if (selfNodeId != null) return;
 
-    // 3. First-time setup: migrate personal relatives into the group.
-    await migrateRelativesToGroup(
-      userId: userId,
-      groupId: groupId,
-    );
+    // 3. First-time setup: optionally migrate personal relatives into the group.
+    if (migrateRelatives) {
+      await migrateRelativesToGroup(
+        userId: userId,
+        groupId: groupId,
+      );
+    }
 
     // 4. Create user's self-node in the group
     {

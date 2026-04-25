@@ -7,6 +7,8 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/utils/contact_launcher.dart';
 import '../../../core/providers/cache_provider.dart';
+import '../../../core/providers/gamification_provider.dart';
+import '../../../core/providers/relative_streak_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/voice_note_button.dart';
 import '../../../shared/services/supabase_storage_service.dart';
@@ -401,12 +403,50 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
 
       if (mounted) {
         final themeColors = ref.read(themeColorsProvider);
-        HapticFeedback.lightImpact();
-        UIHelpers.showSnackBar(
-          context,
-          'تم تسجيل التواصل: ${type.arabicName}',
-          backgroundColor: themeColors.primary,
+
+        // Compute points the same way gamification_service does (admin-config driven).
+        final gamificationService = ref.read(gamificationServiceProvider);
+        final points = gamificationService.calculateInteractionPoints(interaction);
+
+        // Read the streak that was just updated by the service.
+        final streakService = ref.read(relativeStreakServiceProvider);
+        final streak = await streakService.getRelativeStreak(
+          userId: user.id,
+          relativeId: widget.relativeId,
         );
+        final streakDays = streak?.currentStreak ?? 0;
+
+        // Relative name (the screen already streams this relative).
+        final relativeName = ref
+                .read(relativeDetailProvider(widget.relativeId))
+                .valueOrNull
+                ?.fullName ??
+            '';
+
+        const milestones = {7, 14, 30, 50, 100};
+        final isMilestone = milestones.contains(streakDays);
+
+        HapticFeedback.lightImpact();
+        if (!mounted) return;
+        if (isMilestone) {
+          UIHelpers.showSnackBar(
+            context,
+            '✨ +$points نقطة · 🔥 وصلت لـ$streakDays يوم متواصل مع $relativeName',
+            backgroundColor: themeColors.primary,
+          );
+        } else if (streakDays > 0) {
+          UIHelpers.showSnackBar(
+            context,
+            '+$points نقطة · 🔥 سلسلة $streakDays أيام مع $relativeName',
+            backgroundColor: themeColors.primary,
+          );
+        } else {
+          UIHelpers.showSnackBar(
+            context,
+            '+$points نقطة · تم تسجيل التواصل مع $relativeName',
+            backgroundColor: themeColors.primary,
+          );
+        }
       }
     } catch (_) {
       // Interaction logging failed silently

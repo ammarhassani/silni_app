@@ -7,6 +7,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/ai/ai_models.dart';
+import '../../../shared/widgets/ai_generated_badge.dart';
 import 'markdown_styles.dart';
 import 'message_actions.dart';
 
@@ -133,6 +134,8 @@ class ConversationMessage extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              const SizedBox(width: AppSpacing.sm),
+              const AIGeneratedBadge(color: Colors.white),
             ],
           ),
 

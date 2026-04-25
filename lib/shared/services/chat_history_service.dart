@@ -199,7 +199,10 @@ class ChatHistoryService {
 
   // ============ MEMORIES ============
 
-  /// Save a new memory
+  /// Save a new memory.
+  ///
+  /// Memory extraction disabled — Memory Viewer was deleted in Phase 0; collecting without surfacing is privacy debt.
+  /// The method signature is preserved so callers don't crash; it always returns null.
   Future<AIMemory?> saveMemory({
     required AIMemoryCategory category,
     required String content,
@@ -207,22 +210,7 @@ class ChatHistoryService {
     int importance = 5,
     String? sourceConversationId,
   }) async {
-    if (_userId == null) return null;
-
-    try {
-      final response = await _supabase.from('ai_memories').insert({
-        'user_id': _userId,
-        'category': category.value,
-        'content': content,
-        'relative_id': relativeId,
-        'importance': importance,
-        'source_conversation_id': sourceConversationId,
-      }).select().single();
-
-      return AIMemory.fromJson(response);
-    } catch (e) {
-      return null;
-    }
+    return null;
   }
 
   /// Get all active memories for user (sorted by importance)

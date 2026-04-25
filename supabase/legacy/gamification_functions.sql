@@ -1,3 +1,4 @@
+-- Historical bootstrap. Superseded by migration 20260425000000_runtime_rpc_definitions.sql. Kept for reference only — do not run against production.
 -- =====================================================
 -- Gamification RPC Functions
 -- =====================================================

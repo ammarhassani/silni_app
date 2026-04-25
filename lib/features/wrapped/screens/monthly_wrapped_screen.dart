@@ -9,6 +9,7 @@ import '../../../core/ai/deepseek_ai_service.dart';
 import '../../../core/providers/subscription_provider.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../../shared/widgets/ai_generated_badge.dart';
 import '../../../shared/widgets/share_bottom_sheet.dart';
 import '../../../shared/widgets/share_cards/wrapped_share_card.dart';
 import '../../../shared/widgets/shareable_card_generator.dart';
@@ -731,6 +732,11 @@ class _WrappedStoryContentState extends State<_WrappedStoryContent> {
                 duration: 500.ms,
                 curve: Curves.easeOut,
               ),
+
+          const SizedBox(height: 6),
+          const AIGeneratedBadge(color: Colors.white)
+              .animate()
+              .fadeIn(delay: 600.ms, duration: 400.ms),
 
           const SizedBox(height: 12),
 

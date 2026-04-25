@@ -15,6 +15,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/relative_model.dart';
+import '../../../shared/widgets/ai_generated_badge.dart';
 import '../../../shared/widgets/glass_pill_title.dart';
 import '../../home/providers/home_providers.dart';
 import '../providers/ai_chat_provider.dart';
@@ -799,6 +800,8 @@ class _ScriptResultView extends StatelessWidget {
                           ],
                         ),
                       ),
+                    const SizedBox(height: 4),
+                    const AIGeneratedBadge(color: Colors.white),
                   ],
                 ),
               ),

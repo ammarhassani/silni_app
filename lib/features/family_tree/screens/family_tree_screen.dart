@@ -12,6 +12,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show UserAttributes;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:screenshot_callback/screenshot_callback.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
@@ -99,11 +100,18 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     }
   }
 
+  /// SharedPreferences key for the user's migration choice.
+  /// Stored globally — once chosen, we don't ask again on subsequent groups.
+  static const String _migrationChoiceKey = 'family_migration_choice';
+
   /// Ensure the group admin's relatives are migrated to their group.
   ///
   /// Called once per session when we detect the user is in a group.
   /// Only the admin's personal relatives are migrated — joiners keep
   /// their personal data separate (they mapped to an existing node).
+  ///
+  /// On first-time setup (admin has no self-node yet), prompts the user
+  /// before silently moving their personal relatives into the shared tree.
   Future<void> _ensureRelativesMigrated(String groupId) async {
     if (_hasMigratedRelatives) return;
     _hasMigratedRelatives = true;
@@ -117,17 +125,27 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       // a separate, independent dataset that shouldn't pollute the group.
       final memberRow = await SupabaseConfig.client
           .from('family_group_members')
-          .select('role')
+          .select('role, relative_id_in_tree')
           .eq('group_id', groupId)
           .eq('user_id', userId)
           .maybeSingle();
 
       final isAdmin = memberRow?['role'] == 'admin';
+      final hasSelfNode = memberRow?['relative_id_in_tree'] != null;
 
       if (isAdmin) {
+        // First-time setup only (no self-node yet) — ask the user before
+        // moving their personal relatives. Subsequent calls early-return
+        // inside the service.
+        bool migrateRelatives = true;
+        if (!hasSelfNode) {
+          migrateRelatives = await _resolveMigrationChoice(userId);
+        }
+
         await FamilySharingService.ensureRelativesInGroup(
           userId: userId,
           groupId: groupId,
+          migrateRelatives: migrateRelatives,
         );
       }
 
@@ -143,6 +161,57 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       // Allow retry on next screen mount by resetting the flag
       _hasMigratedRelatives = false;
     }
+  }
+
+  /// Resolve the user's choice to migrate personal relatives.
+  ///
+  /// Returns the stored choice if one exists. Otherwise counts personal
+  /// relatives, shows a modal, persists the choice, and returns it.
+  /// Skips the modal entirely (returns false) if there are no personal
+  /// relatives — nothing to ask about.
+  Future<bool> _resolveMigrationChoice(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getBool(_migrationChoiceKey);
+    if (stored != null) return stored;
+
+    final personal = await SupabaseConfig.client
+        .from('relatives')
+        .select('id')
+        .eq('user_id', userId)
+        .isFilter('family_group_id', null)
+        .eq('is_archived', false);
+    final count = personal.length;
+    if (count == 0) return false;
+
+    if (!mounted) return false;
+    final choice = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text(
+          'نقل أقاربك إلى الشجرة المشتركة؟',
+          textAlign: TextAlign.center,
+        ),
+        content: Text(
+          'الأقارب اللي عندك حالياً: $count. تبي تنقلهم للشجرة المشتركة عشان أهل المجموعة يقدرون يشوفونهم؟',
+          textAlign: TextAlign.right,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('اتركهم منفصلين'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('انقلهم'),
+          ),
+        ],
+      ),
+    );
+
+    final result = choice ?? false;
+    await prefs.setBool(_migrationChoiceKey, result);
+    return result;
   }
 
   void _initScreenshotDetection() {
@@ -459,7 +528,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                         ),
                       ),
                       child: Text(
-                        'إنشاء مجموعة',
+                        'إنشاء مجموعة عائلية ✨',
                         style: AppTypography.labelMedium.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -541,6 +610,16 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
           ),
+          if (groupInfo == null)
+            Semantics(
+              label: 'إنشاء مجموعة عائلية',
+              button: true,
+              child: IconButton(
+                onPressed: () => context.push(AppRoutes.createFamilyGroup),
+                icon: Icon(Icons.group_add_rounded, color: themeColors.textOnGradient),
+                tooltip: 'إنشاء مجموعة عائلية ✨',
+              ),
+            ),
           Semantics(
             label: 'مشاركة الشجرة',
             button: true,

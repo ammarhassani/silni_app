@@ -23,6 +23,11 @@ class SwipeableRelativeCard extends ConsumerWidget {
   /// Falls back to [relative.relationshipType.arabicName] when null.
   final String? relationshipLabel;
 
+  /// Per-relative streak count. When > 0, renders a small `🔥 N` indicator
+  /// in the secondary row. Resolved by the parent (via the all-streaks
+  /// stream) so the card itself does no DB work.
+  final int? streakDays;
+
   const SwipeableRelativeCard({
     super.key,
     required this.relative,
@@ -30,6 +35,7 @@ class SwipeableRelativeCard extends ConsumerWidget {
     this.onMarkContacted,
     this.showContactActions = true,
     this.relationshipLabel,
+    this.streakDays,
   });
 
   @override
@@ -258,6 +264,16 @@ class SwipeableRelativeCard extends ConsumerWidget {
                           color: themeColors.textSecondary,
                         ),
                       ),
+                      if (streakDays != null && streakDays! > 0) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          '🔥$streakDays',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.joyfulOrange,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                       if (needsAttention) ...[
                         const SizedBox(width: 6),
                         Icon(

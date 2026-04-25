@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/gamification_stats_card.dart';
+import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/services/session_persistence_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/services/error_handler_service.dart';
 import '../../../shared/widgets/persistent_bottom_nav.dart';
+import '../../family_tree/providers/family_graph_providers.dart';
 import '../widgets/widgets.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/message_widget.dart';
@@ -109,6 +113,81 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                   child: GamificationStatsCard(userId: userId, compact: false),
+                ),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
+
+              // Shared family section
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: Text(
+                    '👨‍👩‍👧 العائلة المشتركة',
+                    style: AppTypography.headlineMedium.copyWith(
+                      color: themeColors.textOnGradient,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
+
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: Consumer(
+                    builder: (context, ref, _) {
+                      final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+                      if (groupInfo == null) {
+                        return GlassCard(
+                          child: ListTile(
+                            leading: Icon(Icons.group_add_rounded, color: themeColors.accent),
+                            title: Text(
+                              'إنشاء مجموعة عائلية ✨',
+                              style: AppTypography.titleMedium.copyWith(color: Colors.white),
+                            ),
+                            subtitle: Text(
+                              'شارك شجرتك مع أهلك ليرى كل واحد علاقاته',
+                              style: AppTypography.bodySmall.copyWith(
+                                color: Colors.white.withValues(alpha: 0.7),
+                              ),
+                            ),
+                            trailing: Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              color: Colors.white.withValues(alpha: 0.5),
+                              size: 20,
+                            ),
+                            onTap: () => context.push(AppRoutes.createFamilyGroup),
+                          ),
+                        );
+                      }
+                      return GlassCard(
+                        child: ListTile(
+                          leading: Icon(Icons.diversity_3_rounded, color: themeColors.accent),
+                          title: Text(
+                            'مجموعتي العائلية',
+                            style: AppTypography.titleMedium.copyWith(color: Colors.white),
+                          ),
+                          subtitle: Text(
+                            'إدارة الأعضاء والدعوات',
+                            style: AppTypography.bodySmall.copyWith(
+                              color: Colors.white.withValues(alpha: 0.7),
+                            ),
+                          ),
+                          trailing: Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            color: Colors.white.withValues(alpha: 0.5),
+                            size: 20,
+                          ),
+                          onTap: () => context.push(
+                            '${AppRoutes.familyGroupDetail}/${groupInfo.groupId}',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
 

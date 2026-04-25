@@ -186,10 +186,6 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
   final RefreshHistoryCallback? _onHistoryChanged;
   final _uuid = const Uuid();
 
-  /// Counter for throttling memory extraction (every 3 assistant messages)
-  int _assistantMessagesSinceExtraction = 0;
-  static const int _memoryExtractionInterval = 3;
-
   AIChatNotifier({
     required AIService aiService,
     required ChatHistoryService chatHistoryService,
@@ -492,14 +488,7 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
           // Save assistant message (async)
           _saveMessageAsync(assistantMessage);
 
-          // Only extract memories every N assistant messages to reduce API calls
-          if (fullContent.trim().isNotEmpty && fullContent.length > 20) {
-            _assistantMessagesSinceExtraction++;
-            if (_assistantMessagesSinceExtraction >= _memoryExtractionInterval) {
-              _assistantMessagesSinceExtraction = 0;
-              _extractAndSaveMemoriesAsync();
-            }
-          }
+          // Memory extraction disabled — Memory Viewer was deleted in Phase 0; collecting without surfacing is privacy debt.
         }
       }
     } on AIServiceException catch (e) {
@@ -530,250 +519,6 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
     } catch (e) {
       // Silent fail - message is still in local state
     }
-  }
-
-  /// Extract and save memories from the last conversation turn (async, non-blocking)
-  Future<void> _extractAndSaveMemoriesAsync() async {
-    if (!mounted || state.messages.length < 2) return;
-
-    try {
-      // Build conversation text from the last few messages (user + assistant)
-      final lastMessages = state.messages.reversed.take(4).toList().reversed;
-      final conversationText = lastMessages
-          .map((m) => '${m.role == MessageRole.user ? "المستخدم" : "واصل"}: ${m.content}')
-          .join('\n');
-
-      // Get fresh memories from service to check for duplicates
-      final existingMemories = await _chatHistoryService.getMemories();
-
-      // Extract memories using AI
-      final memories = await _aiService.extractMemories(conversationText);
-
-      if (!mounted || memories.isEmpty) return;
-
-      // Get active category keys from admin config
-      final activeCategories = AIPrompts.activeMemoryCategoryKeys;
-
-      // Save each extracted memory and count successes
-      int savedCount = 0;
-      for (final memory in memories) {
-        if (!mounted) return;
-
-        final categoryStr = memory['category'] as String? ?? 'conversation_insight';
-        final content = memory['content'] as String? ?? '';
-        final importance = memory['importance'] as int? ?? 5;
-
-        if (content.isEmpty) continue;
-
-        // Skip categories that are not active in admin config
-        if (!activeCategories.contains(categoryStr)) {
-          continue;
-        }
-
-        // Check for duplicate - skip if similar memory already exists
-        if (_isDuplicateMemory(content, existingMemories)) {
-          continue;
-        }
-
-        // Map string category to enum
-        final category = AIMemoryCategory.fromString(categoryStr);
-
-        final saved = await _chatHistoryService.saveMemory(
-          category: category,
-          content: content,
-          importance: importance,
-          sourceConversationId: state.conversation?.id,
-        );
-        if (saved != null) {
-          savedCount++;
-          // Add to existing memories to prevent duplicates within same extraction
-          existingMemories.add(AIMemory(
-            id: saved.id,
-            userId: saved.userId,
-            category: category,
-            content: content,
-            importance: importance,
-            createdAt: DateTime.now(),
-          ));
-        }
-      }
-
-      // Update state to show memory saved indicator
-      if (mounted && savedCount > 0) {
-        state = state.copyWith(memorySavedCount: savedCount);
-      }
-
-      // Refresh memories provider so next conversation has access
-      _onHistoryChanged?.call();
-    } catch (e) {
-      // Silent fail - memory extraction is optional enhancement
-    }
-  }
-
-  /// Check if a memory is about relative facts (names/relationships)
-  /// These should NOT be stored - data exists in relatives table
-  /// Uses dynamic keywords from admin config
-  bool _isRelativeFact(String content) {
-    // Get skip keywords from admin config (falls back to defaults if not loaded)
-    final memoryConfig = AIConfigService.instance.memoryConfig;
-
-    // If skipRelativeFacts is disabled in admin, don't skip anything
-    if (!memoryConfig.skipRelativeFacts) {
-      return false;
-    }
-
-    // Use dynamic keywords from admin config
-    final relationshipKeywords = memoryConfig.skipKeywords;
-
-    final lowerContent = content.toLowerCase();
-
-    // If content contains relationship keyword + looks like a name statement
-    for (final keyword in relationshipKeywords) {
-      if (lowerContent.contains(keyword)) {
-        // Check if it's a simple "name is X" pattern
-        if (lowerContent.contains('اسم') ||
-            lowerContent.contains(':') ||
-            lowerContent.contains('هو ') ||
-            lowerContent.contains('هي ')) {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  }
-
-  /// Check if content already exists in relatives data
-  bool _isInRelativesData(String content, List<Relative> relatives) {
-    final lowerContent = content.toLowerCase();
-
-    for (final relative in relatives) {
-      // Check if content mentions this relative's name
-      if (relative.fullName.isNotEmpty &&
-          lowerContent.contains(relative.fullName.toLowerCase())) {
-        // If it's just about their name/relationship, skip it
-        if (_isRelativeFact(content)) {
-          return true;
-        }
-      }
-
-      // Also check first name only (common pattern: "أبوي سعيد" or "أمي حمدة")
-      final firstName = relative.fullName.split(' ').first;
-      if (firstName.length >= 2 && lowerContent.contains(firstName.toLowerCase())) {
-        // If content is about this person's basic info, skip it
-        if (_isRelativeFact(content)) {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  }
-
-  /// Check if a memory is a duplicate of an existing one
-  /// Uses key term matching and normalized comparison to detect semantically similar memories
-  bool _isDuplicateMemory(String newContent, List<AIMemory> existingMemories) {
-    // First check: Is this a relative fact? (names, basic relationships)
-    // These should NEVER be stored - they exist in relatives table
-    if (_isRelativeFact(newContent)) {
-      return true; // Treat as duplicate to skip it
-    }
-
-    // Check against relatives data
-    if (_isInRelativesData(newContent, _allRelatives)) {
-      return true;
-    }
-
-    // Normalize content for comparison
-    final normalizedNew = _normalizeForComparison(newContent);
-
-    // Check against existing memories
-    for (final existing in existingMemories) {
-      final normalizedExisting = _normalizeForComparison(existing.content);
-
-      // Direct match after normalization
-      if (normalizedNew == normalizedExisting) {
-        return true;
-      }
-
-      // Extract key terms for semantic matching
-      final newKeyTerms = _extractKeyTerms(newContent);
-      final existingKeyTerms = _extractKeyTerms(existing.content);
-
-      if (newKeyTerms.isEmpty) continue;
-
-      // Count matching key terms
-      int matchCount = 0;
-      for (final term in newKeyTerms) {
-        if (existingKeyTerms.contains(term)) {
-          matchCount++;
-        }
-      }
-
-      // If 2+ key terms match, consider it a duplicate
-      // (e.g., "يفضل" + "التواصل" + "صباحاً" = same preference)
-      if (matchCount >= 2) {
-        return true;
-      }
-
-      // Also check for high overlap (50%+ is now stricter)
-      if (newKeyTerms.isNotEmpty && matchCount / newKeyTerms.length >= 0.5) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /// Normalize content for comparison (remove punctuation, extra spaces, etc.)
-  String _normalizeForComparison(String content) {
-    return content
-        .replaceAll(RegExp(r'[:\-،,\.؟?!]'), ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim()
-        .toLowerCase();
-  }
-
-  /// Extract key terms (names, relationships) from memory content
-  /// Uses dynamic skip keywords from admin config for relationship detection
-  Set<String> _extractKeyTerms(String content) {
-    final terms = <String>{};
-
-    // Get relationship terms from admin config (uses same skip keywords)
-    final memoryConfig = AIConfigService.instance.memoryConfig;
-    final relationshipTerms = memoryConfig.skipKeywords;
-
-    // Split content into words
-    final words = content.split(RegExp(r'[\s:،,]+'));
-
-    for (final word in words) {
-      final cleanWord = word.trim();
-      if (cleanWord.isEmpty) continue;
-
-      // Include relationship terms
-      if (relationshipTerms.any((r) => cleanWord.contains(r))) {
-        terms.add(cleanWord);
-        continue;
-      }
-
-      // Include proper names (words that look like names - not common words)
-      // Names are typically 3+ chars, not common Arabic words
-      if (cleanWord.length >= 3 && !_isCommonWord(cleanWord)) {
-        terms.add(cleanWord);
-      }
-    }
-
-    return terms;
-  }
-
-  /// Check if a word is a common Arabic word (not a name)
-  bool _isCommonWord(String word) {
-    const commonWords = {
-      'اسم', 'هو', 'هي', 'في', 'من', 'إلى', 'على', 'عن', 'مع', 'هذا', 'هذه',
-      'التي', 'الذي', 'كان', 'كانت', 'يكون', 'تكون', 'المستخدم', 'القريب',
-      'اسمه', 'اسمها', 'يحب', 'تحب', 'يفضل', 'تفضل', 'أسماء',
-    };
-    return commonWords.contains(word);
   }
 
   /// Update conversation title asynchronously with intelligent naming
@@ -866,7 +611,6 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
 
   /// Clear the current conversation
   void clearConversation() {
-    _assistantMessagesSinceExtraction = 0;
     state = const AIChatState();
   }
 

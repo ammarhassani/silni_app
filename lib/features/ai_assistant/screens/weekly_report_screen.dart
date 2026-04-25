@@ -14,6 +14,7 @@ import '../../../core/theme/app_themes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/utils/relationship_label_helper.dart';
+import '../../../shared/widgets/ai_generated_badge.dart';
 import '../../../shared/widgets/glass_pill_title.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../gamification/providers/stats_provider.dart';
@@ -464,6 +465,8 @@ $personality
                   ],
                 ),
               ),
+              const SizedBox(width: AppSpacing.sm),
+              const AIGeneratedBadge(color: Colors.white),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -897,6 +900,8 @@ $personality
                   ],
                 ),
               ),
+              const SizedBox(width: AppSpacing.sm),
+              const AIGeneratedBadge(color: Colors.white),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
