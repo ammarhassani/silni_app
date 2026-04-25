@@ -14,6 +14,7 @@ import '../../../../core/providers/subscription_provider.dart';
 import '../../../../core/services/ai_touch_point_service.dart';
 import '../../../../core/theme/theme_provider.dart';
 import '../../../../shared/models/relative_model.dart';
+import '../../../../shared/utils/ui_helpers.dart';
 import '../../../../shared/widgets/glass_card.dart';
 import '../../../../shared/widgets/skeleton_loader.dart';
 
@@ -512,15 +513,11 @@ class _ConversationStarterCard extends StatelessWidget {
   void _copyToClipboard(BuildContext context) {
     Clipboard.setData(ClipboardData(text: topic));
     HapticFeedback.lightImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'تم نسخ الموضوع',
-          style: TextStyle(color: themeColors.onPrimary),
-        ),
-        backgroundColor: themeColors.primary,
-        duration: const Duration(seconds: 2),
-      ),
+    UIHelpers.showSnackBar(
+      context,
+      'تم نسخ الموضوع',
+      backgroundColor: themeColors.primary,
+      duration: const Duration(seconds: 2),
     );
   }
 

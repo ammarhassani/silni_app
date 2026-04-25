@@ -7,6 +7,8 @@ import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
+import '../utils/ui_helpers.dart';
+
 /// Three-state voice recorder: idle → recording → recorded.
 ///
 /// In **idle** state, shows a mic icon suitable for [suffixIcon].
@@ -105,8 +107,10 @@ class VoiceNoteRecorderState extends State<VoiceNoteRecorder>
     final hasPermission = await _recorder!.hasPermission();
     if (!hasPermission) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('يرجى السماح بالوصول للميكروفون')),
+        UIHelpers.showSnackBar(
+          context,
+          'يرجى السماح بالوصول للميكروفون',
+          isError: true,
         );
       }
       return;

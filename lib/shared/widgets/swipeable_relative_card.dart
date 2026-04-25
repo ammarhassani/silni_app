@@ -11,6 +11,7 @@ import '../../core/theme/theme_provider.dart';
 import '../../features/ai_assistant/widgets/health_badge.dart';
 import '../models/relative_model.dart';
 import '../utils/relationship_label_helper.dart';
+import '../utils/ui_helpers.dart';
 import 'glass_card.dart';
 
 class SwipeableRelativeCard extends ConsumerWidget {
@@ -82,12 +83,10 @@ class SwipeableRelativeCard extends ConsumerWidget {
               onPressed: (_) async {
                 await onMarkContacted!();
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('تم تسجيل التواصل مع ${relative.fullName}'),
-                      backgroundColor: themeColors.primary,
-                      behavior: SnackBarBehavior.floating,
-                    ),
+                  UIHelpers.showSnackBar(
+                    context,
+                    'تم تسجيل التواصل مع ${relative.fullName}',
+                    backgroundColor: themeColors.primary,
                   );
                 }
               },

@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../shared/utils/ui_helpers.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
@@ -134,14 +135,14 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
         ref.invalidate(sharedFamilyEdgesStreamProvider(widget.groupId));
         ref.invalidate(groupMemberNodeIdsProvider(widget.groupId));
         ref.invalidate(familyLeaderboardProvider(widget.groupId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تمت إزالة العضو')),
-        );
+        UIHelpers.showSnackBar(context, 'تمت إزالة العضو');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء إزالة العضو: $e')),
+        UIHelpers.showSnackBar(
+          context,
+          'حدث خطأ أثناء إزالة العضو: $e',
+          isError: true,
         );
       }
     } finally {
@@ -250,8 +251,10 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLeaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء مغادرة المجموعة: $e')),
+        UIHelpers.showSnackBar(
+          context,
+          'حدث خطأ أثناء مغادرة المجموعة: $e',
+          isError: true,
         );
       }
     }
@@ -374,8 +377,10 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isDeleting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء حذف المجموعة: $e')),
+        UIHelpers.showSnackBar(
+          context,
+          'حدث خطأ أثناء حذف المجموعة: $e',
+          isError: true,
         );
       }
     }
@@ -583,8 +588,10 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
                     }
                   } catch (e) {
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('حدث خطأ أثناء تجديد الرابط: $e')),
+                      UIHelpers.showSnackBar(
+                        context,
+                        'حدث خطأ أثناء تجديد الرابط: $e',
+                        isError: true,
                       );
                     }
                   }
@@ -976,14 +983,14 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
       await service.cancelInvitation(invitation.id);
       if (mounted) {
         ref.invalidate(groupInvitationsProvider(invitation.groupId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم إلغاء الدعوة')),
-        );
+        UIHelpers.showSnackBar(context, 'تم إلغاء الدعوة');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء إلغاء الدعوة: $e')),
+        UIHelpers.showSnackBar(
+          context,
+          'حدث خطأ أثناء إلغاء الدعوة: $e',
+          isError: true,
         );
       }
     }

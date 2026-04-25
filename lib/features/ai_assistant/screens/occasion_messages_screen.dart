@@ -12,6 +12,7 @@ import 'package:silni_app/core/constants/app_typography.dart';
 import 'package:silni_app/core/models/subscription_tier.dart';
 import 'package:silni_app/core/providers/subscription_provider.dart';
 import 'package:silni_app/core/theme/theme_provider.dart';
+import 'package:silni_app/shared/utils/ui_helpers.dart';
 import 'package:silni_app/features/ai_assistant/providers/occasion_messages_provider.dart';
 import 'package:silni_app/features/ai_assistant/services/occasion_message_service.dart';
 import 'package:silni_app/features/ai_assistant/widgets/ai_loading_indicator.dart';
@@ -306,15 +307,10 @@ class _OccasionMessageCard extends StatelessWidget {
                     HapticFeedback.lightImpact();
                     Clipboard.setData(
                         ClipboardData(text: message.message));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'تم نسخ رسالة ${message.relativeName}',
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                        behavior: SnackBarBehavior.floating,
-                        duration: const Duration(seconds: 2),
-                      ),
+                    UIHelpers.showSnackBar(
+                      context,
+                      'تم نسخ رسالة ${message.relativeName}',
+                      duration: const Duration(seconds: 2),
                     );
                   },
                   icon: Icon(

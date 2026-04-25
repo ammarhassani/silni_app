@@ -17,6 +17,7 @@ import '../providers/home_providers.dart';
 import '../widgets/widgets.dart';
 import '../../../shared/widgets/message_widget.dart';
 import '../../../shared/widgets/persistent_bottom_nav.dart';
+import '../../../shared/utils/ui_helpers.dart';
 import '../../family_groups/widgets/family_activity_feed.dart';
 import '../../family_groups/widgets/family_celebration_card.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
@@ -135,53 +136,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         break;
 
       case GamificationEventType.streakWarning:
-        // Show streak warning notification
         if (mounted) {
           final themeColors = ref.read(themeColorsProvider);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.favorite_rounded, color: Colors.white),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      '💛 تذكير: عائلتك تشتاق لك — تواصل بسيط يفرق',
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: themeColors.statusWarning,
-              duration: const Duration(seconds: 5),
-              behavior: SnackBarBehavior.floating,
-            ),
+          UIHelpers.showSnackBar(
+            context,
+            '💛 تذكير: عائلتك تشتاق لك — تواصل بسيط يفرق',
+            icon: Icons.favorite_rounded,
+            backgroundColor: themeColors.statusWarning,
+            duration: const Duration(seconds: 5),
           );
         }
         break;
 
       case GamificationEventType.streakCritical:
-        // Show gentle streak reminder
         if (mounted) {
           final themeColors = ref.read(themeColorsProvider);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.favorite_rounded, color: Colors.white),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      '🤍 تذكير بسيط: وقت حلو تتواصل مع أهلك',
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: themeColors.statusWarning,
-              duration: const Duration(seconds: 8),
-              behavior: SnackBarBehavior.floating,
-            ),
+          UIHelpers.showSnackBar(
+            context,
+            '🤍 تذكير بسيط: وقت حلو تتواصل مع أهلك',
+            icon: Icons.favorite_rounded,
+            backgroundColor: themeColors.statusWarning,
+            duration: const Duration(seconds: 8),
           );
         }
         break;
@@ -191,27 +166,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         break;
 
       case GamificationEventType.freezeUsed:
-        // Show freeze used notification
         if (mounted) {
           final infoColor = ref.read(themeColorsProvider).statusInfo;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.ac_unit_rounded, color: Colors.white),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      '❄️ تم استخدام تجميد السلسلة! سلسلتك محمية اليوم',
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: infoColor,
-              duration: const Duration(seconds: 4),
-              behavior: SnackBarBehavior.floating,
-            ),
+          UIHelpers.showSnackBar(
+            context,
+            '❄️ تم استخدام تجميد السلسلة! سلسلتك محمية اليوم',
+            icon: Icons.ac_unit_rounded,
+            backgroundColor: infoColor,
+            duration: const Duration(seconds: 4),
           );
         }
         break;

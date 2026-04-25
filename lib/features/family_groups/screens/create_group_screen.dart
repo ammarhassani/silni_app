@@ -7,6 +7,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
@@ -107,10 +108,10 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('حدث خطأ أثناء إنشاء المجموعة: $e'),
-          ),
+        UIHelpers.showSnackBar(
+          context,
+          'حدث خطأ أثناء إنشاء المجموعة: $e',
+          isError: true,
         );
       }
     }

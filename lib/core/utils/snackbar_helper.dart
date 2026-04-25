@@ -16,7 +16,6 @@ class SnackBarHelper {
   static const _fallbackSuccess = Color(0xFF4CAF50);
   static const _fallbackWarning = Color(0xFFFFA726);
   static const _fallbackInfo = Color(0xFF29B6F6);
-  static const _fallbackPrimary = Color(0xFF4CAF50);
 
   /// Show an error snackbar with optional retry action
   static void showError(
@@ -156,46 +155,6 @@ class SnackBarHelper {
       duration: const Duration(seconds: 5),
       onRetry: onRetry,
       retryLabel: 'إعادة المحاولة',
-    );
-  }
-
-  /// Show loading snackbar (indefinite duration)
-  static void showLoading(
-    BuildContext context,
-    String message, {
-    ThemeColors? colors,
-  }) {
-    if (!context.mounted) return;
-
-    final bgColor = colors?.primary ?? _fallbackPrimary;
-    final textColor = colors?.onPrimary ?? Colors.white;
-
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(textColor),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                message,
-                style: TextStyle(color: textColor),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: bgColor,
-        duration: const Duration(days: 1), // Effectively indefinite
-        behavior: SnackBarBehavior.floating,
-      ),
     );
   }
 

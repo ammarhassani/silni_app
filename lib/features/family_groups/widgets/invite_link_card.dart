@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../services/family_group_service.dart';
 
@@ -179,11 +180,11 @@ class InviteLinkCard extends ConsumerWidget {
   void _copyToClipboard(BuildContext context, String link) {
     Clipboard.setData(ClipboardData(text: link));
     HapticFeedback.mediumImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('تم نسخ الرابط'),
-        duration: Duration(seconds: 2),
-      ),
+    UIHelpers.showSnackBar(
+      context,
+      'تم نسخ الرابط',
+      icon: Icons.check_circle_outline_rounded,
+      duration: const Duration(seconds: 2),
     );
   }
 

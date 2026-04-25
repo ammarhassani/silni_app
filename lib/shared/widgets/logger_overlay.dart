@@ -8,6 +8,7 @@ import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/services/app_logger_service.dart';
 import '../../core/providers/logger_provider.dart';
+import '../utils/ui_helpers.dart';
 
 // Debug-only color constants
 const _kDebugWarningColor = Color(0xFFFFA726);
@@ -437,11 +438,10 @@ class _LoggerOverlayState extends ConsumerState<LoggerOverlay> {
               await Clipboard.setData(ClipboardData(text: exported));
 
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${logs.length} logs copied to clipboard'),
-                    backgroundColor: _kDebugSuccessColor,
-                  ),
+                UIHelpers.showSnackBar(
+                  context,
+                  '${logs.length} logs copied to clipboard',
+                  backgroundColor: _kDebugSuccessColor,
                 );
               }
             },

@@ -17,6 +17,7 @@ import '../../../core/providers/analytics_provider.dart';
 import '../../../shared/services/auth_service.dart';
 import '../../../shared/services/biometric_service.dart';
 import '../../../shared/services/session_persistence_service.dart';
+import '../../../shared/utils/ui_helpers.dart';
 import '../providers/auth_provider.dart';
 import '../../../core/services/app_logger_service.dart';
 import '../../../core/config/supabase_config.dart';
@@ -24,7 +25,6 @@ import '../../../core/errors/app_errors.dart';
 import '../../../core/services/error_reporter.dart';
 import '../widgets/social_login_button.dart';
 import '../widgets/name_prompt_dialog.dart';
-import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/theme_aware_dialog.dart';
 import 'package:universal_html/html.dart' as html;
 import 'dart:io' show Platform;
@@ -184,26 +184,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } else if (result.error) {
       if (mounted) {
-        final errorColor = ref.read(themeColorsProvider).statusError;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.errorMessage ?? 'فشل المصادقة البيومترية'),
-            backgroundColor: errorColor,
-            duration: const Duration(seconds: 3),
-          ),
+        UIHelpers.showSnackBar(
+          context,
+          result.errorMessage ?? 'فشل المصادقة البيومترية',
+          isError: true,
+          duration: const Duration(seconds: 3),
         );
       }
     }
   }
 
   void _showSessionExpiredError() {
-    final errorColor = ref.read(themeColorsProvider).statusError;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('انتهت صلاحية الجلسة. يرجى تسجيل الدخول بكلمة المرور'),
-        backgroundColor: errorColor,
-        duration: const Duration(seconds: 3),
-      ),
+    UIHelpers.showSnackBar(
+      context,
+      'انتهت صلاحية الجلسة. يرجى تسجيل الدخول بكلمة المرور',
+      isError: true,
+      duration: const Duration(seconds: 3),
     );
     // Also refresh the biometric availability check since credentials may have been cleared
     _checkBiometricAvailability();
@@ -263,16 +259,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (!mounted) return;
         setState(() => _isLoading = false);
 
-        final errorColor = ref.read(themeColorsProvider).statusError;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'فشل تهيئة الاتصال بالخادم. يرجى إعادة تشغيل التطبيق والمحاولة مرة أخرى.\n'
-              'Server connection failed to initialize. Please restart the app and try again.',
-            ),
-            backgroundColor: errorColor,
-            duration: const Duration(seconds: 5),
-          ),
+        UIHelpers.showSnackBar(
+          context,
+          'فشل تهيئة الاتصال بالخادم. يرجى إعادة تشغيل التطبيق والمحاولة مرة أخرى.\n'
+          'Server connection failed to initialize. Please restart the app and try again.',
+          isError: true,
+          duration: const Duration(seconds: 5),
         );
         return;
       }
@@ -419,12 +411,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
 
       final errorColor = ref.read(themeColorsProvider).statusError;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: errorColor,
-          duration: const Duration(seconds: 3),
-        ),
+      UIHelpers.showSnackBar(
+        context,
+        errorMessage,
+        backgroundColor: errorColor,
+        duration: const Duration(seconds: 3),
       );
 
       logger.error(
@@ -466,12 +457,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
 
       final unexpectedErrorColor = ref.read(themeColorsProvider).statusError;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: unexpectedErrorColor,
-          duration: const Duration(seconds: 3),
-        ),
+      UIHelpers.showSnackBar(
+        context,
+        errorMessage,
+        backgroundColor: unexpectedErrorColor,
+        duration: const Duration(seconds: 3),
       );
 
       logger.error(
@@ -583,24 +573,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         await authService.resetPassword(emailController.text.trim());
 
         if (mounted) {
-          final successColor = ref.read(themeColorsProvider).statusSuccess;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني'),
-              backgroundColor: successColor,
-              duration: const Duration(seconds: 4),
-            ),
+          UIHelpers.showSnackBar(
+            context,
+            'تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني',
+            duration: const Duration(seconds: 4),
           );
         }
       } catch (e) {
         if (mounted) {
-          final resetErrorColor = ref.read(themeColorsProvider).statusError;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorHandler.getArabicMessage(e)),
-              backgroundColor: resetErrorColor,
-              duration: const Duration(seconds: 3),
-            ),
+          UIHelpers.showSnackBar(
+            context,
+            errorHandler.getArabicMessage(e),
+            isError: true,
+            duration: const Duration(seconds: 3),
           );
         }
       }
@@ -753,25 +738,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (!mounted) return;
       setState(() => _isAppleLoading = false);
 
-      final appleAuthErrorColor = ref.read(themeColorsProvider).statusError;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AuthService.getErrorMessage(e.message)),
-          backgroundColor: appleAuthErrorColor,
-          duration: const Duration(seconds: 3),
-        ),
+      UIHelpers.showSnackBar(
+        context,
+        AuthService.getErrorMessage(e.message),
+        isError: true,
+        duration: const Duration(seconds: 3),
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _isAppleLoading = false);
 
-      final appleErrorColor = ref.read(themeColorsProvider).statusError;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AuthService.getErrorMessage(e.toString())),
-          backgroundColor: appleErrorColor,
-          duration: const Duration(seconds: 3),
-        ),
+      UIHelpers.showSnackBar(
+        context,
+        AuthService.getErrorMessage(e.toString()),
+        isError: true,
+        duration: const Duration(seconds: 3),
       );
     }
   }
