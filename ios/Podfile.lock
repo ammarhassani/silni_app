@@ -241,8 +241,6 @@ PODS:
     - Flutter
   - screenshot_callback (0.0.1):
     - Flutter
-  - sensors_plus (0.0.1):
-    - Flutter
   - Sentry/HybridSDK (8.56.2)
   - sentry_flutter (9.9.0):
     - Flutter
@@ -288,7 +286,6 @@ DEPENDENCIES:
   - record_ios (from `.symlinks/plugins/record_ios/ios`)
   - rive_common (from `.symlinks/plugins/rive_common/ios`)
   - screenshot_callback (from `.symlinks/plugins/screenshot_callback/ios`)
-  - sensors_plus (from `.symlinks/plugins/sensors_plus/ios`)
   - sentry_flutter (from `.symlinks/plugins/sentry_flutter/ios`)
   - share_plus (from `.symlinks/plugins/share_plus/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
@@ -380,8 +377,6 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/rive_common/ios"
   screenshot_callback:
     :path: ".symlinks/plugins/screenshot_callback/ios"
-  sensors_plus:
-    :path: ".symlinks/plugins/sensors_plus/ios"
   sentry_flutter:
     :path: ".symlinks/plugins/sentry_flutter/ios"
   share_plus:
@@ -449,7 +444,6 @@ SPEC CHECKSUMS:
   RevenueCat: eab035bbab271faccfef5c36eaff2a1ffef14dc0
   rive_common: dd421daaf9ae69f0125aa761dd96abd278399952
   screenshot_callback: 85707df1b45a59407f7de87de2408c2f5312a473
-  sensors_plus: 6a11ed0c2e1d0bd0b20b4029d3bad27d96e0c65b
   Sentry: b53951377b78e21a734f5dc8318e333dbfc682d7
   sentry_flutter: 77a018a9daceea074455fd4a5b7eda950c8a01a8
   share_plus: 50da8cb520a8f0f65671c6c6a99b3617ed10a58a

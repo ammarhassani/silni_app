@@ -11,6 +11,7 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/gamification_stats_card.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../core/services/session_cleanup_service.dart';
 import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/services/session_persistence_service.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -229,6 +230,65 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       context: context,
                       ref: ref,
                       themeColors: themeColors,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.sm)),
+
+              // Settings link — Settings screen is otherwise unreachable
+              // from the bottom nav (Profile replaced Settings in Phase 0).
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: GlassCard(
+                    child: ListTile(
+                      leading: Icon(Icons.settings_rounded,
+                          color: themeColors.accent),
+                      title: Text(
+                        'الإعدادات',
+                        style: AppTypography.titleMedium.copyWith(
+                            color: Colors.white),
+                      ),
+                      trailing: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: Colors.white.withValues(alpha: 0.5),
+                        size: 20,
+                      ),
+                      onTap: () => context.push(AppRoutes.settings),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.sm)),
+
+              // Logout
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: GlassCard(
+                    child: ListTile(
+                      leading: Icon(Icons.logout_rounded,
+                          color: themeColors.accent),
+                      title: Text(
+                        'تسجيل الخروج',
+                        style: AppTypography.titleMedium.copyWith(
+                            color: Colors.white),
+                      ),
+                      onTap: () async {
+                        final userId = SupabaseConfig.currentUserId;
+                        final authService = ref.read(authServiceProvider);
+                        await authService.signOut();
+                        clearUserSessionFromWidget(
+                          ref,
+                          previousUserId: userId,
+                        );
+                        if (context.mounted) {
+                          context.go(AppRoutes.login);
+                        }
+                      },
                     ),
                   ),
                 ),

@@ -637,6 +637,18 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
       }
       _previousUserId = currentUserId;
 
+      // Ensure the public.users row exists for the current auth user.
+      // Re-login via OAuth (Google, Apple) reuses the auth.users row without
+      // firing handle_new_user, so any user who deleted their account and
+      // came back would otherwise have an empty public.users row and FK
+      // violations on relatives.user_id, family_edges.user_id, etc.
+      // RPC is idempotent and cheap.
+      if ((event == AuthChangeEvent.signedIn ||
+              event == AuthChangeEvent.initialSession) &&
+          session != null) {
+        unawaited(_ensureUserRecord(session.user.id, logger));
+      }
+
       // Check pending invitations on sign-in or initial session
       if ((event == AuthChangeEvent.signedIn ||
               event == AuthChangeEvent.initialSession) &&
@@ -655,6 +667,30 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
         );
       }
     });
+  }
+
+  /// Ensure the public.users mirror exists for the current auth user.
+  ///
+  /// Called on every signedIn / initialSession event. Idempotent server-side
+  /// (UPSERT). Fixes the case where a user deleted their account and came
+  /// back via OAuth — the auth.users row gets reused so handle_new_user
+  /// doesn't fire, leaving public.users empty and FK-dependent inserts
+  /// (relatives, family_edges, etc.) failing with 23503.
+  Future<void> _ensureUserRecord(
+    String userId,
+    AppLoggerService logger,
+  ) async {
+    try {
+      await SupabaseConfig.client.rpc('ensure_user_record');
+    } catch (e) {
+      // Server-side function logs the SQL error; we never block the client.
+      logger.warning(
+        'ensure_user_record RPC failed',
+        category: LogCategory.auth,
+        tag: 'main',
+        metadata: {'userId': userId, 'error': e.toString()},
+      );
+    }
   }
 
   /// Fire-and-forget: check for pending invitations and create notification

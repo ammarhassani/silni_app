@@ -145,9 +145,25 @@ void showDeleteAccountDialog({
         style: AppTypography.titleLarge.copyWith(color: Colors.white),
         textAlign: TextAlign.center,
       ),
-      content: Text(
-        'هل أنت متأكد من حذف حسابك؟ سيتم حذف جميع بياناتك بشكل نهائي ولا يمكن التراجع عن هذا الإجراء.',
-        style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'هل أنت متأكد من حذف حسابك؟ سيتم حذف جميع بياناتك بشكل نهائي ولا يمكن التراجع عن هذا الإجراء.',
+            style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'ملاحظة: اشتراك صلني MAX مرتبط بحساب Apple أو Google عندك، '
+            'وحذف الحساب لا يلغي الاشتراك. لإلغاء الاشتراك افتح إعدادات '
+            'متجر التطبيقات > الاشتراكات.',
+            style: AppTypography.bodySmall.copyWith(
+              color: Colors.amber.withValues(alpha: 0.9),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
       ),
       actions: [
         TextButton(
