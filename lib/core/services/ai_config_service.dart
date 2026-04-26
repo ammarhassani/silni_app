@@ -19,8 +19,6 @@ class AIConfigService {
   List<AIMessageTone>? _tonesCache;
   Map<String, AIParameterConfig>? _parametersCache;
   List<AISuggestedPrompt>? _suggestedPromptsCache;
-  AIMemorySystemConfig? _memoryConfigCache;
-  List<AIMemoryCategoryConfig>? _memoryCategoriesCache;
   Map<int, AIErrorMessageConfig>? _errorMessagesCache;
   AIStreamingConfig? _streamingConfigCache;
   List<AICommunicationScenario>? _scenariosCache;
@@ -56,8 +54,6 @@ class AIConfigService {
         _fetchTones(),
         _fetchParameters(),
         _fetchSuggestedPrompts(),
-        _fetchMemoryConfig(),
-        _fetchMemoryCategories(),
         _fetchErrorMessages(),
         _fetchStreamingConfig(),
         _fetchCommunicationScenarios(),
@@ -77,8 +73,6 @@ class AIConfigService {
     _tonesCache = null;
     _parametersCache = null;
     _suggestedPromptsCache = null;
-    _memoryConfigCache = null;
-    _memoryCategoriesCache = null;
     _errorMessagesCache = null;
     _streamingConfigCache = null;
     _scenariosCache = null;
@@ -267,42 +261,13 @@ class AIConfigService {
   }
 
   // ============ Memory Config ============
+  // admin_ai_memory_config and admin_memory_categories tables dropped
+  // 2026-04-26 (Wave 2 Task 1B). Fallbacks are now the only source of truth.
 
-  Future<void> _fetchMemoryConfig() async {
-    try {
-      final response = await _supabase
-          .from('admin_ai_memory_config')
-          .select()
-          .eq('is_active', true)
-          .single();
-      _memoryConfigCache = AIMemorySystemConfig.fromJson(response);
-    } catch (_) {
-      // Memory config fetch failed silently
-    }
-  }
-
-  AIMemorySystemConfig get memoryConfig =>
-      _memoryConfigCache ?? AIMemorySystemConfig.fallback();
-
-  // ============ Memory Categories ============
-
-  Future<void> _fetchMemoryCategories() async {
-    try {
-      final response = await _supabase
-          .from('admin_memory_categories')
-          .select()
-          .eq('is_active', true)
-          .order('sort_order');
-      _memoryCategoriesCache = (response as List)
-          .map((json) => AIMemoryCategoryConfig.fromJson(json))
-          .toList();
-    } catch (_) {
-      // Memory categories fetch failed silently
-    }
-  }
+  AIMemorySystemConfig get memoryConfig => AIMemorySystemConfig.fallback();
 
   List<AIMemoryCategoryConfig> get memoryCategories =>
-      _memoryCategoriesCache ?? AIMemoryCategoryConfig.fallbackCategories();
+      AIMemoryCategoryConfig.fallbackCategories();
 
   // ============ Error Messages ============
 

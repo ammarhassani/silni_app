@@ -16,7 +16,6 @@ class GamificationConfigService {
   Map<String, PointsConfig>? _pointsConfigCache;
   List<BadgeConfig>? _badgesCache;
   List<LevelConfig>? _levelsCache;
-  List<ChallengeConfig>? _challengesCache;
   StreakConfig? _streakConfigCache;
   DateTime? _lastFetchTime;
 
@@ -46,7 +45,6 @@ class GamificationConfigService {
         _fetchPointsConfig(),
         _fetchBadges(),
         _fetchLevels(),
-        _fetchChallenges(),
         _fetchStreakConfig(),
       ]);
       _lastFetchTime = DateTime.now();
@@ -60,7 +58,6 @@ class GamificationConfigService {
     _pointsConfigCache = null;
     _badgesCache = null;
     _levelsCache = null;
-    _challengesCache = null;
     _streakConfigCache = null;
     _lastFetchTime = null;
   }
@@ -321,32 +318,11 @@ class GamificationConfigService {
   StreakConfig get streakConfig => _streakConfigCache ?? StreakConfig.fallback();
 
   // ============ Challenges Config ============
-
-  Future<void> _fetchChallenges() async {
-    try {
-      final now = DateTime.now();
-      final response = await _supabase
-          .from('admin_challenges')
-          .select()
-          .eq('is_active', true)
-          .order('sort_order');
-
-      _challengesCache = (response as List)
-          .map((json) => ChallengeConfig.fromJson(json))
-          .where((c) => c.isAvailable(now))
-          .toList();
-    } catch (_) {
-      // Challenges fetch failed silently
-    }
-  }
+  // admin_challenges table dropped 2026-04-26 (Wave 2 Task 1B). Fallbacks
+  // are now the only source of truth.
 
   /// Get all active challenges
-  List<ChallengeConfig> get challenges {
-    if (_challengesCache == null || _challengesCache!.isEmpty) {
-      return ChallengeConfig.fallbackChallenges();
-    }
-    return _challengesCache!;
-  }
+  List<ChallengeConfig> get challenges => ChallengeConfig.fallbackChallenges();
 
   /// Get challenges by type (daily, weekly, monthly, special, seasonal)
   List<ChallengeConfig> getChallengesByType(String type) {
