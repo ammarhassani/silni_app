@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:share_plus/share_plus.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -871,10 +871,16 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
                 color: themeColors.textSecondary,
               ),
               const SizedBox(width: AppSpacing.xs),
-              Text(
-                invitation.maskedPhone,
-                style: AppTypography.bodySmall.copyWith(
-                  color: themeColors.textSecondary,
+              // Masked phone is "+966 **** 5678"-shaped — must render LTR
+              // even inside the parent's RTL flow, otherwise the asterisks
+              // and digits flip right-to-left and look broken.
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: Text(
+                  invitation.maskedPhone,
+                  style: AppTypography.bodySmall.copyWith(
+                    color: themeColors.textSecondary,
+                  ),
                 ),
               ),
               const Spacer(),

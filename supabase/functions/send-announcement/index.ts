@@ -167,11 +167,26 @@ serve(async (req) => {
       }
     }
 
-    // Update announcement with results
+    // Update announcement with results.
+    // Three terminal statuses driven by success_count / total_count:
+    //   sent    — every recipient delivered
+    //   partial — at least one delivered, at least one failed
+    //   failed  — none delivered
+    // (CTO 2026-04-26; pairs with the admin_announcements_status_check
+    // expansion in migration 20260427900000.)
+    let finalStatus: "sent" | "partial" | "failed";
+    if (successCount === 0) {
+      finalStatus = "failed";
+    } else if (successCount === tokens.length) {
+      finalStatus = "sent";
+    } else {
+      finalStatus = "partial";
+    }
+
     await supabaseClient
       .from("admin_announcements")
       .update({
-        status: failCount === tokens.length ? "failed" : "sent",
+        status: finalStatus,
         total_recipients: tokens.length,
         successful_sends: successCount,
         failed_sends: failCount,

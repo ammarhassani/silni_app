@@ -1242,3 +1242,63 @@ This maintenance and operations guide provides comprehensive procedures for ensu
 Following these procedures helps maintain high service quality and user satisfaction while ensuring the application remains secure and performant.
 
 For specific issues or questions, refer to the [troubleshooting guide](TROUBLESHOOTING.md) or contact the operations team.
+
+---
+
+## Appendix A — `ensure_user_record` failure surveillance
+
+`ensure_user_record()` is the client-callable RPC that mirrors `auth.users` → `public.users`/`public.profiles` on every sign-in. It deliberately swallows every exception (`EXCEPTION WHEN OTHERS RAISE LOG ...`) so a transient failure never blocks the user from logging in. The trade-off: failures are invisible until you go look for them. Run this query weekly.
+
+### Weekly query
+
+Filter Supabase logs (Dashboard → Logs → Postgres Logs) for the function's structured `RAISE LOG` line:
+
+```sql
+-- Past 7 days of swallowed ensure_user_record failures
+SELECT
+  postgres_logs.timestamp,
+  parsed.error_severity,
+  parsed.detail
+FROM postgres_logs
+CROSS JOIN UNNEST(metadata) AS m
+CROSS JOIN UNNEST(m.parsed) AS parsed
+WHERE
+  timestamp > NOW() - INTERVAL '7 days'
+  AND event_message LIKE '%ensure_user_record failed for user %'
+ORDER BY timestamp DESC
+LIMIT 200;
+```
+
+Each match looks like:
+
+```
+ensure_user_record failed for user <uuid>: <SQLERRM> (SQLSTATE: <code>)
+```
+
+### Triage
+
+- **Empty result set:** healthy. No follow-up needed.
+- **Non-empty result, but all rows have the same SQLSTATE for the same user:** that user has a corrupted `public.users` or `public.profiles` row that's blocking the UPSERT. Inspect both rows; reconcile manually. If reconciliation isn't obvious, see "delete + recreate" below.
+- **Non-empty result, multiple users, varied SQLSTATEs:** something downstream of the function is broken (FK, CHECK, trigger). Treat as a P1 — the auth layer is degraded.
+
+### Delete + recreate (last resort, single user)
+
+If a corrupted row blocks `ensure_user_record` for one specific user and reconciliation isn't tractable:
+
+```sql
+-- BACKUP FIRST
+SELECT * FROM users WHERE id = '<uuid>';
+SELECT * FROM profiles WHERE id = '<uuid>';
+
+-- Delete profile + users row. Their auth.users row stays (and so does
+-- the user's app data, since we're not running delete_user_account).
+DELETE FROM profiles WHERE id = '<uuid>';
+DELETE FROM users WHERE id = '<uuid>';
+```
+
+The next time the user signs in, `ensure_user_record` will INSERT clean rows.
+
+### What's NOT in this runbook (yet)
+
+- Alerting hook to ping #ops when the count > 0 in a given window. Add when ops bandwidth allows.
+- A persisted `ensure_user_record_failures` table. Considered but rejected (Phase 4 audit, Option B) because adding a write path on every sign-in failure increases sign-in latency and complicates the function's "never block the client" contract. The Postgres logs are sufficient for weekly visibility.

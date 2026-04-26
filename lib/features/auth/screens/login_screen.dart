@@ -517,7 +517,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ThemeAwareTextField(
                   controller: emailController,
                   label: 'البريد الإلكتروني',
-                  hintText: 'user@example.com',
+                  hintText: 'بريدك الإلكتروني',
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -870,7 +870,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     labelStyle: AppTypography.bodyMedium.copyWith(
                                       color: themeColors.textOnGradient.withValues(alpha: 0.8),
                                     ),
-                                    hintText: 'example@email.com',
+                                    hintText: 'بريدك الإلكتروني',
                                     hintStyle: AppTypography.bodyMedium.copyWith(
                                       color: themeColors.textOnGradient.withValues(alpha: 0.5),
                                     ),

@@ -4,7 +4,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
-export type AnnouncementStatus = "draft" | "scheduled" | "sending" | "sent" | "failed";
+export type AnnouncementStatus =
+  | "draft"
+  | "scheduled"
+  | "sending"
+  | "sent"
+  | "partial"
+  | "failed";
 export type AnnouncementTarget = "all" | "active" | "premium" | "inactive" | "custom";
 
 export interface Announcement {
@@ -215,6 +221,7 @@ export const STATUS_LABELS: Record<AnnouncementStatus, string> = {
   scheduled: "مجدول",
   sending: "جاري الإرسال",
   sent: "تم الإرسال",
+  partial: "إرسال جزئي",
   failed: "فشل",
 };
 
@@ -231,5 +238,6 @@ export const STATUS_COLORS: Record<AnnouncementStatus, string> = {
   scheduled: "bg-blue-100 text-blue-700",
   sending: "bg-yellow-100 text-yellow-700",
   sent: "bg-green-100 text-green-700",
+  partial: "bg-amber-100 text-amber-700",
   failed: "bg-red-100 text-red-700",
 };

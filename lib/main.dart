@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -112,8 +113,15 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Initialize Arabic locale for date formatting
+  // Initialize Arabic locale for date formatting.
   await initializeDateFormatting('ar');
+
+  // Digit display policy: Western digits (0123) used app-wide, including in
+  // time pickers, dates, prices, points, streaks, and durations. Decision
+  // rationale: iOS system UI uses Western digits in Arabic locale, ecosystem
+  // norm in Saudi mobile apps (WhatsApp, banking apps, ride-share). Decision
+  // confirmed by CTO 2026-04-26 audit. Revisit only if users specifically
+  // request Arabic-Indic (٠١٢٣).
 
   // Validate environment configuration (compile-time type-safe via envied)
   logger.info(
@@ -799,6 +807,15 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
         milliseconds: 400,
       ), // Smooth theme transitions
       themeAnimationCurve: Curves.easeInOut,
+      // Localization — Material/Cupertino/Widgets delegates so dialogs
+      // (DatePicker, AlertDialog defaults, accessibility labels) render
+      // in Arabic instead of falling back to English.
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('ar', 'SA'), Locale('en')],
       scrollBehavior:
           AppScrollBehavior(), // Enable mouse drag scrolling for web
       routerConfig: router,

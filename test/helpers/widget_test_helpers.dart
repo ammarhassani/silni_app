@@ -23,7 +23,13 @@ import 'package:silni_app/features/profile/screens/profile_screen.dart';
 /// to ensure tests don't require Supabase initialization.
 List<Override> get defaultThemeOverrides => [
   themeKeyProvider.overrideWithValue('default'),
-  themeColorsProvider.overrideWithValue(ThemeColors.defaultGreen),
+  // themeColorsProvider is a StateNotifierProvider — current Riverpod
+  // requires overrideWith returning a notifier instance. Plain Providers
+  // (themeKey/theme/dynamicThemes/currentDynamicTheme) still take
+  // overrideWithValue.
+  themeColorsProvider.overrideWith(
+    (ref) => AnimatedThemeColorsNotifier(ThemeColors.defaultGreen),
+  ),
   themeProvider.overrideWithValue(AppThemeType.defaultGreen),
   dynamicThemesProvider.overrideWithValue([
     DynamicTheme.fromAppTheme(AppThemeType.defaultGreen),

@@ -344,7 +344,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                           _buildTextField(
                             controller: _emailController,
                             label: 'البريد الإلكتروني',
-                            hint: 'example@email.com',
+                            hint: 'بريدك الإلكتروني',
                             icon: Icons.email_outlined,
                             keyboardType: TextInputType.emailAddress,
                             textDirection: TextDirection.ltr,

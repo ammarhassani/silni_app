@@ -36,11 +36,13 @@ Widget createGoldenTestWidget(
 
   return ProviderScope(
     overrides: [
-      // Override the themeColorsProvider with the desired theme
-      themeColorsProvider.overrideWithValue(themeColors),
-      // Override the themeKeyProvider
+      // themeColorsProvider is a StateNotifierProvider — current Riverpod
+      // requires overrideWith returning a notifier instance. Plain Providers
+      // below still take overrideWithValue.
+      themeColorsProvider.overrideWith(
+        (ref) => AnimatedThemeColorsNotifier(themeColors),
+      ),
       themeKeyProvider.overrideWithValue(themeType.value),
-      // Override the currentDynamicThemeProvider
       currentDynamicThemeProvider.overrideWithValue(
         DynamicTheme.fromAppTheme(themeType),
       ),

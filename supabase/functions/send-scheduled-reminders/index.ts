@@ -203,6 +203,14 @@ serve(async (req) => {
       console.log(`   📤 Sending consolidated reminder for ${relatives.length} relative(s) to user ${schedule.user_id}`);
       console.log(`   📝 Title: "${title}", Body: "${body}"`);
 
+      // Only flip to true when send-push-notification confirms ≥1 device delivered.
+      // last_sent is updated only on success; any failure (HTTP error, 0 tokens,
+      // network exception) leaves last_sent unchanged so the schedule's "last
+      // delivered at" reflects reality. Re-firing in the same minute is not a
+      // concern because the cron WHERE clause keys on (is_active, time=HH:mm),
+      // not on last_sent.
+      let sentSuccessfully = false;
+
       try {
         // Call send-push-notification function with ONE consolidated notification
         const notificationResponse = await fetch(
@@ -235,23 +243,26 @@ serve(async (req) => {
           const responseData = JSON.parse(responseText);
           // Check if notification was actually sent (not just "no tokens found")
           if (responseData.sent > 0) {
+            sentSuccessfully = true;
             remindersSent++;
             console.log(`   ✅ Consolidated reminder sent for ${relatives.length} relative(s)`);
           } else {
-            console.log(`   ⚠️ No FCM tokens found for user - notification not delivered`);
+            console.log(`   ⚠️ No FCM tokens found for user - notification not delivered; last_sent unchanged`);
           }
         } else {
-          console.error(`   ❌ Failed to send reminder: ${responseText}`);
+          console.error(`   ❌ Failed to send reminder (HTTP ${notificationResponse.status}): ${responseText}; last_sent unchanged`);
         }
       } catch (error) {
-        console.error(`   ❌ Error sending notification:`, error);
+        console.error(`   ❌ Error sending notification (last_sent unchanged):`, error);
       }
 
-      // Update last_sent timestamp
-      await supabase
-        .from("reminder_schedules")
-        .update({ last_sent: new Date().toISOString() })
-        .eq("id", schedule.id);
+      // Update last_sent only on confirmed delivery.
+      if (sentSuccessfully) {
+        await supabase
+          .from("reminder_schedules")
+          .update({ last_sent: new Date().toISOString() })
+          .eq("id", schedule.id);
+      }
     }
 
     console.log(`\n📊 Reminder check complete:`);

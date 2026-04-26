@@ -127,7 +127,21 @@ serve(async (req) => {
 
         console.log(`📊 Announcement ${announcement.id}: ${sentCount} sent, ${failedCount} failed`);
 
-        // Update status using REST API
+        // Three-status terminal mapping (CTO 2026-04-26):
+        //   sent    — all recipients delivered
+        //   partial — at least one delivered, at least one failed
+        //   failed  — none delivered
+        const totalCount = sentCount + failedCount;
+        let finalStatus: "sent" | "partial" | "failed";
+        if (sentCount === 0) {
+          finalStatus = "failed";
+        } else if (sentCount === totalCount) {
+          finalStatus = "sent";
+        } else {
+          finalStatus = "partial";
+        }
+
+        // Update status + delivery counts using REST API.
         await fetch(
           `${supabaseUrl}/rest/v1/admin_announcements?id=eq.${announcement.id}`,
           {
@@ -139,7 +153,10 @@ serve(async (req) => {
               "Prefer": "return=minimal",
             },
             body: JSON.stringify({
-              status: "sent",
+              status: finalStatus,
+              total_recipients: totalCount,
+              successful_sends: sentCount,
+              failed_sends: failedCount,
               sent_at: new Date().toISOString(),
             }),
           }

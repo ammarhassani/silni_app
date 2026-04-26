@@ -288,9 +288,20 @@ export default function AnnouncementsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge className={STATUS_COLORS[announcement.status]}>
-                        {STATUS_LABELS[announcement.status]}
-                      </Badge>
+                      <div className="flex flex-col gap-1">
+                        <Badge className={STATUS_COLORS[announcement.status]}>
+                          {STATUS_LABELS[announcement.status]}
+                        </Badge>
+                        {(announcement.status === "partial" ||
+                          announcement.status === "sent" ||
+                          announcement.status === "failed") &&
+                          announcement.total_recipients > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              {announcement.successful_sends}/
+                              {announcement.total_recipients} وصلت
+                            </span>
+                          )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 text-sm">
