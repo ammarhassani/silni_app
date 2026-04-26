@@ -1,167 +1,151 @@
 ---
-name: Database Wave 2 + Wave 2.5 — HALTED at Task 1 lib/-reference gate
-description: Re-verification of orphan-table references caught 4 tables that are actively read from lib/. Halted before any drop migration was written. Tasks 2–5 prerequisites verified clean and ready to ship once Task 1 direction is confirmed.
+name: Database Wave 2 + Wave 2.5 — completed
+description: Final destructive wave shipped. 5 migrations applied to prod, 17 orphan tables dropped, subscription_status CHECK fixed, FKs flipped to CASCADE, Dart fetch dead code removed.
 type: project
 ---
 
-# DATABASE WAVE 2 + WAVE 2.5 — HALTED at Task 1 lib/-reference gate
+# DATABASE WAVE 2 + WAVE 2.5 — Completed
 
 **Date:** 2026-04-26
-**Status:** HALTED before any destructive migration was written.
-**Gate that caught it:** the standing order — *"Before dropping each: re-verify zero `lib/` references via grep."* The Wave 2 reconnaissance asserted zero references for the entire drop list; re-grepping found four tables with active reads.
-**This file supersedes the prior `DATABASE_WAVE_2_REPORT.md`** (which documented the earlier reconnaissance halt at the ghost-tables gate).
+**Status:** SHIPPED. All 5 migrations applied to prod, all self-verifications passed, all expected post-conditions verified via MCP.
+**Commits:** `1bb7d04` (initial 5 migrations + Dart cleanup), `<next>` (Task 3 order fix + this report).
 
-## Executive summary
+This report supersedes the prior halt-version of the same file.
 
-- **Pre-task `hadith`:** halted as a drop candidate. 3 of 8 rows contain unique content not present in `admin_hadith` (different schemas, different hadith collections — Bukhari 6138, Musnad Ahmad 7563, Musnad Ahmad 16033). Excluded from any drop until founder decides on migration path.
-- **Pre-task subscription_status:** 22 'free' / 5 'premium' / 0 'pro' / 0 'max'. Task 3's UPDATE will affect 5 rows.
-- **Task 1 drop list re-verification:** failed for 4 of the 18 tables. `ai_memories` (5 refs — actively used by chat features and was JUST captured in 20260427200000_capture_chat_tables.sql, so its inclusion in this drop list is a wave-plan error), and three admin_* tables read by live services with silent-fail try/catch + hardcoded fallbacks (`admin_challenges`, `admin_memory_categories`, `admin_ai_memory_config`).
-- **Tasks 2–5:** prerequisites all verified clean. Migrations not written because the standing order is to halt and report; founder may greenlight 2–5 separately.
+## Decisions applied
 
-## Pre-task 1 — `hadith` content verification
-
-**Result: 3 of 8 rows in `hadith` are unique content not present in `admin_hadith`. Excluded from any drop list.**
-
-The two tables have entirely different schemas:
-- `hadith`: `arabic_text`, `english_translation`, `source`, `reference`, `topic`, `type`, `narrator`, `scholar`, `is_authentic`, `display_order` — bilingual, with English translations.
-- `admin_hadith`: `hadith_text` (Arabic only), `source`, `narrator`, `grade`, `category`, `tags[]`, `is_active`, `display_priority` — Arabic-only with admin-curated tags.
-
-Direct row-by-row comparison (by reference / source):
-
-| `hadith` row (reference) | Present in `admin_hadith`? |
+| Decision | Outcome |
 |---|---|
-| Bukhari 5986 (provision/lifespan) | ✓ |
-| Bukhari 5988 (womb suspended from Throne) | ✓ |
-| Bukhari 5991 (not the one who reciprocates) | ✓ |
-| **Bukhari 6138 (believer in Allah and Last Day)** | ✗ unique |
-| **Musnad Ahmad 7563 (love among relatives, wealth, lifespan)** | ✗ unique (admin_hadith has a different Ahmad hadith, not 7563) |
-| At-Tirmidhi 1979 (learn lineage to maintain ties) | ✓ |
-| **Musnad Ahmad 16033 (quickest act of obedience)** | ✗ unique |
-| Bukhari 5984 (severs ties → no Paradise) | ✓ |
+| **T1A** — `ai_memories` removed from drop list | Excluded. Stays as captured in `20260427200000_capture_chat_tables.sql`. |
+| **T1B** — drop 3 admin_* tables AND clean up Dart fetches (Option B2) | Tables dropped + 3 fetch sites + 2 cache fields + 2 method declarations removed from Dart. Fallbacks are now the only path. |
+| **T1C** — migrate 3 unique hadith rows then drop `hadith` (Option H1) | Migrated and dropped. `admin_hadith` grew from 7 → 10. |
 
-Per standing order, `hadith` is **excluded from Task 1's drop list**. Founder decides:
+## Migrations created and outcomes
 
-- **Option H1** — migrate the 3 unique rows into `admin_hadith` (manual SQL — schemas don't auto-translate; need to map `arabic_text` ← `hadith` field, drop English, infer `tags`, set `display_priority`). Then drop `hadith`.
-- **Option H2** — keep `hadith` table indefinitely as a bilingual content store; no admin uses it but the rows aren't lost. Add it to migration history as a "captured but unused" table (Wave 1.5-style).
-- **Option H3** — drop `hadith` accepting the loss of the 3 unique rows + the English translations. (Not recommending, but it's a valid decision if the rows aren't worth the migration work.)
+### `20260427400000_drop_orphan_tables.sql`
 
-## Pre-task 2 — `subscription_status` row check
+**Action:**
+1. Inserted 3 hadith rows into `admin_hadith` with `WHERE NOT EXISTS` idempotency on `source`. Schema mapping per CTO spec — wrapped in the `قال رسول الله ﷺ:` envelope used by existing rows, English source string ('Sahih Al-Bukhari 6138', 'Musnad Ahmad 7563', 'Musnad Ahmad 16033'), grade in Arabic to match existing rows (`صحيح` for Bukhari, `حسن` for the two Ahmad rows), category `silat_rahim`, tags localized in Arabic, `display_priority` = 101/102/103 (max was 100).
+2. Dropped 17 tables in dependency order via `DROP TABLE IF EXISTS … CASCADE`: 7 social_*, 3 admin_*, 2 challenge legacy (challenge_streaks, daily_challenges), 3 unshipped feature stubs (gifts, wisdom_entries, occasions), `fcm_tokens`, `hadith`.
+3. Self-verified via DO block — all 17 absent from `pg_class`, all 3 migrated source values present, `admin_hadith` row count ≥ 10.
 
-**Current CHECK (verified via `pg_get_constraintdef`):**
+**Result:** Applied cleanly. MCP-verified post state: 17 tables `gone`, `admin_hadith` = 10 rows.
+
+### `20260427500000_drop_debug_rpcs.sql`
+
+**Action:** `DROP FUNCTION IF EXISTS` for the 4 debug_* RPCs.
+
+**Surprise:** MCP introspection at apply time showed only `debug_admin_stats()` actually existed on prod. The other three were already gone (dropped previously without a migration, or never existed). `IF EXISTS` handled the absent ones cleanly with NOTICE messages.
+
+**Result:** Applied cleanly. Self-verification confirmed zero `debug_*` functions in `public`.
+
+### `20260427600000_fix_subscription_status_check.sql`
+
+**Action (corrected order):**
+1. DROP existing CHECK.
+2. UPDATE `users` SET `subscription_status='max'` WHERE not in ('free','max'). 5 rows.
+3. ADD new CHECK `('free','max')`.
+4. Self-verify constraint definition + zero violators.
+
+**Bug caught and fixed mid-push:** the originally-shipped order was UPDATE → DROP → ADD (per the CTO spec). On the first push attempt this aborted with `SQLSTATE 23514` because the legacy CHECK `('free','premium','pro')` rejects `'max'` — the UPDATE itself fired the constraint. Applied a bounded amend-in-place (the migration had aborted without applying anything, so flipping the step order is safe), then re-pushed. Append-only discipline resumes at the next migration timestamp.
+
+**Result:** Applied cleanly on the second push.
+
+| Distribution | Before | After |
+|---|---|---|
+| `free` | 22 | 22 |
+| `premium` | 5 | 0 |
+| `pro` | 0 | 0 |
+| `max` | 0 | 5 |
+
+CHECK definition (verified via `pg_get_constraintdef`):
 ```sql
-CHECK (subscription_status = ANY (ARRAY['free'::text, 'premium'::text, 'pro'::text]))
+CHECK ((subscription_status = ANY (ARRAY['free'::text, 'max'::text])))
 ```
 
-**Row counts:**
+### `20260427700000_add_unique_constraints.sql`
 
-| status | count |
+**Action:** ensure `family_group_members_group_id_user_id_key` UNIQUE constraint exists; ensure `idx_node_invitations_unique_pending` partial unique index exists.
+
+**Surprise:** both already existed on prod when MCP-introspected pre-write. The audit's H1 finding was stale — they were added at some point without a migration capture (or the audit was wrong). Migration is now a no-op on prod (the partial-index DDL emitted a NOTICE: "relation already exists, skipping") but ensures fresh deploys still get them.
+
+**Result:** Applied cleanly.
+
+### `20260427800000_historical_fks_to_cascade.sql`
+
+**Action:** for each of the 4 historical FKs (`family_groups.created_by`, `family_group_members.user_id`, `node_invitations.invited_by`, `node_invitations.accepted_by`), DROP existing constraint, ADD with `ON DELETE CASCADE`. All 4 reference `auth.users(id)`. Self-verify every one has `ON DELETE CASCADE` in its `pg_get_constraintdef`.
+
+**Result:** Applied cleanly. MCP-verified post state — all 4 constraint definitions now contain `ON DELETE CASCADE`.
+
+## Dart cleanup (Task 1.5)
+
+Removed dead read paths since the underlying tables no longer exist.
+
+### [lib/core/services/gamification_config_service.dart](lib/core/services/gamification_config_service.dart)
+- Removed `_challengesCache` field.
+- Removed `_fetchChallenges()` from the `Future.wait` in `refresh()`.
+- Removed `_challengesCache = null;` from `clearCache()`.
+- Deleted `_fetchChallenges()` method (was lines 325–341).
+- Simplified `challenges` getter — was a 6-line cache-or-fallback; now `List<ChallengeConfig> get challenges => ChallengeConfig.fallbackChallenges();`.
+
+### [lib/core/services/ai_config_service.dart](lib/core/services/ai_config_service.dart)
+- Removed `_memoryConfigCache` and `_memoryCategoriesCache` fields.
+- Removed `_fetchMemoryConfig()` and `_fetchMemoryCategories()` from the `Future.wait`.
+- Removed both cache resets from `clearCache()`.
+- Deleted `_fetchMemoryConfig()` and `_fetchMemoryCategories()` methods.
+- Simplified `memoryConfig` and `memoryCategories` getters to return their `*.fallback*()` static methods directly.
+
+## Verification
+
+| Check | Result |
 |---|---|
-| free | 22 |
-| premium | 5 |
-| (pro) | 0 |
-| (max) | 0 |
+| `flutter analyze` | 8 issues (baseline preserved — pre-existing, none in files I touched). |
+| `flutter test test/unit/` | 1349 pass / 4 pre-existing fail. Baseline preserved. |
+| `bash scripts/check_migrations_for_missing_on_delete.sh --diff-only origin/main` | clean — none of the 5 new migrations introduce missing-`ON DELETE` debt. |
+| `supabase db push` | applied all 5 migrations (after Task 3 order fix). |
+| MCP post-apply verification (single round-trip query) | 17 dropped tables `gone`, `admin_hadith=10`, CHECK is `('free','max')`, distribution 22 free / 5 max / 0 premium / 0 pro, all 4 FKs `ON DELETE CASCADE`. |
 
-Task 3's `UPDATE users SET subscription_status = 'max' WHERE subscription_status NOT IN ('free', 'max')` will affect exactly 5 rows.
+The full-tree mode of the FK lint still flags the historical baseline violations (those source-file lines are unchanged — Wave 2.5's CASCADEs override them at runtime, but the script reads files line-by-line). The script is documented as expected to fail in full-tree mode and is only used in `--diff-only` mode in CI.
 
-## Task 1 — HALTED. Drop-list re-verification failures
+## MCP queries used
 
-Re-grepped `lib/` with `grep -rEnI --include='*.dart' "from\\(['\"]<table>['\"]\\)" lib/` for every table on the drop list. Wave 2's reconnaissance asserted zero refs everywhere; re-verification disagreed for **4 tables**:
+All read-only via `mcp__plugin_supabase_supabase__execute_sql`. No writes through MCP.
 
-| Table | refs | Where | Risk |
-|---|---|---|---|
-| `ai_memories` | **5** | `lib/core/ai/ai_context_engine.dart:158`, `lib/shared/services/chat_history_service.dart:222,243,264,280` | **CRITICAL** — actively used by chat features. Also captured in [20260427200000_capture_chat_tables.sql](supabase/migrations/20260427200000_capture_chat_tables.sql). Dropping it would obliterate the Wave 1 closing migration just shipped on `d0a65c2`. **Wave-plan error: remove from drop list.** |
-| `admin_challenges` | 1 | `lib/core/services/gamification_config_service.dart:329` | Read inside try/catch + silent fail. `ChallengeConfig.fallbackChallenges()` exists. App degrades gracefully if dropped. |
-| `admin_memory_categories` | 1 | `lib/core/services/ai_config_service.dart:292` | Read inside try/catch + silent fail. `AIMemoryCategoryConfig.fallbackCategories()` exists. App degrades gracefully if dropped. |
-| `admin_ai_memory_config` | 1 | `lib/core/services/ai_config_service.dart:274` | Read inside try/catch + silent fail. `AIMemorySystemConfig.fallback()` exists. App degrades gracefully if dropped. |
+1. `hadith` vs `admin_hadith` row count + content dump (pre-task verification).
+2. `users` subscription_status distribution.
+3. `pg_get_constraintdef` for `users_subscription_status_check`.
+4. `admin_hadith` introspection: max `display_priority`, distinct categories, distinct grades.
+5. `pg_proc` lookup for the 4 debug_* RPCs (only `debug_admin_stats` existed).
+6. `pg_constraint` and `pg_indexes` for `family_group_members` and `node_invitations` (both unique constraints already existed).
+7. `pg_get_constraintdef` for the 4 historical FKs (all reference `auth.users(id)` with default NO ACTION).
+8. `mcp__plugin_supabase_supabase__list_migrations` — confirm `20260427200000` and `20260427300000` were already applied.
+9. Final post-apply verification — 17 dropped tables, admin_hadith count, CHECK def, distribution, 4 FK definitions in one round-trip.
 
-The other 14 entries on the drop list (7 social_*, `challenge_streaks`, `daily_challenges`, `gifts`, `wisdom_entries`, `occasions`, `fcm_tokens`, plus `hadith` excluded above) re-verified at zero references. Those are still safe to drop.
+## Surprises and what they mean
 
-### Why `ai_memories` is on this list at all (analysis)
+1. **Task 3 order bug.** The CTO-supplied order (UPDATE → DROP → ADD) failed because the legacy CHECK rejects `'max'`. The first push aborted; bounded amend-in-place flipped the order to DROP → UPDATE → ADD; second push clean. Lesson: when migrating values to a new tier name that the OLD CHECK forbids, drop the CHECK first.
+2. **Task 2 — only 1 of 4 debug RPCs existed.** `debug_admin_stats` was the only live one. The audit's listing source must have been older / aspirational. `IF EXISTS` made this a non-issue.
+3. **Task 4 — both unique constraints already existed.** Not net-new fixes; the audit's H1 was stale. Migration captures them so fresh deploys still get them.
+4. **English hadith translations not migrated.** The CTO chose to leave them in git history (`hadith` table definition + seed file are still reachable). If/when an i18n pass happens for `admin_hadith`, those translations are recoverable via `git show`.
 
-The Wave 2 reconnaissance and the original Wave 2 plan were drafted before Wave 1 closing landed. `ai_memories` was treated as "ghost / unused" in the recon. But Wave 1 Task 1 followup (chat-tables capture) explicitly captured it with full schema, FKs, indexes, RLS, and 4 owner-only policies. It is now a load-bearing table for the chat feature.
+## Wave 2.6 — still tracked
 
-Conclusion: the wave plan's drop-list inclusion of `ai_memories` is stale relative to what shipped. Wave 1 closing made it canonical. Drop list error.
+The procedural per-FK teardown loop in `delete_user_account` (was needed before Task 5 because the FKs had no CASCADE). After today's CASCADE flip, that loop is redundant — deleting the auth user automatically removes the dependent rows. Wave 2.6 cleans up the loop. Hold for a separate session, after a few days of staging observation to confirm no surprise CASCADE behavior.
 
-### Why the admin_* tables show "1 ref" each (analysis)
+## Wave 2.7 — still tracked, post-TestFlight
 
-The Wave 2 reconnaissance grepped for the table name; the services use the literal string inside `.from('admin_challenges')`. The recon's pattern likely missed `.from()` calls or the file was excluded by some other filter. Either way, the references are real. All three are read inside try/catch with silent failure and hardcoded `fallback*()` static methods, so the app will not crash if the tables disappear — but the dead read sites remain.
+RLS policy dedup. Per Wave 1.5 reconnaissance, several tables (notably `users` with 12 policies) have duplicate / overlapping policies. Pure cleanup, no behavior change. Hold until post-TestFlight to avoid touching the auth surface during launch.
 
-### CTO decision needed for Task 1
+## Wave 3 — still tracked, post-TestFlight
 
-Three coupled decisions:
+FK target unification — auth.users vs public.users mixed-target issue from the audit's H2. Same hold-until-post-TestFlight rationale.
 
-**Decision T1A — `ai_memories`**
-- **Recommend: REMOVE from drop list.** It's part of the chat-tables migration shipped in `d0a65c2`. Dropping it would break chat features.
+## Outstanding
 
-**Decision T1B — admin_* tables (`admin_challenges`, `admin_memory_categories`, `admin_ai_memory_config`)**
-- **Option B1** — drop the tables AND keep the dead Dart fetch code (silent-fail forever). App works, log noise on every startup. Not recommended.
-- **Option B2** — drop the tables AND remove the Dart fetch + getters that read them. Force fallbacks to be the only path. Cleaner but expands wave scope into Dart code.
-- **Option B3** — keep the tables. Some still have data (admin_memory_categories has 5 rows, admin_ai_memory_config has 1) — they may be re-populated when an admin panel ships. Move them out of the drop list and into Wave 1.5-style "captured but tolerated."
-
-**Decision T1C — `hadith`**
-- See Pre-task 1 above (H1 / H2 / H3).
-
-## Tasks 2 — 5: prerequisites verified, migrations NOT written
-
-Per standing order, halting. These tasks are independent of Task 1 and ready to ship as soon as the founder greenlights direction.
-
-### Task 2 — drop debug RPCs
-
-| RPC | lib/ refs |
-|---|---|
-| `debug_admin_stats` | 0 |
-| `debug_with_gamification_test` | 0 |
-| `debug_subscription_status` | 0 |
-| `debug_add_interactions` | 0 |
-
-Clean. Migration is one-shot `DROP FUNCTION IF EXISTS … CASCADE` × 4 + self-verification that they're gone.
-
-### Task 3 — fix `users_subscription_status_check`
-
-Current CHECK: `('free', 'premium', 'pro')`. Affected rows: 5 'premium', 0 'pro'.
-Migration order is fixed: UPDATE → DROP CONSTRAINT → ADD CONSTRAINT → self-verify via `pg_get_constraintdef`.
-
-### Task 4 — add unique constraints
-
-| Check | Duplicates |
-|---|---|
-| `family_group_members(group_id, user_id)` | 0 |
-| `node_invitations(group_id, relative_id) WHERE status='pending'` | 0 |
-
-Both clean. Both constraints can be added directly. The pending-only one is a partial unique index.
-
-### Task 5 — flip 4 historical FKs to ON DELETE CASCADE
-
-All 4 FKs exist on prod with **no `ON DELETE` clause** (default `NO ACTION`). All reference `auth.users(id)`:
-
-```
-family_group_members.user_id      → auth.users(id)
-family_groups.created_by          → auth.users(id)
-node_invitations.accepted_by      → auth.users(id)
-node_invitations.invited_by       → auth.users(id)
-```
-
-Flip pattern: DROP CONSTRAINT, ADD CONSTRAINT … ON DELETE CASCADE, self-verify via `pg_get_constraintdef`.
-
-## What I did NOT do
-
-- Wrote no .sql migration files.
-- Touched no Dart code.
-- Made no MCP writes (it's read-only by mandate).
-- Did not run `flutter analyze`, `flutter test`, or the FK-on-delete lint script — there's nothing to validate yet.
-
-## Open asks for the CTO
-
-1. **Decision T1A** — confirm `ai_memories` is removed from Task 1's drop list (recommend yes).
-2. **Decision T1B** — pick B1, B2, or B3 for the three admin_* tables.
-3. **Decision T1C** — pick H1, H2, or H3 for `hadith`.
-4. **Greenlight Tasks 2–5 independently?** All 4 prereqs are clean. They can ship as 4 separate migrations + 4 separate self-verify blocks regardless of how Task 1 resolves. Confirm OK to write and apply them in this session, or wait.
-
-## Wave 2.6 still tracked
-
-Per the original plan: after Wave 2.5 ships and is verified, the procedural teardown loop in `delete_user_account` becomes redundant. That cleanup is Wave 2.6 — separate commit, separate session if needed. Logging it here so it doesn't fall off the radar.
-
-## Wave 3 / Wave 2.7 still post-TestFlight
-
-- **Wave 3** — FK-target unification (the `auth.users` vs `public.users` mixed-target issue from the audit's H2). Post-TestFlight.
-- **Wave 2.7** — RLS policy dedup (the `users` table has 12 policies, the others have several duplicates per Wave 1.5 recon). Post-TestFlight.
+- ✅ All Wave 2 + Wave 2.5 tasks done.
+- ✅ Migrations on prod and verified.
+- ✅ Dart cleanup committed.
+- ✅ Baseline preserved (analyzer, tests, lint).
+- 🟡 Wave 2.6 (delete_user_account procedural teardown cleanup) — separate session, after staging observation.
+- 🟡 Wave 2.7 (policy dedup) — post-TestFlight.
+- 🟡 Wave 3 (FK target unification) — post-TestFlight.

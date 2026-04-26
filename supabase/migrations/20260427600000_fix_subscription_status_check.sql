@@ -8,24 +8,30 @@
 -- 'pro'. Migrate the 5 'premium' users to 'max', then replace the CHECK
 -- with the current allowed set.
 --
--- Order is fixed:
---   1) UPDATE rows to satisfy the new CHECK before applying it.
---   2) DROP the old CHECK.
+-- Order is fixed (corrected after first push attempt aborted):
+--   1) DROP the old CHECK.  ← MUST go first; old CHECK rejects 'max'.
+--   2) UPDATE rows to use the new tier name.
 --   3) ADD the new CHECK ('free', 'max').
 --   4) Self-verify: pg_get_constraintdef returns the correct definition,
 --      and zero rows violate the new CHECK.
 --
+-- The original CTO-supplied order (UPDATE before DROP) failed on prod
+-- because the legacy CHECK ('free','premium','pro') rejects 'max'. The
+-- failing-row error during the first push was the legacy CHECK firing
+-- on the UPDATE itself. Bounded amend-in-place — this migration aborted
+-- without applying anything, so flipping the step order is safe.
+--
 -- post-rebrand fix; existing 'premium' tier users migrated to 'max' tier
 -- identifier.
 
--- Step 1: migrate the legacy tier names.
+-- Step 1: drop the old CHECK so the UPDATE can land.
+ALTER TABLE public.users
+  DROP CONSTRAINT IF EXISTS users_subscription_status_check;
+
+-- Step 2: migrate the legacy tier names. Now unconstrained.
 UPDATE public.users
 SET subscription_status = 'max'
 WHERE subscription_status NOT IN ('free', 'max');
-
--- Step 2: drop the old CHECK.
-ALTER TABLE public.users
-  DROP CONSTRAINT IF EXISTS users_subscription_status_check;
 
 -- Step 3: add the new CHECK.
 ALTER TABLE public.users
