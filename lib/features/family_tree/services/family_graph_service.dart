@@ -674,8 +674,11 @@ class FamilyGraphService {
       }
     }
 
-    // Fallback: return empty so callers fall back to arabicName
-    return '';
+    // Fallback when no graph path resolves the relationship.
+    // Use the target's stored fullName if present; otherwise 'قريب'.
+    final fallbackName = target?.fullName;
+    if (fallbackName != null && fallbackName.isNotEmpty) return fallbackName;
+    return 'قريب';
   }
 
   /// Resolve uncle/aunt label from stored [FamilySide] and gender.
