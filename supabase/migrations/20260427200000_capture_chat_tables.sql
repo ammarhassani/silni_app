@@ -229,46 +229,48 @@ ALTER TABLE public.chat_conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
 
 -- ai_memories: full SELECT/INSERT/UPDATE/DELETE for owner only.
-DROP POLICY IF EXISTS "Users can view their memories" ON public.ai_memories;
-CREATE POLICY "Users can view their memories"
+-- Policy names use "own" verbatim from prod (MCP-confirmed 2026-04-26).
+-- UPDATE has no WITH CHECK — prod's UPDATE policy has only USING.
+DROP POLICY IF EXISTS "Users can view own memories" ON public.ai_memories;
+CREATE POLICY "Users can view own memories"
   ON public.ai_memories FOR SELECT TO authenticated
   USING (user_id = auth.uid());
 
-DROP POLICY IF EXISTS "Users can insert their memories" ON public.ai_memories;
-CREATE POLICY "Users can insert their memories"
+DROP POLICY IF EXISTS "Users can insert own memories" ON public.ai_memories;
+CREATE POLICY "Users can insert own memories"
   ON public.ai_memories FOR INSERT TO authenticated
   WITH CHECK (user_id = auth.uid());
 
-DROP POLICY IF EXISTS "Users can update their memories" ON public.ai_memories;
-CREATE POLICY "Users can update their memories"
+DROP POLICY IF EXISTS "Users can update own memories" ON public.ai_memories;
+CREATE POLICY "Users can update own memories"
   ON public.ai_memories FOR UPDATE TO authenticated
-  USING (user_id = auth.uid())
-  WITH CHECK (user_id = auth.uid());
+  USING (user_id = auth.uid());
 
-DROP POLICY IF EXISTS "Users can delete their memories" ON public.ai_memories;
-CREATE POLICY "Users can delete their memories"
+DROP POLICY IF EXISTS "Users can delete own memories" ON public.ai_memories;
+CREATE POLICY "Users can delete own memories"
   ON public.ai_memories FOR DELETE TO authenticated
   USING (user_id = auth.uid());
 
 -- chat_conversations: full SELECT/INSERT/UPDATE/DELETE for owner only.
-DROP POLICY IF EXISTS "Users can view their conversations" ON public.chat_conversations;
-CREATE POLICY "Users can view their conversations"
+-- Policy names use "own" verbatim from prod (MCP-confirmed 2026-04-26).
+-- UPDATE has no WITH CHECK — prod's UPDATE policy has only USING.
+DROP POLICY IF EXISTS "Users can view own conversations" ON public.chat_conversations;
+CREATE POLICY "Users can view own conversations"
   ON public.chat_conversations FOR SELECT TO authenticated
   USING (user_id = auth.uid());
 
-DROP POLICY IF EXISTS "Users can insert their conversations" ON public.chat_conversations;
-CREATE POLICY "Users can insert their conversations"
+DROP POLICY IF EXISTS "Users can insert own conversations" ON public.chat_conversations;
+CREATE POLICY "Users can insert own conversations"
   ON public.chat_conversations FOR INSERT TO authenticated
   WITH CHECK (user_id = auth.uid());
 
-DROP POLICY IF EXISTS "Users can update their conversations" ON public.chat_conversations;
-CREATE POLICY "Users can update their conversations"
+DROP POLICY IF EXISTS "Users can update own conversations" ON public.chat_conversations;
+CREATE POLICY "Users can update own conversations"
   ON public.chat_conversations FOR UPDATE TO authenticated
-  USING (user_id = auth.uid())
-  WITH CHECK (user_id = auth.uid());
+  USING (user_id = auth.uid());
 
-DROP POLICY IF EXISTS "Users can delete their conversations" ON public.chat_conversations;
-CREATE POLICY "Users can delete their conversations"
+DROP POLICY IF EXISTS "Users can delete own conversations" ON public.chat_conversations;
+CREATE POLICY "Users can delete own conversations"
   ON public.chat_conversations FOR DELETE TO authenticated
   USING (user_id = auth.uid());
 
@@ -279,8 +281,8 @@ CREATE POLICY "Users can delete their conversations"
 -- conversation level (chat_conversations DELETE cascades to messages via the FK).
 -- Per-message editing would create context-corruption risks with AI replies.
 -- CTO decision documented 2026-04-26.
-DROP POLICY IF EXISTS "Users can view their messages" ON public.chat_messages;
-CREATE POLICY "Users can view their messages"
+DROP POLICY IF EXISTS "Users can view own messages" ON public.chat_messages;
+CREATE POLICY "Users can view own messages"
   ON public.chat_messages FOR SELECT TO authenticated
   USING (user_id = auth.uid());
 
