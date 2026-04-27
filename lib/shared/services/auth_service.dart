@@ -9,6 +9,7 @@ import '../../core/config/supabase_config.dart';
 import '../../core/config/env/env_services.dart';
 import '../../core/errors/app_errors.dart';
 import '../../core/services/app_logger_service.dart';
+import '../../core/services/session_cleanup_service.dart';
 import '../../core/services/subscription_service.dart';
 import 'session_persistence_service.dart';
 import 'unified_notification_service.dart';
@@ -587,6 +588,12 @@ class AuthService {
           metadata: {'error': e.toString()},
         );
       }
+
+      // Clear per-user SharedPreferences (onboarding gates, content caches,
+      // per-week rate-limits, etc.). Device-global keys (theme, animation
+      // prefs, notification prefs preserved by Phase 5.5) are left alone.
+      // See session_cleanup_service.dart for the canonical key list.
+      await clearPerUserDeviceState();
 
       logger.info(
         'Sign out successful',
@@ -1304,46 +1311,19 @@ class AuthService {
         tag: 'deleteAccount',
       );
 
-      // Clear per-account local state BEFORE signOut. After signOut the
-      // auth listener fires and may re-trigger code that reads these keys;
-      // wiping them first removes the staleness window.
-      //
-      // The keys cleared here are the ones that would mis-route a fresh
-      // account on the same device:
-      //   - onboarding_completed: gates the 4-slide marketing carousel.
-      //     If it survives delete, the new account skips onboarding.
-      //   - premium_onboarding_state + premium_onboarding_dismissed_tips:
-      //     gate the premium walkthrough + dismissed tips. Stale values
-      //     mark a fresh account as having seen things it hasn't.
-      //
-      // Anything keyed off a userId/relativeId/month suffix (oneQuestion_*,
-      // wrapped_ai_*, weekly_report_*, hadith_*) is left alone — it'll be
-      // overwritten the next time the new account hits the same code path,
-      // and the worst-case is a one-frame stale value, not a flow break.
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('onboarding_completed');
-        await prefs.remove('premium_onboarding_state');
-        await prefs.remove('premium_onboarding_dismissed_tips');
-        logger.debug(
-          'Per-account SharedPreferences cleared',
-          category: LogCategory.auth,
-          tag: 'deleteAccount',
-        );
-      } catch (e) {
-        logger.warning(
-          'Failed to clear per-account SharedPreferences (non-critical)',
-          category: LogCategory.auth,
-          tag: 'deleteAccount',
-          metadata: {'error': e.toString()},
-        );
-      }
+      // Pre-clear per-user device state BEFORE signOut so the auth-state
+      // listener doesn't observe stale flags during the brief window
+      // between the RPC return and the signOut completion. signOut also
+      // calls clearPerUserDeviceState() — this pre-clear is belt-and-
+      // suspenders to close any race window.
+      await clearPerUserDeviceState();
 
       // Route through the wrapper signOut() instead of the bare
-      // _supabase.auth.signOut() — the wrapper also clears the biometric
-      // refresh token + saved email in flutter_secure_storage, deactivates
-      // the FCM token, and clears RevenueCat. Without this, a deleted
-      // account's Face-ID credentials linger on the device.
+      // _supabase.auth.signOut() — the wrapper deactivates the FCM token,
+      // clears RevenueCat, marks the user logged out in SessionPersistence,
+      // clears the biometric refresh token + saved email in
+      // flutter_secure_storage, and runs clearPerUserDeviceState again.
+      // Without this, a deleted account's Face-ID credentials would linger.
       await signOut();
 
       logger.info(
