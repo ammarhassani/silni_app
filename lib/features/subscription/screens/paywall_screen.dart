@@ -295,7 +295,6 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
           _buildFeatureRow('كتابة الرسائل', false, true),
           _buildFeatureRow('تحليل العلاقات', false, true),
           _buildFeatureRow('إحصائيات متقدمة', false, true),
-          _buildFeatureRow('لوحة المتصدرين', false, true),
           _buildFeatureRow('تصدير البيانات', false, true),
         ],
       ),

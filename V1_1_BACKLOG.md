@@ -46,3 +46,12 @@ Currently empty on prod. v1 routes through code fallback. If the admin panel gai
 
 - Security & PII audit — CTO recommends as next when audit cycle resumes.
 - Accessibility audit — VoiceOver labels, dynamic type, color contrast.
+
+## Admin-panel cleanup (from Phase 9.1.B-db)
+
+- `admin_app_routes` rows for the deleted gamification route. The Phase 9.1
+  spec asked to clean these but the schema didn't match the spec's
+  assumption of a `category` column. Skip until the admin schema is
+  diff-checked. Doesn't affect the user-facing app (admin-only).
+- `admin_notification_templates` rows for `badge`/`level`/`challenge`
+  categories — same reason.

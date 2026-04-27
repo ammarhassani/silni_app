@@ -33,12 +33,12 @@ A 60-second screen recording for the App Store preview video. Arabic narration, 
 ## 0:20 → 0:28 — Log an interaction (the moment of feedback)
 
 **Action:** Open the relative detail for خالتي فاطمة. Tap the call action. (Cancel the call sheet immediately — this is a demo). The interaction-creation dialog auto-fires. Tap "حفظ".
-**Narration:** كل تواصل يحسبه — نقاط، سلسلة، شهور.
-**Cue:** the enriched toast appears: `+15 نقطة · 🔥 سلسلة 1 يوم مع خالتي فاطمة`. Hold it on screen for at least 1.5s.
+**Narration:** كل تواصل يحسبه — سلسلة، شهور، عمر العلاقة.
+**Cue:** the toast appears: `🔥 سلسلة 1 يوم مع خالتي فاطمة`. Hold it on screen for at least 1.5s.
 
 ## 0:28 → 0:34 — Streak milestone moment
 
-**Action:** Pre-record the device with state where the next interaction triggers a 7-day milestone. Re-do the call action. The fancier toast fires: `✨ +15 نقطة · 🔥 وصلت لـ7 يوم متواصل مع خالتي فاطمة`.
+**Action:** Pre-record the device with state where the next interaction triggers a 7-day milestone. Re-do the call action. The fancier toast fires: `🔥 وصلت لـ7 يوم متواصل مع خالتي فاطمة` and the milestone modal opens with confetti.
 **Narration:** ولما توصل لمحطة، صِلْني يحتفل معاك.
 **Cue:** sparkle in the toast. Hold 2 seconds.
 
