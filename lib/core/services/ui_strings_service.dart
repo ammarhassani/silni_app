@@ -83,8 +83,6 @@ class UIStringsService {
 
     // Labels
     'streak_label': 'سلسلة التواصل',
-    'points_label': 'النقاط',
-    'level_label': 'المستوى',
     'today': 'اليوم',
     'yesterday': 'أمس',
     'days_ago': 'يوم',
@@ -106,11 +104,8 @@ class UIStringsService {
     'name_placeholder': 'الاسم',
     'notes_placeholder': 'ملاحظات...',
 
-    // Gamification
+    // Streak
     'streak_congrats': 'أحسنت! حافظت على السلسلة',
-    'level_up': 'مبروك! ارتقيت لمستوى جديد',
-    'badge_earned': 'حصلت على شارة جديدة!',
-    'points_earned': 'نقطة',
   };
 
   /// Initialize the service (call on app start)

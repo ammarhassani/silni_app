@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/streak_freeze_model.dart';
 import '../services/streak_freeze_service.dart';
-import 'gamification_events_provider.dart';
+import 'streak_events_provider.dart';
 
 /// Provider for the StreakFreezeService
 final streakFreezeServiceProvider = Provider<StreakFreezeService>((ref) {
-  final eventsController = ref.watch(gamificationEventsControllerProvider);
+  final eventsController = ref.watch(streakEventsControllerProvider);
   return StreakFreezeService(
     eventsController: eventsController,
   );

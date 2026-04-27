@@ -9,12 +9,11 @@ import '../../../core/models/subscription_tier.dart';
 import '../../../core/providers/subscription_provider.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../core/theme/theme_provider.dart';
-import '../../../core/utils/badge_prestige.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../providers/home_providers.dart';
 
-/// Beautiful streak/badge bar for the home header
-/// Displays: Username | Highest badge | Streak count | Countdown timer
+/// Streak bar for the home header.
+/// Displays: avatar + username (+ tier pill if Max) | streak counter + countdown
 class StreakBadgeBar extends ConsumerStatefulWidget {
   const StreakBadgeBar({
     super.key,
@@ -55,8 +54,6 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
 
   Widget _buildBar(Map<String, dynamic> data) {
     final currentStreak = data['current_streak'] as int? ?? 0;
-    final badges = List<String>.from(data['badges'] ?? []);
-    final highestBadge = BadgePrestige.getHighestPrestigeBadge(badges);
 
     // Parse streak deadline for warning indicator
     final deadlineStr = data['streak_deadline'] as String?;
@@ -77,12 +74,6 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
         children: [
           // Username Section
           _buildUsernameSection(),
-
-          // Divider
-          _buildDivider(),
-
-          // Badge Section
-          _buildBadgeSection(highestBadge),
 
           // Divider
           _buildDivider(),
@@ -211,118 +202,6 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildBadgeSection(String? badgeId) {
-    if (badgeId == null) {
-      // No badge earned yet
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: _themeColors.glassBorder,
-                width: 1.5,
-              ),
-              color: _themeColors.glassBackground,
-            ),
-            child: Center(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  '?',
-                  style: TextStyle(
-                    color: _themeColors.textHint,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'ابدأ رحلتك',
-            style: AppTypography.labelSmall.copyWith(
-              color: _themeColors.textHint,
-            ),
-          ),
-        ],
-      );
-    }
-
-    final badgeInfo = BadgePrestige.getBadgeInfo(badgeId);
-    final isHighPrestige = ['streak_365', 'interactions_1000', 'streak_100']
-        .contains(badgeId);
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Badge container with gradient border
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: isHighPrestige ? AppColors.goldenGradient : null,
-            border: isHighPrestige
-                ? null
-                : Border.all(
-                    color: badgeInfo.color.withValues(alpha: 0.7),
-                    width: 1.5,
-                  ),
-            boxShadow: isHighPrestige
-                ? [
-                    BoxShadow(
-                      color: AppColors.premiumGold.withValues(alpha: 0.4),
-                      blurRadius: 8,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : null,
-          ),
-          child: Container(
-            margin: isHighPrestige ? const EdgeInsets.all(2) : null,
-            decoration: isHighPrestige
-                ? BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _themeColors.primaryDark,
-                  )
-                : null,
-            alignment: Alignment.center,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                badgeInfo.emoji,
-                style: const TextStyle(fontSize: 16),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        )
-            .animate(
-              onPlay: (controller) =>
-                  isHighPrestige ? controller.repeat() : null,
-            )
-            .shimmer(
-              duration: isHighPrestige ? 3.seconds : Duration.zero,
-              color: isHighPrestige
-                  ? AppColors.premiumGold.withValues(alpha: 0.3)
-                  : Colors.transparent,
-            ),
-        const SizedBox(width: 6),
-        Text(
-          badgeInfo.name,
-          style: AppTypography.labelSmall.copyWith(
-            color: _themeColors.textPrimary.withValues(alpha: 0.9),
-          ),
-        ),
-      ],
     );
   }
 

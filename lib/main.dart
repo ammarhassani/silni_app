@@ -21,7 +21,6 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/router/navigation_service.dart';
-import 'core/providers/gamification_events_provider.dart';
 import 'core/services/sync_service.dart';
 import 'core/services/connectivity_service.dart';
 import 'features/auth/providers/auth_provider.dart'; // Auth providers
@@ -36,7 +35,7 @@ import 'core/services/subscription_service.dart';
 import 'core/services/cache_config_service.dart';
 import 'core/services/feature_config_service.dart';
 import 'core/services/ai_config_service.dart';
-import 'core/services/gamification_config_service.dart';
+import 'core/services/streak_config_service.dart';
 import 'core/services/content_config_service.dart';
 import 'core/services/notification_config_service.dart';
 import 'core/services/design_config_service.dart';
@@ -479,7 +478,7 @@ Future<void> _initDeferredServices(AppLoggerService logger) async {
     init(() => FeatureConfigService.instance.refresh(), 'FeatureConfig'),
     init(() => CacheConfigService().initialize(), 'CacheConfig'),
     init(() => AIConfigService.instance.initialize(), 'AIConfig'),
-    init(() => GamificationConfigService.instance.initialize(), 'GamificationConfig'),
+    init(() => StreakConfigService.instance.initialize(), 'StreakConfig'),
     init(() => ContentConfigService.instance.refresh(), 'ContentConfig'),
     init(() => NotificationConfigService.instance.refresh(), 'NotificationConfig'),
     init(() => DesignConfigService.instance.initialize(), 'DesignConfig'),
@@ -732,7 +731,7 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
       // Refresh configs when app comes back to foreground
       FeatureConfigService.instance.refresh();
       AIConfigService.instance.refresh();
-      GamificationConfigService.instance.refresh();
+      StreakConfigService.instance.refresh();
       ContentConfigService.instance.refresh();
       NotificationConfigService.instance.refresh();
       DesignConfigService.instance.refresh();
@@ -744,10 +743,6 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
-    // Initialize SyncService with gamification events controller for UI feedback
-    final eventsController = ref.read(gamificationEventsControllerProvider);
-    SyncService.instance.setEventsController(eventsController);
-
     final router = ref.watch(routerProvider);
     // Watch theme provider for dynamic theme changes
     final themeColors = ref.watch(themeColorsProvider);

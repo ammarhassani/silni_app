@@ -19,7 +19,6 @@ import '../providers/family_group_providers.dart';
 import '../services/family_group_service.dart';
 import '../widgets/family_activity_card.dart';
 import '../widgets/family_activity_feed.dart';
-import '../widgets/family_leaderboard.dart';
 import '../widgets/invite_link_card.dart';
 
 /// Screen showing the detail view of a family group.
@@ -567,12 +566,6 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
                   }
                 },
               ),
-              const SizedBox(height: AppSpacing.md),
-            ],
-
-            // Weekly leaderboard (hide when only 1 member)
-            if (membersAsync.valueOrNull != null && membersAsync.valueOrNull!.length > 1) ...[
-              FamilyLeaderboard(groupId: widget.groupId),
               const SizedBox(height: AppSpacing.md),
             ],
 

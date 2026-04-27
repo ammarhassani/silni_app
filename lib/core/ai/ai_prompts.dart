@@ -287,13 +287,11 @@ ${mode.modeInstructions}
     buffer.writeln();
     buffer.writeln(getDynamicModeInstructions(mode.name));
 
-    // Add gamification context
+    // Add user context
     buffer.writeln('''
 
 ## معلومات المستخدم:
-- المستوى: ${context.gamification.level}
-- إجمالي النقاط: ${context.gamification.totalPoints}
-- إجمالي التفاعلات: ${context.gamification.totalInteractions}
+- إجمالي التفاعلات: ${context.totalInteractions}
 - الشعلات النشطة: ${context.totalActiveStreaks}
 ''');
 

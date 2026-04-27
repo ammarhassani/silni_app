@@ -1,9 +1,9 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../models/relative_streak_model.dart';
-import '../models/gamification_event.dart';
-import '../providers/gamification_events_provider.dart';
-import 'gamification_config_service.dart';
+import '../models/streak_event.dart';
+import '../providers/streak_events_provider.dart';
+import 'streak_config_service.dart';
 
 /// Result of updating a relative streak
 class RelativeStreakResult {
@@ -24,10 +24,10 @@ class RelativeStreakResult {
 class RelativeStreakService {
   // Use lazy initialization to avoid accessing Supabase before it's initialized
   SupabaseClient get _supabase => SupabaseConfig.client;
-  final GamificationEventsController? _eventsController;
+  final StreakEventsController? _eventsController;
 
   RelativeStreakService({
-    GamificationEventsController? eventsController,
+    StreakEventsController? eventsController,
   }) : _eventsController = eventsController;
 
   /// Update streak for a specific relative after interaction
@@ -47,7 +47,7 @@ class RelativeStreakService {
 
       final now = DateTime.now().toUtc();
       // Get deadline hours from config (default 26)
-      final deadlineHours = GamificationConfigService.instance.streakConfig.deadlineHours;
+      final deadlineHours = StreakConfigService.instance.streakConfig.deadlineHours;
       final newDeadline = now.add(Duration(hours: deadlineHours));
 
       int newStreak;
@@ -142,15 +142,15 @@ class RelativeStreakService {
 
       // Emit event if streak increased
       if (streakIncreased && !streakBroken) {
-        _eventsController?.emit(GamificationEvent.streakIncreased(
+        _eventsController?.emit(StreakEvent.streakIncreased(
           userId: userId,
           currentStreak: newStreak,
           longestStreak: newLongestStreak,
         ));
 
         // Check for celebration milestone (dynamic from admin config)
-        if (GamificationConfigService.instance.streakConfig.isCelebrationMilestone(newStreak)) {
-          _eventsController?.emit(GamificationEvent.streakMilestone(
+        if (StreakConfigService.instance.streakConfig.isCelebrationMilestone(newStreak)) {
+          _eventsController?.emit(StreakEvent.streakMilestone(
             userId: userId,
             streak: newStreak,
           ));

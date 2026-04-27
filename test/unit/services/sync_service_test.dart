@@ -361,11 +361,6 @@ void main() {
         expect(service.processOfflineQueue, isA<Function>());
       });
 
-      test('should have setEventsController method', () {
-        final service = SyncService.instance;
-        expect(service.setEventsController, isA<Function>());
-      });
-
       test('should have dispose method', () {
         final service = SyncService.instance;
         expect(service.dispose, isA<Function>());

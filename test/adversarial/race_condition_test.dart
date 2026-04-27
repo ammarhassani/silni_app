@@ -9,7 +9,6 @@ library;
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:silni_app/core/models/gamification_event.dart';
 import 'package:silni_app/core/models/relative_streak_model.dart';
 import 'package:silni_app/shared/models/interaction_model.dart';
 import 'package:silni_app/shared/models/offline_operation.dart';
@@ -148,41 +147,6 @@ void main() {
         await Future.wait(operations);
       });
 
-      test('concurrent GamificationEvent creation is safe', () async {
-        final futures = <Future<GamificationEvent>>[];
-
-        for (var i = 0; i < 100; i++) {
-          futures.add(Future(() {
-            return GamificationEvent.pointsEarned(
-              userId: 'user-$i',
-              points: i * 10,
-              source: 'test-$i',
-            );
-          }));
-
-          futures.add(Future(() {
-            return GamificationEvent.levelUp(
-              userId: 'user-$i',
-              oldLevel: i,
-              newLevel: i + 1,
-              currentXP: i * 100,
-              xpToNextLevel: (i + 1) * 100,
-            );
-          }));
-        }
-
-        final results = await Future.wait(futures);
-        expect(results.length, 200);
-
-        // Verify each event has correct data
-        for (var i = 0; i < 100; i++) {
-          final pointsEvent = results[i * 2];
-          expect(pointsEvent.points, i * 10);
-
-          final levelEvent = results[i * 2 + 1];
-          expect(levelEvent.newLevel, i + 1);
-        }
-      });
     });
 
     // =========================================================================

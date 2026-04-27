@@ -8,7 +8,7 @@ library;
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:silni_app/core/models/gamification_event.dart';
+import 'package:silni_app/core/models/streak_event.dart';
 import 'package:silni_app/core/models/relative_streak_model.dart';
 import 'package:silni_app/core/models/streak_freeze_model.dart';
 import 'package:silni_app/shared/models/interaction_model.dart';
@@ -598,64 +598,24 @@ void main() {
     });
 
     // =========================================================================
-    // GAMIFICATION EVENT FUZZING
+    // STREAK EVENT FUZZING
     // =========================================================================
 
-    group('GamificationEvent Model Fuzzing', () {
+    group('StreakEvent Model Fuzzing', () {
       test('survives malicious data in events', () {
         for (final malicious in MaliciousInputs.sqlInjection) {
-          final event = GamificationEvent(
-            type: GamificationEventType.pointsEarned,
+          final event = StreakEvent(
+            type: StreakEventType.streakIncreased,
             userId: malicious,
             data: {
-              'points': 10,
-              'source': malicious,
+              'current_streak': 10,
+              'longest_streak': 10,
               'extra': malicious,
             },
           );
 
           expect(event.userId, malicious);
-          expect(event.data['source'], malicious);
-        }
-      });
-
-      test('handles extreme point values', () {
-        final extremePoints = [
-          0,
-          -1,
-          -1000,
-          1,
-          100,
-          1000000,
-          2147483647,
-          -2147483648,
-        ];
-
-        for (final points in extremePoints) {
-          final event = GamificationEvent.pointsEarned(
-            userId: 'test',
-            points: points,
-            source: 'test',
-          );
-
-          expect(event.points, points);
-        }
-      });
-
-      test('handles extreme level values', () {
-        final extremeLevels = [0, -1, 1, 100, 1000, 2147483647];
-
-        for (final level in extremeLevels) {
-          final event = GamificationEvent.levelUp(
-            userId: 'test',
-            oldLevel: level - 1,
-            newLevel: level,
-            currentXP: 0,
-            xpToNextLevel: 100,
-          );
-
-          expect(event.newLevel, level);
-          expect(event.oldLevel, level - 1);
+          expect(event.data['extra'], malicious);
         }
       });
 
@@ -663,18 +623,18 @@ void main() {
         // Test all milestone values
         final milestones = [3, 7, 10, 14, 21, 30, 50, 100, 200, 365, 500];
         for (final milestone in milestones) {
-          expect(GamificationEvent.isStreakMilestone(milestone), isTrue);
+          expect(StreakEvent.isStreakMilestone(milestone), isTrue);
         }
 
         // Test non-milestones
         final nonMilestones = [0, 1, 2, 4, 5, 6, 8, 9, 11, 99, 101, 999];
         for (final nonMilestone in nonMilestones) {
-          expect(GamificationEvent.isStreakMilestone(nonMilestone), isFalse);
+          expect(StreakEvent.isStreakMilestone(nonMilestone), isFalse);
         }
 
         // Test negative values
-        expect(GamificationEvent.isStreakMilestone(-1), isFalse);
-        expect(GamificationEvent.isStreakMilestone(-7), isFalse);
+        expect(StreakEvent.isStreakMilestone(-1), isFalse);
+        expect(StreakEvent.isStreakMilestone(-7), isFalse);
       });
     });
 

@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/relative_streak_model.dart';
 import '../services/relative_streak_service.dart';
-import 'gamification_events_provider.dart';
+import 'streak_events_provider.dart';
 
 /// Provider for the RelativeStreakService
 final relativeStreakServiceProvider = Provider<RelativeStreakService>((ref) {
-  final eventsController = ref.watch(gamificationEventsControllerProvider);
+  final eventsController = ref.watch(streakEventsControllerProvider);
   return RelativeStreakService(
     eventsController: eventsController,
   );

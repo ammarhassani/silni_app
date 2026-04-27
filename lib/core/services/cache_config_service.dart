@@ -20,7 +20,7 @@ class CacheConfigService {
   static const Map<String, int> _defaults = {
     'feature_config': 300, // 5 minutes
     'ai_config': 300, // 5 minutes
-    'gamification_config': 300, // 5 minutes
+    'streak_config': 300, // 5 minutes
     'notification_config': 600, // 10 minutes
     'design_config': 600, // 10 minutes
     'content_config': 600, // 10 minutes

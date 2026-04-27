@@ -5,8 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:silni_app/core/services/analytics.dart';
-import 'package:silni_app/core/providers/gamification_events_provider.dart';
-import 'package:silni_app/core/models/gamification_event.dart';
+import 'package:silni_app/core/providers/streak_events_provider.dart';
+import 'package:silni_app/core/models/streak_event.dart';
 
 /// Test helpers and utilities for Silni app tests
 ///
@@ -55,13 +55,13 @@ class MockSharedPreferences extends Mock implements SharedPreferences {}
 // Mock Classes - Controllers
 // ========================================
 
-/// Test GamificationEventsController that tracks emitted events
+/// Test StreakEventsController that tracks emitted events
 /// This extends the real controller to add testing capabilities
-class TestGamificationEventsController extends GamificationEventsController {
-  final List<GamificationEvent> emittedEvents = [];
+class TestStreakEventsController extends StreakEventsController {
+  final List<StreakEvent> emittedEvents = [];
 
   @override
-  void emit(GamificationEvent event) {
+  void emit(StreakEvent event) {
     emittedEvents.add(event);
     super.emit(event);
   }
@@ -72,17 +72,17 @@ class TestGamificationEventsController extends GamificationEventsController {
   }
 
   /// Check if a specific event type was emitted
-  bool hasEmittedEventOfType(GamificationEventType type) {
+  bool hasEmittedEventOfType(StreakEventType type) {
     return emittedEvents.any((e) => e.type == type);
   }
 
   /// Get all events of a specific type
-  List<GamificationEvent> getEventsOfType(GamificationEventType type) {
+  List<StreakEvent> getEventsOfType(StreakEventType type) {
     return emittedEvents.where((e) => e.type == type).toList();
   }
 
   /// Get the last emitted event
-  GamificationEvent? get lastEvent => emittedEvents.isNotEmpty ? emittedEvents.last : null;
+  StreakEvent? get lastEvent => emittedEvents.isNotEmpty ? emittedEvents.last : null;
 
   /// Get events count
   int get eventCount => emittedEvents.length;

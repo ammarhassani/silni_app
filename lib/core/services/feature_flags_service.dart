@@ -16,7 +16,6 @@ class FeatureFlags {
   // Feature Rollouts
   static const String aiAssistant = 'ai_assistant_enabled';
   static const String familyTree = 'family_tree_enabled';
-  static const String gamification = 'gamification_enabled';
   static const String smartReminders = 'smart_reminders_enabled';
 
   // A/B Test Variants
@@ -40,7 +39,6 @@ class FeatureFlags {
     // Feature Rollouts - default to enabled
     aiAssistant: true,
     familyTree: true,
-    gamification: true,
     smartReminders: true,
 
     // A/B Test Variants - default variants

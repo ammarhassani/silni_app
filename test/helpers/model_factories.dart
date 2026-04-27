@@ -2,7 +2,6 @@ import 'package:silni_app/shared/models/relative_model.dart';
 import 'package:silni_app/shared/models/interaction_model.dart';
 import 'package:silni_app/shared/models/reminder_schedule_model.dart';
 import 'package:silni_app/shared/models/hadith_model.dart';
-import 'package:silni_app/core/models/gamification_event.dart';
 
 /// Test data factories for creating model instances in tests
 ///
@@ -364,104 +363,6 @@ Map<String, dynamic> createTestHadithMap({
     'createdAt': createdAt ?? DateTime.now(),
     'updatedAt': updatedAt,
   };
-}
-
-// ========================================
-// GamificationEvent Factories
-// ========================================
-
-/// Create a test GamificationEvent for points earned
-GamificationEvent createTestPointsEarnedEvent({
-  String? userId,
-  int? points,
-  String? source,
-  DateTime? timestamp,
-}) {
-  return GamificationEvent(
-    type: GamificationEventType.pointsEarned,
-    userId: userId ?? 'test-user-id',
-    data: {
-      'points': points ?? 10,
-      'source': source ?? 'call',
-    },
-    timestamp: timestamp,
-  );
-}
-
-/// Create a test GamificationEvent for badge unlocked
-GamificationEvent createTestBadgeUnlockedEvent({
-  String? userId,
-  String? badgeId,
-  String? badgeName,
-  String? badgeDescription,
-  DateTime? timestamp,
-}) {
-  return GamificationEvent(
-    type: GamificationEventType.badgeUnlocked,
-    userId: userId ?? 'test-user-id',
-    data: {
-      'badge_id': badgeId ?? 'first_interaction',
-      'badge_name': badgeName ?? 'أول تفاعل',
-      'badge_description': badgeDescription ?? 'سجلت أول تفاعل لك',
-    },
-    timestamp: timestamp,
-  );
-}
-
-/// Create a test GamificationEvent for level up
-GamificationEvent createTestLevelUpEvent({
-  String? userId,
-  int? oldLevel,
-  int? newLevel,
-  int? currentXP,
-  int? xpToNextLevel,
-  DateTime? timestamp,
-}) {
-  return GamificationEvent(
-    type: GamificationEventType.levelUp,
-    userId: userId ?? 'test-user-id',
-    data: {
-      'old_level': oldLevel ?? 1,
-      'new_level': newLevel ?? 2,
-      'current_xp': currentXP ?? 100,
-      'xp_to_next_level': xpToNextLevel ?? 150,
-    },
-    timestamp: timestamp,
-  );
-}
-
-/// Create a test GamificationEvent for streak increased
-GamificationEvent createTestStreakIncreasedEvent({
-  String? userId,
-  int? currentStreak,
-  int? longestStreak,
-  DateTime? timestamp,
-}) {
-  return GamificationEvent(
-    type: GamificationEventType.streakIncreased,
-    userId: userId ?? 'test-user-id',
-    data: {
-      'current_streak': currentStreak ?? 5,
-      'longest_streak': longestStreak ?? 10,
-    },
-    timestamp: timestamp,
-  );
-}
-
-/// Create a test GamificationEvent for streak milestone
-GamificationEvent createTestStreakMilestoneEvent({
-  String? userId,
-  int? streak,
-  DateTime? timestamp,
-}) {
-  return GamificationEvent(
-    type: GamificationEventType.streakMilestone,
-    userId: userId ?? 'test-user-id',
-    data: {
-      'streak': streak ?? 7,
-    },
-    timestamp: timestamp,
-  );
 }
 
 // ========================================

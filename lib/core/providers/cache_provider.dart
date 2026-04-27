@@ -3,13 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/cache_service.dart';
 import '../services/offline_queue_service.dart';
 import '../services/sync_service.dart';
-import '../services/gamification_service.dart';
 import '../services/relative_streak_service.dart';
 import '../../shared/repositories/relatives_repository.dart';
 import '../../shared/repositories/interactions_repository.dart';
 import '../../shared/repositories/reminder_schedules_repository.dart';
 import '../../shared/services/interactions_service.dart';
-import 'gamification_events_provider.dart';
+import 'streak_events_provider.dart';
 
 /// Provider for the CacheService singleton.
 final cacheServiceProvider = Provider<CacheService>((ref) {
@@ -31,17 +30,13 @@ final relativesRepositoryProvider = Provider<RelativesRepository>((ref) {
   return RelativesRepository();
 });
 
-/// Provider for InteractionsRepository with gamification support.
+/// Provider for InteractionsRepository with streak support.
 final interactionsRepositoryProvider = Provider<InteractionsRepository>((ref) {
-  final eventsController = ref.watch(gamificationEventsControllerProvider);
-  final gamificationService = GamificationService(
-    eventsController: eventsController,
-  );
+  final eventsController = ref.watch(streakEventsControllerProvider);
   final relativeStreakService = RelativeStreakService(
     eventsController: eventsController,
   );
   final interactionsService = InteractionsService(
-    gamificationService: gamificationService,
     relativeStreakService: relativeStreakService,
   );
   return InteractionsRepository(service: interactionsService);

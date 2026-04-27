@@ -11,7 +11,6 @@ library;
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:silni_app/core/models/gamification_event.dart';
 import 'package:silni_app/shared/models/interaction_model.dart';
 import 'package:silni_app/shared/models/offline_operation.dart';
 import 'package:silni_app/shared/models/relative_model.dart';
@@ -139,19 +138,6 @@ void main() {
         }
       });
 
-      test('GamificationEvent handles XSS payloads in badge names', () {
-        for (final xssPayload in MaliciousInputs.xssPayloads) {
-          final event = GamificationEvent.badgeUnlocked(
-            userId: 'user',
-            badgeId: 'badge_xss',
-            badgeName: xssPayload,
-            badgeDescription: xssPayload,
-          );
-
-          expect(event.badgeName, xssPayload);
-          expect(event.badgeDescription, xssPayload);
-        }
-      });
     });
 
     group('Input Sanitization - SQL Injection', () {
@@ -922,24 +908,6 @@ void main() {
         expect(json.containsKey('item_count'), isTrue);
       });
 
-      test('GamificationEvent does not store excessive PII', () {
-        final event = GamificationEvent.pointsEarned(
-          userId: 'user-uuid-123',
-          points: 100,
-          source: 'interaction',
-        );
-
-        final data = event.data;
-
-        // Should contain minimal data for gamification
-        expect(data['points'], 100);
-        expect(data['source'], 'interaction');
-
-        // Should not contain PII
-        expect(data.containsKey('email'), isFalse);
-        expect(data.containsKey('name'), isFalse);
-        expect(data.containsKey('phone'), isFalse);
-      });
     });
 
     // =========================================================================

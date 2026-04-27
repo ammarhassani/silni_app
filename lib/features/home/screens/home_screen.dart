@@ -4,10 +4,10 @@ import 'package:confetti/confetti.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/theme/theme_provider.dart';
-import '../../../core/models/gamification_event.dart';
+import '../../../core/models/streak_event.dart';
 import '../../../core/providers/ai_preload_provider.dart';
+import '../../../core/providers/streak_events_provider.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
-import '../../../shared/widgets/badge_unlock_modal.dart';
 import '../../../shared/widgets/streak_milestone_modal.dart';
 import '../../../shared/models/hadith_model.dart';
 import '../../../core/config/supabase_config.dart';
@@ -35,7 +35,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   late ConfettiController _confettiController;
   Hadith? _dailyHadith;
   bool _isLoadingHadith = true;
-  final List<GamificationEvent> _pendingEvents = [];
+  final List<StreakEvent> _pendingEvents = [];
 
   @override
   void initState() {
@@ -70,12 +70,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         _floatingController.repeat(reverse: true);
       }
 
-      // Process pending gamification events
+      // Process pending streak events
       if (_pendingEvents.isNotEmpty) {
         Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted) {
             for (final event in _pendingEvents) {
-              _processGamificationEvent(event);
+              _processStreakEvent(event);
             }
             _pendingEvents.clear();
           }
@@ -114,39 +114,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     super.dispose();
   }
 
-  void _processGamificationEvent(GamificationEvent event) {
+  void _processStreakEvent(StreakEvent event) {
     switch (event.type) {
-      case GamificationEventType.pointsEarned:
-        // Removed: points overlay no longer shown
-        break;
-
-      case GamificationEventType.levelUp:
-        // Removed: no more level celebrations
-        break;
-
-      case GamificationEventType.streakMilestone:
+      case StreakEventType.streakMilestone:
         _confettiController.play();
         if (event.streak != null) {
           StreakMilestoneModal.show(context, streak: event.streak!);
         }
         break;
 
-      case GamificationEventType.badgeUnlocked:
-        // Subtle celebration — no confetti
-        if (event.badgeId != null) {
-          BadgeUnlockModal.show(
-            context,
-            badgeId: event.badgeId!,
-            badgeName: event.badgeName ?? 'وسام جديد',
-            badgeDescription: event.badgeDescription ?? 'أحسنت!',
-          );
-        }
+      case StreakEventType.streakIncreased:
         break;
 
-      case GamificationEventType.streakIncreased:
-        break;
-
-      case GamificationEventType.streakWarning:
+      case StreakEventType.streakWarning:
         if (mounted) {
           final themeColors = ref.read(themeColorsProvider);
           UIHelpers.showSnackBar(
@@ -159,7 +139,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         }
         break;
 
-      case GamificationEventType.streakCritical:
+      case StreakEventType.streakCritical:
         if (mounted) {
           final themeColors = ref.read(themeColorsProvider);
           UIHelpers.showSnackBar(
@@ -172,11 +152,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         }
         break;
 
-      case GamificationEventType.freezeEarned:
+      case StreakEventType.freezeEarned:
         // Freeze earned is shown in the milestone modal
         break;
 
-      case GamificationEventType.freezeUsed:
+      case StreakEventType.freezeUsed:
         if (mounted) {
           final infoColor = ref.read(themeColorsProvider).statusInfo;
           UIHelpers.showSnackBar(
@@ -221,6 +201,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     ref.watch(autoRealtimeSubscriptionsProvider);
     ref.watch(aiAutoPreloadProvider);
 
+    // Listen for streak events (milestones, warnings, freezes) and dispatch
+    // to confetti/modal/snackbar. Was previously a GamificationListener
+    // widget; now a direct ref.listen so we don't need a widget shell.
+    ref.listen<AsyncValue<StreakEvent>>(streakEventsStreamProvider,
+        (previous, next) {
+      next.whenData((event) {
+        final lifecycleState = WidgetsBinding.instance.lifecycleState;
+        final isInForeground = lifecycleState == null ||
+            lifecycleState == AppLifecycleState.resumed;
+        if (isInForeground) {
+          _processStreakEvent(event);
+        } else {
+          _pendingEvents.add(event);
+        }
+      });
+    });
+
     // Family group info (for activity feed + celebration card)
     final groupId = ref.watch(userFamilyGroupProvider).valueOrNull?.groupId;
 
@@ -230,21 +227,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       floatingActionButton: null,
       body: Stack(
         children: [
-          // Gamification event listener (invisible)
-          GamificationListener(
-            onEvent: (event) {
-              final appLifecycleState =
-                  WidgetsBinding.instance.lifecycleState;
-              final isInForeground = appLifecycleState == null ||
-                  appLifecycleState == AppLifecycleState.resumed;
-              if (isInForeground) {
-                _processGamificationEvent(event);
-              } else {
-                _pendingEvents.add(event);
-              }
-            },
-          ),
-
           // Confetti overlay
           Align(
             alignment: Alignment.topCenter,

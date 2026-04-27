@@ -80,18 +80,4 @@ class NotificationTemplates {
     'ما شاء الله، {streak} يوم! كمّل',
   ];
 
-  /// Badge unlock messages (Saudi dialect).
-  static const badgeMessages = [
-    'يا بطل، شارة جديدة تستاهلها!',
-    'وسام جديد! أنت تستاهل',
-    'حصلت على شارة جديدة، يا وصّال!',
-  ];
-
-  /// Level up messages (Saudi dialect).
-  /// Use {level} placeholder for level number.
-  static const levelUpMessages = [
-    'مستوى جديد! كل ما تتواصل كل ما ترتقي',
-    'ارتقيت لمستوى {level}! الله يوفقك',
-    'مستوى {level}! أنت من أفضل الوصّالين',
-  ];
 }

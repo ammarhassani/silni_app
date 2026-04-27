@@ -1,8 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../models/streak_freeze_model.dart';
-import '../models/gamification_event.dart';
-import '../providers/gamification_events_provider.dart';
+import '../models/streak_event.dart';
+import '../providers/streak_events_provider.dart';
 
 /// Result of using a freeze
 class FreezeUseResult {
@@ -21,10 +21,10 @@ class FreezeUseResult {
 class StreakFreezeService {
   // Use lazy initialization to avoid accessing Supabase before it's initialized
   SupabaseClient get _supabase => SupabaseConfig.client;
-  final GamificationEventsController? _eventsController;
+  final StreakEventsController? _eventsController;
 
   StreakFreezeService({
-    GamificationEventsController? eventsController,
+    StreakEventsController? eventsController,
   }) : _eventsController = eventsController;
 
   /// Get user's freeze inventory
@@ -81,7 +81,7 @@ class StreakFreezeService {
       });
 
       // Emit event
-      _eventsController?.emit(GamificationEvent.freezeEarned(
+      _eventsController?.emit(StreakEvent.freezeEarned(
         userId: userId,
         source: 'milestone_$milestone',
       ));
@@ -125,7 +125,7 @@ class StreakFreezeService {
       });
 
       // Emit event
-      _eventsController?.emit(GamificationEvent.freezeUsed(
+      _eventsController?.emit(StreakEvent.freezeUsed(
         userId: userId,
         streakProtected: currentStreak,
         autoUsed: autoUse,

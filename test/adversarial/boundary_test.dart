@@ -6,7 +6,6 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:silni_app/core/models/gamification_event.dart';
 import 'package:silni_app/core/models/relative_streak_model.dart';
 import 'package:silni_app/core/models/streak_freeze_model.dart';
 import 'package:silni_app/shared/models/interaction_model.dart';
@@ -352,46 +351,6 @@ void main() {
         }
       });
 
-      test('GamificationEvent handles extreme point values', () {
-        final extremePoints = [
-          0,
-          1,
-          -1,
-          100,
-          -100,
-          1000000,
-          -1000000,
-          2147483647,
-          -2147483648,
-        ];
-
-        for (final points in extremePoints) {
-          final event = GamificationEvent.pointsEarned(
-            userId: 'test',
-            points: points,
-            source: 'test',
-          );
-
-          expect(event.points, points);
-        }
-      });
-
-      test('GamificationEvent handles extreme XP values', () {
-        final extremeXP = [0, 1, -1, 1000000, 2147483647, -2147483648];
-
-        for (final xp in extremeXP) {
-          final event = GamificationEvent.levelUp(
-            userId: 'test',
-            oldLevel: 1,
-            newLevel: 2,
-            currentXP: xp,
-            xpToNextLevel: xp,
-          );
-
-          expect(event.currentXP, xp);
-          expect(event.xpToNextLevel, xp);
-        }
-      });
     });
 
     // =========================================================================
@@ -788,19 +747,6 @@ void main() {
           // fromString should round-trip
           final parsed = FreezeType.fromString(type.value);
           expect(parsed, type);
-        }
-      });
-
-      test('all GamificationEventType values are valid', () {
-        for (final type in GamificationEventType.values) {
-          // Should be able to create event with each type
-          final event = GamificationEvent(
-            type: type,
-            userId: 'test',
-            data: {},
-          );
-
-          expect(event.type, type);
         }
       });
 

@@ -58,18 +58,12 @@ class AnalyticsEvents {
   static const aiAnalysisViewed = 'ai_analysis_viewed';
 
   // =====================================================
-  // GAMIFICATION EVENTS
+  // STREAK EVENTS
   // =====================================================
   static const streakAchieved = 'streak_achieved';
   static const streakMilestone = 'streak_milestone';
   static const streakLost = 'streak_lost';
   static const streakRecovered = 'streak_recovered';
-  static const badgeUnlocked = 'badge_unlocked';
-  static const badgeViewed = 'badge_viewed';
-  static const levelUp = 'level_up';
-  static const pointsEarned = 'points_earned';
-  static const challengeStarted = 'challenge_started';
-  static const challengeCompleted = 'challenge_completed';
 
   // =====================================================
   // FAMILY TREE EVENTS
@@ -147,12 +141,8 @@ class AnalyticsParams {
   static const scriptType = 'script_type';
   static const giftCategory = 'gift_category';
 
-  // Gamification Parameters
+  // Streak Parameters
   static const streakDays = 'streak_days';
-  static const badgeName = 'badge_name';
-  static const level = 'level';
-  static const points = 'points';
-  static const challengeId = 'challenge_id';
 
   // Retention Parameters
   static const dayNumber = 'day_number';

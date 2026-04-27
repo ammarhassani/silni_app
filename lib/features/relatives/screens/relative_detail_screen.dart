@@ -7,7 +7,6 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/utils/contact_launcher.dart';
 import '../../../core/providers/cache_provider.dart';
-import '../../../core/providers/gamification_provider.dart';
 import '../../../core/providers/relative_streak_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/voice_note_button.dart';
@@ -409,10 +408,6 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
       if (mounted) {
         final themeColors = ref.read(themeColorsProvider);
 
-        // Compute points the same way gamification_service does (admin-config driven).
-        final gamificationService = ref.read(gamificationServiceProvider);
-        final points = gamificationService.calculateInteractionPoints(interaction);
-
         // Read the streak that was just updated by the service.
         final streakService = ref.read(relativeStreakServiceProvider);
         final streak = await streakService.getRelativeStreak(
@@ -436,19 +431,19 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
         if (isMilestone) {
           UIHelpers.showSnackBar(
             context,
-            '✨ +$points نقطة · 🔥 وصلت لـ$streakDays يوم متواصل مع $relativeName',
+            '🔥 وصلت لـ$streakDays يوم متواصل مع $relativeName',
             backgroundColor: themeColors.primary,
           );
         } else if (streakDays > 0) {
           UIHelpers.showSnackBar(
             context,
-            '+$points نقطة · 🔥 سلسلة $streakDays أيام مع $relativeName',
+            '🔥 سلسلة $streakDays أيام مع $relativeName',
             backgroundColor: themeColors.primary,
           );
         } else {
           UIHelpers.showSnackBar(
             context,
-            '+$points نقطة · تم تسجيل التواصل مع $relativeName',
+            'تم تسجيل التواصل مع $relativeName',
             backgroundColor: themeColors.primary,
           );
         }

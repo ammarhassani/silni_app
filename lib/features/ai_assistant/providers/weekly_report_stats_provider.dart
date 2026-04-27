@@ -5,10 +5,8 @@ import '../../auth/providers/auth_provider.dart';
 
 /// Aggregated stats consumed by the Weekly Report screen.
 ///
-/// Lifted from the (now-deleted) gamification stats_provider during Phase 2
-/// cleanup. Weekly Report only reads `userStats['current_streak']` and
-/// `recentActivity` — the other fields are kept for now since the existing
-/// query already aggregates them and removing them changes no behavior.
+/// Reads streak + interaction-count aggregates only — Phase 9.1 cut the
+/// gamification stack so badges/points/level are no longer fetched.
 class DetailedStats {
   final Map<String, dynamic> userStats;
   final Map<InteractionType, int> interactionCounts;
@@ -16,7 +14,6 @@ class DetailedStats {
   final List<Map<String, dynamic>> monthlyData;
   final List<Map<String, dynamic>> topRelatives;
   final Map<String, int> timePatterns;
-  final List<Map<String, dynamic>> achievements;
 
   const DetailedStats({
     required this.userStats,
@@ -25,7 +22,6 @@ class DetailedStats {
     required this.monthlyData,
     required this.topRelatives,
     required this.timePatterns,
-    required this.achievements,
   });
 
   static const empty = DetailedStats(
@@ -35,23 +31,7 @@ class DetailedStats {
     monthlyData: [],
     topRelatives: [],
     timePatterns: {},
-    achievements: [],
   );
-}
-
-List<Map<String, dynamic>> _parseBadges(dynamic badges) {
-  if (badges == null) return [];
-  if (badges is! List) return [];
-
-  return badges.map((badge) {
-    if (badge is Map<String, dynamic>) {
-      return badge;
-    } else if (badge is String) {
-      return {'name': badge, 'id': badge};
-    } else {
-      return {'name': badge.toString(), 'id': badge.toString()};
-    }
-  }).toList();
 }
 
 /// Provider for loading detailed statistics for the Weekly Report.
@@ -62,9 +42,7 @@ final detailedStatsProvider =
 
   final userResponse = await SupabaseConfig.client
       .from('users')
-      .select(
-        'points, level, current_streak, longest_streak, badges, total_interactions',
-      )
+      .select('current_streak, longest_streak, total_interactions')
       .eq('id', user.id)
       .single();
 
@@ -155,6 +133,5 @@ final detailedStatsProvider =
         .toList(),
     topRelatives: topRelativesData,
     timePatterns: hourlyPatterns,
-    achievements: _parseBadges(userResponse['badges']),
   );
 });

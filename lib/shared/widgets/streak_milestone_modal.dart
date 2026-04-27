@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/ai/deepseek_ai_service.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
-import '../../core/models/gamification_event.dart';
+import '../../core/models/streak_event.dart';
 import '../../core/providers/subscription_provider.dart';
 import '../../core/theme/app_themes.dart';
 import '../../core/theme/theme_provider.dart';
@@ -49,7 +49,7 @@ class StreakMilestoneModal extends ConsumerStatefulWidget {
     bool freezeAwarded = false,
   }) {
     final shouldAwardFreeze =
-        freezeAwarded || GamificationEvent.isFreezeAwardMilestone(streak);
+        freezeAwarded || StreakEvent.isFreezeAwardMilestone(streak);
 
     return showDialog(
       context: context,

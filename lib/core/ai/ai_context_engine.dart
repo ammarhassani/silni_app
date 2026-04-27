@@ -30,7 +30,7 @@ class AIContextEngine {
   List<Interaction>? _interactionsCache;
   Map<String, RelativeStreak>? _streaksCache;
   List<AIMemory>? _memoriesCache;
-  GamificationStats? _gamificationCache;
+  int? _totalInteractionsCache;
   DateTime? _lastFetchTime;
 
   // Cache duration (5 minutes)
@@ -47,7 +47,7 @@ class AIContextEngine {
     _interactionsCache = null;
     _streaksCache = null;
     _memoriesCache = null;
-    _gamificationCache = null;
+    _totalInteractionsCache = null;
     _lastFetchTime = null;
   }
 
@@ -78,7 +78,7 @@ class AIContextEngine {
       relatives: _relativesCache ?? [],
       recentInteractions: _getRecentInteractions(focusRelative?.id),
       streaks: _streaksCache ?? {},
-      gamification: _gamificationCache ?? GamificationStats.empty(),
+      totalInteractions: _totalInteractionsCache ?? 0,
       memories: _getRelevantMemories(focusRelative?.id),
       upcomingOccasions: _getUpcomingOccasions(),
       healthSummary: _buildHealthSummary(),
@@ -94,7 +94,7 @@ class AIContextEngine {
         _fetchInteractions(userId),
         _fetchStreaks(userId),
         _fetchMemories(userId),
-        _fetchGamification(userId),
+        _fetchTotalInteractions(userId),
       ]);
       _lastFetchTime = DateTime.now();
     } catch (_) {
@@ -169,21 +169,17 @@ class AIContextEngine {
     }
   }
 
-  Future<void> _fetchGamification(String userId) async {
+  Future<void> _fetchTotalInteractions(String userId) async {
     try {
       final response = await _supabase
-          .from('gamification_stats')
-          .select()
-          .eq('user_id', userId)
+          .from('users')
+          .select('total_interactions')
+          .eq('id', userId)
           .maybeSingle();
-
-      if (response != null) {
-        _gamificationCache = GamificationStats.fromJson(response);
-      } else {
-        _gamificationCache = GamificationStats.empty();
-      }
+      _totalInteractionsCache =
+          (response?['total_interactions'] as int?) ?? 0;
     } catch (_) {
-      _gamificationCache = GamificationStats.empty();
+      _totalInteractionsCache = 0;
     }
   }
 
@@ -343,7 +339,7 @@ class AIContext {
   final List<Relative> relatives;
   final List<Interaction> recentInteractions;
   final Map<String, RelativeStreak> streaks;
-  final GamificationStats gamification;
+  final int totalInteractions;
   final List<AIMemory> memories;
   final List<UpcomingOccasion> upcomingOccasions;
   final HealthSummary healthSummary;
@@ -355,7 +351,7 @@ class AIContext {
     required this.relatives,
     required this.recentInteractions,
     required this.streaks,
-    required this.gamification,
+    required this.totalInteractions,
     required this.memories,
     required this.upcomingOccasions,
     required this.healthSummary,
@@ -368,7 +364,7 @@ class AIContext {
       relatives: [],
       recentInteractions: [],
       streaks: {},
-      gamification: GamificationStats.empty(),
+      totalInteractions: 0,
       memories: [],
       upcomingOccasions: [],
       healthSummary: HealthSummary.empty(),
@@ -404,8 +400,7 @@ class AIContext {
     if (extendedCount > 0) buffer.writeln('- تواصل دائم: $extendedCount');
     if (distantCount > 0) buffer.writeln('- مناسبات: $distantCount');
 
-    buffer.writeln('- المستوى: ${gamification.level}');
-    buffer.writeln('- النقاط: ${gamification.totalPoints}');
+    buffer.writeln('- إجمالي التفاعلات: $totalInteractions');
     buffer.writeln('- الشعلات النشطة: $totalActiveStreaks');
 
     buffer.writeln('\n## صحة العلاقات');
@@ -448,39 +443,6 @@ class AIContext {
     }
 
     return buffer.toString();
-  }
-}
-
-/// Gamification statistics for a user
-class GamificationStats {
-  final int totalPoints;
-  final int level;
-  final List<String> badges;
-  final int totalInteractions;
-
-  GamificationStats({
-    required this.totalPoints,
-    required this.level,
-    required this.badges,
-    required this.totalInteractions,
-  });
-
-  factory GamificationStats.fromJson(Map<String, dynamic> json) {
-    return GamificationStats(
-      totalPoints: json['total_points'] as int? ?? 0,
-      level: json['level'] as int? ?? 1,
-      badges: (json['badges'] as List?)?.cast<String>() ?? [],
-      totalInteractions: json['total_interactions'] as int? ?? 0,
-    );
-  }
-
-  factory GamificationStats.empty() {
-    return GamificationStats(
-      totalPoints: 0,
-      level: 1,
-      badges: [],
-      totalInteractions: 0,
-    );
   }
 }
 

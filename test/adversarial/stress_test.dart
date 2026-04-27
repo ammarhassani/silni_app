@@ -2,7 +2,7 @@
 ///
 /// These tests push the app to its limits by simulating extreme conditions:
 /// - Memory Stress: Handle 1000 relatives, 10000 interactions, rapid widget rebuilds
-/// - CPU Stress: Complex gamification calculations, family tree rendering
+/// - CPU Stress: Streak milestone checks, family tree rendering
 /// - Network Stress: 100 concurrent API calls, timeout storms
 /// - Storage Stress: Full offline queue (1000 operations), cache limits
 /// - UI Stress: Rapid scroll, dialog open/close, keyboard toggle
@@ -11,7 +11,7 @@ library;
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:silni_app/core/models/gamification_event.dart';
+import 'package:silni_app/core/models/streak_event.dart';
 import 'package:silni_app/core/models/relative_streak_model.dart';
 import 'package:silni_app/shared/models/interaction_model.dart';
 import 'package:silni_app/shared/models/offline_operation.dart';
@@ -261,64 +261,13 @@ void main() {
     // =========================================================================
 
     group('CPU Stress', () {
-      test('handles complex gamification stat calculations', () {
-        final stopwatch = Stopwatch()..start();
-
-        // Create many gamification events
-        final events = <GamificationEvent>[];
-        for (var i = 0; i < 10000; i++) {
-          events.add(GamificationEvent.pointsEarned(
-            userId: 'user-${i % 100}',
-            points: (i % 100) * 10,
-            source: 'interaction',
-          ));
-
-          if (i % 50 == 0) {
-            events.add(GamificationEvent.levelUp(
-              userId: 'user-${i % 100}',
-              oldLevel: i % 10,
-              newLevel: (i % 10) + 1,
-              currentXP: i * 100,
-              xpToNextLevel: (i + 1) * 100,
-            ));
-          }
-
-          if (i % 100 == 0) {
-            events.add(GamificationEvent.badgeUnlocked(
-              userId: 'user-${i % 100}',
-              badgeId: 'badge_$i',
-              badgeName: 'Badge $i',
-              badgeDescription: 'Description for badge $i',
-            ));
-          }
-        }
-
-        stopwatch.stop();
-        expect(events.length, greaterThan(10000));
-        expect(stopwatch.elapsedMilliseconds, lessThan(5000), reason: 'Event creation took too long');
-
-        // Aggregate by user
-        stopwatch.reset();
-        stopwatch.start();
-        final userStats = <String, int>{};
-        for (final event in events) {
-          if (event.type == GamificationEventType.pointsEarned) {
-            userStats[event.userId] = (userStats[event.userId] ?? 0) + (event.points ?? 0);
-          }
-        }
-        stopwatch.stop();
-
-        expect(userStats.length, 100);
-        expect(stopwatch.elapsedMilliseconds, lessThan(2000), reason: 'Aggregation took too long');
-      });
-
       test('handles intensive streak milestone checks', () {
         final stopwatch = Stopwatch()..start();
 
         // Check milestones for many values
         var milestoneCount = 0;
         for (var i = 0; i < 100000; i++) {
-          if (GamificationEvent.isStreakMilestone(i)) {
+          if (StreakEvent.isStreakMilestone(i)) {
             milestoneCount++;
           }
         }

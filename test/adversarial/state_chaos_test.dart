@@ -8,7 +8,6 @@ library;
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:silni_app/core/models/gamification_event.dart';
 import 'package:silni_app/core/models/relative_streak_model.dart';
 import 'package:silni_app/core/models/streak_freeze_model.dart';
 import 'package:silni_app/shared/models/interaction_model.dart';
@@ -580,81 +579,6 @@ void main() {
     // =========================================================================
 
     group('Provider State Corruption', () {
-      test('GamificationEvent handles corrupted event data', () {
-        // Test that creating event with corrupted data does not crash
-        final corruptedData = <Map<String, dynamic>>[
-          {},
-          {'points': 'not-a-number'},
-          {'points': null},
-          {'points': double.infinity},
-          {'badge_id': 12345}, // Should be string
-          StateChaos.randomChaosMap(),
-        ];
-
-        for (final data in corruptedData) {
-          // Should not crash when creating event
-          final event = GamificationEvent(
-            type: GamificationEventType.pointsEarned,
-            userId: 'test-user',
-            data: data,
-          );
-
-          expect(event, isNotNull);
-          // Note: Accessing computed properties may throw TypeError
-          // when data contains type mismatches. This is expected behavior
-          // as the getters use strict type casts (as int?).
-          // The test validates that construction succeeds even with bad data.
-          try {
-            event.points;
-          } catch (e) {
-            // TypeError is acceptable when data is corrupted
-            expect(e, isA<TypeError>());
-          }
-          try {
-            event.badgeId;
-          } catch (e) {
-            // TypeError is acceptable when data is corrupted
-            expect(e, isA<TypeError>());
-          }
-        }
-      });
-
-      test('GamificationEvent static constructors handle edge cases', () {
-        // Test boundary values for static constructors
-        final extremeValues = [0, -1, 1, 2147483647, -2147483648];
-
-        for (final value in extremeValues) {
-          expect(
-            () => GamificationEvent.pointsEarned(
-              userId: 'test',
-              points: value,
-              source: 'test',
-            ),
-            returnsNormally,
-          );
-
-          expect(
-            () => GamificationEvent.levelUp(
-              userId: 'test',
-              oldLevel: value - 1,
-              newLevel: value,
-              currentXP: value,
-              xpToNextLevel: value.abs() + 1,
-            ),
-            returnsNormally,
-          );
-
-          expect(
-            () => GamificationEvent.streakIncreased(
-              userId: 'test',
-              currentStreak: value,
-              longestStreak: value,
-            ),
-            returnsNormally,
-          );
-        }
-      });
-
       test('RelativeStreak computed properties survive corrupted state', () {
         // Test boundary conditions for computed properties
         final testCases = [
@@ -885,28 +809,6 @@ void main() {
         }
       });
 
-      test('GamificationEvent concurrent access to data map is safe', () async {
-        final event = GamificationEvent(
-          type: GamificationEventType.pointsEarned,
-          userId: 'test',
-          data: {
-            'points': 100,
-            'source': 'interaction',
-            'extra': List.generate(100, (i) => 'item-$i'),
-          },
-        );
-
-        // Access data map concurrently
-        final futures = <Future<dynamic>>[];
-        for (var i = 0; i < 100; i++) {
-          futures.add(Future(() => event.points));
-          futures.add(Future(() => event.data['source']));
-          futures.add(Future(() => event.data.keys.toList()));
-        }
-
-        await Future.wait(futures);
-        // If we get here without exceptions, concurrent access is safe
-      });
     });
 
     // =========================================================================

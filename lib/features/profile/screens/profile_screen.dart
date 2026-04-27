@@ -9,7 +9,6 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
-import '../../../shared/widgets/gamification_stats_card.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../core/services/session_cleanup_service.dart';
 import '../../../shared/services/supabase_storage_service.dart';
@@ -45,7 +44,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
-    final userId = user?.id ?? '';
     final themeColors = ref.watch(themeColorsProvider);
 
     return Scaffold(
@@ -104,16 +102,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-              ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
-
-              // Gamification Stats
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                  child: GamificationStatsCard(userId: userId, compact: false),
                 ),
               ),
 

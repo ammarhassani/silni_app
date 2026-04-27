@@ -165,9 +165,7 @@ class AITouchPointService {
         .replaceAll('{{at_risk_count}}', context.healthSummary.atRiskCount.toString())
         .replaceAll('{{healthy_count}}', context.healthSummary.healthyCount.toString())
         .replaceAll('{{needs_attention_count}}', context.healthSummary.needsAttentionCount.toString())
-        .replaceAll('{{total_interactions}}', context.gamification.totalInteractions.toString())
-        .replaceAll('{{user_level}}', context.gamification.level.toString())
-        .replaceAll('{{total_points}}', context.gamification.totalPoints.toString());
+        .replaceAll('{{total_interactions}}', context.totalInteractions.toString());
 
     // Replace upcoming occasions
     if (prompt.contains('{{upcoming_occasions}}')) {

@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:silni_app/features/widgets/home_widget_service.dart';
 import '../../core/config/supabase_config.dart';
-import '../../core/services/gamification_service.dart';
 import '../../core/services/relative_streak_service.dart';
 import '../../core/services/app_logger_service.dart';
 import '../models/interaction_model.dart';
@@ -11,16 +10,13 @@ import '../models/interaction_model.dart';
 class InteractionsService {
   // Use lazy initialization to avoid accessing Supabase before it's initialized
   SupabaseClient get _supabase => SupabaseConfig.client;
-  final GamificationService? _gamificationService;
   final RelativeStreakService? _relativeStreakService;
   final AppLoggerService _logger = AppLoggerService();
   static const String _table = 'interactions';
 
   InteractionsService({
-    GamificationService? gamificationService,
     RelativeStreakService? relativeStreakService,
-  })  : _gamificationService = gamificationService,
-        _relativeStreakService = relativeStreakService;
+  }) : _relativeStreakService = relativeStreakService;
 
   /// Create a new interaction
   /// Uses RPC function to atomically create interaction and update relative
@@ -43,24 +39,6 @@ class InteractionsService {
           'p_user_id': interaction.userId,
         },
       );
-
-      // Process gamification (points, streaks, badges, levels)
-      if (_gamificationService != null) {
-        try {
-          await _gamificationService.processInteractionGamification(
-            userId: interaction.userId,
-            interaction: interaction.copyWith(id: id),
-          );
-        } catch (e) {
-          // Don't fail interaction creation if gamification fails, but log it
-          _logger.warning(
-            'Gamification processing failed',
-            category: LogCategory.gamification,
-            tag: 'InteractionsService',
-            metadata: {'userId': interaction.userId, 'error': e.toString()},
-          );
-        }
-      }
 
       // Update per-relative streak
       if (_relativeStreakService != null) {

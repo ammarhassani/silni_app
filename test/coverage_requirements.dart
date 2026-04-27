@@ -29,7 +29,6 @@ const testedServices = [
   'AuthService', // test/unit/services/auth_service_test.dart
   'RelativesService', // test/unit/services/relatives_service_test.dart
   'InteractionsService', // test/unit/services/interactions_service_test.dart
-  'GamificationService', // test/unit/services/gamification_service_test.dart
   'ReminderSchedulesService', // test/unit/services/reminder_schedules_service_test.dart
   'ErrorHandlerService', // test/unit/services/error_handler_service_test.dart
   'ConnectivityService', // test/unit/services/connectivity_service_test.dart
@@ -73,7 +72,6 @@ const testedScreens = [
 
 /// Critical screens that NEED widget tests
 const untestedCriticalScreens = [
-  'BadgesScreen', // Gamification display
   'ContactImportScreen', // Contact import UI
   'AIChatScreen', // AI chat interface
   'AIHubScreen', // AI features hub
@@ -83,8 +81,6 @@ const untestedCriticalScreens = [
   'AddRelativeScreen', // Add new relative
   'EditRelativeScreen', // Edit relative
   'NotificationsScreen', // Notifications list
-  'LeaderboardScreen', // Gamification leaderboard
-  'ChallengesScreen', // Gamification challenges
   'WeeklyReportScreen', // AI weekly report
   'MessageComposerScreen', // AI message composer
 ];
@@ -98,7 +94,6 @@ const testedFlows = [
   'auth_flow', // integration_test/auth_flow_test.dart
   'relatives_crud', // integration_test/relatives_crud_test.dart
   'interactions_flow', // integration_test/interactions_flow_test.dart
-  'gamification_flow', // integration_test/gamification_flow_test.dart
   'settings_flow', // integration_test/settings_flow_test.dart
   'reminders_flow', // integration_test/reminders_flow_test.dart
 ];
@@ -122,7 +117,6 @@ const untestedCriticalFlows = [
 /// Model tests
 const testedModels = [
   'ReminderScheduleModel', // test/unit/models/reminder_schedule_model_test.dart
-  'GamificationEvent', // test/unit/models/gamification_event_test.dart
   'HadithModel', // test/unit/models/hadith_model_test.dart
   'InteractionModel', // test/unit/models/interaction_model_test.dart
   'RelativeModel', // test/unit/models/relative_model_test.dart
@@ -151,16 +145,16 @@ const testHelpers = [
 // =============================================================================
 //
 // TESTED:
-// - Services: 9 tested
+// - Services: 8 tested
 // - Screens: 9 tested
-// - Integration flows: 6 tested
-// - Models: 5 tested
+// - Integration flows: 5 tested
+// - Models: 4 tested
 // - Cache components: 2 tested
 // - Utils: 1 tested
 //
 // NEEDS TESTS:
 // - Critical services: 13 untested
-// - Critical screens: 14 untested
+// - Critical screens: 11 untested
 // - Critical flows: 8 untested
 //
 // PRIORITY ORDER FOR NEW TESTS:
@@ -168,6 +162,6 @@ const testHelpers = [
 // 2. SubscriptionService (monetization critical)
 // 3. AIService, DeepseekAIService (core feature)
 // 4. DataExportService (GDPR compliance)
-// 5. BadgesScreen, ContactImportScreen (user-facing gaps)
+// 5. ContactImportScreen (user-facing gap)
 // 6. offline_sync_flow, subscription_flow (integration gaps)
 // =============================================================================

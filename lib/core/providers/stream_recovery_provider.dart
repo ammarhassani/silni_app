@@ -97,7 +97,6 @@ void _recoverStreams(Ref ref, AppLoggerService logger) {
         ref.invalidate(groupMemberNodeIdsProvider(groupInfo.groupId));
         ref.invalidate(groupTodayInteractionsStreamProvider(groupInfo.groupId));
         ref.invalidate(groupTodayContactedRelativesProvider(groupInfo.groupId));
-        ref.invalidate(familyLeaderboardProvider(groupInfo.groupId));
       }
 
       // Re-establish realtime subscriptions
@@ -169,7 +168,6 @@ extension StreamRecoveryExtension on WidgetRef {
         invalidate(groupMemberNodeIdsProvider(groupInfo.groupId));
         invalidate(groupTodayInteractionsStreamProvider(groupInfo.groupId));
         invalidate(groupTodayContactedRelativesProvider(groupInfo.groupId));
-        invalidate(familyLeaderboardProvider(groupInfo.groupId));
       }
     }
   }

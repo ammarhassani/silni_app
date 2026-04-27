@@ -12,8 +12,6 @@ import 'cache_service.dart';
 import 'offline_queue_service.dart';
 import 'connectivity_service.dart';
 import 'app_logger_service.dart';
-import 'gamification_service.dart';
-import '../providers/gamification_events_provider.dart';
 import '../errors/app_errors.dart';
 
 /// Status of the sync process.
@@ -25,12 +23,7 @@ enum SyncStatus {
 
 /// Service for synchronizing local cache with remote Supabase.
 class SyncService {
-  SyncService._() {
-    // Initialize interactions service with gamification support
-    _interactionsService = InteractionsService(
-      gamificationService: _gamificationService,
-    );
-  }
+  SyncService._();
   static final SyncService instance = SyncService._();
 
   final CacheService _cache = CacheService.instance;
@@ -40,9 +33,8 @@ class SyncService {
 
   // Services for remote operations
   final RelativesService _relativesService = RelativesService();
-  late InteractionsService _interactionsService;
+  final InteractionsService _interactionsService = InteractionsService();
   final ReminderSchedulesService _schedulesService = ReminderSchedulesService();
-  GamificationService _gamificationService = GamificationService();
 
   // Stream controllers
   final _statusController = StreamController<SyncStatus>.broadcast();
@@ -137,20 +129,6 @@ class SyncService {
         tag: 'Sync',
       );
     }
-  }
-
-  /// Set the gamification events controller for UI event emission.
-  /// Call this after Riverpod is initialized to enable gamification UI feedback.
-  void setEventsController(GamificationEventsController controller) {
-    _gamificationService = GamificationService(eventsController: controller);
-    _interactionsService = InteractionsService(
-      gamificationService: _gamificationService,
-    );
-    _logger.info(
-      'SyncService gamification events controller configured',
-      category: LogCategory.service,
-      tag: 'Sync',
-    );
   }
 
   /// Start background sync timer.
