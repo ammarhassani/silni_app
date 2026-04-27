@@ -206,6 +206,8 @@ class _AvatarCarouselState extends State<AvatarCarousel> {
                             fit: BoxFit.cover,
                             width: 85,
                             height: 85,
+                            memCacheWidth: 170,
+                            memCacheHeight: 170,
                             placeholder: (context, url) => Center(
                               child: Text(
                                 relative.displayEmoji,

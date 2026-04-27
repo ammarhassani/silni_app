@@ -412,6 +412,7 @@ serve(async (req) => {
                   gap_days: rel.daysSince.toString(),
                 },
               }),
+              signal: AbortSignal.timeout(5000),
             }
           );
 

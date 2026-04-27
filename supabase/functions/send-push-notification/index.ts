@@ -140,6 +140,9 @@ serve(async (req) => {
           },
         };
 
+        // 5s timeout (Phase 7 Task 7) — without this, a stalled FCM
+        // endpoint would pin the function until the platform wall-clock
+        // kill (~60s).
         const response = await fetch(
           `https://fcm.googleapis.com/v1/projects/${firebaseCredentials.project_id}/messages:send`,
           {
@@ -149,6 +152,7 @@ serve(async (req) => {
               Authorization: `Bearer ${accessToken}`,
             },
             body: JSON.stringify(fcmMessage),
+            signal: AbortSignal.timeout(5000),
           }
         );
 
@@ -263,11 +267,12 @@ async function getFirebaseAccessToken(credentials: any): Promise<string> {
   const jwtSignature = arrayBufferToBase64Url(signature);
   const jwt = `${signatureInput}.${jwtSignature}`;
 
-  // Exchange JWT for access token
+  // Exchange JWT for access token (5s timeout — Phase 7 Task 7).
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+    signal: AbortSignal.timeout(5000),
   });
 
   const result = await response.json();

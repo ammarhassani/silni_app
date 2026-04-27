@@ -172,8 +172,16 @@ serve(async (req: Request) => {
       );
     }
 
-    // Increment rate limit counter BEFORE the API call (prevents races during streaming)
-    await serviceClient.from("ai_rate_limits").upsert(
+    // Fire-and-forget rate-limit increment. The upsert is idempotent
+    // (onConflict: user_id,date) and the existing under-concurrency race
+    // (currentCount + 1 reads stale counts) is not changed by removing
+    // the await — the race lives in the SET expression, not in the
+    // await. Removing the await reclaims ~30-60 ms of TTFB on every
+    // chat message (Phase 7 Task 6, addressing PERFORMANCE_AUDIT.md).
+    //
+    // If the upsert fails (network blip), the user gets one bonus
+    // request — acceptable trade-off for first-token latency.
+    serviceClient.from("ai_rate_limits").upsert(
       {
         user_id: user.id,
         date: today,
@@ -181,7 +189,11 @@ serve(async (req: Request) => {
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id,date" }
-    );
+    ).then(({ error }) => {
+      if (error) {
+        console.error("[DEBUG] rate-limit upsert failed (non-blocking):", error.message);
+      }
+    });
 
     const wantStream = body.stream === true;
 

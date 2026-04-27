@@ -23,6 +23,99 @@ import 'placeholder_spawn_service.dart';
 class FamilyTreeLayoutService {
   FamilyTreeLayoutService._();
 
+  // Single-entry memoization cache for computeLayout. The function is
+  // O(N²) in the worst case (per the Phase 7 perf audit) and gets called
+  // on every LayoutBuilder constraint tick — most of which are no-op
+  // changes. We hold the most recent input fingerprint + output. If the
+  // next call's fingerprint matches, we skip the work.
+  //
+  // Cache size is intentionally 1: this fix targets the LayoutBuilder
+  // re-fire pattern, not multi-viewer scenarios. A larger cache would
+  // pay memory + invalidation complexity for marginal wins.
+  static String? _cachedKey;
+  static FamilyTreeLayout? _cachedLayout;
+
+  /// Build a stable fingerprint from every input that could change the
+  /// layout output. Order matters — the buffer is concatenated and the
+  /// final string is the cache key.
+  static String _layoutCacheKey({
+    required String userId,
+    required String userName,
+    required FamilyGraph? graph,
+    required List<Relative> relatives,
+    required Size canvasSize,
+    Gender? userGender,
+    Set<String> linkedMemberNodeIds = const {},
+    double nodeRadius = 30.0,
+    double horizontalSpacing = 105.0,
+    double verticalSpacing = 140.0,
+  }) {
+    final buf = StringBuffer()
+      ..write(userId)
+      ..write('|')
+      ..write(userName)
+      ..write('|')
+      ..write(canvasSize.width.toStringAsFixed(1))
+      ..write('x')
+      ..write(canvasSize.height.toStringAsFixed(1))
+      ..write('|')
+      ..write(userGender?.name ?? 'null')
+      ..write('|')
+      ..write(nodeRadius)
+      ..write(',')
+      ..write(horizontalSpacing)
+      ..write(',')
+      ..write(verticalSpacing)
+      ..write('|');
+
+    // Graph fingerprint: edge count + structural hash. Edges are
+    // deterministically ordered by id, so the hash is stable for the
+    // same graph regardless of fetch order.
+    if (graph == null) {
+      buf.write('g:null');
+    } else {
+      buf.write('g:');
+      buf.write(graph.userId);
+      buf.write(':');
+      buf.write(graph.edges.length);
+      buf.write(':');
+      // Combine edge identifiers — edge id alone is sufficient because
+      // FamilyEdge fields are all final and edges are immutable.
+      final edgeIds = graph.edges.map((e) => e.id).toList()..sort();
+      buf.write(Object.hashAll(edgeIds));
+    }
+    buf.write('|');
+
+    // Linked-member node ids (sorted for stability).
+    final linked = linkedMemberNodeIds.toList()..sort();
+    buf.write('lm:');
+    buf.write(linked.join(','));
+    buf.write('|');
+
+    // Relatives fingerprint — id + the fields the layout reads.
+    // (full_name is not used by layout, so we skip it.)
+    buf.write('r:');
+    buf.write(relatives.length);
+    buf.write(':');
+    final relIds = <String>[];
+    for (final r in relatives) {
+      relIds.add(
+        '${r.id}:'
+        '${r.relationshipType.value}:'
+        '${r.gender?.name ?? "null"}:'
+        '${r.familySide?.name ?? "null"}:'
+        '${r.relativeCategory.name}:'
+        '${r.familyGroupId ?? "null"}:'
+        '${r.isArchived ? 1 : 0}:'
+        '${r.isSelf ? 1 : 0}',
+      );
+    }
+    relIds.sort();
+    buf.write(Object.hashAll(relIds));
+
+    return buf.toString();
+  }
+
   /// Compute the complete layout for the family tree canvas.
   ///
   /// If [graph] is null (no persisted edges), infers edges from each
@@ -40,6 +133,22 @@ class FamilyTreeLayoutService {
     double horizontalSpacing = 105.0,
     double verticalSpacing = 140.0,
   }) {
+    // Memoization fast-path. See _layoutCacheKey + _cachedLayout above.
+    final cacheKey = _layoutCacheKey(
+      userId: userId,
+      userName: userName,
+      graph: graph,
+      relatives: relatives,
+      canvasSize: canvasSize,
+      userGender: userGender,
+      linkedMemberNodeIds: linkedMemberNodeIds,
+      nodeRadius: nodeRadius,
+      horizontalSpacing: horizontalSpacing,
+      verticalSpacing: verticalSpacing,
+    );
+    if (_cachedKey == cacheKey && _cachedLayout != null) {
+      return _cachedLayout!;
+    }
     // ── 1. Build graph ──
     // For shared trees (graph provided and contains the user), use the
     // persisted edges which are correct for multi-perspective viewing.
@@ -692,7 +801,7 @@ class FamilyTreeLayoutService {
       maxY + padding,
     );
 
-    return FamilyTreeLayout(
+    final layout = FamilyTreeLayout(
       nodes: nodes,
       edges: edges,
       junctions: junctions,
@@ -700,6 +809,12 @@ class FamilyTreeLayoutService {
       bounds: bounds,
       userPosition: positions[userId] ?? Offset(centerX, 0),
     );
+
+    // Memoize for the next LayoutBuilder tick. cacheKey was computed at
+    // function entry from the same inputs.
+    _cachedKey = cacheKey;
+    _cachedLayout = layout;
+    return layout;
   }
 
   // ---------------------------------------------------------------------------

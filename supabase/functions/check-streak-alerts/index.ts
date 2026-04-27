@@ -95,6 +95,7 @@ serve(async (req) => {
                 urgent: isUrgent.toString(),
               },
             }),
+            signal: AbortSignal.timeout(5000),
           }
         );
 

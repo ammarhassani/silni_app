@@ -25,10 +25,17 @@ class MessageIllustration extends StatelessWidget {
       return _buildPlaceholder(context);
     }
 
+    // Cap mem-cache resolution at 2× the rendered size (or 400 if size
+    // is unbounded). Prevents the source image (potentially full-screen
+    // resolution) from sitting in image cache at native size.
+    final int memCacheH = height != null ? (height! * 2).round() : 400;
+    final int memCacheW = width != null ? (width! * 2).round() : 400;
     Widget image = CachedNetworkImage(
       imageUrl: illustrationUrl!,
       width: width,
       height: height,
+      memCacheWidth: memCacheW,
+      memCacheHeight: memCacheH,
       fit: fit,
       placeholder: (context, url) => _buildLoadingIndicator(context),
       errorWidget: (context, url, error) => _buildErrorWidget(context),
@@ -121,10 +128,13 @@ class MessageBackgroundIllustration extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Background image
+        // Background image — full-screen but cap mem cache at 800×800
+        // to avoid holding full-resolution images for a background.
         CachedNetworkImage(
           imageUrl: illustrationUrl!,
           fit: BoxFit.cover,
+          memCacheWidth: 800,
+          memCacheHeight: 800,
           placeholder: (context, url) => const SizedBox.shrink(),
           errorWidget: (context, url, error) => const SizedBox.shrink(),
         ),

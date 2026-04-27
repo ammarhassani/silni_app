@@ -114,6 +114,8 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
                     imageUrl: widget.profilePhotoUrl!,
                     width: 28,
                     height: 28,
+                    memCacheWidth: 56,
+                    memCacheHeight: 56,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => _buildDefaultAvatar(),
                     errorWidget: (context, url, error) => _buildDefaultAvatar(),

@@ -212,7 +212,10 @@ serve(async (req) => {
       let sentSuccessfully = false;
 
       try {
-        // Call send-push-notification function with ONE consolidated notification
+        // Call send-push-notification function with ONE consolidated notification.
+        // 5s timeout (Phase 7 Task 7) — without this, a stalled inner
+        // fetch could pin the cron-minute function for the platform's
+        // wall-clock kill (~60s).
         const notificationResponse = await fetch(
           `${supabaseUrl}/functions/v1/send-push-notification`,
           {
@@ -233,6 +236,7 @@ serve(async (req) => {
                 frequency: schedule.frequency,
               },
             }),
+            signal: AbortSignal.timeout(5000),
           }
         );
 

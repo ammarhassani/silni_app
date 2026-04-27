@@ -113,12 +113,18 @@ class RelativeAvatar extends ConsumerWidget {
 
   Widget _buildAvatarContent() {
     if (relative.photoUrl != null && relative.photoUrl!.isNotEmpty) {
+      // memCache* uses 2× logical size to cover up to DPR=2 displays
+      // without holding the full 1920×1920 source bitmap in memory.
+      // Image cache pressure was the audit's top 🟡 finding.
+      final memCacheDimension = (size * 2).round();
       return ClipOval(
         child: CachedNetworkImage(
           imageUrl: relative.photoUrl!,
           fit: BoxFit.cover,
           width: size,
           height: size,
+          memCacheWidth: memCacheDimension,
+          memCacheHeight: memCacheDimension,
           placeholder: (context, url) => _buildEmojiAvatar(),
           errorWidget: (context, url, error) => _buildEmojiAvatar(),
         ),
@@ -267,12 +273,15 @@ class UserAvatar extends ConsumerWidget {
 
   Widget _buildAvatarContent(ThemeColors themeColors) {
     if (photoUrl != null && photoUrl!.isNotEmpty) {
+      final memCacheDimension = (size * 2).round();
       return ClipOval(
         child: CachedNetworkImage(
           imageUrl: photoUrl!,
           fit: BoxFit.cover,
           width: size,
           height: size,
+          memCacheWidth: memCacheDimension,
+          memCacheHeight: memCacheDimension,
           placeholder: (context, url) => _buildFallbackAvatar(themeColors),
           errorWidget: (context, url, error) => _buildFallbackAvatar(themeColors),
         ),

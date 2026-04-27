@@ -263,11 +263,12 @@ async function getFirebaseAccessToken(serviceAccount: {
 
   const jwt = `${signatureInput}.${encodedSignature}`;
 
-  // Exchange JWT for access token
+  // Exchange JWT for access token (5s timeout — Phase 7 Task 7).
   const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+    signal: AbortSignal.timeout(5000),
   });
 
   const tokenData = await tokenResponse.json();
@@ -338,6 +339,7 @@ async function sendFCMNotification(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ message }),
+      signal: AbortSignal.timeout(5000),
     }
   );
 }

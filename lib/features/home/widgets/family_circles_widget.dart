@@ -276,6 +276,11 @@ class FamilyCirclesWidget extends ConsumerWidget {
                             ? CachedNetworkImage(
                                 imageUrl: relative.photoUrl!,
                                 fit: BoxFit.cover,
+                                // _avatarSize = 54.0; cap mem cache at 2× to
+                                // cover DPR=2 phones without holding the
+                                // 1920×1920 source bitmap.
+                                memCacheWidth: 108,
+                                memCacheHeight: 108,
                                 errorWidget: (context, url, _) => Center(
                                   child: Text(
                                     relative.displayEmoji,

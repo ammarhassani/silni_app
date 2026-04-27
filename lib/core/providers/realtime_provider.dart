@@ -2,7 +2,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../shared/services/realtime_service.dart';
-import '../../shared/services/relatives_service.dart';
 import '../../core/services/app_logger_service.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/home/providers/home_providers.dart';
@@ -86,12 +85,14 @@ class RealtimeSubscriptionsNotifier
           },
         );
 
-        // Invalidate all relatives-related providers to trigger UI refresh
-        // We need to invalidate the stream provider for the specific user
+        // Invalidate the stream that the UI watches.
+        //
+        // RelativesService itself is stateless (only Supabase + logger
+        // + perf injections — see lib/shared/services/relatives_service.dart),
+        // so the previous invalidate(relativesServiceProvider) was a
+        // no-op for the data and just tore down the singleton for no
+        // benefit. Removed.
         _ref.invalidate(relativesStreamProvider(userId));
-
-        // Also invalidate the service provider
-        _ref.invalidate(relativesServiceProvider);
 
         _logger.info(
           '✅ PROVIDERS INVALIDATED - Relatives provider invalidated successfully',
@@ -127,9 +128,11 @@ class RealtimeSubscriptionsNotifier
           // schedules and relatives as parameters. It will automatically update
           // when the parent providers (relativesStreamProvider, reminderSchedulesStreamProvider)
           // are invalidated and widgets re-read fresh data.
-
-          // Also invalidate the service provider
-          _ref.invalidate(interactionsServiceProvider);
+          //
+          // InteractionsService is stateless (only Supabase + logger
+          // injections — see lib/shared/services/interactions_service.dart),
+          // so invalidating its provider was a no-op for data refresh
+          // and just tore down the singleton. Removed.
 
           _logger.info(
             'Interactions provider invalidated - UI should refresh immediately',

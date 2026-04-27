@@ -158,6 +158,8 @@ class SwipeableRelativeCard extends ConsumerWidget {
                               fit: BoxFit.cover,
                               width: 50,
                               height: 50,
+                              memCacheWidth: 100,
+                              memCacheHeight: 100,
                               placeholder: (context, url) => _buildDefaultAvatar(),
                               errorWidget: (context, url, error) => _buildDefaultAvatar(),
                             ),

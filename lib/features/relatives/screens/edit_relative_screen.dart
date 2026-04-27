@@ -502,6 +502,8 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
                           fit: BoxFit.cover,
                           width: 120,
                           height: 120,
+                          memCacheWidth: 240,
+                          memCacheHeight: 240,
                           placeholder: (context, url) => _buildEmojiAvatar(),
                           errorWidget: (context, url, error) => _buildEmojiAvatar(),
                         )

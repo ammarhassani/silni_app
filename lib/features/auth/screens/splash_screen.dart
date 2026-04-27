@@ -48,8 +48,22 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       setState(() => _fontLoaded = true);
     }
 
-    // Wait for animations to play
-    await Future.delayed(const Duration(milliseconds: 1500));
+    // Race the splash animation against the session-init future:
+    // whichever resolves first advances the splash. Fast networks /
+    // already-warm sessions get out of the splash sooner; slow inits
+    // still see the floor 1500ms. _navigateToNextScreen below awaits
+    // sessionInitializationProvider.future itself — so if the 1500ms
+    // path wins (init still pending), the navigation handler waits the
+    // extra time inside its own await. The init future is idempotent
+    // and re-await on the same FutureProvider returns the same value
+    // (or completes instantly if already resolved).
+    //
+    // Errors on the init future are swallowed here — _navigateToNextScreen
+    // re-awaits and handles them centrally (try/catch added in Phase 6.0).
+    await Future.any<dynamic>([
+      Future.delayed(const Duration(milliseconds: 1500)),
+      ref.read(sessionInitializationProvider.future).catchError((_) => false),
+    ]);
     if (!mounted) return;
     _navigateToNextScreen();
   }

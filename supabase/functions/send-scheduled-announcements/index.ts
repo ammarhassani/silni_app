@@ -110,6 +110,7 @@ serve(async (req) => {
                     ...announcement.notification_data,
                   },
                 }),
+                signal: AbortSignal.timeout(5000),
               }
             );
 
