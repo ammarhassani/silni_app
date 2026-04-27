@@ -14,7 +14,6 @@ import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/signup_screen.dart';
 import '../../features/auth/screens/email_verification_screen.dart';
-import '../../features/auth/screens/phone_verification_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/relatives/screens/relatives_screen.dart';
 import '../../features/relatives/screens/relative_detail_screen.dart';
@@ -145,18 +144,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) =>
             _buildPageWithTransition(context, state, const EmailVerificationScreen()),
       ),
-      GoRoute(
-        path: AppRoutes.phoneVerification,
-        name: 'phoneVerification',
-        pageBuilder: (context, state) {
-          final returnRoute = state.uri.queryParameters['return'];
-          return _buildPageWithTransition(
-            context,
-            state,
-            PhoneVerificationScreen(returnRoute: returnRoute),
-          );
-        },
-      ),
+      // Phone-verification screen cut from v1 launch (Phase 6.0,
+      // 2026-04-27). It was the only English-leakage 🔴 surface in the
+      // content audit and no flow routed to it. Screen file deleted;
+      // route + AppRoutes.phoneVerification constant removed.
+
       // Main App Routes
       GoRoute(
         path: AppRoutes.home,

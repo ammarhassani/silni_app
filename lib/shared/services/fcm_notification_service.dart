@@ -32,8 +32,8 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
     const androidDetails = AndroidNotificationDetails(
       'silni_channel',
-      'Silni Notifications',
-      channelDescription: 'Notifications for Silni app',
+      'إشعارات صلني',
+      channelDescription: 'إشعارات تطبيق صلني',
       importance: Importance.high,
       priority: Priority.high,
       playSound: true,
@@ -170,8 +170,8 @@ class FCMNotificationService {
     // Create Android notification channel with custom sound
     const androidChannel = AndroidNotificationChannel(
       'silni_channel',
-      'Silni Notifications',
-      description: 'Notifications for Silni app',
+      'إشعارات صلني',
+      description: 'إشعارات تطبيق صلني',
       importance: Importance.high,
       playSound: true,
       sound: RawResourceAndroidNotificationSound('silni_default'),
@@ -371,8 +371,8 @@ class FCMNotificationService {
 
       const androidDetails = AndroidNotificationDetails(
         'silni_channel',
-        'Silni Notifications',
-        channelDescription: 'Notifications for Silni app',
+        'إشعارات صلني',
+        channelDescription: 'إشعارات تطبيق صلني',
         importance: Importance.high,
         priority: Priority.high,
         icon: '@mipmap/ic_launcher',

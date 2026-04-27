@@ -7,7 +7,6 @@ class AppRoutes {
   static const String login = '/login';
   static const String signup = '/signup';
   static const String emailVerification = '/email-verification';
-  static const String phoneVerification = '/phone-verification';
 
   /// Routes that don't require authentication
   static const Set<String> publicRoutes = {

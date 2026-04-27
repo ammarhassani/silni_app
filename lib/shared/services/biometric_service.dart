@@ -100,7 +100,7 @@ class BiometricService {
           category: LogCategory.service,
           tag: 'BiometricService',
         );
-        return BiometricAuthResult.failed('Authentication failed');
+        return BiometricAuthResult.failed('فشل التحقق');
       }
     } on PlatformException catch (e) {
       _logger.error(
@@ -120,7 +120,10 @@ class BiometricService {
         category: LogCategory.service,
         tag: 'BiometricService',
       );
-      return BiometricAuthResult.error('Unexpected error occurred', 'unknown');
+      return BiometricAuthResult.error(
+        'حدث خطأ غير متوقع في المصادقة البيومترية',
+        'unknown',
+      );
     }
   }
 

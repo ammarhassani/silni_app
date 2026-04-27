@@ -171,8 +171,8 @@ class SupabaseNotificationService {
 
       const androidDetails = AndroidNotificationDetails(
         'silni_channel',
-        'Silni Notifications',
-        channelDescription: 'Notifications for Silni app',
+        'إشعارات صلني',
+        channelDescription: 'إشعارات تطبيق صلني',
         importance: Importance.high,
         priority: Priority.high,
         icon: '@mipmap/ic_launcher',
@@ -277,8 +277,8 @@ class SupabaseNotificationService {
     try {
       const androidDetails = AndroidNotificationDetails(
         'reminders_channel',
-        'Reminders',
-        channelDescription: 'Reminders to contact relatives',
+        'تذكيرات',
+        channelDescription: 'تذكيرات للتواصل مع الأقارب',
         importance: Importance.high,
         priority: Priority.high,
         icon: '@mipmap/ic_launcher',
@@ -337,8 +337,8 @@ class SupabaseNotificationService {
     try {
       const androidDetails = AndroidNotificationDetails(
         'silni_channel',
-        'Silni Notifications',
-        channelDescription: 'Notifications for Silni app',
+        'إشعارات صلني',
+        channelDescription: 'إشعارات تطبيق صلني',
         importance: Importance.high,
         priority: Priority.high,
         icon: '@mipmap/ic_launcher',
@@ -404,8 +404,8 @@ class SupabaseNotificationService {
       // Determine notification details based on priority
       final androidDetails = AndroidNotificationDetails(
         'silni_channel',
-        'Silni Notifications',
-        channelDescription: 'Notifications for Silni app',
+        'إشعارات صلني',
+        channelDescription: 'إشعارات تطبيق صلني',
         importance: content.priority == 'high' ? Importance.high : Importance.defaultImportance,
         priority: content.priority == 'high' ? Priority.high : Priority.defaultPriority,
         icon: '@mipmap/ic_launcher',
