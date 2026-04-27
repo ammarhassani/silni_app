@@ -1304,28 +1304,47 @@ class AuthService {
         tag: 'deleteAccount',
       );
 
-      // Clear subscription user from RevenueCat
+      // Clear per-account local state BEFORE signOut. After signOut the
+      // auth listener fires and may re-trigger code that reads these keys;
+      // wiping them first removes the staleness window.
+      //
+      // The keys cleared here are the ones that would mis-route a fresh
+      // account on the same device:
+      //   - onboarding_completed: gates the 4-slide marketing carousel.
+      //     If it survives delete, the new account skips onboarding.
+      //   - premium_onboarding_state + premium_onboarding_dismissed_tips:
+      //     gate the premium walkthrough + dismissed tips. Stale values
+      //     mark a fresh account as having seen things it hasn't.
+      //
+      // Anything keyed off a userId/relativeId/month suffix (oneQuestion_*,
+      // wrapped_ai_*, weekly_report_*, hadith_*) is left alone — it'll be
+      // overwritten the next time the new account hits the same code path,
+      // and the worst-case is a one-frame stale value, not a flow break.
       try {
-        await SubscriptionService.instance.clearUser();
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('onboarding_completed');
+        await prefs.remove('premium_onboarding_state');
+        await prefs.remove('premium_onboarding_dismissed_tips');
         logger.debug(
-          'Subscription user cleared on account deletion',
+          'Per-account SharedPreferences cleared',
           category: LogCategory.auth,
           tag: 'deleteAccount',
         );
       } catch (e) {
         logger.warning(
-          'Failed to clear subscription user (non-critical)',
+          'Failed to clear per-account SharedPreferences (non-critical)',
           category: LogCategory.auth,
           tag: 'deleteAccount',
           metadata: {'error': e.toString()},
         );
       }
 
-      // Sign out (Supabase Auth user deletion is handled by RPC or manually via Admin API)
-      await _supabase.auth.signOut();
-
-      // Mark user as explicitly logged out
-      await _sessionPersistence.markUserLoggedOut();
+      // Route through the wrapper signOut() instead of the bare
+      // _supabase.auth.signOut() — the wrapper also clears the biometric
+      // refresh token + saved email in flutter_secure_storage, deactivates
+      // the FCM token, and clears RevenueCat. Without this, a deleted
+      // account's Face-ID credentials linger on the device.
+      await signOut();
 
       logger.info(
         'Account deleted successfully',

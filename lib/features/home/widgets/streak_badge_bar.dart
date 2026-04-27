@@ -44,7 +44,11 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
       child: gamificationData.when(
         data: (data) => _buildBar(data),
         loading: () => _buildSkeletonLoader(),
-        error: (_, _) => const SizedBox.shrink(),
+        // On stream error, fall back to default values so the bar (name +
+        // tier + placeholders) still renders. Returning SizedBox.shrink
+        // here used to collapse the entire row on navigate-back when the
+        // realtime channel was torn down by a competing subscription.
+        error: (_, _) => _buildBar(const <String, dynamic>{}),
       ),
     );
   }

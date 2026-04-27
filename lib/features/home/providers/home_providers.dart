@@ -341,31 +341,17 @@ final todayDueRelativesProvider = Provider.family<List<DueRelativeWithFrequencie
 });
 
 /// Stream provider for user gamification data (streak, badges)
-/// Used by StreakBadgeBar for live updates
-/// Uses autoDispose with timed cache to prevent memory leaks
+/// Used by StreakBadgeBar for live updates.
+///
+/// Non-autoDispose by design: the bar is mounted on every home page render
+/// and disposing the underlying realtime stream on navigate-away led to
+/// race conditions with the competing `subscribeToUserProfile` channel
+/// (both watch the `users` table for the same userId). Re-attaching to a
+/// torn-down stream surfaced as an error → the bar collapsed to nothing.
+/// Memory cost is negligible (one row, one user) and the stream is
+/// invalidated explicitly on logout via clearUserSession.
 final userGamificationDataProvider =
-    StreamProvider.autoDispose.family<Map<String, dynamic>, String>((
-  ref,
-  userId,
-) {
-  // Keep alive for 5 minutes after last listener removed
-  final link = ref.keepAlive();
-  Timer? timer;
-
-  ref.onDispose(() {
-    timer?.cancel();
-  });
-
-  ref.onCancel(() {
-    timer = Timer(_cacheTimeout, () {
-      link.close();
-    });
-  });
-
-  ref.onResume(() {
-    timer?.cancel();
-  });
-
+    StreamProvider.family<Map<String, dynamic>, String>((ref, userId) {
   return SupabaseConfig.client
       .from('users')
       .stream(primaryKey: ['id'])
