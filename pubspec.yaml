@@ -1,7 +1,7 @@
 name: silni_app
 description: "A dramatic Islamic family connection tracker with stunning UI/UX"
 publish_to: 'none'
-version: 2.0.1+38
+version: 2.1.0+1
 
 environment:
   sdk: ^3.10.1
