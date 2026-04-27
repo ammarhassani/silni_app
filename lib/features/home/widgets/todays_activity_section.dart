@@ -46,7 +46,11 @@ class TodaysActivitySection extends ConsumerWidget {
         ),
       ),
       loading: () => const TodaysActivitySkeleton(),
-      error: (_, _) => const SizedBox.shrink(),
+      error: (e, _) => InlineErrorWidget.fromError(
+        e,
+        compact: true,
+        onRetry: () => ref.invalidate(viewerFilteredRelativesProvider),
+      ),
     );
   }
 }

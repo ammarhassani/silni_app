@@ -31,7 +31,6 @@ import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/notifications/screens/notification_history_screen.dart';
 import '../../features/family_groups/screens/create_group_screen.dart';
 import '../../features/family_groups/screens/family_group_screen.dart';
-import '../../features/family_groups/screens/invitation_detail_screen.dart';
 import '../../features/family_groups/screens/join_group_screen.dart';
 import '../../features/wrapped/screens/monthly_wrapped_screen.dart';
 import '../../features/ai_assistant/screens/ai_chat_screen.dart';
@@ -344,19 +343,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
-      // Invitation detail (invitee accepts/declines)
-      GoRoute(
-        path: '${AppRoutes.invitationDetail}/:id',
-        name: 'invitationDetail',
-        pageBuilder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return _buildPageWithTransition(
-            context,
-            state,
-            InvitationDetailScreen(invitationId: id),
-          );
-        },
-      ),
+      // Phone-invite detail route was cut from v1 launch (CTO 2026-04-26).
+      // Any stale notification or deep-link to /invitation/:id falls
+      // through to the catch-all and routes the user to home.
 
       // Short alias for deep link: silni.app/join/<code>
       GoRoute(

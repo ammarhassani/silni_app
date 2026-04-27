@@ -16,7 +16,6 @@ import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
-import '../../../core/router/app_routes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/errors/app_errors.dart';
 import '../../../core/services/error_reporter.dart';
@@ -67,6 +66,13 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   FamilyGroup? _selectedGroup; // The selected family group (if shared)
   FamilySide? _selectedFamilySide; // Paternal or maternal side for extended family
   RelativeCategory _selectedCategory = RelativeCategory.extended;
+  // Tracks whether any user input has happened. PopScope below uses this
+  // to decide whether to prompt before discarding a partially-filled form.
+  bool _isFormDirty = false;
+
+  void _markDirty() {
+    if (!_isFormDirty) setState(() => _isFormDirty = true);
+  }
 
   // Contact import state
   Contact? _selectedContact;
@@ -121,6 +127,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
     if (image != null) {
       setState(() {
         _selectedImage = image;
+        _isFormDirty = true;
       });
     }
   }
@@ -165,6 +172,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         _priority = suggested['priority'] as int;
       }
       _manualExpanded = true;
+      _isFormDirty = true;
     });
   }
 
@@ -337,16 +345,28 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
       // Reset loading state before navigation
       setState(() => _isLoading = false);
 
-      // Invalidate relatives provider so the list refreshes immediately
+      // Invalidate every list view that could surface this new relative.
+      // Personal view always; shared views when the relative was added to
+      // a group (the group's relatives list AND the inferred-edges stream
+      // — both feed the family-tree screen and the family-group screen).
       ref.invalidate(relativesStreamProvider(user.id));
+      if (isShared && groupInfo != null) {
+        ref.invalidate(groupRelativesStreamProvider(groupInfo.groupId));
+        ref.invalidate(sharedFamilyEdgesStreamProvider(groupInfo.groupId));
+      }
 
-      // Wait a moment for confetti, then navigate
+      // The form is no longer "dirty" — flip the flag so the PopScope
+      // confirmation doesn't trigger on the auto-pop below.
+      _isFormDirty = false;
+
+      // Brief pause for confetti.
       await Future.delayed(const Duration(milliseconds: 400));
 
       if (!mounted) return;
 
-      // Navigate back to home
-      context.go(AppRoutes.home);
+      // Return to whichever screen pushed Add Relative (home, relatives
+      // list, family circles, etc.) instead of always landing on home.
+      context.pop();
     } catch (e, stackTrace) {
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -390,9 +410,22 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
 
     final showForm = _manualExpanded || _selectedContact != null;
 
-    return Stack(
-      children: [
-        Scaffold(
+    return PopScope(
+      // Block the system pop when the user has filled anything in; the
+      // onPopInvokedWithResult callback below pops manually after the user
+      // confirms via the discard dialog.
+      canPop: !_isFormDirty,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final shouldDiscard = await _confirmDiscardChanges();
+        if (!shouldDiscard) return;
+        if (!mounted) return;
+        if (!context.mounted) return;
+        context.pop();
+      },
+      child: Stack(
+        children: [
+          Scaffold(
           body: GradientBackground(
             animated: true,
             child: SafeArea(
@@ -486,6 +519,14 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                             child: showForm
                                 ? Form(
                                     key: _formKey,
+                                    // Catches every TextFormField change so
+                                    // PopScope below can prompt before
+                                    // discarding partially-filled forms.
+                                    // Non-FormField changes (image picker,
+                                    // relationship picker, phone, bool
+                                    // toggles, contact import) call
+                                    // _markDirty() inline.
+                                    onChanged: _markDirty,
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.stretch,
                                       children: [
@@ -528,6 +569,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                                               _selectedFamilySide = side;
                                               if (gender != null) _selectedGender = gender;
                                               _priority = AvatarType.suggestPriority(type);
+                                              _isFormDirty = true;
                                             });
                                           },
                                         ),
@@ -540,7 +582,10 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                                         RelativeCategoryPicker(
                                           selected: _selectedCategory,
                                           onChanged: (value) {
-                                            setState(() => _selectedCategory = value);
+                                            setState(() {
+                                              _selectedCategory = value;
+                                              _isFormDirty = true;
+                                            });
                                           },
                                         ),
                                         const SizedBox(height: AppSpacing.md),
@@ -586,6 +631,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                                           flagsButtonPadding: const EdgeInsets.only(left: 8),
                                           onChanged: (phone) {
                                             _phoneNumber = phone.completeNumber;
+                                            _markDirty();
                                           },
                                         ),
                                         const SizedBox(height: AppSpacing.md),
@@ -594,7 +640,10 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                                         HealthStatusPicker(
                                           selectedStatus: _healthStatus,
                                           onStatusChanged: (status) {
-                                            setState(() => _healthStatus = status);
+                                            setState(() {
+                                              _healthStatus = status;
+                                              _isFormDirty = true;
+                                            });
                                           },
                                         ),
                                         const SizedBox(height: AppSpacing.md),
@@ -650,8 +699,46 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
             gravity: 0.3,
           ),
         ),
-      ],
+        ],
+      ),
     );
+  }
+
+  /// Show a "discard changes?" prompt when the user backs out of a dirty
+  /// form. Returns true if the user chose to discard.
+  Future<bool> _confirmDiscardChanges() async {
+    final themeColors = ref.read(themeColorsProvider);
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: themeColors.background1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text(
+          'هل تريد الخروج بدون حفظ؟',
+          textAlign: TextAlign.center,
+        ),
+        content: const Text(
+          'ستفقد المعلومات التي أدخلتها.',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('متابعة التعديل'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'تجاهل',
+              style: TextStyle(color: themeColors.statusError),
+            ),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   Widget _buildHeader(dynamic themeColors) {
@@ -950,6 +1037,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                             if (value && groups.length == 1) {
                               _selectedGroup = groups.first;
                             }
+                            _isFormDirty = true;
                           });
                         },
                         activeTrackColor:
@@ -1003,7 +1091,10 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                               ))
                           .toList(),
                       onChanged: (group) {
-                        setState(() => _selectedGroup = group);
+                        setState(() {
+                          _selectedGroup = group;
+                          _isFormDirty = true;
+                        });
                       },
                       validator: (value) {
                         if (_addToSharedTree && value == null) {

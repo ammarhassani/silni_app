@@ -69,6 +69,13 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   /// Flag to track if we've attempted migration for this session.
   bool _hasMigratedRelatives = false;
 
+  /// Group-mode shared-graph load timeout. The shared-graph stream
+  /// historically had no timeout — if it failed silently, the screen
+  /// spun forever. After 10s without a graph the spinner gives way to
+  /// an error state with retry.
+  Timer? _graphTimeoutTimer;
+  bool _graphLoadTimedOut = false;
+
   String _familyName = 'شجرة العائلة';
   final _nameController = TextEditingController();
 
@@ -247,7 +254,71 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     _nameController.dispose();
     _transformationController.dispose();
     _screenshotCallback.dispose();
+    _graphTimeoutTimer?.cancel();
     super.dispose();
+  }
+
+  /// Arm the 10-second graph-load timeout. Idempotent — if the timer is
+  /// already running it's left alone.
+  void _armGraphTimeout() {
+    if (_graphTimeoutTimer != null) return;
+    _graphTimeoutTimer = Timer(const Duration(seconds: 10), () {
+      if (mounted) setState(() => _graphLoadTimedOut = true);
+    });
+  }
+
+  /// Cancel + reset the timeout (called when the graph arrives or on retry).
+  void _resetGraphTimeout() {
+    _graphTimeoutTimer?.cancel();
+    _graphTimeoutTimer = null;
+    if (_graphLoadTimedOut && mounted) {
+      setState(() => _graphLoadTimedOut = false);
+    }
+  }
+
+  /// Error state shown after the 10s graph-load timeout fires. Tapping
+  /// "إعادة المحاولة" invalidates the upstream stream and resets the
+  /// timeout flag, returning the user to the spinner with a fresh chance.
+  Widget _buildGraphLoadTimeoutState(String groupId) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 48,
+              color: Colors.white,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            const Text(
+              'تعذّر تحميل شجرة العائلة',
+              style: TextStyle(color: Colors.white, fontSize: 18),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'تحقق من الاتصال بالإنترنت ثم حاول مرة أخرى',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.7),
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            ElevatedButton.icon(
+              onPressed: () {
+                _resetGraphTimeout();
+                ref.invalidate(sharedFamilyEdgesStreamProvider(groupId));
+              },
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('إعادة المحاولة'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _saveFamilyName(String name) async {
@@ -881,10 +952,24 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     // In group mode, wait for the shared graph before rendering.
     // Without the graph, _inferGraph creates wrong edges from the adder's
     // relationship types (e.g. uncle's wife appears as viewer's wife).
+    // 10-second timeout — without it the spinner ran forever on stream
+    // failures (audit Cat 8 finding).
     if (groupInfo != null && graph == null) {
+      if (_graphLoadTimedOut) {
+        return _buildGraphLoadTimeoutState(groupInfo.groupId);
+      }
+      // Schedule the timer in a post-frame callback so we don't call
+      // setState during build.
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _armGraphTimeout());
       return const Center(
         child: CircularProgressIndicator(color: Colors.white),
       );
+    }
+    // Graph arrived — clear any pending timeout state.
+    if (graph != null && (_graphTimeoutTimer != null || _graphLoadTimedOut)) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _resetGraphTimeout());
     }
 
     // For shared trees, apply rahim scope filter so each viewer only

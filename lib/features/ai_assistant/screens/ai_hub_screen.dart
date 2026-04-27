@@ -13,6 +13,7 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/glass_pill_title.dart';
 import '../../../shared/widgets/message_widget.dart';
+import '../../../shared/widgets/offline_guard.dart';
 import '../../../shared/widgets/persistent_bottom_nav.dart';
 import '../../subscription/screens/paywall_screen.dart';
 
@@ -110,11 +111,17 @@ class _AIFeatureCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return GlassCard(
-      semanticsLabel: '$title، $description',
-      onTap: () => _handleTap(context, ref),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Row(
+    // OfflineGuard dims the card and shows a connectivity snackbar when
+    // offline. The downstream AI features all require network anyway —
+    // letting users tap into them while disconnected just produces opaque
+    // errors a few screens deeper. Tap routing happens inside
+    // OfflineGuard's onPressed when isOnline.
+    return OfflineGuard(
+      onPressed: () => _handleTap(context, ref),
+      child: GlassCard(
+        semanticsLabel: '$title، $description',
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
         children: [
           Container(
             width: 48,
@@ -153,6 +160,7 @@ class _AIFeatureCard extends ConsumerWidget {
             color: themeColors.textOnGradient.withValues(alpha: 0.5),
           ),
         ],
+        ),
       ),
     );
   }

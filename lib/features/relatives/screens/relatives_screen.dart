@@ -390,13 +390,18 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
             context.push('${AppRoutes.relativeDetail}/${relative.id}');
           },
           onMarkContacted: () async {
+            // Quick-swipe logs as InteractionType.other rather than .call —
+            // the audit caught us silently misattributing every quick
+            // contact as a phone call when it might have been a message,
+            // visit, or anything else. Users wanting to attribute a
+            // specific type tap into the relative detail screen.
             final repository = ref.read(interactionsRepositoryProvider);
             await repository.createInteraction(
               Interaction(
                 id: '',
                 userId: userId,
                 relativeId: relative.id,
-                type: InteractionType.call,
+                type: InteractionType.other,
                 date: DateTime.now(),
                 notes: 'تواصل سريع',
                 createdAt: DateTime.now(),
@@ -494,29 +499,49 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
   }
 
   Widget _buildErrorState(String error, dynamic themeColors) {
+    // Pattern mirrors reminders_screen._buildError (audit gold-standard):
+    // clear Arabic copy + connectivity hint + retry that invalidates the
+    // upstream provider. The raw Dart exception string is no longer
+    // shown — it leaked SocketException, etc., into the UI.
+    final user = ref.read(currentUserProvider);
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 80,
-            color: themeColors.statusError.withValues(alpha: 0.7),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            'حدث خطأ',
-            style: AppTypography.titleLarge.copyWith(color: themeColors.textOnGradient),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            error,
-            style: AppTypography.bodySmall.copyWith(
-              color: themeColors.textOnGradient.withValues(alpha: 0.7),
+      child: GlassCard(
+        margin: const EdgeInsets.all(AppSpacing.xl),
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              color: themeColors.textOnGradient,
+              size: 48,
             ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'حدث خطأ في تحميل الأقارب',
+              style: AppTypography.bodyLarge
+                  .copyWith(color: themeColors.textOnGradient),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'يرجى التحقق من الاتصال بالإنترنت والمحاولة مرة أخرى',
+              style: AppTypography.bodySmall.copyWith(
+                color: themeColors.textOnGradient.withValues(alpha: 0.8),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            GradientButton(
+              onPressed: () {
+                if (user != null) {
+                  ref.invalidate(relativesStreamProvider(user.id));
+                }
+              },
+              text: 'إعادة المحاولة',
+              icon: Icons.refresh_rounded,
+            ),
+          ],
+        ),
       ),
     );
   }

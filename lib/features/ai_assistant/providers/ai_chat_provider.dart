@@ -7,6 +7,7 @@ import '../../../core/ai/ai_prompts.dart';
 import '../../../core/ai/deepseek_ai_service.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/services/ai_config_service.dart';
+import '../../../core/services/error_reporter.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/services/chat_history_service.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
@@ -369,17 +370,11 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
 
       // Save assistant message to Supabase (async)
       _saveMessageAsync(assistantMessage);
-    } on AIServiceException catch (e) {
-      if (!mounted) return;
-      state = state.copyWith(
-        isLoading: false,
-        error: e.message,
-      );
     } catch (e) {
       if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
-        error: 'حدث خطأ غير متوقع. حاول مرة أخرى.',
+        error: errorHandler.getArabicMessage(e),
       );
     }
   }
@@ -491,17 +486,11 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
           // Memory extraction disabled — Memory Viewer was deleted in Phase 0; collecting without surfacing is privacy debt.
         }
       }
-    } on AIServiceException catch (e) {
-      if (!mounted) return;
-      state = state.copyWith(
-        isStreaming: false,
-        error: e.message,
-      );
     } catch (e) {
       if (!mounted) return;
       state = state.copyWith(
         isStreaming: false,
-        error: 'حدث خطأ غير متوقع. حاول مرة أخرى.',
+        error: errorHandler.getArabicMessage(e),
       );
     }
   }

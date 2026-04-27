@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
@@ -75,10 +74,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Future<void> _finish() async {
-    // Save onboarding completion status
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('onboarding_completed', true);
-
+    // The `onboarding_completed` flag is intentionally NOT written here.
+    // Skipping or finishing the carousel only routes the user to login;
+    // the flag is set on first successful sign-in (main.dart's
+    // onAuthStateChange listener) so a user who skipped without ever
+    // signing up still sees the carousel on next cold-start.
     if (mounted) {
       context.go(AppRoutes.login);
     }

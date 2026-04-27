@@ -18,6 +18,7 @@ import '../../../shared/widgets/glass_pill_title.dart';
 import '../../../shared/widgets/persistent_bottom_nav.dart';
 import '../../../core/config/env/env.dart';
 import '../../../core/providers/subscription_provider.dart';
+import '../../profile/widgets/profile_dialogs.dart';
 import '../widgets/subscription_card.dart';
 import '../widgets/theme_carousel.dart';
 
@@ -87,6 +88,23 @@ class SettingsScreen extends ConsumerWidget {
                         context.go(AppRoutes.login);
                       }
                     },
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  // Mirror of the delete-account entry on Profile. The
+                  // dialog itself (showDeleteAccountDialog) handles the
+                  // 2-step warning + typed-confirm + password re-auth.
+                  _buildSettingsTile(
+                    icon: Icons.delete_forever_rounded,
+                    title: 'حذف الحساب',
+                    themeColors: themeColors,
+                    iconColor: themeColors.statusError,
+                    titleColor: themeColors.statusError,
+                    showChevron: false,
+                    onTap: () => showDeleteAccountDialog(
+                      context: context,
+                      ref: ref,
+                      themeColors: themeColors,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
 
@@ -190,14 +208,16 @@ class SettingsScreen extends ConsumerWidget {
     required VoidCallback onTap,
     IconData trailingIcon = Icons.arrow_forward_ios_rounded,
     bool showChevron = true,
+    Color? iconColor,
+    Color? titleColor,
   }) {
     return GlassCard(
       child: ListTile(
-        leading: Icon(icon, color: themeColors.textOnGradient),
+        leading: Icon(icon, color: iconColor ?? themeColors.textOnGradient),
         title: Text(
           title,
           style: AppTypography.titleMedium.copyWith(
-            color: themeColors.textOnGradient,
+            color: titleColor ?? themeColors.textOnGradient,
           ),
         ),
         trailing: showChevron

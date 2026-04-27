@@ -9,13 +9,17 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../features/auth/providers/auth_provider.dart';
-import '../../../features/family_groups/providers/node_invitation_providers.dart';
 import '../../../shared/services/notification_history_service.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
 import 'streak_badge_bar.dart';
 
-/// Islamic greeting header with notification bell
-class HomeHeaderWidget extends ConsumerStatefulWidget {
+/// Islamic greeting header with notification bell.
+///
+/// The bell links to the generic notification history (announcements,
+/// streak alerts, achievement unlocks, etc.). The phone-invite-driven
+/// glow animation was removed in v1 (CTO 2026-04-26 audit) along with
+/// the rest of the phone-invite UI surface.
+class HomeHeaderWidget extends ConsumerWidget {
   const HomeHeaderWidget({
     super.key,
     required this.displayName,
@@ -26,50 +30,13 @@ class HomeHeaderWidget extends ConsumerStatefulWidget {
   final String userId;
 
   @override
-  ConsumerState<HomeHeaderWidget> createState() => _HomeHeaderWidgetState();
-}
-
-class _HomeHeaderWidgetState extends ConsumerState<HomeHeaderWidget>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _glowController;
-
-  @override
-  void initState() {
-    super.initState();
-    _glowController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    );
-  }
-
-  @override
-  void dispose() {
-    _glowController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final themeColors = ref.watch(themeColorsProvider);
     final unreadCountAsync =
-        ref.watch(unreadNotificationCountProvider(widget.userId));
+        ref.watch(unreadNotificationCountProvider(userId));
     final user = ref.watch(currentUserProvider);
     final profilePhotoUrl =
         user?.userMetadata?['profile_picture_url'] as String?;
-    final pendingInvitationCount =
-        ref.watch(pendingInvitationCountProvider).valueOrNull ?? 0;
-
-    // Start or stop glow animation based on pending invitations
-    if (pendingInvitationCount > 0) {
-      if (!_glowController.isAnimating) {
-        _glowController.repeat(reverse: true);
-      }
-    } else {
-      if (_glowController.isAnimating) {
-        _glowController.stop();
-        _glowController.reset();
-      }
-    }
 
     final hour = DateTime.now().hour;
     String greeting = 'السلام عليكم';
@@ -80,7 +47,7 @@ class _HomeHeaderWidgetState extends ConsumerState<HomeHeaderWidget>
     }
 
     return Semantics(
-      label: '$greeting ${widget.displayName}',
+      label: '$greeting $displayName',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -95,48 +62,21 @@ class _HomeHeaderWidgetState extends ConsumerState<HomeHeaderWidget>
                   ),
                 ),
               ),
-              // Sync status indicator
-              const SyncStatusIndicator(
-                asBadge: true,
-                size: 24,
-              ),
+              const SyncStatusIndicator(asBadge: true, size: 24),
               const SizedBox(width: AppSpacing.md),
-              // Notification bell icon with unread badge and glow
+              // Notification bell — links to generic notification history.
               Semantics(
                 label: 'الإشعارات',
                 button: true,
                 child: GestureDetector(
                   onTap: () => context.push(AppRoutes.notificationHistory),
-                  child: AnimatedBuilder(
-                    animation: _glowController,
-                    builder: (context, child) {
-                      final glowAlpha = pendingInvitationCount > 0
-                          ? 0.2 + (_glowController.value * 0.4)
-                          : 0.0;
-                      final glowBlur = pendingInvitationCount > 0
-                          ? 8.0 + (_glowController.value * 8.0)
-                          : 0.0;
-
-                      return Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: themeColors.glassBackground,
-                          boxShadow: pendingInvitationCount > 0
-                              ? [
-                                  BoxShadow(
-                                    color: AppColors.premiumGold
-                                        .withValues(alpha: glowAlpha),
-                                    blurRadius: glowBlur,
-                                    spreadRadius: 2,
-                                  ),
-                                ]
-                              : null,
-                        ),
-                        child: child,
-                      );
-                    },
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: themeColors.glassBackground,
+                    ),
                     child: Stack(
                       children: [
                         Center(
@@ -146,7 +86,6 @@ class _HomeHeaderWidgetState extends ConsumerState<HomeHeaderWidget>
                             size: 24,
                           ),
                         ),
-                        // Unread badge
                         unreadCountAsync.when(
                           data: (count) => count > 0
                               ? Positioned(
@@ -187,10 +126,9 @@ class _HomeHeaderWidgetState extends ConsumerState<HomeHeaderWidget>
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          // Streak & Badge Bar with username
           StreakBadgeBar(
-            userId: widget.userId,
-            displayName: widget.displayName,
+            userId: userId,
+            displayName: displayName,
             profilePhotoUrl: profilePhotoUrl,
           ),
         ],

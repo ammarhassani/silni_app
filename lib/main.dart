@@ -48,7 +48,7 @@ import 'shared/widgets/error_boundary.dart';
 import 'shared/widgets/premium_loading_indicator.dart';
 import 'features/widgets/home_widget_service.dart';
 import 'core/services/session_cleanup_service.dart';
-import 'features/family_groups/services/node_invitation_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Background handler is now in fcm_notification_service.dart
 // It's imported and used via FirebaseMessaging.onBackgroundMessage()
@@ -655,17 +655,19 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
               event == AuthChangeEvent.initialSession) &&
           session != null) {
         unawaited(_ensureUserRecord(session.user.id, logger));
+        // Mark onboarding as complete on first authenticated session.
+        // The onboarding screen no longer writes the flag — see
+        // onboarding_screen.dart#_finish — so a user who tapped "تخطي"
+        // without ever signing up will see the carousel again on next
+        // cold-start.
+        unawaited(_markOnboardingCompleted());
       }
 
-      // Check pending invitations on sign-in or initial session
-      if ((event == AuthChangeEvent.signedIn ||
-              event == AuthChangeEvent.initialSession) &&
-          session != null) {
-        final phone = session.user.phone;
-        if (phone != null && phone.isNotEmpty) {
-          unawaited(_checkPendingInvitations(session.user.id, logger));
-        }
-      }
+      // Phone-invite subsystem cut from v1 (CTO 2026-04-26). The
+      // _checkPendingInvitations call here used to surface
+      // node_invitations as notification_history rows; removed because
+      // the bell, the InvitationDetailScreen route, and the
+      // node_invitations creation UI are all cut.
 
       if (event == AuthChangeEvent.passwordRecovery) {
         logger.info(
@@ -701,56 +703,17 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
     }
   }
 
-  /// Fire-and-forget: check for pending invitations and create notification
-  /// records so the user sees them in the notification center.
-  Future<void> _checkPendingInvitations(
-    String userId,
-    AppLoggerService logger,
-  ) async {
+  /// Set the `onboarding_completed` SharedPreferences flag on first
+  /// authenticated session. Idempotent — checks the existing value first
+  /// so we don't pay the disk write on every sign-in.
+  Future<void> _markOnboardingCompleted() async {
     try {
-      final invitations =
-          await NodeInvitationService().getMyPendingInvitations();
-      if (invitations.isEmpty) return;
-
-      final supabase = SupabaseConfig.client;
-
-      for (final invitation in invitations) {
-        // Check if a notification already exists for this invitation
-        final existing = await supabase
-            .from('notification_history')
-            .select('id')
-            .eq('user_id', userId)
-            .eq('notification_type', 'invitation')
-            .contains('data', {'invitation_id': invitation.id})
-            .maybeSingle();
-
-        if (existing != null) continue;
-
-        await supabase.from('notification_history').insert({
-          'user_id': userId,
-          'notification_type': 'invitation',
-          'title': 'دعوة عائلية',
-          'body':
-              '${invitation.invitedByName ?? ''} دعاك للانضمام إلى ${invitation.groupName ?? ''}',
-          'data': {'invitation_id': invitation.id},
-          'status': 'sent',
-          'is_read': false,
-        });
-      }
-
-      logger.info(
-        'Checked pending invitations',
-        category: LogCategory.auth,
-        tag: 'main',
-        metadata: {'count': invitations.length},
-      );
-    } catch (e) {
-      logger.warning(
-        'Failed to check pending invitations',
-        category: LogCategory.auth,
-        tag: 'main',
-        metadata: {'error': e.toString()},
-      );
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool('onboarding_completed') == true) return;
+      await prefs.setBool('onboarding_completed', true);
+    } catch (_) {
+      // Disk failure here just means the user might see the carousel
+      // again next cold-start. Not user-visible enough to surface.
     }
   }
 

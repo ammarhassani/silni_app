@@ -127,13 +127,18 @@ Future<void> showExportDataDialogFlow({
   }
 }
 
-/// Show delete account dialog
-void showDeleteAccountDialog({
+/// Two-step delete-account confirmation:
+///   Step 1 — warning dialog (Cancel / Continue)
+///   Step 2 — typed-string confirmation ("حذف") + password re-auth
+/// Both must validate before the delete RPC is invoked. Hardened for App
+/// Store 5.1.1(v) compliance — single-tap deletion is no longer possible.
+Future<void> showDeleteAccountDialog({
   required BuildContext context,
   required WidgetRef ref,
   required ThemeColors themeColors,
-}) {
-  showDialog(
+}) async {
+  // Step 1 — warning.
+  final continueToStep2 = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
       backgroundColor: themeColors.background1.withValues(alpha: 0.95),
@@ -167,58 +172,235 @@ void showDeleteAccountDialog({
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(dialogContext),
+          onPressed: () => Navigator.pop(dialogContext, false),
           child: Text(
             'إلغاء',
             style: TextStyle(color: themeColors.primary),
           ),
         ),
         ElevatedButton(
-          onPressed: () async {
-            Navigator.pop(dialogContext);
-
-            // Show loading dialog
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (loadingContext) =>
-                  const Center(child: CircularProgressIndicator()),
-            );
-
-            try {
-              // Use Supabase delete account method
-              final authService = ref.read(authServiceProvider);
-              await authService.deleteAccount();
-
-              // Close loading dialog and navigate
-              if (context.mounted) {
-                Navigator.of(context).pop(); // Close loading
-                GoRouter.of(context).go(AppRoutes.login);
-
-                UIHelpers.showSnackBar(
-                  context,
-                  'تم حذف حسابك بنجاح',
-                );
-              }
-            } catch (e) {
-              // Close loading dialog
-              if (context.mounted) {
-                Navigator.of(context).pop(); // Close loading
-                UIHelpers.showSnackBar(
-                  context,
-                  errorHandler.getArabicMessage(e),
-                  isError: true,
-                );
-              }
-            }
-          },
+          onPressed: () => Navigator.pop(dialogContext, true),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.red,
             foregroundColor: Colors.white,
           ),
-          child: const Text('حذف'),
+          child: const Text('متابعة'),
         ),
       ],
     ),
   );
+
+  if (continueToStep2 != true || !context.mounted) return;
+
+  // Step 2 — typed confirmation + password re-auth.
+  final confirmed = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) => _DeleteAccountConfirmDialog(
+      themeColors: themeColors,
+      ref: ref,
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  // Loading spinner while the RPC runs.
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const Center(child: CircularProgressIndicator()),
+  );
+
+  try {
+    await ref.read(authServiceProvider).deleteAccount();
+    if (!context.mounted) return;
+    Navigator.of(context).pop(); // Close loading
+    GoRouter.of(context).go(AppRoutes.login);
+    UIHelpers.showSnackBar(context, 'تم حذف حسابك بنجاح');
+  } catch (e) {
+    if (!context.mounted) return;
+    Navigator.of(context).pop(); // Close loading
+    UIHelpers.showSnackBar(
+      context,
+      errorHandler.getArabicMessage(e),
+      isError: true,
+    );
+  }
+}
+
+/// Step-2 dialog. Lives as a StatefulWidget so the typed-confirm and
+/// password fields can manage their own controllers and validation
+/// state without the caller juggling them.
+class _DeleteAccountConfirmDialog extends StatefulWidget {
+  const _DeleteAccountConfirmDialog({
+    required this.themeColors,
+    required this.ref,
+  });
+
+  final ThemeColors themeColors;
+  final WidgetRef ref;
+
+  @override
+  State<_DeleteAccountConfirmDialog> createState() =>
+      _DeleteAccountConfirmDialogState();
+}
+
+class _DeleteAccountConfirmDialogState
+    extends State<_DeleteAccountConfirmDialog> {
+  static const _confirmWord = 'حذف';
+
+  final _confirmController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isVerifying = false;
+  String? _inlineError;
+
+  @override
+  void dispose() {
+    _confirmController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  bool get _canSubmit =>
+      _confirmController.text.trim() == _confirmWord &&
+      _passwordController.text.isNotEmpty &&
+      !_isVerifying;
+
+  Future<void> _onSubmit() async {
+    final email = SupabaseConfig.client.auth.currentUser?.email;
+    if (email == null || email.isEmpty) {
+      setState(() => _inlineError =
+          'تعذّر التحقق من البريد الإلكتروني — حاول تسجيل الخروج وإعادة الدخول.');
+      return;
+    }
+
+    setState(() {
+      _isVerifying = true;
+      _inlineError = null;
+    });
+
+    try {
+      // Verify the password by attempting a fresh sign-in with the same
+      // email. signInWithPassword keeps the existing session if it
+      // succeeds; if the password is wrong, it raises an AuthException.
+      // (Supabase's auth.reauthenticate() sends a nonce email rather than
+      // verifying a password — wrong primitive for this flow.)
+      await widget.ref.read(authServiceProvider).signInWithEmail(
+            email: email,
+            password: _passwordController.text,
+          );
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isVerifying = false;
+        _inlineError = errorHandler.getArabicMessage(e);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: widget.themeColors.background1.withValues(alpha: 0.95),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+      ),
+      title: Text(
+        'تأكيد حذف الحساب',
+        style: AppTypography.titleLarge.copyWith(color: Colors.white),
+        textAlign: TextAlign.center,
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'اكتب كلمة "$_confirmWord" لتأكيد طلبك:',
+            style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextField(
+            controller: _confirmController,
+            onChanged: (_) => setState(() {}),
+            textDirection: TextDirection.rtl,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: _confirmWord,
+              hintStyle:
+                  TextStyle(color: Colors.white.withValues(alpha: 0.4)),
+              filled: true,
+              fillColor: Colors.white.withValues(alpha: 0.08),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'أدخل كلمة المرور لتأكيد هويتك:',
+            style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextField(
+            controller: _passwordController,
+            onChanged: (_) => setState(() {}),
+            obscureText: true,
+            textDirection: TextDirection.ltr,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'كلمة المرور',
+              hintStyle:
+                  TextStyle(color: Colors.white.withValues(alpha: 0.4)),
+              filled: true,
+              fillColor: Colors.white.withValues(alpha: 0.08),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          if (_inlineError != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              _inlineError!,
+              style: AppTypography.bodySmall.copyWith(color: Colors.red[200]),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isVerifying
+              ? null
+              : () => Navigator.of(context).pop(false),
+          child: Text(
+            'إلغاء',
+            style: TextStyle(color: widget.themeColors.primary),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: _canSubmit ? _onSubmit : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: Colors.red.withValues(alpha: 0.3),
+            disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
+          ),
+          child: _isVerifying
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text('احذف الحساب'),
+        ),
+      ],
+    );
+  }
 }

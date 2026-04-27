@@ -1,3 +1,10 @@
+// PHONE-INVITE SUBSYSTEM CUT FROM V1 LAUNCH (2026-04-26).
+// Database tables and RPCs preserved but no UI invokes them.
+// Latent column-name bug in create_node_invitation and
+// get_my_pending_invitations (refs `name`, column is `full_name`)
+// is dormant while node_invitations table stays empty.
+// Post-TestFlight: revisit if users request "invite by phone".
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:silni_app/core/config/supabase_config.dart';

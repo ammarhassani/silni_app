@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/supabase_config.dart';
+import '../../../shared/widgets/error_widgets.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/providers/interactions_provider.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
@@ -38,10 +39,19 @@ class DueRemindersSection extends ConsumerWidget {
           relationshipLabels: relationshipLabels,
         ),
         loading: () => const DueRemindersCardSkeleton(),
-        error: (_, _) => const SizedBox.shrink(),
+        error: (e, _) => InlineErrorWidget.fromError(
+          e,
+          compact: true,
+          onRetry: () =>
+              ref.invalidate(reminderSchedulesStreamProvider(user.id)),
+        ),
       ),
       loading: () => const DueRemindersCardSkeleton(),
-      error: (_, _) => const SizedBox.shrink(),
+      error: (e, _) => InlineErrorWidget.fromError(
+        e,
+        compact: true,
+        onRetry: () => ref.invalidate(viewerFilteredRelativesProvider),
+      ),
     );
   }
 }

@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:silni_app/core/constants/app_typography.dart';
 import 'package:silni_app/core/router/app_routes.dart';
 import 'package:silni_app/core/theme/theme_provider.dart';
+import 'package:silni_app/core/services/app_logger_service.dart';
+import 'package:silni_app/shared/utils/ui_helpers.dart';
 import 'package:silni_app/shared/widgets/gradient_background.dart';
 import 'package:silni_app/features/auth/providers/auth_provider.dart';
 import 'package:silni_app/core/config/supabase_config.dart';
@@ -113,9 +115,32 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       }
     }
 
-    // IMPORTANT: First try to restore persistent session
-    // This calls checkPersistentSession() which handles session recovery after app kill
-    final sessionRestored = await ref.read(sessionInitializationProvider.future);
+    // First try to restore persistent session — checkPersistentSession()
+    // handles session recovery after app kill. If the provider throws
+    // (e.g. Supabase init swallowed an exception in main.dart but the
+    // provider still propagates the failure), route to login with a
+    // banner instead of leaving the user stranded on the loader.
+    bool sessionRestored;
+    try {
+      sessionRestored =
+          await ref.read(sessionInitializationProvider.future);
+    } catch (e, stack) {
+      AppLoggerService().error(
+        'sessionInitializationProvider threw — routing to login',
+        category: LogCategory.auth,
+        tag: 'splash',
+        metadata: {'error': e.toString()},
+        stackTrace: stack,
+      );
+      if (!mounted) return;
+      UIHelpers.showSnackBar(
+        context,
+        'حدث خطأ في الاتصال — حاول مجدداً',
+        isError: true,
+      );
+      context.go(AppRoutes.login);
+      return;
+    }
 
     if (!mounted) return;
 

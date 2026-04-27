@@ -85,13 +85,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Future<void> _loadDailyHadith() async {
+    // Wrapped in try/catch/finally because `_isLoadingHadith` was leaving
+    // the home spinner spinning forever on any throw from getDailyHadith
+    // (network failure, malformed admin row, etc.). The hadithService has
+    // its own hardcoded fallback list, so the worst case here is a null
+    // hadith — we hide the section gracefully.
     final hadithService = ref.read(hadithServiceProvider);
-    final hadith = await hadithService.getDailyHadith();
-    if (mounted) {
-      setState(() {
-        _dailyHadith = hadith;
-        _isLoadingHadith = false;
-      });
+    Hadith? hadith;
+    try {
+      hadith = await hadithService.getDailyHadith();
+    } catch (_) {
+      hadith = null;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _dailyHadith = hadith;
+          _isLoadingHadith = false;
+        });
+      }
     }
   }
 

@@ -383,7 +383,11 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
       final repository = ref.read(interactionsRepositoryProvider);
       final interactionId = await repository.createInteraction(interaction);
 
-      // Upload voice note if recorded
+      // Upload voice note if recorded. The interaction itself was already
+      // saved above, so a failed upload doesn't lose the user's tap — it
+      // just means the audio attachment is missing. Surface a non-blocking
+      // warning so the user knows.
+      bool voiceNoteUploadFailed = false;
       if (audioFilePath != null) {
         try {
           final storageService = SupabaseStorageService();
@@ -397,6 +401,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
             {'audio_note_url': audioUrl},
           );
         } catch (e) {
+          voiceNoteUploadFailed = true;
           debugPrint('[VoiceNote] Upload failed: $e');
         }
       }
@@ -447,9 +452,29 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
             backgroundColor: themeColors.primary,
           );
         }
+
+        // Voice-note upload failure follows the success toast so the
+        // interaction-saved feedback still lands first; the user knows
+        // the tap counted but the audio didn't.
+        if (voiceNoteUploadFailed && mounted) {
+          UIHelpers.showSnackBar(
+            context,
+            'تم تسجيل التواصل، لكن تعذّر رفع المقطع الصوتي.',
+            isError: true,
+          );
+        }
       }
-    } catch (_) {
-      // Interaction logging failed silently
+    } catch (e) {
+      // Interaction save failed before any of the success-side bookkeeping
+      // ran. Surface to the user — the audit caught us showing a fake
+      // success snackbar in this branch, which is worse than no feedback.
+      if (mounted) {
+        UIHelpers.showSnackBar(
+          context,
+          'تعذّر تسجيل التواصل. حاول مرة أخرى.',
+          isError: true,
+        );
+      }
     } finally {
       await Future.delayed(const Duration(seconds: 2));
       _isLoggingInteraction = false;
