@@ -1,20 +1,35 @@
+// NOTIFICATION TOGGLES CUT FROM V1 (2026-04-26).
+// Previous toggles wrote to SharedPreferences but never gated FCM or local
+// notifications. v1 relies on OS-level notification controls.
+// v1.1 plan: ship FCM topic-subscription infrastructure (server-side topic
+// publish + client-side subscribe/unsubscribe + offline reconciliation),
+// then re-enable per-category toggles backed by topic membership.
+// SharedPreferences keys preserved so v1.1 can read prior user intent.
+
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
-import '../../../core/theme/app_themes.dart';
-import '../../../shared/widgets/gradient_background.dart';
-import '../../../shared/widgets/glass_card.dart';
-import '../../../shared/services/supabase_notification_service.dart';
 import '../../../shared/utils/ui_helpers.dart';
+import '../../../shared/widgets/glass_card.dart';
+import '../../../shared/widgets/gradient_background.dart';
+import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/message_widget.dart';
 
-/// SharedPreferences keys for notification settings persistence
+/// SharedPreferences keys preserved verbatim for v1.1 readback.
+///
+/// The previous in-screen toggles wrote to these keys but never gated
+/// FCM or local notifications. v1.1 (topic-subscription infra) will read
+/// any prior values to seed initial topic membership before re-exposing
+/// per-category controls. The keys are unused in v1 — that's intentional.
+// ignore_for_file: unused_field, unused_element
 class _NotificationPrefsKeys {
   static const String remindersEnabled = 'notifications_reminders_enabled';
   static const String dailyRemindersEnabled = 'notifications_daily_enabled';
@@ -23,81 +38,17 @@ class _NotificationPrefsKeys {
   static const String vibrationEnabled = 'notifications_vibration_enabled';
 }
 
-class NotificationsScreen extends ConsumerStatefulWidget {
+/// v1 notifications screen — explainer + OS-settings launcher.
+///
+/// All control of notification delivery happens at the OS level. Tapping
+/// the button below opens iOS Settings → Silni → Notifications directly;
+/// on Android the user is shown the path to navigate manually (a native
+/// intent for `APP_NOTIFICATION_SETTINGS` would require an extra package).
+class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
 
   @override
-  ConsumerState<NotificationsScreen> createState() =>
-      _NotificationsScreenState();
-}
-
-class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
-  final SupabaseNotificationService _notificationService =
-      SupabaseNotificationService();
-
-  bool _remindersEnabled = true;
-  bool _dailyRemindersEnabled = true;
-  bool _weeklyRemindersEnabled = true;
-  bool _soundEnabled = true;
-  bool _vibrationEnabled = true;
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeNotificationService();
-    _loadSavedPreferences();
-  }
-
-  /// Load saved notification preferences from SharedPreferences
-  Future<void> _loadSavedPreferences() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (mounted) {
-        setState(() {
-          _remindersEnabled = prefs.getBool(_NotificationPrefsKeys.remindersEnabled) ?? true;
-          _dailyRemindersEnabled = prefs.getBool(_NotificationPrefsKeys.dailyRemindersEnabled) ?? true;
-          _weeklyRemindersEnabled = prefs.getBool(_NotificationPrefsKeys.weeklyRemindersEnabled) ?? true;
-          _soundEnabled = prefs.getBool(_NotificationPrefsKeys.soundEnabled) ?? true;
-          _vibrationEnabled = prefs.getBool(_NotificationPrefsKeys.vibrationEnabled) ?? true;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      // If loading fails, use defaults and mark as loaded
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  /// Save a notification preference to SharedPreferences
-  Future<void> _savePreference(String key, bool value) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(key, value);
-    } catch (e) {
-      // Silently fail - the setting is still applied in memory for this session
-    }
-  }
-
-  Future<void> _initializeNotificationService() async {
-    try {
-      await _notificationService.initialize();
-    } catch (e) {
-      // Show error to user if mounted
-      if (mounted) {
-        UIHelpers.showSnackBar(
-          context,
-          'فشل تهيئة خدمة الإشعارات',
-          isError: true,
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final themeColors = ref.watch(themeColorsProvider);
 
     return GradientBackground(
@@ -110,125 +61,104 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           child: SafeArea(
             child: Column(
               children: [
-                _buildHeader(themeColors),
-              Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : ListView(
-                  padding: const EdgeInsets.only(
-                    top: AppSpacing.md,
-                    left: AppSpacing.md,
-                    right: AppSpacing.md,
-                    bottom: AppSpacing.xxl,
+                _buildHeader(context, themeColors),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      AppSpacing.md,
+                      AppSpacing.md,
+                      AppSpacing.xxl,
+                    ),
+                    children: [
+                      const MessageWidget(screenPath: '/notifications'),
+                      const SizedBox(height: AppSpacing.md),
+                      GlassCard(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Icon(
+                              Icons.notifications_active_rounded,
+                              color: Colors.white,
+                              size: 48,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            Text(
+                              'إدارة إشعارات صلني من إعدادات النظام',
+                              style: AppTypography.titleMedium.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              'لتشغيل أو إيقاف التذكيرات والإشعارات، '
+                              'افتح إعدادات الإشعارات الخاصة بصلني '
+                              'من خلال إعدادات النظام.',
+                              style: AppTypography.bodyMedium.copyWith(
+                                color: Colors.white.withValues(alpha: 0.8),
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            GradientButton(
+                              text: 'افتح إعدادات النظام',
+                              icon: Icons.open_in_new_rounded,
+                              onPressed: () =>
+                                  _openSystemNotificationSettings(context),
+                            ),
+                          ],
+                        ),
+                      ).animate().fadeIn().slideY(begin: 0.1, end: 0),
+                    ],
                   ),
-                  children: [
-                    // In-App Messages
-                    const MessageWidget(screenPath: '/notifications'),
-                    const SizedBox(height: AppSpacing.md),
-
-                    // Notification Preferences
-                    Text(
-                      '🔔 تفضيلات الإشعارات',
-                      style: AppTypography.headlineMedium.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    _buildSwitchTile(
-                      title: 'تفعيل الإشعارات',
-                      subtitle: 'تلقي إشعارات عامة من التطبيق',
-                      value: _remindersEnabled,
-                      onChanged: (value) {
-                        HapticFeedback.selectionClick();
-                        setState(() => _remindersEnabled = value);
-                        _savePreference(_NotificationPrefsKeys.remindersEnabled, value);
-                      },
-                      themeColors: themeColors,
-                    ),
-
-                    const SizedBox(height: AppSpacing.sm),
-
-                    _buildSwitchTile(
-                      title: 'تذكيرات يومية',
-                      subtitle: 'تذكير يومي للتواصل مع الأقارب',
-                      value: _dailyRemindersEnabled,
-                      onChanged: (value) {
-                        HapticFeedback.selectionClick();
-                        setState(() => _dailyRemindersEnabled = value);
-                        _savePreference(_NotificationPrefsKeys.dailyRemindersEnabled, value);
-                      },
-                      themeColors: themeColors,
-                      enabled: _remindersEnabled,
-                    ),
-
-                    const SizedBox(height: AppSpacing.sm),
-
-                    _buildSwitchTile(
-                      title: 'تذكيرات أسبوعية',
-                      subtitle: 'تذكير أسبوعي بالأقارب الذين يحتاجون تواصل',
-                      value: _weeklyRemindersEnabled,
-                      onChanged: (value) {
-                        HapticFeedback.selectionClick();
-                        setState(() => _weeklyRemindersEnabled = value);
-                        _savePreference(_NotificationPrefsKeys.weeklyRemindersEnabled, value);
-                      },
-                      themeColors: themeColors,
-                      enabled: _remindersEnabled,
-                    ),
-
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // Sound & Vibration
-                    Text(
-                      '🔊 الصوت والاهتزاز',
-                      style: AppTypography.headlineMedium.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    _buildSwitchTile(
-                      title: 'الصوت',
-                      subtitle: 'تشغيل صوت عند وصول إشعار',
-                      value: _soundEnabled,
-                      onChanged: (value) {
-                        HapticFeedback.selectionClick();
-                        setState(() => _soundEnabled = value);
-                        _savePreference(_NotificationPrefsKeys.soundEnabled, value);
-                      },
-                      themeColors: themeColors,
-                    ),
-
-                    const SizedBox(height: AppSpacing.sm),
-
-                    _buildSwitchTile(
-                      title: 'الاهتزاز',
-                      subtitle: 'اهتزاز الجهاز عند وصول إشعار',
-                      value: _vibrationEnabled,
-                      onChanged: (value) {
-                        HapticFeedback.selectionClick();
-                        setState(() => _vibrationEnabled = value);
-                        _savePreference(_NotificationPrefsKeys.vibrationEnabled, value);
-                      },
-                      themeColors: themeColors,
-                    ),
-
-                    const SizedBox(height: AppSpacing.xl),
-                  ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader(dynamic themeColors) {
+  /// Open the OS notification settings for Silni.
+  ///
+  /// iOS: `app-settings:` URL scheme jumps straight to the app's
+  /// notification page. Confirmed by Apple as the supported deep-link
+  /// since iOS 8 — same scheme used by `permission_handler` etc.
+  ///
+  /// Android: `url_launcher` can't open the
+  /// `android.settings.APP_NOTIFICATION_SETTINGS` intent without a native
+  /// helper, so we surface the manual path via a snackbar. v1.1 with
+  /// `app_settings` or `permission_handler` will improve this.
+  Future<void> _openSystemNotificationSettings(BuildContext context) async {
+    if (Platform.isIOS) {
+      final uri = Uri.parse('app-settings:');
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+        return;
+      }
+      if (context.mounted) {
+        UIHelpers.showSnackBar(
+          context,
+          'تعذّر فتح الإعدادات. افتح إعدادات الجهاز > صلني > الإشعارات.',
+          isError: true,
+        );
+      }
+      return;
+    }
+
+    if (context.mounted) {
+      UIHelpers.showSnackBar(
+        context,
+        'افتح إعدادات الجهاز > التطبيقات > صلني > الإشعارات.',
+      );
+    }
+  }
+
+  Widget _buildHeader(BuildContext context, dynamic themeColors) {
     return Padding(
       padding: const EdgeInsets.only(
         top: AppSpacing.sm,
@@ -243,81 +173,22 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             button: true,
             child: IconButton(
               onPressed: () => context.pop(),
-              icon: Icon(Icons.arrow_forward_rounded, color: themeColors.textOnGradient),
+              icon: Icon(Icons.arrow_forward_rounded,
+                  color: themeColors.textOnGradient),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'إعدادات الإشعارات',
-                  style: AppTypography.headlineMedium.copyWith(
-                    color: themeColors.textOnGradient,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'تخصيص التذكيرات والإشعارات',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: themeColors.textOnGradient.withValues(alpha: 0.8),
-                  ),
-                ),
-              ],
+            child: Text(
+              'إعدادات الإشعارات',
+              style: AppTypography.headlineMedium.copyWith(
+                color: themeColors.textOnGradient,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
       ),
     ).animate().fadeIn().slideY(begin: -0.1, end: 0);
-  }
-
-  Widget _buildSwitchTile({
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-    required ThemeColors themeColors,
-    bool enabled = true,
-  }) {
-    return GlassCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.titleMedium.copyWith(
-                    color: enabled
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: 0.5),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: AppTypography.bodySmall.copyWith(
-                    color: enabled
-                        ? Colors.white.withValues(alpha: 0.7)
-                        : Colors.white.withValues(alpha: 0.3),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: enabled ? onChanged : null,
-            activeTrackColor: themeColors.primary,
-            activeThumbColor: Colors.white,
-          ),
-        ],
-      ),
-    ).animate().fadeIn().slideX(begin: -0.1, end: 0);
   }
 }
