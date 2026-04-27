@@ -1,7 +1,7 @@
 # Silni App - AI Assistant Guidelines
 
 ## Project Overview
-Silni (صِلني) is a Flutter app for maintaining family relationships through interaction tracking, streaks, and AI-powered insights.
+Silni (صِلْني) is a Flutter app for maintaining family relationships through interaction tracking, streaks, and AI-powered insights.
 
 ## Supabase
 - **Production**: `bapwklwxmwhpucutyras`

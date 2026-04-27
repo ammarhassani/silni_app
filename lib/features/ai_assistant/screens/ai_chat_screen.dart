@@ -19,7 +19,7 @@ import '../widgets/conversation_message.dart';
 import '../widgets/chat_history_drawer.dart';
 import '../widgets/memory_indicator.dart';
 
-/// AI Chat Screen - Family Counselor (واصل)
+/// AI Chat Screen - Family Counselor (أنيس)
 class AIChatScreen extends ConsumerStatefulWidget {
   final String? relativeId;
 

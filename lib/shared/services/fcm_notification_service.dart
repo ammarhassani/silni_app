@@ -32,8 +32,8 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
     const androidDetails = AndroidNotificationDetails(
       'silni_channel',
-      'إشعارات صلني',
-      channelDescription: 'إشعارات تطبيق صلني',
+      'إشعارات صِلْني',
+      channelDescription: 'إشعارات تطبيق صِلْني',
       importance: Importance.high,
       priority: Priority.high,
       playSound: true,
@@ -57,7 +57,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
     await localNotifications.show(
       uniqueId,
-      notification.title ?? 'تذكير',
+      notification.title ?? 'إشعار',
       notification.body ?? 'لديك إشعار جديد',
       const NotificationDetails(android: androidDetails, iOS: iosDetails),
       payload: payload, // Enable navigation on tap
@@ -170,8 +170,8 @@ class FCMNotificationService {
     // Create Android notification channel with custom sound
     const androidChannel = AndroidNotificationChannel(
       'silni_channel',
-      'إشعارات صلني',
-      description: 'إشعارات تطبيق صلني',
+      'إشعارات صِلْني',
+      description: 'إشعارات تطبيق صِلْني',
       importance: Importance.high,
       playSound: true,
       sound: RawResourceAndroidNotificationSound('silni_default'),
@@ -371,8 +371,8 @@ class FCMNotificationService {
 
       const androidDetails = AndroidNotificationDetails(
         'silni_channel',
-        'إشعارات صلني',
-        channelDescription: 'إشعارات تطبيق صلني',
+        'إشعارات صِلْني',
+        channelDescription: 'إشعارات تطبيق صِلْني',
         importance: Importance.high,
         priority: Priority.high,
         icon: '@mipmap/ic_launcher',

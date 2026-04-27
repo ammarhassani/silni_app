@@ -101,7 +101,7 @@ Future<void> showExportDataDialogFlow({
         MaterialPageRoute(
           builder: (_) => const PaywallScreen(
             featureToUnlock: FeatureIds.dataExport,
-            contextHeadline: 'صدّر بياناتك مع صِلني MAX',
+            contextHeadline: 'صدّر بياناتك مع صِلْني MAX',
           ),
         ),
       );
@@ -160,7 +160,7 @@ Future<void> showDeleteAccountDialog({
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'ملاحظة: اشتراك صلني MAX مرتبط بحساب Apple أو Google عندك، '
+            'ملاحظة: اشتراك صِلْني MAX مرتبط بحساب Apple أو Google عندك، '
             'وحذف الحساب لا يلغي الاشتراك. لإلغاء الاشتراك افتح إعدادات '
             'متجر التطبيقات > الاشتراكات.',
             style: AppTypography.bodySmall.copyWith(

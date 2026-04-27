@@ -171,8 +171,8 @@ class SupabaseNotificationService {
 
       const androidDetails = AndroidNotificationDetails(
         'silni_channel',
-        'إشعارات صلني',
-        channelDescription: 'إشعارات تطبيق صلني',
+        'إشعارات صِلْني',
+        channelDescription: 'إشعارات تطبيق صِلْني',
         importance: Importance.high,
         priority: Priority.high,
         icon: '@mipmap/ic_launcher',
@@ -337,8 +337,8 @@ class SupabaseNotificationService {
     try {
       const androidDetails = AndroidNotificationDetails(
         'silni_channel',
-        'إشعارات صلني',
-        channelDescription: 'إشعارات تطبيق صلني',
+        'إشعارات صِلْني',
+        channelDescription: 'إشعارات تطبيق صِلْني',
         importance: Importance.high,
         priority: Priority.high,
         icon: '@mipmap/ic_launcher',
@@ -393,9 +393,13 @@ class SupabaseNotificationService {
       );
 
       if (content == null) {
-        // Template not found - use fallback
+        // Template not found — generic OS-push fallback. Per the
+        // terminology decision (TERMINOLOGY.md, 2026-04-27) the title
+        // is `إشعار` (OS-level delivery surface) when the body is the
+        // generic "لديك إشعار جديد". `تنبيه` is reserved for urgent
+        // in-app banners and is not used as an OS-push title.
         await showImmediateNotification(
-          title: 'تنبيه',
+          title: 'إشعار',
           body: 'لديك إشعار جديد',
         );
         return;
@@ -404,8 +408,8 @@ class SupabaseNotificationService {
       // Determine notification details based on priority
       final androidDetails = AndroidNotificationDetails(
         'silni_channel',
-        'إشعارات صلني',
-        channelDescription: 'إشعارات تطبيق صلني',
+        'إشعارات صِلْني',
+        channelDescription: 'إشعارات تطبيق صِلْني',
         importance: content.priority == 'high' ? Importance.high : Importance.defaultImportance,
         priority: content.priority == 'high' ? Priority.high : Priority.defaultPriority,
         icon: '@mipmap/ic_launcher',

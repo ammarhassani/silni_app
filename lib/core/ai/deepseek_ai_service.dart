@@ -732,7 +732,7 @@ class MockAIService implements AIService {
     int maxTokens = 2048,
   }) async* {
     const mockResponse = '''
-أهلاً بك! أنا واصل، مساعدك في صلة الرحم.
+أهلاً بك! أنا أنيس، مساعدك في صلة الرحم.
 
 صلة الرحم من أعظم الأعمال عند الله، وهي سبب للبركة في الرزق والعمر.
 
@@ -757,7 +757,7 @@ class MockAIService implements AIService {
   }) async {
     await Future.delayed(const Duration(milliseconds: 500));
     return '''
-أهلاً بك! أنا واصل، مساعدك في صلة الرحم.
+أهلاً بك! أنا أنيس، مساعدك في صلة الرحم.
 
 صلة الرحم من أعظم الأعمال عند الله، وهي سبب للبركة في الرزق والعمر.
 

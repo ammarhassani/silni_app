@@ -57,7 +57,7 @@ class UIStringsService {
   // Fallback strings (hardcoded defaults)
   static const Map<String, String> _fallbackStrings = {
     // General
-    'app_name': 'صِلني',
+    'app_name': 'صِلْني',
     'loading': 'جاري التحميل...',
     'retry': 'إعادة المحاولة',
 

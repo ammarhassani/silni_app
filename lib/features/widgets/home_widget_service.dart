@@ -35,7 +35,7 @@ class HomeWidgetService {
           .limit(1)
           .maybeSingle();
 
-      String displayName = '\u0635\u0650\u0644\u0646\u064A'; // صِلني
+      String displayName = '\u0635\u0650\u0644\u0646\u064A'; // صِلْني
       int streakCount = 0;
 
       if (streakData != null && streakData['current_streak'] > 0) {

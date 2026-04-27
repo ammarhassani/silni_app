@@ -130,7 +130,7 @@ class SettingsScreen extends ConsumerWidget {
                         final origin =
                             box.localToGlobal(Offset.zero) & box.size;
                         Share.share(
-                          'حمّل تطبيق صِلني وصِل رحمك 🌳\n\n'
+                          'حمّل تطبيق صِلْني وصِل رحمك 🌳\n\n'
                           'iOS: https://apps.apple.com/app/id6738029498\n'
                           'Android: https://play.google.com/store/apps/details?id=com.silni.app',
                           sharePositionOrigin: origin,

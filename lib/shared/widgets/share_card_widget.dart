@@ -252,7 +252,7 @@ class ShareCardWidget extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: 20),
                 child: Text(
-                  '\u0635\u0650\u0644\u0646\u064A', // صِلني
+                  '\u0635\u0650\u0644\u0646\u064A', // صِلْني
                   style: GoogleFonts.cairo(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,

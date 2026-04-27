@@ -232,7 +232,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         ScaffoldMessenger.of(context).clearSnackBars();
         UIHelpers.showSnackBar(
           context,
-          'شجرة عائلتي من صلني 🌳',
+          'شجرة عائلتي من صِلْني 🌳',
           backgroundColor: AppColors.islamicGreenDark,
           duration: const Duration(seconds: 3),
         );
@@ -399,7 +399,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
 
       await Share.shareXFiles(
         [XFile(tempFile.path)],
-        text: 'شجرة عائلتي من صِلني 🌳',
+        text: 'شجرة عائلتي من صِلْني 🌳',
         sharePositionOrigin: sharePositionOrigin,
       );
 

@@ -189,7 +189,7 @@ class InviteLinkCard extends ConsumerWidget {
   }
 
   Future<void> _shareViaWhatsApp(BuildContext context, String link) async {
-    final message = Uri.encodeComponent('انضم لعائلتنا في صِلني 🌳 $link');
+    final message = Uri.encodeComponent('انضم لعائلتنا في صِلْني 🌳 $link');
     final whatsappUrl = Uri.parse('https://wa.me/?text=$message');
 
     if (await canLaunchUrl(whatsappUrl)) {
@@ -205,7 +205,7 @@ class InviteLinkCard extends ConsumerWidget {
   Future<void> _shareGeneric(BuildContext context, String link) async {
     final box = context.findRenderObject() as RenderBox?;
     final origin = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
-    await Share.share('انضم لعائلتنا في صِلني 🌳 $link', sharePositionOrigin: origin);
+    await Share.share('انضم لعائلتنا في صِلْني 🌳 $link', sharePositionOrigin: origin);
   }
 }
 

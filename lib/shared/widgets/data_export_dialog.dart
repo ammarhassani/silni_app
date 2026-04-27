@@ -52,7 +52,7 @@ class _DataExportDialogState extends ConsumerState<DataExportDialog> {
       await Share.shareXFiles(
         [XFile(filePath)],
         subject: 'Silni - تصدير البيانات',
-        text: 'ملف تصدير بيانات تطبيق صلني',
+        text: 'ملف تصدير بيانات تطبيق صِلْني',
         sharePositionOrigin: sharePositionOrigin,
       );
     } catch (e) {

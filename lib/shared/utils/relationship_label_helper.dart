@@ -59,7 +59,7 @@ String getRelationshipLabel({
 
 /// Convert first-person possessive label (عمي) to second-person (عمك).
 ///
-/// Used when واصل (the AI) speaks TO the user about their relative.
+/// Used when أنيس (the AI) speaks TO the user about their relative.
 String toSecondPerson(String label) {
   if (label == 'أبي') return 'والدك';
   if (label == 'أخوي') return 'أخوك';

@@ -25,7 +25,7 @@ enum CounselingMode {
 /// Message role in chat
 enum MessageRole {
   user('user', 'المستخدم'),
-  assistant('assistant', 'واصل'),
+  assistant('assistant', 'أنيس'),
   system('system', 'النظام');
 
   final String value;

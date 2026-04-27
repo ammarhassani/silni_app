@@ -351,7 +351,7 @@ class AIConfigService {
   // ============ Hardcoded Fallback ============
 
   static const String _hardcodedPersonality = '''
-أنت "واصل"، مساعد ذكي متخصص في صلة الرحم والعلاقات الأسرية.
+أنت "أنيس"، مساعد ذكي متخصص في صلة الرحم والعلاقات الأسرية.
 
 ## شخصيتك الأساسية:
 - تتحدث بالعامية السعودية البيضاء بأسلوب دافئ ومحب وطبيعي
@@ -399,7 +399,7 @@ class AIIdentityConfig {
 
   factory AIIdentityConfig.fromJson(Map<String, dynamic> json) {
     return AIIdentityConfig(
-      aiName: json['ai_name'] as String? ?? 'واصل',
+      aiName: json['ai_name'] as String? ?? 'أنيس',
       aiNameEn: json['ai_name_en'] as String?,
       aiRoleAr: json['ai_role_ar'] as String? ?? 'مساعد ذكي متخصص في صلة الرحم',
       aiRoleEn: json['ai_role_en'] as String?,
@@ -412,11 +412,11 @@ class AIIdentityConfig {
 
   factory AIIdentityConfig.fallback() {
     return AIIdentityConfig(
-      aiName: 'واصل',
+      aiName: 'أنيس',
       aiNameEn: 'Wasel',
       aiRoleAr: 'مساعد ذكي متخصص في صلة الرحم والعلاقات الأسرية',
       aiRoleEn: 'Smart assistant for family connections',
-      greetingMessageAr: 'السلام عليكم! أنا واصل، مساعدك الشخصي لصلة الرحم. كيف يمكنني مساعدتك اليوم؟',
+      greetingMessageAr: 'السلام عليكم! أنا أنيس، مساعدك الشخصي لصلة الرحم. كيف يمكنني مساعدتك اليوم؟',
       dialect: 'saudi_arabic',
     );
   }
@@ -452,7 +452,7 @@ class AIPersonalitySection {
       AIPersonalitySection(
         sectionKey: 'base',
         sectionNameAr: 'الهوية الأساسية',
-        contentAr: 'أنت واصل، مساعد ذكي متخصص في تعزيز صلة الرحم والعلاقات الأسرية. تتحدث بالعامية السعودية البيضاء وتهتم بالقيم الإسلامية.',
+        contentAr: 'أنت أنيس، مساعد ذكي متخصص في تعزيز صلة الرحم والعلاقات الأسرية. تتحدث بالعامية السعودية البيضاء وتهتم بالقيم الإسلامية.',
         priority: 1,
       ),
       AIPersonalitySection(

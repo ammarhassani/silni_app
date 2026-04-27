@@ -331,7 +331,7 @@ class _OccasionMessageCard extends StatelessWidget {
                         greetingText: message.message,
                         copyText: aiCopy,
                       ),
-                      shareText: '${message.message} #صِلني',
+                      shareText: '${message.message} #صِلْني',
                     );
                   },
                   icon: Icon(

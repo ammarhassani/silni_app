@@ -242,7 +242,7 @@ class _LeaderboardEntryCard extends ConsumerWidget {
       subtitle:
           '\u0643\u0644\u0645 $arabicCount \u0623\u0642\u0627\u0631\u0628 \u0647\u0627\u0644\u0623\u0633\u0628\u0648\u0639!', // كلم X أقارب هالأسبوع!
       shareText:
-          '$displayName \u0643\u0644\u0645 $arabicCount \u0623\u0642\u0627\u0631\u0628 \u0647\u0627\u0644\u0623\u0633\u0628\u0648\u0639 \u{1F947} #\u0635\u0650\u0644\u0646\u064A', // name كلم X أقارب هالأسبوع 🥇 #صِلني
+          '$displayName \u0643\u0644\u0645 $arabicCount \u0623\u0642\u0627\u0631\u0628 \u0647\u0627\u0644\u0623\u0633\u0628\u0648\u0639 \u{1F947} #\u0635\u0650\u0644\u0646\u064A', // name كلم X أقارب هالأسبوع 🥇 #صِلْني
     );
 
     ShareCardWidget.captureAndShare(context, cardData);

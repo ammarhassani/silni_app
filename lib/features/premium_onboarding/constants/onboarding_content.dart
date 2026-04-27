@@ -33,7 +33,7 @@ class OnboardingContent {
 
   /// Completion subtitle
   static const String completionSubtitle =
-      'استكشفت جميع ميزات صلني MAX\nابدأ رحلتك في تقوية صلة الرحم';
+      'استكشفت جميع ميزات صِلْني MAX\nابدأ رحلتك في تقوية صلة الرحم';
 
   /// Completion CTA
   static const String completionCta = 'ابدأ الآن';

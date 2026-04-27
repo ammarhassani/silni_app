@@ -7,7 +7,7 @@ import '../services/ai_config_service.dart';
 ///
 /// Example usage:
 /// ```dart
-/// Text(AIIdentity.name) // Displays "واصل" or configured name
+/// Text(AIIdentity.name) // Displays "أنيس" or configured name
 /// ```
 class AIIdentity {
   AIIdentity._();
@@ -15,7 +15,7 @@ class AIIdentity {
   // ============ Hardcoded Defaults ============
 
   /// Default AI name (used when config not loaded)
-  static const String defaultName = 'واصل';
+  static const String defaultName = 'أنيس';
 
   /// Default AI name in English
   static const String defaultNameEn = 'Wasel';
@@ -30,14 +30,14 @@ class AIIdentity {
 
   /// Default greeting message
   static const String defaultGreetingAr =
-      'السلام عليكم! أنا واصل، مساعدك الشخصي لصلة الرحم. كيف يمكنني مساعدتك اليوم؟';
+      'السلام عليكم! أنا أنيس، مساعدك الشخصي لصلة الرحم. كيف يمكنني مساعدتك اليوم؟';
 
   // ============ Dynamic Accessors ============
 
   /// The AI assistant's display name (Arabic)
   ///
   /// Returns the configured name from admin panel if loaded,
-  /// otherwise returns the default name "واصل"
+  /// otherwise returns the default name "أنيس"
   static String get name {
     final config = AIConfigService.instance;
     return config.isLoaded ? config.identity.aiName : defaultName;
@@ -95,7 +95,7 @@ class AIIdentity {
 
   /// Fallback personality prompt when config not loaded
   static const String _fallbackPersonality = '''
-أنت "واصل"، مساعد ذكي متخصص في صلة الرحم والعلاقات الأسرية.
+أنت "أنيس"، مساعد ذكي متخصص في صلة الرحم والعلاقات الأسرية.
 
 ## شخصيتك الأساسية:
 - تتحدث بالعامية السعودية البيضاء بأسلوب دافئ ومحب وطبيعي

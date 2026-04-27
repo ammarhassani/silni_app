@@ -7,7 +7,7 @@ import '../models/monthly_wrapped_model.dart';
 /// A branded card widget that previews the monthly wrapped summary.
 ///
 /// Shows the personality emoji, label, month name, key stat, and a
-/// "صِلني" watermark. Intended for use both as an in-screen preview
+/// "صِلْني" watermark. Intended for use both as an in-screen preview
 /// and as the capture target for sharing.
 class WrappedCardWidget extends StatelessWidget {
   final MonthlyWrapped wrapped;
@@ -87,7 +87,7 @@ class WrappedCardWidget extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 20),
             child: Text(
-              '\u0635\u0650\u0644\u0646\u064A', // صِلني
+              '\u0635\u0650\u0644\u0646\u064A', // صِلْني
               style: GoogleFonts.cairo(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,

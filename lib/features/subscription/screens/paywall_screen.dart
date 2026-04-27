@@ -203,7 +203,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'لقد جربت واصل — مساعدك الذكي للعائلة',
+                    'لقد جربت أنيس — مساعدك الذكي للعائلة',
                     style: AppTypography.titleMedium.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -527,7 +527,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
               ],
             ),
             child: Text(
-              'صلني MAX',
+              'صِلْني MAX',
               style: AppTypography.titleMedium.copyWith(
                 color: Colors.black,
                 fontWeight: FontWeight.bold,
@@ -664,7 +664,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     if (isTrialEligible) {
       buttonText = 'ابدأ التجربة المجانية';
     } else if (isPostTrial) {
-      buttonText = 'استمر مع صلني MAX';
+      buttonText = 'استمر مع صِلْني MAX';
     } else {
       buttonText = _buildSubscribeText(offerings);
     }

@@ -118,7 +118,7 @@ class _SubscriptionCongratsDialogState
 
                     // Subtitle
                     Text(
-                      'أنت الآن من أعضاء صلني المميزين',
+                      'أنت الآن من أعضاء صِلْني المميزين',
                       style: AppTypography.bodyLarge.copyWith(
                         color: colors.textSecondary,
                       ),

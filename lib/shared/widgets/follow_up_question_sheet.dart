@@ -97,7 +97,7 @@ class _FollowUpQuestionSheetState
                 ),
                 const SizedBox(width: AppSpacing.xs),
                 Text(
-                  'واصل يسألك:',
+                  'أنيس يسألك:',
                   style: AppTypography.labelMedium.copyWith(
                     color: themeColors.textPrimary,
                     fontWeight: FontWeight.w600,

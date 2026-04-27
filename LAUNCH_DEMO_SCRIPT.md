@@ -39,7 +39,7 @@ A 60-second screen recording for the App Store preview video. Arabic narration, 
 ## 0:28 → 0:34 — Streak milestone moment
 
 **Action:** Pre-record the device with state where the next interaction triggers a 7-day milestone. Re-do the call action. The fancier toast fires: `✨ +15 نقطة · 🔥 وصلت لـ7 يوم متواصل مع خالتي فاطمة`.
-**Narration:** ولما توصل لمحطة، صِلني يحتفل معاك.
+**Narration:** ولما توصل لمحطة، صِلْني يحتفل معاك.
 **Cue:** sparkle in the toast. Hold 2 seconds.
 
 ## 0:34 → 0:42 — Open Wrapped (monthly)

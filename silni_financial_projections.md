@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Silni (صلني) is an Islamic family connection tracking app targeting the Saudi Arabian and GCC markets. This financial projection analysis provides a conservative, evidence-based assessment of the app's potential financial performance over 12 months, assuming a bootstrap approach with minimal external investment.
+Silni (صِلْني) is an Islamic family connection tracking app targeting the Saudi Arabian and GCC markets. This financial projection analysis provides a conservative, evidence-based assessment of the app's potential financial performance over 12 months, assuming a bootstrap approach with minimal external investment.
 
 **Key Findings:**
 - **Break-even Timeline**: Month 8-9 (base case scenario)

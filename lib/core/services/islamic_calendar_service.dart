@@ -42,7 +42,7 @@ class IslamicCalendarService {
 
     // Eid al-Fitr (~Mar 20-22)
     if (month == 3 && day >= 20 && day <= 22) {
-      return 'كل عام وأنت بخير! عيد سعيد — واصل يقدر يكتب لك رسائل عيد 🎉';
+      return 'كل عام وأنت بخير! عيد سعيد — أنيس يقدر يكتب لك رسائل عيد 🎉';
     }
 
     // Pre-Eid al-Adha (~May 20-26)

@@ -94,8 +94,8 @@ class ShareableCardData {
         ? '$occasionName مبارك يا $target!'
         : '$occasionName مبارك!';
     final shareText = target != null
-        ? '$occasionName مبارك! كل عام و$target بخير 🤍 #صِلني'
-        : '$occasionName مبارك! كل عام وأنتم بخير 🤍 #صِلني';
+        ? '$occasionName مبارك! كل عام و$target بخير 🤍 #صِلْني'
+        : '$occasionName مبارك! كل عام وأنتم بخير 🤍 #صِلْني';
 
     return ShareableCardData(
       emoji: occasionEmoji,
@@ -125,7 +125,7 @@ class ShareableCardData {
       subtitle: 'ملخص $periodName: $totalInteractions تواصل مع $uniqueRelatives شخص',
       shareText: 'ملخص $periodName: تواصلت $totalInteractions مرة مع '
           '$uniqueRelatives شخص! شخصيتي: $personalityLabel $personalityEmoji '
-          '#صِلني',
+          '#صِلْني',
     );
   }
 }

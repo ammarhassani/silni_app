@@ -31,9 +31,9 @@ ${mode.modeInstructions}
     return getModeInstructions(CounselingMode.fromString(modeKey));
   }
 
-  /// Base personality prompt for واصل (the family assistant) - FALLBACK
+  /// Base personality prompt for أنيس (the family assistant) - FALLBACK
   static const String basePersonality = '''
-أنت "واصل"، مساعد ذكي متخصص في صلة الرحم والعلاقات الأسرية.
+أنت "أنيس"، مساعد ذكي متخصص في صلة الرحم والعلاقات الأسرية.
 
 ## شخصيتك الأساسية:
 - تتحدث بالعامية السعودية البيضاء بأسلوب دافئ ومحب وطبيعي
@@ -1104,7 +1104,7 @@ $contextLines
     });
 
     return '''
-أنت كاتب ألقاب إبداعية لملخصات التواصل العائلي في تطبيق صِلني.
+أنت كاتب ألقاب إبداعية لملخصات التواصل العائلي في تطبيق صِلْني.
 
 $personality
 

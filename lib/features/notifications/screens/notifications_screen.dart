@@ -85,7 +85,7 @@ class NotificationsScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: AppSpacing.md),
                             Text(
-                              'إدارة إشعارات صلني من إعدادات النظام',
+                              'إدارة إشعارات صِلْني من إعدادات النظام',
                               style: AppTypography.titleMedium.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -95,7 +95,7 @@ class NotificationsScreen extends ConsumerWidget {
                             const SizedBox(height: AppSpacing.sm),
                             Text(
                               'لتشغيل أو إيقاف التذكيرات والإشعارات، '
-                              'افتح إعدادات الإشعارات الخاصة بصلني '
+                              'افتح إعدادات الإشعارات الخاصة بصِلْني '
                               'من خلال إعدادات النظام.',
                               style: AppTypography.bodyMedium.copyWith(
                                 color: Colors.white.withValues(alpha: 0.8),
@@ -143,7 +143,7 @@ class NotificationsScreen extends ConsumerWidget {
       if (context.mounted) {
         UIHelpers.showSnackBar(
           context,
-          'تعذّر فتح الإعدادات. افتح إعدادات الجهاز > صلني > الإشعارات.',
+          'تعذّر فتح الإعدادات. افتح إعدادات الجهاز > صِلْني > الإشعارات.',
           isError: true,
         );
       }
@@ -153,7 +153,7 @@ class NotificationsScreen extends ConsumerWidget {
     if (context.mounted) {
       UIHelpers.showSnackBar(
         context,
-        'افتح إعدادات الجهاز > التطبيقات > صلني > الإشعارات.',
+        'افتح إعدادات الجهاز > التطبيقات > صِلْني > الإشعارات.',
       );
     }
   }

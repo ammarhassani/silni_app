@@ -130,7 +130,7 @@ class OnboardingConfigService {
     OnboardingScreenConfig(
       id: 'fallback-1',
       screenOrder: 1,
-      titleAr: 'مرحباً بك في صِلني',
+      titleAr: 'مرحباً بك في صِلْني',
       titleEn: 'Welcome to Silni',
       subtitleAr: 'تطبيق يساعدك على التواصل مع أقاربك والحفاظ على صلة الرحم',
       subtitleEn: 'An app that helps you stay connected with your relatives',
