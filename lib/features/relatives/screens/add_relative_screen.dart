@@ -406,7 +406,11 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
     final relativesAsync = (_addToSharedTree && groupInfo != null)
         ? ref.watch(groupRelativesStreamProvider(groupInfo.groupId))
         : (user != null ? ref.watch(relativesStreamProvider(user.id)) : null);
-    final existingRelatives = relativesAsync?.valueOrNull ?? <Relative>[];
+    // Phase 9.X.D.A.fix Bug 1: exclude self-node from duplicate-detection.
+    // The user shouldn't trigger a "duplicate name" warning against themselves.
+    final existingRelatives = (relativesAsync?.valueOrNull ?? <Relative>[])
+        .where((r) => !r.isSelf)
+        .toList();
 
     final showForm = _manualExpanded || _selectedContact != null;
 

@@ -77,7 +77,16 @@ final viewerFilteredRelativesProvider =
     if (rahimScope != null) {
       visible = visible.where((r) => rahimScope.contains(r.id)).toList();
     }
-    // Exclude viewer's own self-node
+    // Always exclude the viewer's self-node — it's an internal anchor for the
+    // family tree, not a "relative" the user wants to see in carousels, lists,
+    // or AI counts. Phase 9.X.D.A4 began inserting self-nodes for solo users
+    // (previously only group-joiners had one), which surfaced this leak.
+    //
+    // is_self is the canonical marker. The legacy viewerNodeId check remains
+    // as defense-in-depth for stale data where is_self might be unset on a
+    // claimed group node (handled by 20260206110000_fix_claimed_nodes_is_self
+    // but worth keeping the belt + suspenders).
+    visible = visible.where((r) => !r.isSelf).toList();
     if (viewerNodeId != null) {
       visible = visible.where((r) => r.id != viewerNodeId).toList();
     }

@@ -121,11 +121,17 @@ class AIContextEngine {
 
   Future<void> _fetchRelatives(String userId) async {
     try {
+      // Phase 9.X.D.A.fix Bug 1: exclude the user's self-node. The AI should
+      // not count or reference the user as one of their own relatives. The
+      // user's name lives in `_userFullNameCache` (added by Phase 9.X.D.A5);
+      // anything user-personal that the AI needs is on that field, not in
+      // `_relativesCache`.
       final response = await _supabase
           .from('relatives')
           .select()
           .eq('user_id', userId)
           .eq('is_archived', false)
+          .eq('is_self', false)
           .order('priority');
       _relativesCache = (response as List)
           .map((json) => Relative.fromJson(json))

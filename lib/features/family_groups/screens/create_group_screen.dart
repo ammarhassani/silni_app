@@ -324,7 +324,11 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
   Widget _buildReviewStep(ThemeColors themeColors) {
     final user = ref.watch(currentUserProvider);
     final relativesAsync = user != null
-        ? ref.watch(relativesStreamProvider(user.id))
+        ? ref.watch(relativesStreamProvider(user.id)).whenData(
+            // Phase 9.X.D.A.fix Bug 1: exclude self-node from the group-creation
+            // member picker. The creator IS the group; they don't pick themselves.
+            (list) => list.where((r) => !r.isSelf).toList(),
+          )
         : null;
 
     return Padding(

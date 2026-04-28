@@ -103,10 +103,14 @@ final detailedStatsProvider =
         sortedRelatives.take(5).map((e) => e.key).toList();
 
     if (topRelativeIds.isNotEmpty) {
+      // Phase 9.X.D.A.fix Bug 1: exclude self-node from top-relatives weekly
+      // report. Self-node has 0 interactions today so unlikely to surface,
+      // but defense-in-depth in case future code logs interactions to self.
       final relativesResponse = await SupabaseConfig.client
           .from('relatives')
           .select('id, full_name')
           .eq('user_id', user.id)
+          .eq('is_self', false)
           .filter('id', 'in', topRelativeIds);
 
       for (final relative in (relativesResponse as List)) {
