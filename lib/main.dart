@@ -660,6 +660,11 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
         // without ever signing up will see the carousel again on next
         // cold-start.
         unawaited(_markOnboardingCompleted());
+        // Phase 9.X.D Track A7: legacy one-shot notification permission
+        // ask for existing users. New users get the prompt from the Track B
+        // wizard step. The flag is server-side (users.onboarding_metadata->>
+        // 'permissionAsked') so we never ask twice across reinstalls.
+        unawaited(_legacyOneShotPermissionAsk(session.user.id, logger));
       }
 
       // Phone-invite subsystem cut from v1 (CTO 2026-04-26). The
@@ -713,6 +718,66 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
     } catch (_) {
       // Disk failure here just means the user might see the carousel
       // again next cold-start. Not user-visible enough to surface.
+    }
+  }
+
+  /// Phase 9.X.D Track A7: legacy one-shot notification-permission ask.
+  ///
+  /// Existing users (those with `onboarding_metadata->>'setupComplete'='true'`
+  /// from the Phase 9.X.D.A6 backfill) bypass the wizard. They still need to
+  /// see the OS notification prompt at least once. This method:
+  ///   • Checks `users.onboarding_metadata->>'permissionAsked'`. If `'true'`,
+  ///     no-op.
+  ///   • Otherwise calls FCMNotificationService.requestPermission() to fire
+  ///     the OS prompt, then marks `permissionAsked='true'` server-side.
+  ///   • For users without `setupComplete=true` (new accounts), this method
+  ///     returns early and the wizard owns the ask.
+  ///   • Fires-and-forgets — never blocks signin.
+  Future<void> _legacyOneShotPermissionAsk(
+    String userId,
+    AppLoggerService logger,
+  ) async {
+    try {
+      final supabase = SupabaseConfig.client;
+      final row = await supabase
+          .from('users')
+          .select('onboarding_metadata')
+          .eq('id', userId)
+          .maybeSingle();
+      final meta =
+          (row?['onboarding_metadata'] as Map<String, dynamic>?) ?? const {};
+      // New users (wizard not done) → wizard owns the ask. Skip.
+      if (meta['setupComplete'] != true && meta['setupComplete'] != 'true') {
+        return;
+      }
+      // Already asked once → don't re-ask.
+      if (meta['permissionAsked'] == true ||
+          meta['permissionAsked'] == 'true') {
+        return;
+      }
+      // Fire the OS prompt via the deferred ask path.
+      final granted = await FCMNotificationService().requestPermission();
+      // Mark asked regardless of outcome — we don't re-prompt denied users.
+      final updatedMeta = Map<String, dynamic>.from(meta)
+        ..['permissionAsked'] = true
+        ..['permissionGranted'] = granted;
+      await supabase
+          .from('users')
+          .update({'onboarding_metadata': updatedMeta})
+          .eq('id', userId);
+      logger.info(
+        'Legacy one-shot permission ask completed',
+        category: LogCategory.auth,
+        tag: 'main',
+        metadata: {'granted': granted},
+      );
+    } catch (e) {
+      logger.warning(
+        'Legacy one-shot permission ask failed (non-critical)',
+        category: LogCategory.auth,
+        tag: 'main',
+        metadata: {'userId': userId, 'error': e.toString()},
+      );
     }
   }
 

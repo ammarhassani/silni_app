@@ -91,7 +91,22 @@ class FCMNotificationService {
 
   Stream<RemoteMessage> get onMessageReceived => _messageStreamController.stream;
 
-  /// Initialize FCM notification service
+  /// Initialize FCM notification service.
+  ///
+  /// Phase 9.X.D Track A7: this method does NOT request permission.
+  /// The OS permission prompt is deferred until [requestPermission] is
+  /// called by the wizard step (or by the legacy one-shot ask path for
+  /// existing users — see App boot flow in main.dart).
+  ///
+  /// What this method does:
+  ///   • Sets up local notifications + Android channel
+  ///   • Sets up FCM message handlers (foreground/background routing)
+  ///
+  /// What this method does NOT do:
+  ///   • Request OS notification permission (prompts the user)
+  ///   • Fetch the FCM token (requires permission first; deferred to
+  ///     `requestPermission` which calls `_initializeFCMToken` after
+  ///     a successful permission grant)
   Future<void> initialize() async {
     try {
       if (_isInitialized) {
@@ -104,7 +119,7 @@ class FCMNotificationService {
       }
 
       _logger.info(
-        'Starting FCM notification service...',
+        'Starting FCM notification service (no-permission init)...',
         category: LogCategory.service,
         tag: 'FCM',
       );
@@ -112,22 +127,16 @@ class FCMNotificationService {
       // Initialize local notifications for foreground display
       await _initializeLocalNotifications();
 
-      // Request notification permissions
-      await _requestPermissions();
-
-      // Get and store FCM token
-      await _initializeFCMToken();
-
-      // Set up message handlers
+      // Set up message handlers (no permission needed for handlers — they
+      // only fire if permission has been granted, which is OS-enforced)
       _setupMessageHandlers();
 
       _isInitialized = true;
 
       _logger.info(
-        'FCM notification service initialized successfully',
+        'FCM notification service init complete (permission deferred)',
         category: LogCategory.service,
         tag: 'FCM',
-        metadata: {'fcmToken': _fcmToken},
       );
     } catch (e, stackTrace) {
       _logger.error(
@@ -137,6 +146,53 @@ class FCMNotificationService {
         stackTrace: stackTrace,
       );
       rethrow;
+    }
+  }
+
+  /// Request OS notification permission and finalize token retrieval.
+  ///
+  /// Phase 9.X.D Track A7. Called from:
+  ///   • The Track B onboarding wizard's notification-permission step
+  ///   • The legacy one-shot ask path in main.dart for existing users
+  ///     (gated by users.onboarding_metadata->>'permissionAsked' flag
+  ///      so we never ask twice)
+  ///
+  /// Returns true if the user granted (or provisionally granted)
+  /// permission, false if denied. Idempotent — safe to call repeatedly;
+  /// the OS will only show the prompt once per install.
+  Future<bool> requestPermission() async {
+    try {
+      _logger.info(
+        'Requesting notification permission (deferred ask)',
+        category: LogCategory.service,
+        tag: 'FCM',
+      );
+      await _requestPermissions();
+      // Token can only be fetched after a permission decision (granted or
+      // provisional). Skip on flat denial — `_initializeFCMToken` would
+      // succeed but no notification could be delivered anyway.
+      final settings = await _firebaseMessaging.getNotificationSettings();
+      final granted = settings.authorizationStatus ==
+              AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
+      if (granted) {
+        await _initializeFCMToken();
+      }
+      _logger.info(
+        'Permission decision: ${settings.authorizationStatus}',
+        category: LogCategory.service,
+        tag: 'FCM',
+        metadata: {'granted': granted},
+      );
+      return granted;
+    } catch (e, stackTrace) {
+      _logger.error(
+        'Error requesting permission',
+        category: LogCategory.service,
+        tag: 'FCM',
+        stackTrace: stackTrace,
+      );
+      return false;
     }
   }
 

@@ -152,10 +152,11 @@ serve(async (req) => {
 
       console.log(`   👥 Found ${relativeIds.length} relative(s) to notify about`);
 
-      // Fetch relatives info
+      // Fetch relatives info — also pull last_contact_date for the
+      // recent-contact suppression check (Phase 9.X.D Track A3).
       const { data: relatives, error: relativesError } = await supabase
         .from("relatives")
-        .select("id, full_name, user_id")
+        .select("id, full_name, user_id, last_contact_date, relative_category")
         .in("id", relativeIds);
 
       if (relativesError) {
@@ -170,9 +171,66 @@ serve(async (req) => {
         continue;
       }
 
-      // Build consolidated notification for all relatives in this schedule
-      const relativeNames = relatives.map((r: any) => r.full_name);
-      const allIds = relatives.map((r: any) => r.id).join(',');
+      // Phase 9.X.D Track A3: Recent-contact suppression.
+      //
+      // The "remind me to call dad after lunch" production bug — if the user
+      // already contacted a relative recently, don't fire a reminder for that
+      // relative. Default-on behavior, gated by users.suppress_reminders_after_recent_contact.
+      //
+      // v1 uses a single 24h threshold for all relative_categories. The CTO
+      // spec mentioned a 6h household threshold but said to simplify if it
+      // adds complexity; revisit in v1.1 if households need tighter cadence.
+      let workingRelatives: any[] = relatives;
+      const SUPPRESSION_HOURS = 24;
+      try {
+        const { data: userRow, error: userErr } = await supabase
+          .from("users")
+          .select("suppress_reminders_after_recent_contact")
+          .eq("id", schedule.user_id)
+          .single();
+
+        const suppressionEnabled =
+          userErr ? true : (userRow?.suppress_reminders_after_recent_contact ?? true);
+
+        if (suppressionEnabled) {
+          const cutoffMs = riyadhTime.getTime() - SUPPRESSION_HOURS * 60 * 60 * 1000;
+          const filtered: any[] = [];
+          for (const r of relatives) {
+            if (r.last_contact_date) {
+              const lastMs = new Date(r.last_contact_date).getTime();
+              const hoursAgo = ((riyadhTime.getTime() - lastMs) / (1000 * 60 * 60)).toFixed(1);
+              if (lastMs >= cutoffMs) {
+                console.log(
+                  `   ⏸️ Suppressing reminder for relative ${r.id} (${r.full_name}) — last contact ${hoursAgo}h ago, threshold ${SUPPRESSION_HOURS}h`
+                );
+                continue;
+              }
+            }
+            filtered.push(r);
+          }
+          workingRelatives = filtered;
+        }
+      } catch (e) {
+        console.warn(`   ⚠️ Suppression check failed (proceeding without filter):`, e);
+        workingRelatives = relatives;
+      }
+
+      if (workingRelatives.length === 0) {
+        // All relatives in this schedule were recently contacted. Skip the
+        // notification entirely AND skip last_sent update so tomorrow's tick
+        // re-evaluates fresh.
+        console.log(
+          `   ⏭️ All ${relatives.length} relative(s) in schedule were recently contacted within ${SUPPRESSION_HOURS}h — skipping send`
+        );
+        skipped++;
+        continue;
+      }
+
+      // Build consolidated notification for the (possibly suppression-filtered)
+      // relative list. relativeNames + allIds reflect post-filter set so the
+      // user only sees a notification about people they haven't contacted recently.
+      const relativeNames = workingRelatives.map((r: any) => r.full_name);
+      const allIds = workingRelatives.map((r: any) => r.id).join(',');
 
       // Format names: show first 3, then "وX آخرون" for remaining
       let namesText: string;

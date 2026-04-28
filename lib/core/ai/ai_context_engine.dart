@@ -31,6 +31,7 @@ class AIContextEngine {
   Map<String, RelativeStreak>? _streaksCache;
   List<AIMemory>? _memoriesCache;
   int? _totalInteractionsCache;
+  String? _userFullNameCache;
   DateTime? _lastFetchTime;
 
   // Cache duration (5 minutes)
@@ -48,6 +49,7 @@ class AIContextEngine {
     _streaksCache = null;
     _memoriesCache = null;
     _totalInteractionsCache = null;
+    _userFullNameCache = null;
     _lastFetchTime = null;
   }
 
@@ -74,6 +76,7 @@ class AIContextEngine {
     // Build context based on feature needs
     return AIContext(
       userId: userId,
+      userFullName: _userFullNameCache,
       focusRelative: focusRelative,
       relatives: _relativesCache ?? [],
       recentInteractions: _getRecentInteractions(focusRelative?.id),
@@ -95,10 +98,24 @@ class AIContextEngine {
         _fetchStreaks(userId),
         _fetchMemories(userId),
         _fetchTotalInteractions(userId),
+        _fetchUserFullName(userId),
       ]);
       _lastFetchTime = DateTime.now();
     } catch (_) {
       // Cache refresh failed silently
+    }
+  }
+
+  Future<void> _fetchUserFullName(String userId) async {
+    try {
+      final response = await _supabase
+          .from('users')
+          .select('full_name')
+          .eq('id', userId)
+          .maybeSingle();
+      _userFullNameCache = response?['full_name'] as String?;
+    } catch (_) {
+      _userFullNameCache = null;
     }
   }
 
@@ -335,6 +352,10 @@ class AIContextEngine {
 /// Complete AI context for a request
 class AIContext {
   final String userId;
+  /// User's full name from `users.full_name`. Null if not yet fetched or
+  /// the user row is missing. AI prompts reference this so the assistant
+  /// can address the user by name (Phase 9.X.D Track A5).
+  final String? userFullName;
   final Relative? focusRelative;
   final List<Relative> relatives;
   final List<Interaction> recentInteractions;
@@ -347,6 +368,7 @@ class AIContext {
 
   AIContext({
     required this.userId,
+    this.userFullName,
     this.focusRelative,
     required this.relatives,
     required this.recentInteractions,
@@ -361,6 +383,7 @@ class AIContext {
   factory AIContext.empty() {
     return AIContext(
       userId: '',
+      userFullName: null,
       relatives: [],
       recentInteractions: [],
       streaks: {},
@@ -390,6 +413,9 @@ class AIContext {
     final buffer = StringBuffer();
 
     buffer.writeln('## معلومات المستخدم');
+    if (userFullName != null && userFullName!.trim().isNotEmpty) {
+      buffer.writeln('- الاسم: $userFullName');
+    }
     buffer.writeln('- عدد الأقارب: ${relatives.length}');
 
     // Add category breakdown
