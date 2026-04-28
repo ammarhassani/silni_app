@@ -79,6 +79,7 @@ class FeatureConfigState {
       'ai_chat',
       'communication_scripts',
       'weekly_reports',
+      'monthly_wrapped',
       'advanced_analytics',
       'data_export',
       'unlimited_reminders',

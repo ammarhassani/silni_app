@@ -143,6 +143,7 @@ class FeatureIds {
   static const String communicationScripts = 'communication_scripts';
   static const String weeklyReports = 'weekly_reports';
   static const String occasionMessages = 'occasion_messages';
+  static const String monthlyWrapped = 'monthly_wrapped';
 
   // Other MAX Features
   static const String advancedAnalytics = 'advanced_analytics';
@@ -166,6 +167,7 @@ class FeatureIds {
       communicationScripts => SubscriptionTier.max,
       weeklyReports => SubscriptionTier.max,
       occasionMessages => SubscriptionTier.max,
+      monthlyWrapped => SubscriptionTier.max,
       advancedAnalytics => SubscriptionTier.max,
       dataExport => SubscriptionTier.max,
       unlimitedReminders => SubscriptionTier.max,
