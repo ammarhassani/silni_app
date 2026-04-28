@@ -388,7 +388,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                                   horizontal: AppSpacing.md,
                                 ),
                                 itemCount: relatives.length,
-                                separatorBuilder: (_, __) => Divider(
+                                separatorBuilder: (_, _) => Divider(
                                   color: themeColors.onSurface
                                       .withValues(alpha: 0.1),
                                   height: 1,
@@ -429,7 +429,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                         color: themeColors.onSurface,
                       ),
                     ),
-                    error: (_, __) => _buildNoRelativesMessage(themeColors),
+                    error: (_, _) => _buildNoRelativesMessage(themeColors),
                   ),
           ),
           const SizedBox(height: AppSpacing.md),

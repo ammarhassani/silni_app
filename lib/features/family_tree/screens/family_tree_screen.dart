@@ -8,7 +8,6 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show UserAttributes;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:screenshot_callback/screenshot_callback.dart';
@@ -32,7 +31,6 @@ import '../../../core/providers/subscription_provider.dart';
 import '../../relatives/services/relationship_inference_service.dart';
 import '../../../shared/widgets/flat_relationship_picker.dart';
 import '../../subscription/screens/paywall_screen.dart';
-import '../../family_groups/services/family_group_service.dart';
 import '../../family_groups/services/family_sharing_service.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../models/placeholder_node.dart';
@@ -321,31 +319,6 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     );
   }
 
-  Future<void> _saveFamilyName(String name) async {
-    final trimmed = name.trim();
-    if (trimmed.isEmpty) return;
-    setState(() {
-      _familyName = trimmed;
-    });
-    await SupabaseConfig.client.auth.updateUser(
-      UserAttributes(data: {'family_name': trimmed}),
-    );
-    if (!mounted) return;
-
-    // Also update the family group name if user has one
-    final userId = SupabaseConfig.client.auth.currentUser?.id;
-    if (userId != null) {
-      final group = await FamilySharingService.getUserGroup(userId);
-      if (!mounted) return;
-      if (group != null) {
-        await FamilyGroupService.updateGroupName(
-          groupId: group.id,
-          name: trimmed,
-        );
-      }
-    }
-  }
-
   Future<void> _shareTree() async {
     HapticFeedback.lightImpact();
 
@@ -463,7 +436,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                 children: [
                   groupInfoAsync.when(
                     loading: () => _buildHeader(context, themeColors, null),
-                    error: (_, __) => _buildHeader(context, themeColors, null),
+                    error: (_, _) => _buildHeader(context, themeColors, null),
                     data: (groupInfo) => _buildHeader(context, themeColors, groupInfo),
                   ),
                 Expanded(
@@ -473,7 +446,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                     loading: () => const Center(
                       child: CircularProgressIndicator(color: Colors.white),
                     ),
-                    error: (_, __) => _buildError(),
+                    error: (_, _) => _buildError(),
                     data: (groupInfo) {
                       final relativesAsync = groupInfo != null
                           ? ref.watch(groupRelativesStreamProvider(groupInfo.groupId))
@@ -509,7 +482,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                         loading: () => const Center(
                           child: CircularProgressIndicator(color: Colors.white),
                         ),
-                        error: (_, __) => _buildError(),
+                        error: (_, _) => _buildError(),
                       );
                     },
                   ),

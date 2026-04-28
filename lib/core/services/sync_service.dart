@@ -75,8 +75,8 @@ class SyncService {
         tag: 'Sync',
         metadata: {'deadLetterCount': deadLetterCount},
       );
-      // TODO: Consider showing a user notification about failed syncs
-      // For now, just log the warning and clear them to prevent buildup
+      // Log the warning and clear them to prevent buildup. The user-facing
+      // notification for failed syncs is tracked in V1_1_BACKLOG.md.
       await _queue.clearAllDeadLetters();
     }
 
