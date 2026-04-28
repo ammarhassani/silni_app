@@ -42,8 +42,32 @@ import '../../../shared/utils/ui_helpers.dart';
 import '../services/relationship_inference_service.dart';
 import '../../../shared/widgets/flat_relationship_picker.dart';
 
+/// Mode flag for AddRelativeScreen.
+///
+/// When `null`, the screen is in normal mode (category picker interactive,
+/// family-group toggle visible).
+///
+/// When set, the screen is launched from the onboarding wizard and:
+///   • The relative_category is locked to the wizard step's value
+///   • The "add to shared tree" toggle is hidden (wizard is solo-user setup)
+///   • On save, `context.pop(createdRelativeId)` returns the new id so the
+///     wizard can increment its count
+enum WizardMode {
+  householdOnly,
+  extendedOnly;
+
+  RelativeCategory get category => switch (this) {
+        WizardMode.householdOnly => RelativeCategory.household,
+        WizardMode.extendedOnly => RelativeCategory.extended,
+      };
+}
+
 class AddRelativeScreen extends ConsumerStatefulWidget {
-  const AddRelativeScreen({super.key});
+  const AddRelativeScreen({super.key, this.wizardMode});
+
+  /// Phase 9.X.D.B Task B4 — locks the relative_category and pops with the
+  /// created relative's id when set.
+  final WizardMode? wizardMode;
 
   @override
   ConsumerState<AddRelativeScreen> createState() => _AddRelativeScreenState();
@@ -65,7 +89,10 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   bool _addToSharedTree = false; // Whether to add to a shared family tree
   FamilyGroup? _selectedGroup; // The selected family group (if shared)
   FamilySide? _selectedFamilySide; // Paternal or maternal side for extended family
-  RelativeCategory _selectedCategory = RelativeCategory.extended;
+  // In wizard mode, the category is locked to the wizard step's value at
+  // initState. In normal mode, defaults to extended and the picker is
+  // interactive.
+  late RelativeCategory _selectedCategory;
   // Tracks whether any user input has happened. PopScope below uses this
   // to decide whether to prompt before discarding a partially-filled form.
   bool _isFormDirty = false;
@@ -90,6 +117,8 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _nameController.addListener(_onNameChanged);
+    _selectedCategory =
+        widget.wizardMode?.category ?? RelativeCategory.extended;
   }
 
   /// When the name changes, try to infer gender from the Arabic name.
@@ -364,9 +393,14 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
 
       if (!mounted) return;
 
-      // Return to whichever screen pushed Add Relative (home, relatives
-      // list, family circles, etc.) instead of always landing on home.
-      context.pop();
+      // Return to whichever screen pushed Add Relative. In wizard mode,
+      // pop with the created relative's id so the wizard can count adds.
+      // Normal mode pops with no value (existing behavior preserved).
+      if (widget.wizardMode != null) {
+        context.pop(createdRelativeId);
+      } else {
+        context.pop();
+      }
     } catch (e, stackTrace) {
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -582,17 +616,22 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                                         // Shared tree toggle
                                         _buildSharedTreeToggle(),
 
-                                        // Category picker
-                                        RelativeCategoryPicker(
-                                          selected: _selectedCategory,
-                                          onChanged: (value) {
-                                            setState(() {
-                                              _selectedCategory = value;
-                                              _isFormDirty = true;
-                                            });
-                                          },
-                                        ),
-                                        const SizedBox(height: AppSpacing.md),
+                                        // Category picker — hidden in wizard
+                                        // mode (the wizard step pre-locks the
+                                        // category, the picker would just be
+                                        // a confusing read-only tile).
+                                        if (widget.wizardMode == null) ...[
+                                          RelativeCategoryPicker(
+                                            selected: _selectedCategory,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                _selectedCategory = value;
+                                                _isFormDirty = true;
+                                              });
+                                            },
+                                          ),
+                                          const SizedBox(height: AppSpacing.md),
+                                        ],
 
                                         // Phone
                                         IntlPhoneField(

@@ -19,6 +19,7 @@ import 'core/config/env/app_environment.dart';
 import 'core/config/env/env_validator.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
+import 'core/router/app_router.dart' as router;
 import 'core/router/app_router.dart';
 import 'core/router/navigation_service.dart';
 import 'core/services/sync_service.dart';
@@ -486,6 +487,11 @@ Future<void> _initDeferredServices(AppLoggerService logger) async {
     init(() => MessageService.instance.initialize(), 'Messages'),
     init(() => UIStringsService.instance.initialize(), 'UIStrings'),
     init(() => OnboardingConfigService.instance.initialize(), 'OnboardingConfig'),
+    // Phase 9.X.D.B Track B3: hydrate the setupComplete cache so the router's
+    // synchronous redirect knows whether to push the wizard. The auth listener
+    // re-hydrates from DB on signedIn; this just primes the cache from the
+    // last-known SharedPreferences value.
+    init(() => router.hydrateSetupCompleteCache(), 'SetupCompleteCache'),
   ]);
 
   logger.info(
@@ -665,6 +671,10 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
         // wizard step. The flag is server-side (users.onboarding_metadata->>
         // 'permissionAsked') so we never ask twice across reinstalls.
         unawaited(_legacyOneShotPermissionAsk(session.user.id, logger));
+        // Phase 9.X.D.B Track B3: hydrate the setupComplete cache from DB
+        // → SharedPreferences → in-memory router cache. Needed for the
+        // synchronous router redirect to know whether to push the wizard.
+        unawaited(_hydrateSetupCompleteFromDb(session.user.id, logger));
       }
 
       // Phone-invite subsystem cut from v1 (CTO 2026-04-26). The
@@ -718,6 +728,43 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
     } catch (_) {
       // Disk failure here just means the user might see the carousel
       // again next cold-start. Not user-visible enough to surface.
+    }
+  }
+
+  /// Phase 9.X.D.B Track B3 — hydrate the setupComplete cache.
+  ///
+  /// Reads `users.onboarding_metadata->>'setupComplete'` for the current user
+  /// and writes the boolean into SharedPreferences (`setup_complete`) AND the
+  /// router's in-memory cache. The router redirect reads the cache
+  /// synchronously to decide whether to push the wizard.
+  ///
+  /// Idempotent + fire-and-forget. A network error here means the next
+  /// router check sees a stale cache; the wizard route covers the case
+  /// when needed.
+  Future<void> _hydrateSetupCompleteFromDb(
+    String userId,
+    AppLoggerService logger,
+  ) async {
+    try {
+      final row = await SupabaseConfig.client
+          .from('users')
+          .select('onboarding_metadata')
+          .eq('id', userId)
+          .maybeSingle();
+      final meta =
+          (row?['onboarding_metadata'] as Map<String, dynamic>?) ?? const {};
+      final isComplete = meta['setupComplete'] == true ||
+          meta['setupComplete'] == 'true';
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('setup_complete', isComplete);
+      router.setCachedSetupComplete(isComplete);
+    } catch (e) {
+      logger.warning(
+        'setup_complete hydration failed (router will treat as unknown)',
+        category: LogCategory.auth,
+        tag: 'main',
+        metadata: {'userId': userId, 'error': e.toString()},
+      );
     }
   }
 

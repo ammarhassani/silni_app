@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/config/supabase_config.dart';
+import '../../../core/router/app_router.dart' as router;
 import '../../../shared/services/auth_service.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -88,6 +91,16 @@ class SettingsScreen extends ConsumerWidget {
                         context.go(AppRoutes.login);
                       }
                     },
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  // Phase 9.X.D.B Track B6 — re-run setup wizard. De-emphasized
+                  // escape hatch for power users / support cases. Confirms
+                  // before clearing setupComplete and pushing the wizard.
+                  _buildSettingsTile(
+                    icon: Icons.replay_rounded,
+                    title: 'إعادة الإعداد',
+                    themeColors: themeColors,
+                    onTap: () => _confirmRerunSetup(context, ref),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   // Mirror of the delete-account entry on Profile. The
@@ -563,5 +576,59 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
+  /// Phase 9.X.D.B Track B6 — confirm + re-run the onboarding wizard.
+  ///
+  /// Clears the local setupComplete cache + SharedPreferences mirror, sets
+  /// `users.onboarding_metadata->>'setupComplete'` to false on prod, then
+  /// navigates to /onboarding-wizard. The wizard's finish callback writes
+  /// setupComplete=true again on completion.
+  Future<void> _confirmRerunSetup(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('إعادة الإعداد'),
+        content: const Text(
+          'سيتم إعادة عرض دليل الإعداد. أي إعدادات حالية تبقى كما هي؛ هذا فقط يعيد عرض الخطوات. هل تريد المتابعة؟',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('إلغاء'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('إعادة البدء'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
 
+    final user = SupabaseConfig.client.auth.currentUser;
+    if (user == null) return;
+
+    try {
+      // Clear server-side flag
+      final row = await SupabaseConfig.client
+          .from('users')
+          .select('onboarding_metadata')
+          .eq('id', user.id)
+          .maybeSingle();
+      final meta =
+          (row?['onboarding_metadata'] as Map<String, dynamic>?) ?? const {};
+      final next = Map<String, dynamic>.from(meta)..['setupComplete'] = false;
+      await SupabaseConfig.client
+          .from('users')
+          .update({'onboarding_metadata': next})
+          .eq('id', user.id);
+
+      // Mirror locally
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('setup_complete', false);
+      router.setCachedSetupComplete(false);
+    } catch (_) {
+      // Even on partial failure, push the wizard — user expressed intent.
+    }
+    if (context.mounted) context.go(AppRoutes.onboardingWizard);
+  }
 }

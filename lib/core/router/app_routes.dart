@@ -8,6 +8,10 @@ class AppRoutes {
   static const String signup = '/signup';
   static const String emailVerification = '/email-verification';
 
+  // First-run setup wizard (Phase 9.X.D.B). Authenticated route — only shown
+  // to users whose users.onboarding_metadata->>'setupComplete' != 'true'.
+  static const String onboardingWizard = '/onboarding-wizard';
+
   /// Routes that don't require authentication
   static const Set<String> publicRoutes = {
     splash,

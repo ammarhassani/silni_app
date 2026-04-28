@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/router/app_router.dart' as router;
 import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
@@ -77,18 +79,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   /// Navigate after successful login, honoring ?redirect= query param.
-  void _navigateAfterLogin() {
+  ///
+  /// Phase 9.X.D.B Track B3: explicitly hydrates the setupComplete cache
+  /// BEFORE navigating, closing the race between the auth listener's
+  /// fire-and-forget DB roundtrip and the navigation. New users (no
+  /// setupComplete in metadata) land on the wizard; existing users (or
+  /// those with completed setup) land on home.
+  Future<void> _navigateAfterLogin() async {
+    // Honor explicit redirect query param FIRST (deep-link join flows
+    // bypass the wizard — joining a group implicitly completes setup).
     final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
     if (redirect != null && redirect.isNotEmpty) {
       final decodedPath = Uri.decodeComponent(redirect);
-      // Only allow redirects to known safe internal paths
       if (decodedPath.startsWith('/join') ||
           decodedPath.startsWith('/join-family-group')) {
+        if (!mounted) return;
         context.go(decodedPath);
         return;
       }
     }
-    context.go(AppRoutes.home);
+
+    // Inline hydrate setup_complete from DB → SharedPreferences → router cache.
+    // Mirrors main.dart#_hydrateSetupCompleteFromDb but is awaited here so the
+    // immediately-following navigation reads the freshly-written cache.
+    final user = SupabaseConfig.client.auth.currentUser;
+    bool isComplete = true; // default to "go home" if anything fails
+    if (user != null) {
+      try {
+        final row = await SupabaseConfig.client
+            .from('users')
+            .select('onboarding_metadata')
+            .eq('id', user.id)
+            .maybeSingle();
+        final meta =
+            (row?['onboarding_metadata'] as Map<String, dynamic>?) ?? const {};
+        isComplete = meta['setupComplete'] == true ||
+            meta['setupComplete'] == 'true';
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('setup_complete', isComplete);
+        router.setCachedSetupComplete(isComplete);
+      } catch (_) {
+        // Network failure → fall through to home, treat as complete.
+        // Worst case: user reaches home without seeing wizard. They can
+        // re-run via Settings → "إعادة الإعداد".
+      }
+    }
+    if (!mounted) return;
+    context.go(isComplete ? AppRoutes.home : AppRoutes.onboardingWizard);
   }
 
   Future<void> _checkBiometricAvailability() async {

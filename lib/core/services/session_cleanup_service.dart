@@ -37,6 +37,9 @@ import 'app_logger_service.dart';
 const _exactPerUserKeys = <String>[
   // Onboarding gates — survival = mis-routed fresh account
   'onboarding_completed', // marketing carousel cold-start gate
+  'setup_complete', // Phase 9.X.D.B wizard completion mirror (cleared on
+                    // logout/delete so the next account's router sees a
+                    // fresh state)
   'premium_onboarding_state', // premium tip walkthrough state
   'premium_onboarding_dismissed_tips', // premium tip dismissal list
   // Content-enhancer caches — generated per-user, stale at switch

@@ -25,6 +25,20 @@ class OnboardingScreenConfig {
   final List<String> showForTiers;
   final bool isActive;
 
+  /// Phase 9.X.D.B: per-step action discriminator. Drives the wizard
+  /// renderer's branching. Known values:
+  ///   'confirm_name', 'add_relative_household', 'add_relative_extended',
+  ///   'set_reminder_pref_and_permission', 'finish', 'next' (default).
+  final String actionType;
+
+  /// Optional route for steps that push another screen (currently unused —
+  /// the wizard handles routing via `actionType`, but kept for future
+  /// admin-driven pushes).
+  final String? route;
+
+  /// Per-step config (e.g. `{"min_count": 1, "category": "extended"}`).
+  final Map<String, dynamic> metadata;
+
   OnboardingScreenConfig({
     required this.id,
     required this.screenOrder,
@@ -46,6 +60,9 @@ class OnboardingScreenConfig {
     this.autoAdvanceSeconds,
     required this.showForTiers,
     required this.isActive,
+    this.actionType = 'next',
+    this.route,
+    this.metadata = const {},
   });
 
   factory OnboardingScreenConfig.fromJson(Map<String, dynamic> json) {
@@ -70,6 +87,9 @@ class OnboardingScreenConfig {
       autoAdvanceSeconds: json['auto_advance_seconds'] as int?,
       showForTiers: (json['show_for_tiers'] as List<dynamic>?)?.cast<String>() ?? ['free', 'max'],
       isActive: json['is_active'] as bool? ?? true,
+      actionType: json['action_type'] as String? ?? 'next',
+      route: json['route'] as String?,
+      metadata: (json['metadata'] as Map<String, dynamic>?) ?? const {},
     );
   }
 
@@ -125,52 +145,99 @@ class OnboardingConfigService {
   final CacheConfigService _cacheConfig = CacheConfigService();
   static const String _serviceKey = 'onboarding_config';
 
-  // Fallback screens when not loaded
+  // Fallback screens when not loaded — mirror the prod seed (Phase 9.X.D.B1)
+  // so the wizard works offline / pre-fetch. Update both this and the prod
+  // migration in lockstep when seed content changes.
   static List<OnboardingScreenConfig> get _fallbackScreens => [
     OnboardingScreenConfig(
       id: 'fallback-1',
       screenOrder: 1,
-      titleAr: 'مرحباً بك في صِلْني',
+      titleAr: 'أهلاً بك في صِلْني',
       titleEn: 'Welcome to Silni',
-      subtitleAr: 'تطبيق يساعدك على التواصل مع أقاربك والحفاظ على صلة الرحم',
-      subtitleEn: 'An app that helps you stay connected with your relatives',
-      animationName: 'onboarding_welcome',
+      subtitleAr: 'لنبدأ معاً في تعزيز صلة رحمك. سنحتاج دقيقتين لإعداد تجربتك.',
+      subtitleEn: "Let's set up your experience together. Two minutes to get going.",
+      animationName: 'welcome',
       backgroundColor: '#FFFFFF',
       textColor: '#1F2937',
-      buttonTextAr: 'التالي',
-      skipEnabled: true,
+      buttonTextAr: 'لنبدأ',
+      buttonTextEn: "Let's start",
+      skipEnabled: false,
       showForTiers: ['free', 'max'],
       isActive: true,
+      actionType: 'confirm_name',
+      metadata: const {'prompt_for_name': true},
     ),
     OnboardingScreenConfig(
       id: 'fallback-2',
       screenOrder: 2,
-      titleAr: 'تذكيرات ذكية',
-      titleEn: 'Smart Reminders',
-      subtitleAr: 'لا تنسَ صلة أرحامك مع تذكيرات مخصصة لكل قريب',
-      subtitleEn: 'Never forget to connect with personalized reminders',
-      animationName: 'onboarding_reminders',
+      titleAr: 'من يعيش معك في نفس البيت؟',
+      titleEn: 'Who lives with you?',
+      subtitleAr: 'أضف من تتواصل معهم يومياً بشكل طبيعي. لن نزعجك بتذكيرات لمن تراهم كل يوم.',
+      subtitleEn: "Add the people you see every day. We won't remind you about those.",
+      animationName: 'household',
       backgroundColor: '#FFFFFF',
       textColor: '#1F2937',
-      buttonTextAr: 'التالي',
+      buttonTextAr: 'إضافة من أهل البيت',
+      buttonTextEn: 'Add household',
       skipEnabled: true,
       showForTiers: ['free', 'max'],
       isActive: true,
+      actionType: 'add_relative_household',
+      metadata: const {'min_count': 0, 'category': 'household'},
     ),
     OnboardingScreenConfig(
       id: 'fallback-3',
       screenOrder: 3,
-      titleAr: 'ابدأ رحلتك',
-      titleEn: 'Start Your Journey',
-      subtitleAr: 'سجّل الآن وابدأ صلة أرحامك',
-      subtitleEn: 'Sign up now and start connecting',
-      animationName: 'onboarding_start',
-      backgroundColor: '#10B981',
-      textColor: '#FFFFFF',
-      buttonTextAr: 'ابدأ الآن',
+      titleAr: 'من تريد أن تحافظ على صلتك بهم؟',
+      titleEn: 'Who do you want to stay connected with?',
+      subtitleAr: 'أهل وأقارب تريد التواصل معهم بانتظام. سنذكّرك بهم في الوقت المناسب.',
+      subtitleEn: "Family you want to keep in regular contact with. We'll remind you at the right time.",
+      animationName: 'extended',
+      backgroundColor: '#FFFFFF',
+      textColor: '#1F2937',
+      buttonTextAr: 'إضافة من الأقارب',
+      buttonTextEn: 'Add extended family',
+      skipEnabled: true,
+      showForTiers: ['free', 'max'],
+      isActive: true,
+      actionType: 'add_relative_extended',
+      metadata: const {'min_count': 1, 'category': 'extended'},
+    ),
+    OnboardingScreenConfig(
+      id: 'fallback-4',
+      screenOrder: 4,
+      titleAr: 'كيف تفضّل أن نذكّرك؟',
+      titleEn: 'How would you like reminders?',
+      subtitleAr: 'سنرسل تذكيراً واحداً في اليوم بأنسب وقت لك. اختر الوقت الذي يناسبك.',
+      subtitleEn: 'One reminder a day at your preferred time.',
+      animationName: 'reminders',
+      backgroundColor: '#FFFFFF',
+      textColor: '#1F2937',
+      buttonTextAr: 'حدد الوقت',
+      buttonTextEn: 'Set time',
+      skipEnabled: true,
+      showForTiers: ['free', 'max'],
+      isActive: true,
+      actionType: 'set_reminder_pref_and_permission',
+      metadata: const {'default_time': '09:00', 'default_frequency': 'daily'},
+    ),
+    OnboardingScreenConfig(
+      id: 'fallback-5',
+      screenOrder: 5,
+      titleAr: 'تعرّف على أنيس',
+      titleEn: 'Meet Anees',
+      subtitleAr: 'أنيس مساعدك الذكي في صِلْني. يساعدك على كتابة الرسائل، اقتراح أوقات الزيارة، والتفكير في كيف تعيد التواصل بعد فترة. متى احتجت ساعدك.',
+      subtitleEn: 'Anees is your AI assistant in Silni — drafting messages, suggesting visit times, and helping you think through reconnection. Always there when you need.',
+      animationName: 'anees',
+      backgroundColor: '#FFFFFF',
+      textColor: '#1F2937',
+      buttonTextAr: 'جاهز',
+      buttonTextEn: 'Ready',
       skipEnabled: false,
       showForTiers: ['free', 'max'],
       isActive: true,
+      actionType: 'finish',
+      metadata: const {},
     ),
   ];
 

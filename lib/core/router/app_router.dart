@@ -17,6 +17,8 @@ import '../../features/auth/screens/email_verification_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/relatives/screens/relatives_screen.dart';
 import '../../features/relatives/screens/relative_detail_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../features/onboarding_wizard/onboarding_wizard_screen.dart';
 import '../../features/relatives/screens/add_relative_screen.dart';
 import '../../features/relatives/screens/edit_relative_screen.dart';
 import '../../features/reminders/screens/reminders_screen.dart';
@@ -81,10 +83,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         return null; // Let splash screen complete initialization and navigate
       }
 
-      // Case 2: Authenticated user on auth routes (login/signup) - redirect to home
+      // Case 2: Authenticated user on auth routes (login/signup) - redirect
+      // to home OR to wizard if first-run setup not yet complete
       if (isAuthenticated &&
           (currentPath == AppRoutes.login || currentPath == AppRoutes.signup)) {
-        return AppRoutes.home;
+        return _setupCompletePathForAuthed(ref);
+      }
+
+      // Case 2b: Authenticated user landing on home but setup not done →
+      // wizard. Reads SharedPreferences synchronously via the cached value
+      // written by main.dart's auth listener. Defensive: if cache is missing
+      // (first cold-launch with a stale prefs), still allows /home — the
+      // splash + login flows backfill the cache.
+      if (isAuthenticated &&
+          currentPath == AppRoutes.home &&
+          _setupNotComplete(ref)) {
+        return AppRoutes.onboardingWizard;
       }
 
       // Case 3: Unauthenticated user on protected route - redirect to login
@@ -179,8 +193,28 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.addRelative,
         name: 'addRelative',
-        pageBuilder: (context, state) =>
-            _buildPageWithTransition(context, state, const AddRelativeScreen()),
+        pageBuilder: (context, state) {
+          // Phase 9.X.D.B Task B4: ?wizard=householdOnly|extendedOnly query
+          // param locks the category picker. Used by the onboarding wizard's
+          // step 2/3 push.
+          final wizardParam = state.uri.queryParameters['wizard'];
+          final mode = switch (wizardParam) {
+            'householdOnly' => WizardMode.householdOnly,
+            'extendedOnly' => WizardMode.extendedOnly,
+            _ => null,
+          };
+          return _buildPageWithTransition(
+            context,
+            state,
+            AddRelativeScreen(wizardMode: mode),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.onboardingWizard,
+        name: 'onboardingWizard',
+        pageBuilder: (context, state) => _buildPageWithTransition(
+            context, state, const OnboardingWizardScreen()),
       ),
       GoRoute(
         path: '${AppRoutes.editRelative}/:id',
@@ -413,6 +447,63 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+// =============================================================================
+// Phase 9.X.D.B Track B3 — setupComplete redirect helpers
+// =============================================================================
+//
+// The router redirect callback is synchronous; checking
+// users.onboarding_metadata->>'setupComplete' requires a DB round-trip.
+// We mirror the value into SharedPreferences (`setup_complete` bool) on
+// every signin via main.dart's auth listener, so the router can read
+// synchronously here.
+//
+// Cached value semantics:
+//   • absent / false → wizard hasn't been finished → redirect to /onboarding-wizard
+//   • true → wizard done OR pre-existing user (Phase 9.X.D.A6 backfill set
+//     this for all 28 users that existed at backfill time)
+//
+// To avoid an async fetch in the redirect, we keep the value in a
+// process-local cache (`_cachedSetupComplete`) that's hydrated once at
+// app boot from SharedPreferences and updated by the auth listener +
+// the wizard's finish callback.
+
+bool? _cachedSetupComplete;
+
+/// Synchronous read of the cached setupComplete flag. Returns null if
+/// hydration hasn't completed yet — caller should treat null as "don't
+/// block" (let the user proceed to home; the wizard route will catch
+/// them on next router pass once the cache settles).
+bool? cachedSetupComplete() => _cachedSetupComplete;
+
+/// Hydrate the cache from SharedPreferences. Called from main.dart at
+/// boot AND from the auth listener after a signin DB-roundtrip writes
+/// the prefs key.
+Future<void> hydrateSetupCompleteCache() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    _cachedSetupComplete = prefs.getBool('setup_complete');
+  } catch (_) {
+    _cachedSetupComplete = null;
+  }
+}
+
+/// Update the cache directly (e.g. when the wizard finishes — saves the
+/// extra round-trip through SharedPreferences before the next redirect).
+void setCachedSetupComplete(bool value) {
+  _cachedSetupComplete = value;
+}
+
+bool _setupNotComplete(Ref ref) {
+  // Treat null (uninitialized cache) as "not blocking" — let user reach /home
+  // and the auth listener / wizard finish will hydrate on next nav. Only
+  // false is a hard "show the wizard" signal.
+  return _cachedSetupComplete == false;
+}
+
+String _setupCompletePathForAuthed(Ref ref) {
+  return _setupNotComplete(ref) ? AppRoutes.onboardingWizard : AppRoutes.home;
+}
 
 /// Build page with custom transition animation
 Page<dynamic> _buildPageWithTransition(
