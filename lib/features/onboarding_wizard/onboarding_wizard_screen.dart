@@ -12,6 +12,8 @@
 // override so the page-index→pixel-direction mapping is deterministic in
 // Arabic RTL.
 
+// ignore: unnecessary_import — needed for `kDebugMode` symbol
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -63,9 +65,36 @@ class _OnboardingWizardScreenState
   void initState() {
     super.initState();
     // Phase 9.X.D.B hot-fix: PageController initialized at page 0 explicitly.
-    // initialPage defaults to 0, but being explicit guards against any
-    // future "preserve scroll state" subclassing.
     _pageController = PageController(initialPage: 0);
+
+    // Belt-and-suspenders (hot-fix #3): on the first frame, force step 0 +
+    // jumpToPage(0). Hot-reload in debug builds preserves State and the
+    // PageController's internal page, so a stale "we ended at page 4 last
+    // time" leak survives the conceptually-fresh route push. This callback
+    // makes the leak survivable.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final screens =
+          OnboardingConfigService.instance.getScreens(forTier: 'free');
+      assert(
+        screens.isEmpty || screens.first.actionType == 'confirm_name',
+        '[wizard] expected confirm_name at index 0, got '
+        '${screens.first.actionType}',
+      );
+      if (kDebugMode) {
+        debugPrint(
+          '[wizard] mount: currentStep=$_currentStep, '
+          'screens.length=${screens.length}, '
+          'screens[0].actionType=${screens.isEmpty ? "(empty)" : screens.first.actionType}',
+        );
+      }
+      if (_pageController.hasClients && _pageController.page != 0) {
+        _pageController.jumpToPage(0);
+      }
+      if (_currentStep != 0) {
+        setState(() => _currentStep = 0);
+      }
+    });
   }
 
   @override
