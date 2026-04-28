@@ -23,6 +23,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show UserAttributes;
 import '../../core/config/supabase_config.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
+import '../../core/router/app_router.dart' as router;
 import '../../core/router/app_routes.dart';
 import '../../core/services/app_logger_service.dart';
 import '../../core/services/onboarding_config_service.dart';
@@ -78,6 +79,11 @@ class WizardState {
 class WizardStateNotifier extends StateNotifier<WizardState> {
   WizardStateNotifier() : super(const WizardState());
 
+  /// Force a fresh state. Called from the wizard screen's initState to
+  /// guarantee currentStep=0 on every mount, regardless of autoDispose
+  /// timing or hot-reload artifacts.
+  void reset() => state = const WizardState();
+
   void next() => state = state.copyWith(currentStep: state.currentStep + 1);
   void back() {
     if (state.currentStep > 0) {
@@ -107,11 +113,31 @@ final wizardStateProvider =
 // Parent screen
 // =============================================================================
 
-class OnboardingWizardScreen extends ConsumerWidget {
+class OnboardingWizardScreen extends ConsumerStatefulWidget {
   const OnboardingWizardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<OnboardingWizardScreen> createState() =>
+      _OnboardingWizardScreenState();
+}
+
+class _OnboardingWizardScreenState
+    extends ConsumerState<OnboardingWizardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Force fresh wizard state on every mount. Without this, a redirect
+    // loop or autoDispose-not-yet-fired could leak previous session's
+    // currentStep into the new mount, making the wizard appear to
+    // "start at the end" (e.g. step 5 if a prior run got that far).
+    // ref.read on the notifier eagerly creates it, then reset() puts it
+    // back to defaults. Runs synchronously before the first build —
+    // no flash.
+    ref.read(wizardStateProvider.notifier).reset();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final wizard = ref.watch(wizardStateProvider);
     // The seeded admin screens drive the visible content + per-step action
     // discriminator. Falls back to OnboardingConfigService._fallbackScreens
@@ -279,6 +305,13 @@ Future<void> _markSetupComplete(
     // Local cache mirror — splash + login redirect read this synchronously
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('setup_complete', true);
+
+    // CRITICAL: update the router's in-memory cache too. Without this,
+    // context.go(/home) hits the router redirect with a stale `false`
+    // cache value, which redirects right back to /onboarding-wizard —
+    // infinite loop. Symptom: tapping "جاهز" on step 5 looks stuck on
+    // the Anees intro page (silent redirect re-mounts the wizard).
+    router.setCachedSetupComplete(true);
 
     // Seed AI memory (only on full completion — skipped flow doesn't seed)
     if (!skipped) {
