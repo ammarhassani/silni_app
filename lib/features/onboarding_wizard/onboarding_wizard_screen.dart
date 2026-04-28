@@ -35,7 +35,6 @@ import '../../shared/utils/ui_helpers.dart';
 import '../../shared/widgets/glass_card.dart';
 import '../../shared/widgets/gradient_background.dart';
 import '../../shared/widgets/gradient_button.dart';
-import '../auth/providers/auth_provider.dart';
 import '../relatives/screens/add_relative_screen.dart';
 
 // =============================================================================
@@ -92,6 +91,21 @@ class _OnboardingWizardScreenState
     super.initState();
     // Page 0 is enforced both via initialPage and a debug-only assert below.
     _pageController = PageController(initialPage: 0);
+
+    // If the auth metadata already carries a usable full_name (e.g. Google
+    // sign-in), pre-populate _confirmedName so the welcome step's gate is
+    // satisfied immediately and the user can swipe past without retyping.
+    final user = SupabaseConfig.client.auth.currentUser;
+    final metaName = user?.userMetadata?['full_name'] as String? ??
+        user?.userMetadata?['display_name'] as String? ??
+        user?.userMetadata?['name'] as String?;
+    final email = user?.email;
+    if (metaName != null &&
+        metaName.trim().isNotEmpty &&
+        (email == null ||
+            metaName.toLowerCase() != email.toLowerCase())) {
+      _confirmedName = metaName.trim();
+    }
 
     // Permanent guard: postgrest .order() defaults to DESCENDING — see
     // OnboardingConfigService._fetchScreens(). Hot-fix #4 made the order
@@ -326,6 +340,45 @@ class _OnboardingWizardScreenState
     if (mounted) _next();
   }
 
+  // ── Step gating ────────────────────────────────────────────────────
+
+  /// Whether the user has satisfied the bare minimum on `step` so they're
+  /// allowed to advance past it. Backward navigation is always allowed —
+  /// only forward swipe is gated.
+  bool _isStepComplete(int step, List<OnboardingScreenConfig> screens) {
+    if (step < 0 || step >= screens.length) return true;
+    final screen = screens[step];
+    switch (screen.actionType) {
+      case 'confirm_name':
+        // Satisfied when the user has either typed-and-saved a name or
+        // arrived with a usable name in auth metadata (init populates it).
+        return _confirmedName != null && _confirmedName!.trim().isNotEmpty;
+      case 'add_relative_household':
+        final minCount = (screen.metadata['min_count'] as int?) ?? 0;
+        return _householdAddedCount >= minCount;
+      case 'add_relative_extended':
+        final minCount = (screen.metadata['min_count'] as int?) ?? 0;
+        // Extended step has a "skip" affordance when count == 0; respect
+        // that escape hatch by also passing the gate via skipEnabled.
+        if (minCount == 0) return true;
+        if (_extendedAddedCount >= minCount) return true;
+        return false;
+      default:
+        return true;
+    }
+  }
+
+  void _showGateBlockedFeedback() {
+    HapticFeedback.heavyImpact();
+    if (mounted) {
+      UIHelpers.showSnackBar(
+        context,
+        'أكمل هذه الخطوة قبل المتابعة',
+        isError: true,
+      );
+    }
+  }
+
   // ── Build ──────────────────────────────────────────────────────────
 
   @override
@@ -373,13 +426,30 @@ class _OnboardingWizardScreenState
                 Expanded(
                   // Native RTL Directionality: page 0 renders on the right
                   // and "next" slides in from the left (Arabic reading flow).
-                  // Swipe is enabled in both directions — user navigates
-                  // freely; back arrow was removed on founder request.
+                  // Swipe is enabled — backward always, forward only when
+                  // the current step's gate is satisfied. If the user
+                  // swipes forward past an unsatisfied gate, snap back +
+                  // haptic + snackbar.
                   child: PageView.builder(
                     controller: _pageController,
                     physics: const BouncingScrollPhysics(),
                     itemCount: screens.length,
                     onPageChanged: (page) {
+                      // Forward swipe past a gate: snap back.
+                      if (page > _currentStep &&
+                          !_isStepComplete(_currentStep, screens)) {
+                        _showGateBlockedFeedback();
+                        WidgetsBinding.instance
+                            .addPostFrameCallback((_) {
+                          if (!mounted) return;
+                          _pageController.animateToPage(
+                            _currentStep,
+                            duration: const Duration(milliseconds: 250),
+                            curve: Curves.easeOut,
+                          );
+                        });
+                        return;
+                      }
                       if (_currentStep != page) {
                         setState(() => _currentStep = page);
                       }
@@ -424,6 +494,7 @@ class _OnboardingWizardScreenState
       case 'confirm_name':
         return _ConfirmNameStep(
           screen: screen,
+          initialName: _confirmedName ?? '',
           onContinue: _saveNameAndAdvance,
         );
       case 'add_relative_household':
@@ -465,8 +536,13 @@ class _OnboardingWizardScreenState
 // =============================================================================
 
 class _ConfirmNameStep extends ConsumerStatefulWidget {
-  const _ConfirmNameStep({required this.screen, required this.onContinue});
+  const _ConfirmNameStep({
+    required this.screen,
+    required this.initialName,
+    required this.onContinue,
+  });
   final OnboardingScreenConfig screen;
+  final String initialName;
   final Future<void> Function(String name) onContinue;
 
   @override
@@ -475,22 +551,15 @@ class _ConfirmNameStep extends ConsumerStatefulWidget {
 
 class _ConfirmNameStepState extends ConsumerState<_ConfirmNameStep> {
   late final TextEditingController _nameController;
-  late final bool _needsPrompt;
 
   @override
   void initState() {
     super.initState();
-    final user = ref.read(currentUserProvider);
-    final metaName = user?.userMetadata?['full_name'] as String? ??
-        user?.userMetadata?['display_name'] as String? ??
-        user?.userMetadata?['name'] as String?;
-    final email = user?.email;
-    final initial = (metaName != null && metaName.trim().isNotEmpty)
-        ? metaName.trim()
-        : '';
-    _nameController = TextEditingController(text: initial);
-    _needsPrompt = (initial.isEmpty) ||
-        (email != null && initial.toLowerCase() == email.toLowerCase());
+    // Always show the field — pre-filled from the parent's lifted state
+    // (auth metadata seed OR a previous typed-and-saved name). The earlier
+    // hide-when-metadata-set logic broke back-navigation: after the user
+    // saved a name, swiping back found the field gone.
+    _nameController = TextEditingController(text: widget.initialName);
   }
 
   @override
@@ -501,7 +570,7 @@ class _ConfirmNameStepState extends ConsumerState<_ConfirmNameStep> {
 
   Future<void> _onContinue() async {
     final name = _nameController.text.trim();
-    if (_needsPrompt && name.isEmpty) {
+    if (name.isEmpty) {
       UIHelpers.showSnackBar(context, 'الرجاء إدخال اسمك', isError: true);
       return;
     }
@@ -514,51 +583,46 @@ class _ConfirmNameStepState extends ConsumerState<_ConfirmNameStep> {
     final onGradient = colors.textOnGradient;
     return _StepShell(
       screen: widget.screen,
-      bodyExtra: _needsPrompt
-          ? Padding(
-              padding: const EdgeInsets.only(top: AppSpacing.lg),
-              child: TextField(
-                controller: _nameController,
-                textAlign: TextAlign.center,
-                style: AppTypography.bodyLarge.copyWith(color: onGradient),
-                cursorColor: onGradient,
-                decoration: InputDecoration(
-                  hintText: 'كيف تحب أن نناديك؟',
-                  hintStyle: AppTypography.bodyLarge.copyWith(
-                    color: onGradient.withValues(alpha: 0.5),
-                  ),
-                  filled: true,
-                  fillColor: onGradient.withValues(alpha: 0.1),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.md,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.radiusLg),
-                    borderSide: BorderSide(
-                      color: onGradient.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.radiusLg),
-                    borderSide: BorderSide(
-                      color: onGradient.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.radiusLg),
-                    borderSide: BorderSide(
-                      color: onGradient.withValues(alpha: 0.7),
-                      width: 2,
-                    ),
-                  ),
-                ),
+      bodyExtra: Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.lg),
+        child: TextField(
+          controller: _nameController,
+          textAlign: TextAlign.center,
+          style: AppTypography.bodyLarge.copyWith(color: onGradient),
+          cursorColor: onGradient,
+          decoration: InputDecoration(
+            hintText: 'كيف تحب أن نناديك؟',
+            hintStyle: AppTypography.bodyLarge.copyWith(
+              color: onGradient.withValues(alpha: 0.5),
+            ),
+            filled: true,
+            fillColor: onGradient.withValues(alpha: 0.1),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.md,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              borderSide: BorderSide(
+                color: onGradient.withValues(alpha: 0.3),
               ),
-            )
-          : null,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              borderSide: BorderSide(
+                color: onGradient.withValues(alpha: 0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              borderSide: BorderSide(
+                color: onGradient.withValues(alpha: 0.7),
+                width: 2,
+              ),
+            ),
+          ),
+        ),
+      ),
       onContinue: _onContinue,
     );
   }
@@ -705,52 +769,52 @@ class _ReminderPrefStepState extends ConsumerState<_ReminderPrefStep> {
         padding: const EdgeInsets.only(top: AppSpacing.lg),
         child: Column(
           children: [
-            // Frequency selector — 5 cards, single selection.
-            for (final f in ReminderFrequency.values) ...[
-              _FrequencyTile(
-                frequency: f,
-                selected: f == _frequency,
-                onTap: () => setState(() => _frequency = f),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-            ],
+            // Frequency selector — 5 compact pill chips in a centered Wrap.
+            // Replaces the earlier full-width tile-stack (made the page too
+            // tall on small screens — founder feedback).
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                for (final f in ReminderFrequency.values)
+                  _FrequencyChip(
+                    frequency: f,
+                    selected: f == _frequency,
+                    onTap: () => setState(() => _frequency = f),
+                  ),
+              ],
+            ),
             // Time picker — only meaningful when the cadence has a time of day.
             if (showsTime) ...[
-              const SizedBox(height: AppSpacing.md),
-              GlassCard(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  children: [
-                    Text(
-                      'الوقت المختار',
+              const SizedBox(height: AppSpacing.lg),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.schedule_rounded,
+                      color: onGradient.withValues(alpha: 0.85), size: 20),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
+                    style: AppTypography.numberLarge.copyWith(
+                      color: onGradient,
+                      fontSize: 28,
+                    ),
+                    textDirection: TextDirection.ltr,
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  TextButton(
+                    onPressed: _pickTime,
+                    child: Text(
+                      'تغيير',
                       style: AppTypography.labelLarge.copyWith(
-                        color: onGradient.withValues(alpha: 0.75),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
-                      style: AppTypography.numberLarge.copyWith(
                         color: onGradient,
-                        fontSize: 36,
-                      ),
-                      textDirection: TextDirection.ltr,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    TextButton.icon(
-                      onPressed: _pickTime,
-                      icon: Icon(Icons.access_time, color: onGradient),
-                      label: Text(
-                        'تغيير الوقت',
-                        style: AppTypography.labelLarge.copyWith(
-                          color: onGradient,
-                          decoration: TextDecoration.underline,
-                          decorationColor: onGradient,
-                        ),
+                        decoration: TextDecoration.underline,
+                        decorationColor: onGradient,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ],
@@ -766,11 +830,13 @@ class _ReminderPrefStepState extends ConsumerState<_ReminderPrefStep> {
 }
 
 // =============================================================================
-// Frequency tile — single-select card used by the reminder step
+// Frequency chip — compact pill in a Wrap, used by the reminder step.
+// (Replaced the earlier full-width _FrequencyTile that made the step too tall
+// on small screens.)
 // =============================================================================
 
-class _FrequencyTile extends ConsumerWidget {
-  const _FrequencyTile({
+class _FrequencyChip extends ConsumerWidget {
+  const _FrequencyChip({
     required this.frequency,
     required this.selected,
     required this.onTap,
@@ -784,7 +850,7 @@ class _FrequencyTile extends ConsumerWidget {
     final colors = ref.watch(themeColorsProvider);
     final onGradient = colors.textOnGradient;
     final fillAlpha = selected ? 0.22 : 0.08;
-    final borderAlpha = selected ? 0.85 : 0.25;
+    final borderAlpha = selected ? 0.85 : 0.3;
     return Semantics(
       button: true,
       selected: selected,
@@ -796,42 +862,33 @@ class _FrequencyTile extends ConsumerWidget {
             HapticFeedback.selectionClick();
             onTap();
           },
-          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
+            duration: const Duration(milliseconds: 180),
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
-              vertical: AppSpacing.md,
+              vertical: AppSpacing.sm,
             ),
             decoration: BoxDecoration(
               color: onGradient.withValues(alpha: fillAlpha),
-              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
               border: Border.all(
                 color: onGradient.withValues(alpha: borderAlpha),
                 width: selected ? 2 : 1,
               ),
             ),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(frequency.icon, color: onGradient, size: 24),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Text(
-                    frequency.labelAr,
-                    style: AppTypography.titleMedium.copyWith(
-                      color: onGradient,
-                      fontWeight:
-                          selected ? FontWeight.bold : FontWeight.w500,
-                    ),
+                Icon(frequency.icon, color: onGradient, size: 18),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  frequency.labelAr,
+                  style: AppTypography.labelLarge.copyWith(
+                    color: onGradient,
+                    fontWeight:
+                        selected ? FontWeight.bold : FontWeight.w500,
                   ),
-                ),
-                Icon(
-                  selected
-                      ? Icons.check_circle_rounded
-                      : Icons.radio_button_unchecked_rounded,
-                  color:
-                      onGradient.withValues(alpha: selected ? 1.0 : 0.5),
-                  size: 24,
                 ),
               ],
             ),
