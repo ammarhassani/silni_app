@@ -129,7 +129,6 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
         ref.invalidate(groupRelativesStreamProvider(widget.groupId));
         ref.invalidate(sharedFamilyEdgesStreamProvider(widget.groupId));
         ref.invalidate(groupMemberNodeIdsProvider(widget.groupId));
-        ref.invalidate(familyLeaderboardProvider(widget.groupId));
         UIHelpers.showSnackBar(context, 'تمت إزالة العضو');
       }
     } catch (e) {
@@ -390,7 +389,6 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
     ref.invalidate(groupMemberNodeIdsProvider(widget.groupId));
     ref.invalidate(groupTodayInteractionsStreamProvider(widget.groupId));
     ref.invalidate(groupTodayContactedRelativesProvider(widget.groupId));
-    ref.invalidate(familyLeaderboardProvider(widget.groupId));
     if (userId != null) {
       ref.invalidate(userGroupsProvider(userId));
       ref.invalidate(relativesStreamProvider(userId));

@@ -37,9 +37,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       gradient: AppColors.goldenGradient,
     ),
     OnboardingPage(
-      icon: Icons.emoji_events_rounded,
-      title: 'احتفل بإنجازاتك',
-      description: 'كسب النقاط والشارات والإنجازات\nمع كل تواصل مع عائلتك',
+      icon: Icons.local_fire_department_rounded,
+      title: 'سلسلة التواصل',
+      description: 'حافظ على عادة التواصل اليومي\nسلسلة من الأيام تروي صلة الرحم',
       gradient: AppColors.streakFire,
     ),
     OnboardingPage(
