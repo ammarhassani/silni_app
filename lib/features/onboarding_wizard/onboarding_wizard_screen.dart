@@ -39,6 +39,30 @@ import '../auth/providers/auth_provider.dart';
 import '../relatives/screens/add_relative_screen.dart';
 
 // =============================================================================
+// Reminder frequency — 5 cadences the wizard exposes (matches the app's
+// reminder feature set: daily / weekly / Fridays / monthly / occasions).
+// `key` is the value persisted to onboarding_metadata + sent to the AI
+// memory seeder so downstream systems get a stable identifier.
+// =============================================================================
+
+enum ReminderFrequency {
+  daily('daily', 'يومياً', Icons.today_rounded),
+  weekly('weekly', 'أسبوعياً', Icons.view_week_rounded),
+  fridays('fridays', 'كل يوم جمعة', Icons.mosque_rounded),
+  monthly('monthly', 'شهرياً', Icons.calendar_month_rounded),
+  occasions('occasions', 'مناسبات خاصة', Icons.celebration_rounded);
+
+  final String key;
+  final String labelAr;
+  final IconData icon;
+  const ReminderFrequency(this.key, this.labelAr, this.icon);
+
+  /// True if a time-of-day picker is meaningful for this cadence.
+  /// Special occasions don't fire on a fixed daily clock.
+  bool get usesTimeOfDay => this != ReminderFrequency.occasions;
+}
+
+// =============================================================================
 // Parent screen — owns step index + user-input state
 // =============================================================================
 
@@ -61,6 +85,7 @@ class _OnboardingWizardScreenState
   int _householdAddedCount = 0;
   int _extendedAddedCount = 0;
   TimeOfDay? _reminderTime;
+  ReminderFrequency _reminderFrequency = ReminderFrequency.daily;
 
   @override
   void initState() {
@@ -192,9 +217,7 @@ class _OnboardingWizardScreenState
               'p_full_name': _confirmedName ?? '',
               'p_household_count': _householdAddedCount,
               'p_extended_count': _extendedAddedCount,
-              'p_reminder_preference': _reminderTime != null
-                  ? 'daily at ${_reminderTime!.hour.toString().padLeft(2, '0')}:${_reminderTime!.minute.toString().padLeft(2, '0')}'
-                  : 'default',
+              'p_reminder_preference': _formatReminderPreference(),
             },
           );
         } catch (e) {
@@ -253,7 +276,20 @@ class _OnboardingWizardScreenState
     }
   }
 
-  Future<void> _saveReminderAndAdvance(TimeOfDay time) async {
+  String _formatReminderPreference() {
+    final time = _reminderTime;
+    if (_reminderFrequency.usesTimeOfDay && time != null) {
+      final hh = time.hour.toString().padLeft(2, '0');
+      final mm = time.minute.toString().padLeft(2, '0');
+      return '${_reminderFrequency.key} at $hh:$mm';
+    }
+    return _reminderFrequency.key;
+  }
+
+  Future<void> _saveReminderAndAdvance(
+    ReminderFrequency frequency,
+    TimeOfDay? time,
+  ) async {
     final user = SupabaseConfig.client.auth.currentUser;
     if (user != null) {
       try {
@@ -265,8 +301,13 @@ class _OnboardingWizardScreenState
         final meta =
             (row?['onboarding_metadata'] as Map<String, dynamic>?) ?? {};
         final next = Map<String, dynamic>.from(meta)
-          ..['reminderTime'] =
+          ..['reminderFrequency'] = frequency.key;
+        if (time != null && frequency.usesTimeOfDay) {
+          next['reminderTime'] =
               '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+        } else {
+          next.remove('reminderTime');
+        }
         await SupabaseConfig.client
             .from('users')
             .update({'onboarding_metadata': next})
@@ -275,11 +316,12 @@ class _OnboardingWizardScreenState
         // Non-blocking
       }
     }
-    setState(() => _reminderTime = time);
-    // OS permission prompt fires here — user has just chosen their preferred
-    // time so the prompt has context (Phase 9.X.D Track A7's deferral pays off).
-    // Grant outcome is not stored (the OS settings are the source of truth);
-    // we just need the prompt to fire at this moment with the right context.
+    setState(() {
+      _reminderFrequency = frequency;
+      _reminderTime = frequency.usesTimeOfDay ? time : null;
+    });
+    // OS permission prompt fires here — user has chosen their cadence so the
+    // prompt has context (Phase 9.X.D Track A7's deferral pays off).
     await FCMNotificationService().requestPermission();
     if (mounted) _next();
   }
@@ -321,15 +363,21 @@ class _OnboardingWizardScreenState
           body: SafeArea(
             child: Column(
               children: [
-                _buildHeader(_currentStep, screens.length),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.md,
+                  ),
+                  child: _buildProgressDots(_currentStep, screens.length),
+                ),
                 Expanded(
-                  // No Directionality override — native RTL flows page 0 to
-                  // the right side and animates "next" sliding in from the
-                  // left, matching Arabic reading direction.
+                  // Native RTL Directionality: page 0 renders on the right
+                  // and "next" slides in from the left (Arabic reading flow).
+                  // Swipe is enabled in both directions — user navigates
+                  // freely; back arrow was removed on founder request.
                   child: PageView.builder(
                     controller: _pageController,
-                    // Block swipe — buttons advance the wizard.
-                    physics: const NeverScrollableScrollPhysics(),
+                    physics: const BouncingScrollPhysics(),
                     itemCount: screens.length,
                     onPageChanged: (page) {
                       if (_currentStep != page) {
@@ -345,39 +393,6 @@ class _OnboardingWizardScreenState
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(int current, int total) {
-    final colors = ref.watch(themeColorsProvider);
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.md,
-      ),
-      child: Row(
-        children: [
-          // Back button — RTL convention: arrow points right (toward the
-          // start of reading). Hidden on step 0 (PopScope handles exit).
-          SizedBox(
-            width: 48,
-            height: 48,
-            child: current > 0
-                ? IconButton(
-                    onPressed: _back,
-                    icon: Icon(
-                      Icons.arrow_forward_rounded,
-                      color: colors.textOnGradient,
-                    ),
-                    tooltip: 'رجوع',
-                  )
-                : null,
-          ),
-          Expanded(child: _buildProgressDots(current, total)),
-          // Symmetric spacer so the dots stay centered.
-          const SizedBox(width: 48, height: 48),
-        ],
       ),
     );
   }
@@ -430,6 +445,8 @@ class _OnboardingWizardScreenState
       case 'set_reminder_pref_and_permission':
         return _ReminderPrefStep(
           screen: screen,
+          initialFrequency: _reminderFrequency,
+          initialTime: _reminderTime,
           onContinue: _saveReminderAndAdvance,
         );
       case 'finish':
@@ -623,16 +640,32 @@ class _AddRelativeStep extends ConsumerWidget {
 // =============================================================================
 
 class _ReminderPrefStep extends ConsumerStatefulWidget {
-  const _ReminderPrefStep({required this.screen, required this.onContinue});
+  const _ReminderPrefStep({
+    required this.screen,
+    required this.initialFrequency,
+    required this.initialTime,
+    required this.onContinue,
+  });
   final OnboardingScreenConfig screen;
-  final Future<void> Function(TimeOfDay time) onContinue;
+  final ReminderFrequency initialFrequency;
+  final TimeOfDay? initialTime;
+  final Future<void> Function(ReminderFrequency frequency, TimeOfDay? time)
+      onContinue;
 
   @override
   ConsumerState<_ReminderPrefStep> createState() => _ReminderPrefStepState();
 }
 
 class _ReminderPrefStepState extends ConsumerState<_ReminderPrefStep> {
+  late ReminderFrequency _frequency;
   TimeOfDay? _picked;
+
+  @override
+  void initState() {
+    super.initState();
+    _frequency = widget.initialFrequency;
+    _picked = widget.initialTime;
+  }
 
   TimeOfDay _defaultTime() {
     final raw = widget.screen.metadata['default_time'] as String?;
@@ -662,42 +695,149 @@ class _ReminderPrefStepState extends ConsumerState<_ReminderPrefStep> {
   @override
   Widget build(BuildContext context) {
     final colors = ref.watch(themeColorsProvider);
+    final onGradient = colors.textOnGradient;
     final time = _picked ?? _defaultTime();
+    final showsTime = _frequency.usesTimeOfDay;
+
     return _StepShell(
       screen: widget.screen,
       bodyExtra: Padding(
         padding: const EdgeInsets.only(top: AppSpacing.lg),
-        child: GlassCard(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            children: [
-              Text(
-                'الوقت المختار',
-                style: AppTypography.labelLarge.copyWith(
-                  color: colors.textSecondary,
-                ),
+        child: Column(
+          children: [
+            // Frequency selector — 5 cards, single selection.
+            for (final f in ReminderFrequency.values) ...[
+              _FrequencyTile(
+                frequency: f,
+                selected: f == _frequency,
+                onTap: () => setState(() => _frequency = f),
               ),
               const SizedBox(height: AppSpacing.sm),
-              Text(
-                '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
-                style: AppTypography.numberLarge.copyWith(
-                  color: colors.textPrimary,
-                  fontSize: 36,
-                ),
-                textDirection: TextDirection.ltr,
-              ),
+            ],
+            // Time picker — only meaningful when the cadence has a time of day.
+            if (showsTime) ...[
               const SizedBox(height: AppSpacing.md),
-              OutlinedButton.icon(
-                onPressed: _pickTime,
-                icon: const Icon(Icons.access_time),
-                label: const Text('تغيير الوقت'),
+              GlassCard(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  children: [
+                    Text(
+                      'الوقت المختار',
+                      style: AppTypography.labelLarge.copyWith(
+                        color: onGradient.withValues(alpha: 0.75),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
+                      style: AppTypography.numberLarge.copyWith(
+                        color: onGradient,
+                        fontSize: 36,
+                      ),
+                      textDirection: TextDirection.ltr,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextButton.icon(
+                      onPressed: _pickTime,
+                      icon: Icon(Icons.access_time, color: onGradient),
+                      label: Text(
+                        'تغيير الوقت',
+                        style: AppTypography.labelLarge.copyWith(
+                          color: onGradient,
+                          decoration: TextDecoration.underline,
+                          decorationColor: onGradient,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
+          ],
+        ),
+      ),
+      onContinue: () => widget.onContinue(
+        _frequency,
+        showsTime ? time : null,
+      ),
+      continueLabel: widget.screen.buttonTextAr,
+    );
+  }
+}
+
+// =============================================================================
+// Frequency tile — single-select card used by the reminder step
+// =============================================================================
+
+class _FrequencyTile extends ConsumerWidget {
+  const _FrequencyTile({
+    required this.frequency,
+    required this.selected,
+    required this.onTap,
+  });
+  final ReminderFrequency frequency;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = ref.watch(themeColorsProvider);
+    final onGradient = colors.textOnGradient;
+    final fillAlpha = selected ? 0.22 : 0.08;
+    final borderAlpha = selected ? 0.85 : 0.25;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: frequency.labelAr,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.md,
+            ),
+            decoration: BoxDecoration(
+              color: onGradient.withValues(alpha: fillAlpha),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              border: Border.all(
+                color: onGradient.withValues(alpha: borderAlpha),
+                width: selected ? 2 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(frequency.icon, color: onGradient, size: 24),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    frequency.labelAr,
+                    style: AppTypography.titleMedium.copyWith(
+                      color: onGradient,
+                      fontWeight:
+                          selected ? FontWeight.bold : FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Icon(
+                  selected
+                      ? Icons.check_circle_rounded
+                      : Icons.radio_button_unchecked_rounded,
+                  color:
+                      onGradient.withValues(alpha: selected ? 1.0 : 0.5),
+                  size: 24,
+                ),
+              ],
+            ),
           ),
         ),
       ),
-      onContinue: () => widget.onContinue(time),
-      continueLabel: widget.screen.buttonTextAr,
     );
   }
 }
@@ -770,47 +910,68 @@ class _StepShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = ref.watch(themeColorsProvider);
+    final onGradient = colors.textOnGradient;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Column(
         children: [
-          const Spacer(flex: 1),
-          // Lottie placeholder slot — Track C wires the real animations
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: colors.primaryGradient,
-            ),
-            child: Icon(
-              _iconFor(screen.actionType),
-              size: 64,
-              color: colors.onPrimary,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          Text(
-            screen.titleAr,
-            style: AppTypography.headlineMedium.copyWith(
-              color: colors.textPrimary,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          if (screen.subtitleAr != null) ...[
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              screen.subtitleAr!,
-              style: AppTypography.bodyLarge.copyWith(
-                color: colors.textSecondary,
-                height: 1.5,
+          // Scrollable content area — guarantees the reminder step's
+          // 5 frequency options + time picker fit on small screens, and
+          // long content centers via IntrinsicHeight + Spacer.
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints:
+                      BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      children: [
+                        const Spacer(flex: 1),
+                        Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: colors.primaryGradient,
+                          ),
+                          child: Icon(
+                            _iconFor(screen.actionType),
+                            size: 64,
+                            color: colors.onPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xl),
+                        Text(
+                          screen.titleAr,
+                          style: AppTypography.headlineMedium.copyWith(
+                            color: onGradient,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        if (screen.subtitleAr != null) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            screen.subtitleAr!,
+                            style: AppTypography.bodyLarge.copyWith(
+                              color: onGradient.withValues(alpha: 0.85),
+                              height: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                        if (bodyExtra != null) bodyExtra!,
+                        const Spacer(flex: 2),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-              textAlign: TextAlign.center,
             ),
-          ],
-          if (bodyExtra != null) bodyExtra!,
-          const Spacer(flex: 2),
+          ),
+          const SizedBox(height: AppSpacing.md),
           if (onContinue != null)
             GradientButton(
               text: continueLabel ?? screen.buttonTextAr,
@@ -821,17 +982,16 @@ class _StepShell extends ConsumerWidget {
             ),
           if (tertiaryLabel != null && onTertiary != null) ...[
             const SizedBox(height: AppSpacing.sm),
-            TextButton(
+            // OutlinedGradientButton instead of a plain TextButton so the
+            // secondary "إضافة المزيد" CTA is visibly tappable on the
+            // gradient background (WCAG contrast).
+            OutlinedGradientButton(
+              text: tertiaryLabel!,
               onPressed: () {
                 HapticFeedback.lightImpact();
                 onTertiary!();
               },
-              child: Text(
-                tertiaryLabel!,
-                style: AppTypography.labelLarge.copyWith(
-                  color: colors.primary,
-                ),
-              ),
+              icon: Icons.add_rounded,
             ),
           ],
           if (skipLabel != null && onSkip != null) ...[
@@ -840,8 +1000,10 @@ class _StepShell extends ConsumerWidget {
               onPressed: onSkip,
               child: Text(
                 skipLabel!,
-                style: AppTypography.labelMedium.copyWith(
-                  color: colors.textHint,
+                style: AppTypography.labelLarge.copyWith(
+                  color: onGradient.withValues(alpha: 0.7),
+                  decoration: TextDecoration.underline,
+                  decorationColor: onGradient.withValues(alpha: 0.7),
                 ),
               ),
             ),
