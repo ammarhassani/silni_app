@@ -309,21 +309,23 @@ class _OnboardingWizardScreenState
         if (didPop) return;
         await _handleBackButton(context);
       },
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: GradientBackground(
-          animated: true,
-          child: SafeArea(
+      // GradientBackground OUTSIDE the Scaffold so it covers the full screen
+      // including the area behind the on-screen keyboard. The Scaffold's
+      // body shrinks for the keyboard inset, but the gradient persists,
+      // preventing a black strip from appearing when a text field opens
+      // the keyboard.
+      child: GradientBackground(
+        animated: true,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: SafeArea(
             child: Column(
               children: [
                 _buildHeader(_currentStep, screens.length),
                 Expanded(
                   // No Directionality override — native RTL flows page 0 to
                   // the right side and animates "next" sliding in from the
-                  // left, matching Arabic reading direction. Hot-fix #2's
-                  // Directionality.ltr wrapper was masking the data-ordering
-                  // bug fixed in hot-fix #4; with correct ordering we want
-                  // RTL animation back.
+                  // left, matching Arabic reading direction.
                   child: PageView.builder(
                     controller: _pageController,
                     // Block swipe — buttons advance the wizard.
