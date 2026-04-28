@@ -132,7 +132,7 @@ class AIContextEngine {
           .eq('user_id', userId)
           .eq('is_archived', false)
           .eq('is_self', false)
-          .order('priority');
+          .order('priority', ascending: true);
       _relativesCache = (response as List)
           .map((json) => Relative.fromJson(json))
           .toList();

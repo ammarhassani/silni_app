@@ -260,7 +260,7 @@ final familyMonthlyWrappedProvider =
         .select('id, user_id, relative_id, date')
         .gte('date', startOfMonth.toUtc().toIso8601String())
         .lte('date', endOfMonth.toUtc().toIso8601String())
-        .order('date');
+        .order('date', ascending: true);
 
     final interactions = interactionsResponse as List;
 

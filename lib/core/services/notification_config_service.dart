@@ -177,7 +177,7 @@ class NotificationConfigService {
           .from('admin_reminder_time_slots')
           .select()
           .eq('is_active', true)
-          .order('sort_order');
+          .order('sort_order', ascending: true);
       _timeSlotsCache = (response as List)
           .map((json) => ReminderTimeSlot.fromJson(json))
           .toList();

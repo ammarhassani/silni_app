@@ -73,7 +73,7 @@ class DesignConfigService {
           .from('admin_colors')
           .select()
           .eq('is_active', true)
-          .order('sort_order');
+          .order('sort_order', ascending: true);
       final colors = (response as List)
           .map((json) => AdminColor.fromJson(json))
           .toList();
@@ -138,7 +138,7 @@ class DesignConfigService {
           .from('admin_themes')
           .select()
           .eq('is_active', true)
-          .order('sort_order');
+          .order('sort_order', ascending: true);
       _themesCache = (response as List)
           .map((json) => AdminTheme.fromJson(json))
           .toList();
@@ -236,7 +236,7 @@ class DesignConfigService {
           .from('admin_pattern_animations')
           .select()
           .eq('is_active', true)
-          .order('sort_order');
+          .order('sort_order', ascending: true);
       _patternAnimationsCache = (response as List)
           .map((json) => AdminPatternAnimation.fromJson(json))
           .toList();

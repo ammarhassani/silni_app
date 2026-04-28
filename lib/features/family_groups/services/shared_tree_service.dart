@@ -40,7 +40,7 @@ class SharedTreeService {
         .select()
         .eq('family_group_id', groupId)
         .eq('is_archived', false)
-        .order('full_name');
+        .order('full_name', ascending: true);
 
     return data.map((json) => Relative.fromJson(json)).toList();
   }

@@ -253,7 +253,9 @@ class OnboardingConfigService {
           .from('admin_onboarding_screens')
           .select()
           .eq('is_active', true)
-          .order('screen_order');
+          // CRITICAL: postgrest .order() defaults to DESCENDING. Without
+          // `ascending: true` the wizard renders the last screen first.
+          .order('screen_order', ascending: true);
 
       _screensCache = (response as List)
           .map((json) => OnboardingScreenConfig.fromJson(json))

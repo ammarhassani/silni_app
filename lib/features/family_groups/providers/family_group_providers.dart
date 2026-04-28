@@ -48,7 +48,7 @@ final groupMembersProvider =
         .from('family_group_members')
         .stream(primaryKey: ['id'])
         .eq('group_id', groupId)
-        .order('joined_at')
+        .order('joined_at', ascending: true)
         .asyncMap((rows) async {
           final members = rows
               .map((json) => FamilyGroupMember.fromJson(json))

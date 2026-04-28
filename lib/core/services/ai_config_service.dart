@@ -104,7 +104,7 @@ class AIConfigService {
           .from('admin_ai_personality')
           .select()
           .eq('is_active', true)
-          .order('priority');
+          .order('priority', ascending: true);
       _personalityCache = (response as List)
           .map((json) => AIPersonalitySection.fromJson(json))
           .toList();
@@ -142,7 +142,7 @@ class AIConfigService {
           .from('admin_counseling_modes')
           .select()
           .eq('is_active', true)
-          .order('sort_order');
+          .order('sort_order', ascending: true);
       _modesCache = (response as List)
           .map((json) => AICounselingModeConfig.fromJson(json))
           .toList();
@@ -176,7 +176,7 @@ class AIConfigService {
           .from('admin_message_occasions')
           .select()
           .eq('is_active', true)
-          .order('sort_order');
+          .order('sort_order', ascending: true);
       _occasionsCache = (response as List)
           .map((json) => AIMessageOccasion.fromJson(json))
           .toList();
@@ -196,7 +196,7 @@ class AIConfigService {
           .from('admin_message_tones')
           .select()
           .eq('is_active', true)
-          .order('sort_order');
+          .order('sort_order', ascending: true);
       _tonesCache = (response as List)
           .map((json) => AIMessageTone.fromJson(json))
           .toList();
@@ -246,7 +246,7 @@ class AIConfigService {
           .from('admin_suggested_prompts')
           .select()
           .eq('is_active', true)
-          .order('sort_order');
+          .order('sort_order', ascending: true);
       _suggestedPromptsCache = (response as List)
           .map((json) => AISuggestedPrompt.fromJson(json))
           .toList();
@@ -329,7 +329,7 @@ class AIConfigService {
           .from('admin_communication_scenarios')
           .select()
           .eq('is_active', true)
-          .order('sort_order');
+          .order('sort_order', ascending: true);
       _scenariosCache = (response as List)
           .map((json) => AICommunicationScenario.fromJson(json))
           .toList();

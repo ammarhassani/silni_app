@@ -199,7 +199,7 @@ class FamilyGroupService {
         .from('family_group_members')
         .select()
         .eq('group_id', groupId)
-        .order('joined_at');
+        .order('joined_at', ascending: true);
 
     final members = membersData
         .map((json) => FamilyGroupMember.fromJson(json))
