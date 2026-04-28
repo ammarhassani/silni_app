@@ -1,17 +1,16 @@
 // Phase 9.X.D.B Track B — Onboarding wizard parent screen + step renderers.
 //
 // Renders the 5 admin_onboarding_screens-driven steps for first-run setup.
-// State for the wizard's progressive data lives in `wizardStateProvider`,
-// scoped to the wizard's lifetime. Step content (titles, copy, button text,
-// per-step metadata) comes from `OnboardingConfigService`; this file owns
-// the per-step UI for each `action_type`.
+// Step index + user-input state live in this widget's State (NOT in a
+// Riverpod provider) so per-mount freshness is guaranteed regardless of
+// hot-reload artifacts or autoDispose timing.
 //
-// The 5 steps:
-//   1. confirm_name — pure welcome unless full_name is missing/email-only
-//   2. add_relative_household — pushes AddRelativeScreen w/ wizardMode locked
-//   3. add_relative_extended  — same, min_count=1
-//   4. set_reminder_pref_and_permission — time picker + OS permission ask
-//   5. finish — Anees intro; on CTA: writes setupComplete + seed RPC + /home
+// Phase 9.X.D.B hot-fix #2 (founder report 2026-04-28): wizard was opening
+// at step 5 ("Anees") instead of step 1 ("Welcome"). Root cause was a stale
+// wizardStateProvider state leaking across remounts. Fix: own state in the
+// State class. Plus convert to a real PageView with explicit Directionality
+// override so the page-index→pixel-direction mapping is deterministic in
+// Arabic RTL.
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -37,80 +36,7 @@ import '../auth/providers/auth_provider.dart';
 import '../relatives/screens/add_relative_screen.dart';
 
 // =============================================================================
-// State
-// =============================================================================
-
-class WizardState {
-  final int currentStep; // 0-indexed, 0..4 for 5 steps
-  final String? confirmedName;
-  final int householdAddedCount;
-  final int extendedAddedCount;
-  final TimeOfDay? reminderTime;
-  final bool? permissionGranted;
-
-  const WizardState({
-    this.currentStep = 0,
-    this.confirmedName,
-    this.householdAddedCount = 0,
-    this.extendedAddedCount = 0,
-    this.reminderTime,
-    this.permissionGranted,
-  });
-
-  WizardState copyWith({
-    int? currentStep,
-    String? confirmedName,
-    int? householdAddedCount,
-    int? extendedAddedCount,
-    TimeOfDay? reminderTime,
-    bool? permissionGranted,
-  }) {
-    return WizardState(
-      currentStep: currentStep ?? this.currentStep,
-      confirmedName: confirmedName ?? this.confirmedName,
-      householdAddedCount: householdAddedCount ?? this.householdAddedCount,
-      extendedAddedCount: extendedAddedCount ?? this.extendedAddedCount,
-      reminderTime: reminderTime ?? this.reminderTime,
-      permissionGranted: permissionGranted ?? this.permissionGranted,
-    );
-  }
-}
-
-class WizardStateNotifier extends StateNotifier<WizardState> {
-  WizardStateNotifier() : super(const WizardState());
-
-  /// Force a fresh state. Called from the wizard screen's initState to
-  /// guarantee currentStep=0 on every mount, regardless of autoDispose
-  /// timing or hot-reload artifacts.
-  void reset() => state = const WizardState();
-
-  void next() => state = state.copyWith(currentStep: state.currentStep + 1);
-  void back() {
-    if (state.currentStep > 0) {
-      state = state.copyWith(currentStep: state.currentStep - 1);
-    }
-  }
-
-  void setName(String name) => state = state.copyWith(confirmedName: name);
-  void incrementHousehold() => state = state.copyWith(
-        householdAddedCount: state.householdAddedCount + 1,
-      );
-  void incrementExtended() => state = state.copyWith(
-        extendedAddedCount: state.extendedAddedCount + 1,
-      );
-  void setReminderTime(TimeOfDay time) =>
-      state = state.copyWith(reminderTime: time);
-  void setPermissionGranted(bool granted) =>
-      state = state.copyWith(permissionGranted: granted);
-}
-
-final wizardStateProvider =
-    StateNotifierProvider.autoDispose<WizardStateNotifier, WizardState>(
-  (ref) => WizardStateNotifier(),
-);
-
-// =============================================================================
-// Parent screen
+// Parent screen — owns step index + user-input state
 // =============================================================================
 
 class OnboardingWizardScreen extends ConsumerStatefulWidget {
@@ -123,43 +49,242 @@ class OnboardingWizardScreen extends ConsumerStatefulWidget {
 
 class _OnboardingWizardScreenState
     extends ConsumerState<OnboardingWizardScreen> {
+  // ── Step navigation ────────────────────────────────────────────────
+  int _currentStep = 0;
+  late final PageController _pageController;
+
+  // ── User-input state ───────────────────────────────────────────────
+  String? _confirmedName;
+  int _householdAddedCount = 0;
+  int _extendedAddedCount = 0;
+  TimeOfDay? _reminderTime;
+
   @override
   void initState() {
     super.initState();
-    // Force fresh wizard state on every mount. Without this, a redirect
-    // loop or autoDispose-not-yet-fired could leak previous session's
-    // currentStep into the new mount, making the wizard appear to
-    // "start at the end" (e.g. step 5 if a prior run got that far).
-    // ref.read on the notifier eagerly creates it, then reset() puts it
-    // back to defaults. Runs synchronously before the first build —
-    // no flash.
-    ref.read(wizardStateProvider.notifier).reset();
+    // Phase 9.X.D.B hot-fix: PageController initialized at page 0 explicitly.
+    // initialPage defaults to 0, but being explicit guards against any
+    // future "preserve scroll state" subclassing.
+    _pageController = PageController(initialPage: 0);
   }
 
   @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  // ── Navigation methods ─────────────────────────────────────────────
+
+  void _next() {
+    HapticFeedback.lightImpact();
+    setState(() => _currentStep++);
+    _pageController.animateToPage(
+      _currentStep,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _back() {
+    if (_currentStep == 0) return;
+    setState(() => _currentStep--);
+    _pageController.animateToPage(
+      _currentStep,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  Future<void> _handleBackButton(BuildContext context) async {
+    if (_currentStep == 0) {
+      final exit = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('هل تريد الخروج من الإعداد؟'),
+          content: const Text(
+            'لن تجد دليلاً لإعداد التطبيق لاحقاً. تستطيع الإكمال متى أردت من الإعدادات.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('متابعة الإعداد'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('خروج'),
+            ),
+          ],
+        ),
+      );
+      if (exit == true && context.mounted) {
+        await _markSetupComplete(skipped: true);
+      }
+    } else {
+      _back();
+    }
+  }
+
+  // ── Finish path ────────────────────────────────────────────────────
+
+  Future<void> _markSetupComplete({bool skipped = false}) async {
+    final logger = AppLoggerService();
+    final user = SupabaseConfig.client.auth.currentUser;
+    if (user == null) {
+      if (mounted) context.go(AppRoutes.home);
+      return;
+    }
+
+    try {
+      final row = await SupabaseConfig.client
+          .from('users')
+          .select('onboarding_metadata')
+          .eq('id', user.id)
+          .maybeSingle();
+      final meta = (row?['onboarding_metadata'] as Map<String, dynamic>?) ?? {};
+      final next = Map<String, dynamic>.from(meta)
+        ..['setupComplete'] = true
+        ..['permissionAsked'] = true;
+      if (skipped) next['setupSkipped'] = true;
+      await SupabaseConfig.client
+          .from('users')
+          .update({'onboarding_metadata': next})
+          .eq('id', user.id);
+
+      // Local mirror — splash + login redirect read this synchronously.
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('setup_complete', true);
+
+      // CRITICAL: update the router's in-memory cache too so the navigation
+      // below doesn't get bounced back to the wizard via redirect Case 2b.
+      router.setCachedSetupComplete(true);
+
+      // Seed AI memory (only on full completion — skipped flow doesn't seed)
+      if (!skipped) {
+        try {
+          await SupabaseConfig.client.rpc(
+            'seed_onboarding_ai_memory',
+            params: {
+              'p_user_id': user.id,
+              'p_full_name': _confirmedName ?? '',
+              'p_household_count': _householdAddedCount,
+              'p_extended_count': _extendedAddedCount,
+              'p_reminder_preference': _reminderTime != null
+                  ? 'daily at ${_reminderTime!.hour.toString().padLeft(2, '0')}:${_reminderTime!.minute.toString().padLeft(2, '0')}'
+                  : 'default',
+            },
+          );
+        } catch (e) {
+          logger.warning(
+            'seed_onboarding_ai_memory RPC failed (non-blocking)',
+            category: LogCategory.service,
+            tag: 'OnboardingWizard',
+            metadata: {'error': e.toString()},
+          );
+        }
+      }
+    } catch (e) {
+      logger.error(
+        'Wizard finish failed',
+        category: LogCategory.service,
+        tag: 'OnboardingWizard',
+        metadata: {'error': e.toString()},
+      );
+    }
+    if (mounted) context.go(AppRoutes.home);
+  }
+
+  // ── Per-step actions ───────────────────────────────────────────────
+
+  Future<void> _saveNameAndAdvance(String name) async {
+    final user = SupabaseConfig.client.auth.currentUser;
+    if (user != null && name.isNotEmpty) {
+      try {
+        await SupabaseConfig.client.auth.updateUser(
+          UserAttributes(data: {'full_name': name, 'display_name': name}),
+        );
+        await SupabaseConfig.client
+            .from('users')
+            .update({'full_name': name})
+            .eq('id', user.id);
+      } catch (_) {
+        // Non-blocking — name save failure shouldn't stop the wizard
+      }
+    }
+    setState(() => _confirmedName = name);
+    _next();
+  }
+
+  Future<void> _pushAddRelative(WizardMode mode) async {
+    final result = await context.push<String>(
+      '${AppRoutes.addRelative}?wizard=${mode.name}',
+    );
+    if (result != null && mounted) {
+      setState(() {
+        if (mode == WizardMode.householdOnly) {
+          _householdAddedCount++;
+        } else {
+          _extendedAddedCount++;
+        }
+      });
+    }
+  }
+
+  Future<void> _saveReminderAndAdvance(TimeOfDay time) async {
+    final user = SupabaseConfig.client.auth.currentUser;
+    if (user != null) {
+      try {
+        final row = await SupabaseConfig.client
+            .from('users')
+            .select('onboarding_metadata')
+            .eq('id', user.id)
+            .maybeSingle();
+        final meta =
+            (row?['onboarding_metadata'] as Map<String, dynamic>?) ?? {};
+        final next = Map<String, dynamic>.from(meta)
+          ..['reminderTime'] =
+              '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+        await SupabaseConfig.client
+            .from('users')
+            .update({'onboarding_metadata': next})
+            .eq('id', user.id);
+      } catch (_) {
+        // Non-blocking
+      }
+    }
+    setState(() => _reminderTime = time);
+    // OS permission prompt fires here — user has just chosen their preferred
+    // time so the prompt has context (Phase 9.X.D Track A7's deferral pays off).
+    // Grant outcome is not stored (the OS settings are the source of truth);
+    // we just need the prompt to fire at this moment with the right context.
+    await FCMNotificationService().requestPermission();
+    if (mounted) _next();
+  }
+
+  // ── Build ──────────────────────────────────────────────────────────
+
+  @override
   Widget build(BuildContext context) {
-    final wizard = ref.watch(wizardStateProvider);
-    // The seeded admin screens drive the visible content + per-step action
-    // discriminator. Falls back to OnboardingConfigService._fallbackScreens
-    // if Supabase fetch hasn't completed.
     final screens = OnboardingConfigService.instance.getScreens(forTier: 'free');
-    if (screens.isEmpty || wizard.currentStep >= screens.length) {
-      // Defensive: shouldn't happen — but if it does, finish gracefully.
+    if (screens.isEmpty) {
+      // Defensive: fallback list should never be empty, but if it is,
+      // navigate home rather than render nothing.
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (context.mounted) context.go(AppRoutes.home);
+        if (mounted) context.go(AppRoutes.home);
       });
       return const SizedBox.shrink();
     }
-    final screen = screens[wizard.currentStep];
+
+    // Clamp _currentStep defensively so navigation never lands out of range.
+    if (_currentStep >= screens.length) {
+      _currentStep = screens.length - 1;
+    }
 
     return PopScope(
-      // Block accidental swipe-back. Step renderers handle explicit "back"
-      // via the wizardStateNotifier.back() and the back-button on step 1
-      // shows an exit-confirmation dialog.
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
-        await _handleBack(context, ref);
+        await _handleBackButton(context);
       },
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -168,17 +293,44 @@ class _OnboardingWizardScreenState
           child: SafeArea(
             child: Column(
               children: [
-                // Progress dots (5 dots, current highlighted)
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.lg,
                     vertical: AppSpacing.md,
                   ),
-                  child: _buildProgressDots(
-                      ref, wizard.currentStep, screens.length),
+                  child: _buildProgressDots(_currentStep, screens.length),
                 ),
                 Expanded(
-                  child: _renderStep(context, ref, screen),
+                  // Force LTR direction on the PageView itself so page index 0
+                  // ALWAYS renders first regardless of the surrounding Arabic
+                  // RTL UI. Inner page CONTENT is still RTL via the app's
+                  // global Directionality. This is the canonical fix for
+                  // "paged features start at the last page in RTL" — apply
+                  // the same wrapping pattern to Monthly Wrapped.
+                  child: Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: PageView.builder(
+                      controller: _pageController,
+                      // Block swipe — buttons advance the wizard. The
+                      // Directionality.ltr wrapper would invert swipe-mapping
+                      // anyway; not a sane swipe surface for an Arabic user.
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: screens.length,
+                      onPageChanged: (page) {
+                        if (_currentStep != page) {
+                          setState(() => _currentStep = page);
+                        }
+                      },
+                      itemBuilder: (context, index) {
+                        // Re-wrap content in RTL so Arabic text + layout
+                        // direction is preserved inside each step.
+                        return Directionality(
+                          textDirection: TextDirection.rtl,
+                          child: _buildStep(screens[index]),
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -188,7 +340,7 @@ class _OnboardingWizardScreenState
     );
   }
 
-  Widget _buildProgressDots(WidgetRef ref, int current, int total) {
+  Widget _buildProgressDots(int current, int total) {
     final colors = ref.watch(themeColorsProvider);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -210,143 +362,43 @@ class _OnboardingWizardScreenState
     );
   }
 
-  Widget _renderStep(
-      BuildContext context, WidgetRef ref, OnboardingScreenConfig screen) {
+  Widget _buildStep(OnboardingScreenConfig screen) {
     switch (screen.actionType) {
       case 'confirm_name':
-        return _ConfirmNameStep(screen: screen);
+        return _ConfirmNameStep(
+          screen: screen,
+          onContinue: _saveNameAndAdvance,
+        );
       case 'add_relative_household':
         return _AddRelativeStep(
           screen: screen,
           mode: WizardMode.householdOnly,
+          count: _householdAddedCount,
+          onAdd: () => _pushAddRelative(WizardMode.householdOnly),
+          onContinue: _next,
         );
       case 'add_relative_extended':
         return _AddRelativeStep(
           screen: screen,
           mode: WizardMode.extendedOnly,
+          count: _extendedAddedCount,
+          onAdd: () => _pushAddRelative(WizardMode.extendedOnly),
+          onContinue: _next,
         );
       case 'set_reminder_pref_and_permission':
-        return _ReminderPrefStep(screen: screen);
+        return _ReminderPrefStep(
+          screen: screen,
+          onContinue: _saveReminderAndAdvance,
+        );
       case 'finish':
-        return _FinishStep(screen: screen);
+        return _FinishStep(
+          screen: screen,
+          onContinue: () => _markSetupComplete(skipped: false),
+        );
       default:
-        // Unknown action_type — render as a plain "next" presentation step
-        return _PresentationStep(screen: screen);
+        return _PresentationStep(screen: screen, onContinue: _next);
     }
   }
-
-  Future<void> _handleBack(BuildContext context, WidgetRef ref) async {
-    final wizard = ref.read(wizardStateProvider);
-    if (wizard.currentStep == 0) {
-      final exit = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('هل تريد الخروج من الإعداد؟'),
-          content: const Text(
-            'لن تجد دليلاً لإعداد التطبيق لاحقاً. تستطيع الإكمال متى أردت من الإعدادات.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('متابعة الإعداد'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('خروج'),
-            ),
-          ],
-        ),
-      );
-      if (exit == true && context.mounted) {
-        // Mark setupComplete=true with a setupSkipped flag so the user isn't
-        // forced through the wizard again on every launch. They can re-run
-        // it from Settings (B6) if they want.
-        await _markSetupComplete(context, ref, skipped: true);
-      }
-    } else {
-      ref.read(wizardStateProvider.notifier).back();
-    }
-  }
-}
-
-/// Shared "mark setup complete + seed AI memory + go home" finish path.
-/// Called from `_FinishStep` (full completion) and `_handleBack` on step 1
-/// (setupSkipped=true variant).
-Future<void> _markSetupComplete(
-  BuildContext context,
-  WidgetRef ref, {
-  bool skipped = false,
-}) async {
-  final logger = AppLoggerService();
-  final wizard = ref.read(wizardStateProvider);
-  final user = SupabaseConfig.client.auth.currentUser;
-  if (user == null) {
-    if (context.mounted) context.go(AppRoutes.home);
-    return;
-  }
-
-  try {
-    // Read current metadata first to merge on top
-    final row = await SupabaseConfig.client
-        .from('users')
-        .select('onboarding_metadata')
-        .eq('id', user.id)
-        .maybeSingle();
-    final meta = (row?['onboarding_metadata'] as Map<String, dynamic>?) ?? {};
-    final next = Map<String, dynamic>.from(meta)
-      ..['setupComplete'] = true
-      ..['permissionAsked'] = true; // wizard either fired the prompt or skipped
-    if (skipped) next['setupSkipped'] = true;
-    await SupabaseConfig.client
-        .from('users')
-        .update({'onboarding_metadata': next})
-        .eq('id', user.id);
-
-    // Local cache mirror — splash + login redirect read this synchronously
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('setup_complete', true);
-
-    // CRITICAL: update the router's in-memory cache too. Without this,
-    // context.go(/home) hits the router redirect with a stale `false`
-    // cache value, which redirects right back to /onboarding-wizard —
-    // infinite loop. Symptom: tapping "جاهز" on step 5 looks stuck on
-    // the Anees intro page (silent redirect re-mounts the wizard).
-    router.setCachedSetupComplete(true);
-
-    // Seed AI memory (only on full completion — skipped flow doesn't seed)
-    if (!skipped) {
-      try {
-        await SupabaseConfig.client.rpc(
-          'seed_onboarding_ai_memory',
-          params: {
-            'p_user_id': user.id,
-            'p_full_name': wizard.confirmedName ?? '',
-            'p_household_count': wizard.householdAddedCount,
-            'p_extended_count': wizard.extendedAddedCount,
-            'p_reminder_preference': wizard.reminderTime != null
-                ? 'daily at ${wizard.reminderTime!.hour.toString().padLeft(2, '0')}:${wizard.reminderTime!.minute.toString().padLeft(2, '0')}'
-                : 'default',
-          },
-        );
-      } catch (e) {
-        // AI seeding failure is non-blocking — wizard still completes.
-        logger.warning(
-          'seed_onboarding_ai_memory RPC failed (non-blocking)',
-          category: LogCategory.service,
-          tag: 'OnboardingWizard',
-          metadata: {'error': e.toString()},
-        );
-      }
-    }
-  } catch (e) {
-    logger.error(
-      'Wizard finish failed',
-      category: LogCategory.service,
-      tag: 'OnboardingWizard',
-      metadata: {'error': e.toString()},
-    );
-  }
-  if (context.mounted) context.go(AppRoutes.home);
 }
 
 // =============================================================================
@@ -354,8 +406,9 @@ Future<void> _markSetupComplete(
 // =============================================================================
 
 class _ConfirmNameStep extends ConsumerStatefulWidget {
-  const _ConfirmNameStep({required this.screen});
+  const _ConfirmNameStep({required this.screen, required this.onContinue});
   final OnboardingScreenConfig screen;
+  final Future<void> Function(String name) onContinue;
 
   @override
   ConsumerState<_ConfirmNameStep> createState() => _ConfirmNameStepState();
@@ -377,8 +430,6 @@ class _ConfirmNameStepState extends ConsumerState<_ConfirmNameStep> {
         ? metaName.trim()
         : '';
     _nameController = TextEditingController(text: initial);
-    // Prompt for name when metadata name is missing OR equals the email
-    // (Apple Hide-Email + some OAuth flows produce auto-generated values).
     _needsPrompt = (initial.isEmpty) ||
         (email != null && initial.toLowerCase() == email.toLowerCase());
   }
@@ -395,23 +446,7 @@ class _ConfirmNameStepState extends ConsumerState<_ConfirmNameStep> {
       UIHelpers.showSnackBar(context, 'الرجاء إدخال اسمك', isError: true);
       return;
     }
-    final user = SupabaseConfig.client.auth.currentUser;
-    if (user != null && name.isNotEmpty) {
-      try {
-        // Update both auth metadata + public.users.full_name
-        await SupabaseConfig.client.auth.updateUser(
-          UserAttributes(data: {'full_name': name, 'display_name': name}),
-        );
-        await SupabaseConfig.client
-            .from('users')
-            .update({'full_name': name})
-            .eq('id', user.id);
-      } catch (_) {
-        // Non-blocking: name save failure shouldn't stop the wizard
-      }
-    }
-    ref.read(wizardStateProvider.notifier).setName(name);
-    ref.read(wizardStateProvider.notifier).next();
+    await widget.onContinue(name);
   }
 
   @override
@@ -442,28 +477,32 @@ class _ConfirmNameStepState extends ConsumerState<_ConfirmNameStep> {
 // =============================================================================
 
 class _AddRelativeStep extends ConsumerWidget {
-  const _AddRelativeStep({required this.screen, required this.mode});
+  const _AddRelativeStep({
+    required this.screen,
+    required this.mode,
+    required this.count,
+    required this.onAdd,
+    required this.onContinue,
+  });
+
   final OnboardingScreenConfig screen;
   final WizardMode mode;
+  final int count;
+  final VoidCallback onAdd;
+  final VoidCallback onContinue;
 
   int _minCount() {
     final raw = screen.metadata['min_count'];
     return raw is int ? raw : 0;
   }
 
-  int _currentCount(WizardState state) {
-    return mode == WizardMode.householdOnly
-        ? state.householdAddedCount
-        : state.extendedAddedCount;
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final wizard = ref.watch(wizardStateProvider);
     final colors = ref.watch(themeColorsProvider);
-    final count = _currentCount(wizard);
     final minCount = _minCount();
     final canContinue = count >= minCount;
+    final showSkipOnExtended =
+        mode == WizardMode.extendedOnly && count == 0 && screen.skipEnabled;
 
     return _StepShell(
       screen: screen,
@@ -484,46 +523,24 @@ class _AddRelativeStep extends ConsumerWidget {
               ),
             )
           : null,
-      onContinue: canContinue
-          ? () => ref.read(wizardStateProvider.notifier).next()
+      // Primary CTA: add relative (always available). When count > 0 + can
+      // continue, also show a secondary "متابعة" text button below.
+      onContinue: onAdd,
+      continueLabel: count > 0
+          ? (mode == WizardMode.householdOnly
+              ? 'إضافة المزيد من أهل البيت'
+              : 'إضافة المزيد من الأقارب')
+          : screen.buttonTextAr,
+      // After the user adds at least the minimum, surface a secondary
+      // "متابعة" link to advance.
+      tertiaryLabel: canContinue && count >= (count > 0 ? 1 : minCount)
+          ? 'متابعة'
           : null,
-      continueLabel: canContinue && count > 0 ? 'متابعة' : screen.buttonTextAr,
-      secondaryButton: count > 0
-          ? OutlinedButton.icon(
-              icon: const Icon(Icons.add),
-              label: Text(mode == WizardMode.householdOnly
-                  ? 'إضافة المزيد من أهل البيت'
-                  : 'إضافة المزيد من الأقارب'),
-              onPressed: () => _pushAddRelative(context, ref),
-            )
-          : GradientButton(
-              text: screen.buttonTextAr,
-              onPressed: () => _pushAddRelative(context, ref),
-            ),
-      // Skip link on extended step (min_count=1) — de-emphasized escape hatch
-      skipLabel:
-          mode == WizardMode.extendedOnly && count == 0 && screen.skipEnabled
-              ? 'تخطي الآن'
-              : null,
-      onSkip: mode == WizardMode.extendedOnly
-          ? () => ref.read(wizardStateProvider.notifier).next()
-          : null,
+      onTertiary: canContinue ? onContinue : null,
+      // Skip link on extended step (de-emphasized, only when count=0)
+      skipLabel: showSkipOnExtended ? 'تخطي الآن' : null,
+      onSkip: showSkipOnExtended ? onContinue : null,
     );
-  }
-
-  Future<void> _pushAddRelative(BuildContext context, WidgetRef ref) async {
-    final result = await context.push<String>(
-      '${AppRoutes.addRelative}?wizard=${mode.name}',
-    );
-    if (result != null) {
-      // The wizard route variant strips wizard mode pre-add; pop returns the
-      // created id. Increment the appropriate count.
-      if (mode == WizardMode.householdOnly) {
-        ref.read(wizardStateProvider.notifier).incrementHousehold();
-      } else {
-        ref.read(wizardStateProvider.notifier).incrementExtended();
-      }
-    }
   }
 }
 
@@ -532,8 +549,9 @@ class _AddRelativeStep extends ConsumerWidget {
 // =============================================================================
 
 class _ReminderPrefStep extends ConsumerStatefulWidget {
-  const _ReminderPrefStep({required this.screen});
+  const _ReminderPrefStep({required this.screen, required this.onContinue});
   final OnboardingScreenConfig screen;
+  final Future<void> Function(TimeOfDay time) onContinue;
 
   @override
   ConsumerState<_ReminderPrefStep> createState() => _ReminderPrefStepState();
@@ -558,7 +576,6 @@ class _ReminderPrefStepState extends ConsumerState<_ReminderPrefStep> {
     final picked = await showTimePicker(
       context: context,
       initialTime: initial,
-      // Phase 4 digit policy: dates/times in Western digits.
       builder: (ctx, child) => Localizations.override(
         context: ctx,
         locale: const Locale('en'),
@@ -566,43 +583,6 @@ class _ReminderPrefStepState extends ConsumerState<_ReminderPrefStep> {
       ),
     );
     if (picked != null) setState(() => _picked = picked);
-  }
-
-  Future<void> _onContinue() async {
-    final time = _picked ?? _defaultTime();
-    final user = SupabaseConfig.client.auth.currentUser;
-    if (user != null) {
-      // Persist as HH:mm string in onboarding_metadata.reminderTime so the
-      // founder + cron can use it later (the active cron uses
-      // reminder_schedules.time per-schedule, not a user-level default —
-      // but stashing the user's preferred time here lets the wizard's
-      // post-finish path optionally create a default daily schedule, and
-      // surfaces the value in metadata for analytics).
-      try {
-        final row = await SupabaseConfig.client
-            .from('users')
-            .select('onboarding_metadata')
-            .eq('id', user.id)
-            .maybeSingle();
-        final meta =
-            (row?['onboarding_metadata'] as Map<String, dynamic>?) ?? {};
-        final next = Map<String, dynamic>.from(meta)
-          ..['reminderTime'] =
-              '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-        await SupabaseConfig.client
-            .from('users')
-            .update({'onboarding_metadata': next})
-            .eq('id', user.id);
-      } catch (_) {
-        // Non-blocking
-      }
-    }
-    ref.read(wizardStateProvider.notifier).setReminderTime(time);
-    // Now that the user has chosen a time, the OS permission prompt has
-    // context. Phase 9.X.D Track A7 deferred this exact ask from app boot.
-    final granted = await FCMNotificationService().requestPermission();
-    ref.read(wizardStateProvider.notifier).setPermissionGranted(granted);
-    if (mounted) ref.read(wizardStateProvider.notifier).next();
   }
 
   @override
@@ -642,7 +622,7 @@ class _ReminderPrefStepState extends ConsumerState<_ReminderPrefStep> {
           ),
         ),
       ),
-      onContinue: _onContinue,
+      onContinue: () => widget.onContinue(time),
       continueLabel: widget.screen.buttonTextAr,
     );
   }
@@ -653,14 +633,15 @@ class _ReminderPrefStepState extends ConsumerState<_ReminderPrefStep> {
 // =============================================================================
 
 class _FinishStep extends ConsumerWidget {
-  const _FinishStep({required this.screen});
+  const _FinishStep({required this.screen, required this.onContinue});
   final OnboardingScreenConfig screen;
+  final VoidCallback onContinue;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return _StepShell(
       screen: screen,
-      onContinue: () => _markSetupComplete(context, ref),
+      onContinue: onContinue,
       continueLabel: screen.buttonTextAr,
     );
   }
@@ -671,21 +652,22 @@ class _FinishStep extends ConsumerWidget {
 // =============================================================================
 
 class _PresentationStep extends ConsumerWidget {
-  const _PresentationStep({required this.screen});
+  const _PresentationStep({required this.screen, required this.onContinue});
   final OnboardingScreenConfig screen;
+  final VoidCallback onContinue;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return _StepShell(
       screen: screen,
-      onContinue: () => ref.read(wizardStateProvider.notifier).next(),
+      onContinue: onContinue,
       continueLabel: screen.buttonTextAr,
     );
   }
 }
 
 // =============================================================================
-// Shared step shell — title + subtitle + optional body + CTA
+// Shared step shell — title + subtitle + optional body + CTA stack
 // =============================================================================
 
 class _StepShell extends ConsumerWidget {
@@ -694,7 +676,8 @@ class _StepShell extends ConsumerWidget {
     this.bodyExtra,
     this.onContinue,
     this.continueLabel,
-    this.secondaryButton,
+    this.tertiaryLabel,
+    this.onTertiary,
     this.skipLabel,
     this.onSkip,
   });
@@ -703,7 +686,10 @@ class _StepShell extends ConsumerWidget {
   final Widget? bodyExtra;
   final VoidCallback? onContinue;
   final String? continueLabel;
-  final Widget? secondaryButton;
+  // Optional second button beneath the primary CTA (e.g. "متابعة" on
+  // add-relative steps when count > 0).
+  final String? tertiaryLabel;
+  final VoidCallback? onTertiary;
   final String? skipLabel;
   final VoidCallback? onSkip;
 
@@ -751,11 +737,7 @@ class _StepShell extends ConsumerWidget {
           ],
           if (bodyExtra != null) bodyExtra!,
           const Spacer(flex: 2),
-          if (secondaryButton != null) ...[
-            secondaryButton!,
-            const SizedBox(height: AppSpacing.md),
-          ],
-          if (onContinue != null && secondaryButton == null)
+          if (onContinue != null)
             GradientButton(
               text: continueLabel ?? screen.buttonTextAr,
               onPressed: () {
@@ -763,20 +745,23 @@ class _StepShell extends ConsumerWidget {
                 onContinue!();
               },
             ),
-          if (onContinue != null && secondaryButton != null)
+          if (tertiaryLabel != null && onTertiary != null) ...[
+            const SizedBox(height: AppSpacing.sm),
             TextButton(
               onPressed: () {
                 HapticFeedback.lightImpact();
-                onContinue!();
+                onTertiary!();
               },
               child: Text(
-                continueLabel ?? 'متابعة',
+                tertiaryLabel!,
                 style: AppTypography.labelLarge.copyWith(
                   color: colors.primary,
                 ),
               ),
             ),
-          if (skipLabel != null && onSkip != null)
+          ],
+          if (skipLabel != null && onSkip != null) ...[
+            const SizedBox(height: AppSpacing.sm),
             TextButton(
               onPressed: onSkip,
               child: Text(
@@ -786,6 +771,7 @@ class _StepShell extends ConsumerWidget {
                 ),
               ),
             ),
+          ],
           const SizedBox(height: AppSpacing.lg),
         ],
       ),
@@ -803,4 +789,3 @@ class _StepShell extends ConsumerWidget {
     };
   }
 }
-

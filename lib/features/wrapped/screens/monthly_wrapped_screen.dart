@@ -43,7 +43,12 @@ class _MonthlyWrappedScreenState extends ConsumerState<MonthlyWrappedScreen> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
+    // initialPage: 0 explicit. Without this, PageController defaults to 0
+    // anyway, but being explicit guards against subclassing or future Flutter
+    // changes. The Directionality.ltr wrapper around the PageView itself
+    // (further down the tree) ensures page index 0 always renders first
+    // regardless of the surrounding Arabic RTL UI.
+    _pageController = PageController(initialPage: 0);
   }
 
   @override
@@ -843,15 +848,23 @@ class _WrappedStoryContentState extends State<_WrappedStoryContent> {
                 ),
               ),
 
-              // Story pages with tap navigation
+              // Story pages with tap navigation. Wrapped in Directionality.ltr
+              // so page index 0 always renders first regardless of the
+              // surrounding Arabic RTL UI. Each page's CONTENT remains RTL
+              // because individual page widgets use the app's global
+              // Directionality (rtl) by default — only the PageView's
+              // index→pixel-direction mapping is forced LTR here.
               Expanded(
                 child: GestureDetector(
                   onTapUp: _onTap,
                   behavior: HitTestBehavior.translucent,
-                  child: PageView(
-                    controller: widget.pageController,
-                    onPageChanged: _onPageChanged,
-                    children: _pages,
+                  child: Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: PageView(
+                      controller: widget.pageController,
+                      onPageChanged: _onPageChanged,
+                      children: _pages,
+                    ),
                   ),
                 ),
               ),

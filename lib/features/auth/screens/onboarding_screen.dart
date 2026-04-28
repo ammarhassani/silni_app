@@ -117,15 +117,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ),
                 ),
 
-                // Page view
+                // Page view — wrapped in Directionality.ltr so page index 0
+                // always renders first regardless of the surrounding Arabic
+                // RTL UI. Pages render their own RTL content via the app's
+                // global Directionality which inherits from MaterialApp.
                 Expanded(
-                  child: PageView.builder(
-                    controller: _pageController,
-                    onPageChanged: _onPageChanged,
-                    itemCount: _pages.length,
-                    itemBuilder: (context, index) {
-                      return _buildPage(_pages[index], index, themeColors);
-                    },
+                  child: Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: PageView.builder(
+                      controller: _pageController,
+                      onPageChanged: _onPageChanged,
+                      itemCount: _pages.length,
+                      itemBuilder: (context, index) {
+                        return Directionality(
+                          textDirection: TextDirection.rtl,
+                          child:
+                              _buildPage(_pages[index], index, themeColors),
+                        );
+                      },
+                    ),
                   ),
                 ),
 
