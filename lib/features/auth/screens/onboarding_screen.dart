@@ -117,25 +117,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ),
                 ),
 
-                // Page view — wrapped in Directionality.ltr so page index 0
-                // always renders first regardless of the surrounding Arabic
-                // RTL UI. Pages render their own RTL content via the app's
-                // global Directionality which inherits from MaterialApp.
+                // Page view — native RTL Directionality (inherited from
+                // MaterialApp) is correct: page 0 renders on the right and
+                // "next" slides in from the left, matching Arabic reading
+                // flow. Hot-fix #2's Directionality.ltr wrapper was reverted
+                // along with the wizard once the wizard's data-ordering bug
+                // (postgrest .order() default) was identified as the real
+                // cause of "wizard starts at last page."
                 Expanded(
-                  child: Directionality(
-                    textDirection: TextDirection.ltr,
-                    child: PageView.builder(
-                      controller: _pageController,
-                      onPageChanged: _onPageChanged,
-                      itemCount: _pages.length,
-                      itemBuilder: (context, index) {
-                        return Directionality(
-                          textDirection: TextDirection.rtl,
-                          child:
-                              _buildPage(_pages[index], index, themeColors),
-                        );
-                      },
-                    ),
+                  child: PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: _onPageChanged,
+                    itemCount: _pages.length,
+                    itemBuilder: (context, index) {
+                      return _buildPage(_pages[index], index, themeColors);
+                    },
                   ),
                 ),
 

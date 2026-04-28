@@ -316,49 +316,66 @@ class _OnboardingWizardScreenState
           child: SafeArea(
             child: Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                    vertical: AppSpacing.md,
-                  ),
-                  child: _buildProgressDots(_currentStep, screens.length),
-                ),
+                _buildHeader(_currentStep, screens.length),
                 Expanded(
-                  // Force LTR direction on the PageView itself so page index 0
-                  // ALWAYS renders first regardless of the surrounding Arabic
-                  // RTL UI. Inner page CONTENT is still RTL via the app's
-                  // global Directionality. This is the canonical fix for
-                  // "paged features start at the last page in RTL" — apply
-                  // the same wrapping pattern to Monthly Wrapped.
-                  child: Directionality(
-                    textDirection: TextDirection.ltr,
-                    child: PageView.builder(
-                      controller: _pageController,
-                      // Block swipe — buttons advance the wizard. The
-                      // Directionality.ltr wrapper would invert swipe-mapping
-                      // anyway; not a sane swipe surface for an Arabic user.
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: screens.length,
-                      onPageChanged: (page) {
-                        if (_currentStep != page) {
-                          setState(() => _currentStep = page);
-                        }
-                      },
-                      itemBuilder: (context, index) {
-                        // Re-wrap content in RTL so Arabic text + layout
-                        // direction is preserved inside each step.
-                        return Directionality(
-                          textDirection: TextDirection.rtl,
-                          child: _buildStep(screens[index]),
-                        );
-                      },
-                    ),
+                  // No Directionality override — native RTL flows page 0 to
+                  // the right side and animates "next" sliding in from the
+                  // left, matching Arabic reading direction. Hot-fix #2's
+                  // Directionality.ltr wrapper was masking the data-ordering
+                  // bug fixed in hot-fix #4; with correct ordering we want
+                  // RTL animation back.
+                  child: PageView.builder(
+                    controller: _pageController,
+                    // Block swipe — buttons advance the wizard.
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: screens.length,
+                    onPageChanged: (page) {
+                      if (_currentStep != page) {
+                        setState(() => _currentStep = page);
+                      }
+                    },
+                    itemBuilder: (context, index) {
+                      return _buildStep(screens[index]);
+                    },
                   ),
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(int current, int total) {
+    final colors = ref.watch(themeColorsProvider);
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.md,
+      ),
+      child: Row(
+        children: [
+          // Back button — RTL convention: arrow points right (toward the
+          // start of reading). Hidden on step 0 (PopScope handles exit).
+          SizedBox(
+            width: 48,
+            height: 48,
+            child: current > 0
+                ? IconButton(
+                    onPressed: _back,
+                    icon: Icon(
+                      Icons.arrow_forward_rounded,
+                      color: colors.textOnGradient,
+                    ),
+                    tooltip: 'رجوع',
+                  )
+                : null,
+          ),
+          Expanded(child: _buildProgressDots(current, total)),
+          // Symmetric spacer so the dots stay centered.
+          const SizedBox(width: 48, height: 48),
+        ],
       ),
     );
   }
@@ -474,6 +491,8 @@ class _ConfirmNameStepState extends ConsumerState<_ConfirmNameStep> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = ref.watch(themeColorsProvider);
+    final onGradient = colors.textOnGradient;
     return _StepShell(
       screen: widget.screen,
       bodyExtra: _needsPrompt
@@ -482,10 +501,41 @@ class _ConfirmNameStepState extends ConsumerState<_ConfirmNameStep> {
               child: TextField(
                 controller: _nameController,
                 textAlign: TextAlign.center,
-                decoration: const InputDecoration(
-                  labelText: 'اسمك',
+                style: AppTypography.bodyLarge.copyWith(color: onGradient),
+                cursorColor: onGradient,
+                decoration: InputDecoration(
                   hintText: 'كيف تحب أن نناديك؟',
-                  border: OutlineInputBorder(),
+                  hintStyle: AppTypography.bodyLarge.copyWith(
+                    color: onGradient.withValues(alpha: 0.5),
+                  ),
+                  filled: true,
+                  fillColor: onGradient.withValues(alpha: 0.1),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.md,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.radiusLg),
+                    borderSide: BorderSide(
+                      color: onGradient.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.radiusLg),
+                    borderSide: BorderSide(
+                      color: onGradient.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.radiusLg),
+                    borderSide: BorderSide(
+                      color: onGradient.withValues(alpha: 0.7),
+                      width: 2,
+                    ),
+                  ),
                 ),
               ),
             )
@@ -546,20 +596,19 @@ class _AddRelativeStep extends ConsumerWidget {
               ),
             )
           : null,
-      // Primary CTA: add relative (always available). When count > 0 + can
-      // continue, also show a secondary "متابعة" text button below.
-      onContinue: onAdd,
-      continueLabel: count > 0
+      // CTA structure:
+      //   - count == 0  → primary "Add", optional skip on extended.
+      //   - count >= 1  → primary "متابعة" (proceed), secondary "Add more".
+      // The earlier UX (primary always = Add, tiny tertiary "متابعة") trapped
+      // users on this step; founder couldn't find a way forward.
+      onContinue: count > 0 && canContinue ? onContinue : onAdd,
+      continueLabel: count > 0 && canContinue ? 'متابعة' : screen.buttonTextAr,
+      tertiaryLabel: count > 0
           ? (mode == WizardMode.householdOnly
               ? 'إضافة المزيد من أهل البيت'
               : 'إضافة المزيد من الأقارب')
-          : screen.buttonTextAr,
-      // After the user adds at least the minimum, surface a secondary
-      // "متابعة" link to advance.
-      tertiaryLabel: canContinue && count >= (count > 0 ? 1 : minCount)
-          ? 'متابعة'
           : null,
-      onTertiary: canContinue ? onContinue : null,
+      onTertiary: count > 0 ? onAdd : null,
       // Skip link on extended step (de-emphasized, only when count=0)
       skipLabel: showSkipOnExtended ? 'تخطي الآن' : null,
       onSkip: showSkipOnExtended ? onContinue : null,

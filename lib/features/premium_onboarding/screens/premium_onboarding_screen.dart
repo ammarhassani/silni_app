@@ -155,26 +155,20 @@ class _PremiumOnboardingScreenState
                 // Header with skip and progress
                 _buildHeader(themeColors, progress, canSkip),
 
-                // Page view carousel — Directionality.ltr ensures page
-                // index 0 renders first in Arabic RTL UI.
+                // Page view carousel — native RTL Directionality is correct
+                // (page 0 renders on the right; next slides in from the left).
                 Expanded(
-                  child: Directionality(
-                    textDirection: TextDirection.ltr,
-                    child: PageView.builder(
-                      controller: _pageController,
-                      onPageChanged: _onPageChanged,
-                      itemCount: _steps.length,
-                      itemBuilder: (context, index) {
-                        return Directionality(
-                          textDirection: TextDirection.rtl,
-                          child: FeatureShowcaseCard(
-                            step: _steps[index],
-                            index: index,
-                            isActive: index == _currentPage,
-                          ),
-                        );
-                      },
-                    ),
+                  child: PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: _onPageChanged,
+                    itemCount: _steps.length,
+                    itemBuilder: (context, index) {
+                      return FeatureShowcaseCard(
+                        step: _steps[index],
+                        index: index,
+                        isActive: index == _currentPage,
+                      );
+                    },
                   ),
                 ),
 
