@@ -3,12 +3,10 @@ import 'dart:async';
 import '../../shared/models/relative_model.dart';
 import '../../shared/models/interaction_model.dart';
 import '../../shared/models/offline_operation.dart';
-import '../../shared/models/reminder_schedule_model.dart';
 import '../../shared/services/relatives_service.dart';
 import '../../shared/services/interactions_service.dart';
 import '../../shared/services/reminder_schedules_service.dart';
 import '../cache/cache_config.dart';
-import 'cache_service.dart';
 import 'offline_queue_service.dart';
 import 'connectivity_service.dart';
 import 'app_logger_service.dart';
@@ -26,7 +24,6 @@ class SyncService {
   SyncService._();
   static final SyncService instance = SyncService._();
 
-  final CacheService _cache = CacheService.instance;
   final OfflineQueueService _queue = OfflineQueueService.instance;
   final ConnectivityService _connectivity = connectivityService;
   final AppLoggerService _logger = AppLoggerService();
@@ -152,21 +149,13 @@ class SyncService {
     );
   }
 
-  /// Background sync check.
+  /// Background sync — drains pending offline writes when online.
+  /// Phase 9.X.D.B Tier 2: the read-cache staleness check was removed
+  /// along with the read-cache itself. Just process the queue.
   Future<void> _backgroundSync() async {
     if (!_connectivity.isOnline) return;
     if (_isSyncing) return;
-
-    // Only sync if cache is stale
-    if (_cache.isCacheStale(CacheConfig.lastSyncRelativesKey)) {
-      _logger.debug(
-        'Background sync triggered (cache stale)',
-        category: LogCategory.service,
-        tag: 'Sync',
-      );
-      // We don't have userId here, so just process the queue
-      await processOfflineQueue();
-    }
+    await processOfflineQueue();
   }
 
   /// Full sync for a user - pull from server and push pending changes.
@@ -202,13 +191,10 @@ class SyncService {
         metadata: {'userId': userId},
       );
 
-      // 1. Process offline queue first (push local changes)
+      // Process offline queue (push pending local changes to the server).
+      // Server-pull is no longer needed here — Supabase realtime streams
+      // owned by each repository are the single source of truth post-Tier 2.
       await processOfflineQueue();
-
-      // 2. Pull latest data from server
-      await syncRelatives(userId);
-      await syncReminderSchedules(userId);
-      // Note: Interactions are synced per-relative when needed
 
       _setStatus(SyncStatus.idle);
       _lastError = null;
@@ -235,150 +221,14 @@ class SyncService {
     }
   }
 
-  /// Sync relatives from server to cache.
-  Future<void> syncRelatives(String userId) async {
-    try {
-      _logger.debug(
-        'Syncing relatives...',
-        category: LogCategory.service,
-        tag: 'Sync',
-      );
-
-      // Fetch all relatives from server with timeout to prevent hanging
-      bool didTimeout = false;
-      final relatives = await _relativesService
-          .getRelativesStream(userId)
-          .first
-          .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () {
-              didTimeout = true;
-              return <Relative>[];
-            },
-          );
-
-      // Only replace cache if we got a real server response.
-      // On timeout, fall back to additive put to avoid wiping valid cache.
-      if (didTimeout) {
-        _logger.warning(
-          'Sync timed out, keeping existing cache',
-          category: LogCategory.service,
-          tag: 'Sync',
-        );
-      } else {
-        await _cache.replaceRelativesForUser(userId, relatives);
-      }
-
-      // Update sync metadata
-      await _cache.updateLastSyncTime(
-        CacheConfig.lastSyncRelativesKey,
-        itemCount: relatives.length,
-      );
-
-      _logger.info(
-        'Synced ${relatives.length} relatives',
-        category: LogCategory.service,
-        tag: 'Sync',
-      );
-    } catch (e) {
-      _logger.error(
-        'Failed to sync relatives: $e',
-        category: LogCategory.service,
-        tag: 'Sync',
-      );
-      rethrow;
-    }
-  }
-
-  /// Sync interactions for a specific relative.
-  Future<void> syncInteractionsForRelative(String relativeId) async {
-    try {
-      _logger.debug(
-        'Syncing interactions for relative: $relativeId',
-        category: LogCategory.service,
-        tag: 'Sync',
-      );
-
-      // Fetch interactions from server with timeout to prevent hanging
-      final interactions = await _interactionsService
-          .getRelativeInteractionsStream(relativeId)
-          .first
-          .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () => <Interaction>[],
-          );
-
-      // Take only the most recent ones based on limit
-      final limitedInteractions = interactions
-          .take(CacheConfig.maxInteractionsPerRelative)
-          .toList();
-
-      // Update cache
-      await _cache.putInteractions(limitedInteractions);
-
-      // Update sync metadata
-      await _cache.updateLastSyncTime(
-        CacheConfig.lastSyncInteractionsKey(relativeId),
-        itemCount: limitedInteractions.length,
-      );
-
-      _logger.info(
-        'Synced ${limitedInteractions.length} interactions for relative',
-        category: LogCategory.service,
-        tag: 'Sync',
-        metadata: {'relativeId': relativeId},
-      );
-    } catch (e) {
-      _logger.error(
-        'Failed to sync interactions for $relativeId: $e',
-        category: LogCategory.service,
-        tag: 'Sync',
-      );
-      rethrow;
-    }
-  }
-
-  /// Sync reminder schedules from server to cache.
-  Future<void> syncReminderSchedules(String userId) async {
-    try {
-      _logger.debug(
-        'Syncing reminder schedules...',
-        category: LogCategory.service,
-        tag: 'Sync',
-      );
-
-      // Fetch all schedules from server with timeout to prevent hanging
-      final schedules = await _schedulesService
-          .getSchedulesStream(userId)
-          .first
-          .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () => <ReminderSchedule>[],
-          );
-
-      // Update cache
-      await _cache.putReminderSchedules(schedules);
-
-      // Update sync metadata
-      await _cache.updateLastSyncTime(
-        CacheConfig.lastSyncRemindersKey,
-        itemCount: schedules.length,
-      );
-
-      _logger.info(
-        'Synced ${schedules.length} reminder schedules',
-        category: LogCategory.service,
-        tag: 'Sync',
-      );
-    } catch (e) {
-      _logger.error(
-        'Failed to sync reminder schedules: $e',
-        category: LogCategory.service,
-        tag: 'Sync',
-      );
-      rethrow;
-    }
-  }
+  // Phase 9.X.D.B Tier 2: syncRelatives / syncInteractionsForRelative /
+  // syncReminderSchedules removed. Their job was to push server snapshots
+  // into the read-cache boxes that no longer exist. The Supabase realtime
+  // streams that the repositories subscribe to are now the single source
+  // of truth — no separate "pull-and-cache" round trip needed.
+  //
+  // What the SyncService still does: replays the offline write queue when
+  // connectivity returns. See processOfflineQueue() below.
 
   /// Process the offline queue, executing pending operations.
   Future<int> processOfflineQueue() async {
