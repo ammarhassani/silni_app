@@ -208,22 +208,16 @@ void main() async {
   // Connectivity is sync (returns immediately, listener attaches in background).
   connectivityService.initialize();
 
-  // Subscription needs Supabase done (reads currentUserId).
-  final phase2 = Stopwatch()..start();
-  await _safeInit(
-    logger: logger,
-    tag: 'Subscription',
-    action: () => SubscriptionService.instance.initialize(
-      userId:
-          SupabaseConfig.isInitialized ? SupabaseConfig.currentUserId : null,
-    ),
-    severity: _InitSeverity.error,
-  );
-  phase2.stop();
-  bootMark('phase2 (subscription)', phase2.elapsedMilliseconds);
+  // Phase 9.X.D.B hot-fix #13 (launch perf): Subscription init MOVED to
+  // deferred. Founder's runtime report showed it eating 3.2s of preamble
+  // (RevenueCat login + customer-info fetch + offerings + edge-function
+  // sync to Supabase — all synchronous). The free tier is the safe
+  // default; subscriptionTierProvider returns SubscriptionTier.free until
+  // RevenueCat resolves, and any tier-gated UI updates reactively when
+  // the real tier comes in. See _initDeferredServices below.
 
-  // Defer non-critical config services + post-Firebase telemetry. All have
-  // safe fallbacks; nothing here blocks first-frame.
+  // Defer non-critical config services + post-Firebase telemetry +
+  // subscription. All have safe fallbacks; nothing here blocks first-frame.
   unawaited(_initDeferredServices(logger));
 
   // Configure global error handlers with device context
@@ -425,6 +419,17 @@ Future<void> _initDeferredServices(AppLoggerService logger) async {
     init(() => AnalyticsService().logAppOpen(), 'Analytics'),
     init(() => PerformanceMonitoringService().initialize(), 'Performance'),
     init(() async => AppHealthService().startMonitoring(), 'AppHealth'),
+    // Phase 9.X.D.B hot-fix #13: Subscription was 3.2s of phase2 preamble.
+    // Free tier is the safe default; the real tier comes in when this
+    // resolves and tier-gated UI rebuilds reactively.
+    init(
+      () => SubscriptionService.instance.initialize(
+        userId: SupabaseConfig.isInitialized
+            ? SupabaseConfig.currentUserId
+            : null,
+      ),
+      'Subscription',
+    ),
     init(() => HomeWidgetService.initialize(), 'HomeWidget'),
     init(() => SyncService.instance.initialize(), 'Sync'),
     init(() => UnifiedNotificationService().initialize(), 'Notifications'),

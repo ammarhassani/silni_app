@@ -19,6 +19,16 @@ class RealtimeSubscriptionsNotifier
   final AppLoggerService _logger;
   final Ref _ref;
 
+  /// Currently subscribed user — used to deduplicate setup calls. The
+  /// auto-realtime provider's closure-local dedup gets reset on every
+  /// rebuild (which fires when authStateProvider changes), so we'd see
+  /// `subscribeToUserUpdates` called twice in rapid succession on cold
+  /// start: once from `ref.listen`, once from the new build's bottom block.
+  /// Anchoring the dedup here in the notifier (which survives provider
+  /// rebuilds) collapses the second call to a no-op. Phase 9.X.D.B
+  /// hot-fix #13.
+  String? _subscribedUserId;
+
   RealtimeSubscriptionsNotifier(this._realtimeService, this._logger, this._ref)
     : super({});
 
@@ -30,6 +40,16 @@ class RealtimeSubscriptionsNotifier
         'Cannot subscribe to real-time updates: userId is empty',
         category: LogCategory.database,
         tag: 'RealtimeSubscriptionsNotifier',
+      );
+      return;
+    }
+
+    if (_subscribedUserId == userId) {
+      _logger.info(
+        'Already subscribed for user — skipping duplicate setup',
+        category: LogCategory.database,
+        tag: 'RealtimeSubscriptionsNotifier',
+        metadata: {'userId': userId},
       );
       return;
     }
@@ -194,6 +214,7 @@ class RealtimeSubscriptionsNotifier
         'userProfile': userProfileChannel,
         'reminderSchedules': reminderSchedulesChannel,
       };
+      _subscribedUserId = userId;
 
       _logger.info(
         'All real-time subscriptions set up successfully',
@@ -229,6 +250,7 @@ class RealtimeSubscriptionsNotifier
 
     // Clear state
     state = {};
+    _subscribedUserId = null;
   }
 
   /// Subscribe to a specific table for the current user
