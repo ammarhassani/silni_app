@@ -10,7 +10,6 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
-import '../../../core/services/session_cleanup_service.dart';
 import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/services/session_persistence_service.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -180,107 +179,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
               ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
-
-              // Account actions header
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                  child: Text(
-                    '⚙️ إعدادات الحساب',
-                    style: AppTypography.headlineMedium.copyWith(
-                      color: themeColors.textOnGradient,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
-
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                  child: ProfileActionsWidget(
-                    themeColors: themeColors,
-                    onPrivacySettings: () {
-                      UIHelpers.showSnackBar(
-                        context,
-                        'إعدادات الخصوصية قريباً',
-                      );
-                    },
-                    onExportData: () => showExportDataDialogFlow(
-                      context: context,
-                      ref: ref,
-                      themeColors: themeColors,
-                    ),
-                    onDeleteAccount: () => showDeleteAccountDialog(
-                      context: context,
-                      ref: ref,
-                      themeColors: themeColors,
-                    ),
-                  ),
-                ),
-              ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.sm)),
-
-              // Settings link — Settings screen is otherwise unreachable
-              // from the bottom nav (Profile replaced Settings in Phase 0).
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                  child: GlassCard(
-                    child: ListTile(
-                      leading: Icon(Icons.settings_rounded,
-                          color: themeColors.accent),
-                      title: Text(
-                        'الإعدادات',
-                        style: AppTypography.titleMedium.copyWith(
-                            color: Colors.white),
-                      ),
-                      trailing: Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        color: Colors.white.withValues(alpha: 0.5),
-                        size: 20,
-                      ),
-                      onTap: () => context.push(AppRoutes.settings),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.sm)),
-
-              // Logout
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                  child: GlassCard(
-                    child: ListTile(
-                      leading: Icon(Icons.logout_rounded,
-                          color: themeColors.accent),
-                      title: Text(
-                        'تسجيل الخروج',
-                        style: AppTypography.titleMedium.copyWith(
-                            color: Colors.white),
-                      ),
-                      onTap: () async {
-                        final userId = SupabaseConfig.currentUserId;
-                        final authService = ref.read(authServiceProvider);
-                        await authService.signOut();
-                        clearUserSessionFromWidget(
-                          ref,
-                          previousUserId: userId,
-                        );
-                        if (context.mounted) {
-                          context.go(AppRoutes.login);
-                        }
-                      },
-                    ),
-                  ),
-                ),
-              ),
+              // Account-level actions (logout, change password, export data,
+              // delete account, theme, subscription, etc.) live on the
+              // Settings screen — the canonical hub. Profile is now a
+              // focused sub-page reachable from Settings.
 
               SliverToBoxAdapter(child: SizedBox(height: PersistentBottomNav.totalHeight)),
             ],

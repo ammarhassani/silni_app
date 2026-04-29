@@ -147,9 +147,9 @@ class _PersistentBottomNavState extends ConsumerState<PersistentBottomNav>
         route: AppRoutes.aiHub,
       ),
       (
-        icon: Icons.person_rounded,
-        label: 'الملف الشخصي',
-        route: AppRoutes.profile,
+        icon: Icons.settings_rounded,
+        label: 'الإعدادات',
+        route: AppRoutes.settings,
       ),
     ];
 

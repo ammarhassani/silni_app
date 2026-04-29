@@ -103,9 +103,19 @@ class SettingsScreen extends ConsumerWidget {
                     onTap: () => _confirmRerunSetup(context, ref),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  // Mirror of the delete-account entry on Profile. The
-                  // dialog itself (showDeleteAccountDialog) handles the
-                  // 2-step warning + typed-confirm + password re-auth.
+                  _buildSettingsTile(
+                    icon: Icons.download_rounded,
+                    title: 'تصدير بياناتي',
+                    themeColors: themeColors,
+                    onTap: () => showExportDataDialogFlow(
+                      context: context,
+                      ref: ref,
+                      themeColors: themeColors,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  // Delete account dialog handles the 2-step warning +
+                  // typed-confirm + password re-auth.
                   _buildSettingsTile(
                     icon: Icons.delete_forever_rounded,
                     title: 'حذف الحساب',
