@@ -180,12 +180,11 @@ void main() async {
       action: () => SupabaseConfig.initialize(),
       severity: _InitSeverity.critical,
     ),
-    _safeInit(
-      logger: logger,
-      tag: 'Hive',
-      action: () => HiveInitializer.initialize(),
-      severity: _InitSeverity.error,
-    ),
+    // Phase 9.X.D.B hot-fix #14 (Tier 2 Step 1): Hive moved out of the
+    // blocking phase1 — was 772ms (longest single item). CacheService
+    // already wraps every Hive call in try/catch returning []/null, so
+    // any pre-init access during the deferred window gracefully no-ops.
+    // Real data flows through Supabase streams meanwhile.
     _safeInit(
       logger: logger,
       tag: 'Firebase',
@@ -430,6 +429,14 @@ Future<void> _initDeferredServices(AppLoggerService logger) async {
       ),
       'Subscription',
     ),
+    // Phase 9.X.D.B hot-fix #14 (Tier 2 Step 1): Hive deferred from phase1.
+    // Was 772ms of cold-start preamble. CacheService methods all wrap
+    // Hive access in try/catch → return []/null on error, so the brief
+    // window between runApp and Hive ready is safe (Supabase streams
+    // emit fresh data anyway). The eventual Tier 2 Step 2 strips the
+    // read-cache layer entirely; for now this just shifts the cost
+    // post-runApp.
+    init(() => HiveInitializer.initialize(), 'Hive'),
     init(() => HomeWidgetService.initialize(), 'HomeWidget'),
     init(() => SyncService.instance.initialize(), 'Sync'),
     init(() => UnifiedNotificationService().initialize(), 'Notifications'),
