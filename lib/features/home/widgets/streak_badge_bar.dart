@@ -235,55 +235,16 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
                   ]
                 : null,
           ),
+          // Phase 9.X.D.B hot-fix #12 (heat): the streak emoji used to pulse
+          // forever (.animate().repeat()) on the home screen. Continuous
+          // 60fps Transform + Shadow rebuild on every frame. Removed — the
+          // emoji + glow shadow + streak count already communicate the
+          // active streak; motion isn't required.
           child: Text(
             emoji,
             style: const TextStyle(fontSize: 18),
           ),
-        )
-            .animate(
-              onPlay: (controller) => streak > 0 ? controller.repeat() : null,
-            )
-            .then() // Chain animations based on state
-            .custom(
-              builder: (context, value, child) {
-                if (isCritical) {
-                  // Critical: shake animation
-                  return child;
-                } else if (isEndangered) {
-                  // Warning: faster pulse
-                  return child;
-                }
-                // Normal: subtle pulse
-                return child;
-              },
-            )
-            .scale(
-              begin: const Offset(1.0, 1.0),
-              end: const Offset(1.08, 1.08),
-              duration: streak > 0
-                  ? (isEndangered
-                      ? AppAnimations.celebration
-                      : AppAnimations.celebration)
-                  : Duration.zero,
-              curve: Curves.easeInOut,
-            )
-            .then()
-            .scale(
-              begin: const Offset(1.08, 1.08),
-              end: const Offset(1.0, 1.0),
-              duration: streak > 0
-                  ? (isEndangered
-                      ? AppAnimations.celebration
-                      : AppAnimations.celebration)
-                  : Duration.zero,
-              curve: Curves.easeInOut,
-            )
-            .then()
-            .shake(
-              hz: 0,
-              offset: const Offset(0, 0),
-              duration: Duration.zero,
-            ),
+        ),
         const SizedBox(width: 4),
         // Streak number
         Text(

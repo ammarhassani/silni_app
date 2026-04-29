@@ -76,10 +76,12 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
     final themeColors = ref.watch(themeColorsProvider);
     final isFreeUser = currentTier == SubscriptionTier.free;
 
-    // Start/stop breathing animation based on tier
-    if (currentTier.isMax && !_breathingController.isAnimating) {
-      _breathingController.repeat(reverse: true);
-    } else if (!currentTier.isMax && _breathingController.isAnimating) {
+    // Phase 9.X.D.B hot-fix #12 (heat): the MAX breathing glow ran a 3s
+    // reverse-repeat AnimationController forever on home + settings screens
+    // for every MAX subscriber. Combined with the shimmer loop below, that's
+    // two always-on animations per MAX user. Stopped — the glass card itself
+    // signals MAX status; subtle motion isn't worth the GPU.
+    if (_breathingController.isAnimating) {
       _breathingController.stop();
       _breathingController.reset();
     }
@@ -369,12 +371,7 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
         );
       },
     )
-        .animate(onPlay: (controller) => controller.repeat())
-        .shimmer(
-          delay: 2.seconds,
-          duration: 1500.ms,
-          color: AppColors.premiumGold.withValues(alpha: 0.15),
-        )
+        // Phase 9.X.D.B hot-fix #12: dropped infinite shimmer loop (heat).
         .animate()
         .fadeIn(duration: AppAnimations.normal)
         .slideY(

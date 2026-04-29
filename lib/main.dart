@@ -107,14 +107,24 @@ void main() async {
     );
   }
 
+  // Phase 9.X.D.B hot-fix #12 (launch perf): timing instrumentation.
+  // Founder reported "app takes forever to launch" — these logs let us
+  // measure each phase. Look for "[boot]" tag in logs.
+  final bootStart = Stopwatch()..start();
+  void bootMark(String label, int ms) {
+    logger.info(
+      '[boot] $label: ${ms}ms (total ${bootStart.elapsedMilliseconds}ms)',
+      category: LogCategory.lifecycle,
+      tag: 'boot',
+    );
+  }
+
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-
-  // Initialize Arabic locale for date formatting.
-  await initializeDateFormatting('ar');
+  bootMark('orientation', bootStart.elapsedMilliseconds);
 
   // Digit display policy: Western digits (0123) used app-wide, including in
   // time pickers, dates, prices, points, streaks, and durations. Decision
@@ -152,176 +162,68 @@ void main() async {
     if (!kDebugMode) rethrow;
   }
 
-  // Initialize Supabase (primary backend)
-  logger.info(
-    'Starting Supabase initialization...',
-    category: LogCategory.database,
-    tag: 'Supabase',
-  );
-  try {
-    await SupabaseConfig.initialize();
-    logger.info(
-      'Supabase initialization completed successfully',
-      category: LogCategory.database,
+  // Phase 9.X.D.B hot-fix #12 (launch perf): four independent inits run in
+  // PARALLEL via Future.wait — used to be serial awaits taking 1.5–6s combined.
+  // Each future has its own try/catch so a single failure doesn't sink the
+  // others (Future.wait propagates the first error otherwise).
+  final phase1 = Stopwatch()..start();
+  await Future.wait([
+    _safeInit(
+      logger: logger,
+      tag: 'Locale',
+      action: () => initializeDateFormatting('ar'),
+      severity: _InitSeverity.error,
+    ),
+    _safeInit(
+      logger: logger,
       tag: 'Supabase',
-    );
-    logger.info(
-      'Supabase client is ready',
-      category: LogCategory.database,
-      tag: 'Supabase',
-    );
-  } catch (e, stackTrace) {
-    logger.critical(
-      'Supabase initialization FAILED - Auth will NOT work',
-      category: LogCategory.database,
-      tag: 'Supabase',
-      metadata: {'error': e.toString()},
-      stackTrace: stackTrace,
-    );
-    // Don't rethrow - let app start so we can see logs
-  }
-
-  // Initialize Hive for local caching (offline support)
-  logger.info(
-    'Initializing Hive for local caching...',
-    category: LogCategory.database,
-    tag: 'Hive',
-  );
-  try {
-    await HiveInitializer.initialize();
-    logger.info(
-      'Hive initialization completed successfully',
-      category: LogCategory.database,
+      action: () => SupabaseConfig.initialize(),
+      severity: _InitSeverity.critical,
+    ),
+    _safeInit(
+      logger: logger,
       tag: 'Hive',
-    );
-  } catch (e, stackTrace) {
-    logger.error(
-      'Hive initialization failed - Offline caching disabled',
-      category: LogCategory.database,
-      tag: 'Hive',
-      metadata: {'error': e.toString()},
-      stackTrace: stackTrace,
-    );
-    // Don't rethrow - app can work without local cache
-  }
+      action: () => HiveInitializer.initialize(),
+      severity: _InitSeverity.error,
+    ),
+    _safeInit(
+      logger: logger,
+      tag: 'Firebase',
+      action: () async {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+        // Background message handler must be wired right after init.
+        FirebaseMessaging.onBackgroundMessage(
+          firebaseMessagingBackgroundHandler,
+        );
+      },
+      severity: _InitSeverity.error,
+    ),
+  ]);
+  phase1.stop();
+  bootMark('phase1 (parallel: locale + supabase + hive + firebase)',
+      phase1.elapsedMilliseconds);
 
-  // Initialize connectivity monitoring
-  logger.info(
-    'Initializing connectivity service...',
-    category: LogCategory.network,
-    tag: 'Connectivity',
-  );
+  // Connectivity is sync (returns immediately, listener attaches in background).
   connectivityService.initialize();
 
-  // Initialize Firebase for FCM (push notifications only)
-  logger.info(
-    'Initializing Firebase for FCM...',
-    category: LogCategory.service,
-    tag: 'Firebase',
-  );
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-
-    // Set up background message handler
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-
-    logger.info(
-      'Firebase initialized successfully',
-      category: LogCategory.service,
-      tag: 'Firebase',
-    );
-
-    // Initialize Firebase Analytics
-    try {
-      final analytics = AnalyticsService();
-      await analytics.logAppOpen();
-      logger.info(
-        'Firebase Analytics initialized',
-        category: LogCategory.service,
-        tag: 'Analytics',
-      );
-    } catch (e) {
-      logger.warning(
-        'Firebase Analytics initialization failed',
-        category: LogCategory.service,
-        tag: 'Analytics',
-        metadata: {'error': e.toString()},
-      );
-      // Don't rethrow - app can work without analytics
-    }
-
-    // Initialize Performance Monitoring
-    logger.info(
-      'Initializing performance monitoring...',
-      category: LogCategory.service,
-      tag: 'Performance',
-    );
-    try {
-      final perfService = PerformanceMonitoringService();
-      await perfService.initialize();
-
-      // Start app health monitoring
-      final healthService = AppHealthService();
-      healthService.startMonitoring();
-
-      logger.info(
-        'Performance monitoring initialized',
-        category: LogCategory.service,
-        tag: 'Performance',
-      );
-    } catch (e) {
-      logger.warning(
-        'Performance monitoring initialization failed',
-        category: LogCategory.service,
-        tag: 'Performance',
-        metadata: {'error': e.toString()},
-      );
-      // Don't rethrow - app can work without performance monitoring
-    }
-  } catch (e, stackTrace) {
-    logger.error(
-      'Firebase initialization failed',
-      category: LogCategory.service,
-      tag: 'Firebase',
-      metadata: {'error': e.toString()},
-      stackTrace: stackTrace,
-    );
-    // Don't rethrow - app can work without push notifications
-  }
-
-  // Initialize subscription service (RevenueCat)
-  // Only pass userId if Supabase is initialized and user is authenticated
-  logger.info(
-    'Initializing subscription service...',
-    category: LogCategory.service,
+  // Subscription needs Supabase done (reads currentUserId).
+  final phase2 = Stopwatch()..start();
+  await _safeInit(
+    logger: logger,
     tag: 'Subscription',
+    action: () => SubscriptionService.instance.initialize(
+      userId:
+          SupabaseConfig.isInitialized ? SupabaseConfig.currentUserId : null,
+    ),
+    severity: _InitSeverity.error,
   );
-  try {
-    final currentUserId = SupabaseConfig.isInitialized ? SupabaseConfig.currentUserId : null;
-    await SubscriptionService.instance.initialize(
-      userId: currentUserId,
-    );
-    logger.info(
-      'Subscription service initialized successfully',
-      category: LogCategory.service,
-      tag: 'Subscription',
-      metadata: {'hasUserId': currentUserId != null},
-    );
-  } catch (e, stackTrace) {
-    logger.error(
-      'Subscription service initialization failed',
-      category: LogCategory.service,
-      tag: 'Subscription',
-      metadata: {'error': e.toString()},
-      stackTrace: stackTrace,
-    );
-    // Don't rethrow - app can work without subscriptions (defaults to free tier)
-  }
+  phase2.stop();
+  bootMark('phase2 (subscription)', phase2.elapsedMilliseconds);
 
-  // Defer non-critical config services — all have hardcoded fallback defaults.
-  // They load in parallel while the splash screen plays, saving ~2-3s of startup.
+  // Defer non-critical config services + post-Firebase telemetry. All have
+  // safe fallbacks; nothing here blocks first-frame.
   unawaited(_initDeferredServices(logger));
 
   // Configure global error handlers with device context
@@ -371,6 +273,7 @@ void main() async {
     category: LogCategory.service,
     tag: 'Sentry',
   );
+  final phase3 = Stopwatch()..start();
   await SentryFlutter.init(
     (options) {
       options.dsn = AppEnvironment.sentryDsn;
@@ -439,19 +342,62 @@ void main() async {
       );
     },
     appRunner: () {
+      phase3.stop();
+      bootMark('phase3 (sentry init)', phase3.elapsedMilliseconds);
+      bootStart.stop();
       logger.info(
-        'Sentry initialized successfully',
-        category: LogCategory.service,
-        tag: 'Sentry',
-      );
-      logger.info(
-        'All services initialized - Starting app',
+        '[boot] runApp — total cold-start preamble: '
+        '${bootStart.elapsedMilliseconds}ms',
         category: LogCategory.lifecycle,
-        tag: 'main',
+        tag: 'boot',
       );
       return runApp(const ProviderScope(child: SilniApp()));
     },
   );
+}
+
+/// Severity for an init failure — drives which logger level fires.
+enum _InitSeverity { critical, error, warning }
+
+/// Wraps an init future in per-future try/catch + logging. Used inside
+/// Future.wait so a single service failure doesn't sink the whole batch
+/// (Future.wait propagates the first error otherwise).
+Future<void> _safeInit({
+  required AppLoggerService logger,
+  required String tag,
+  required Future<void> Function() action,
+  required _InitSeverity severity,
+}) async {
+  final sw = Stopwatch()..start();
+  try {
+    await action();
+    sw.stop();
+    logger.info(
+      '$tag initialized in ${sw.elapsedMilliseconds}ms',
+      category: LogCategory.lifecycle,
+      tag: tag,
+    );
+  } catch (e, stack) {
+    sw.stop();
+    final meta = {'error': e.toString(), 'durationMs': sw.elapsedMilliseconds};
+    switch (severity) {
+      case _InitSeverity.critical:
+        logger.critical('$tag init FAILED',
+            category: LogCategory.lifecycle,
+            tag: tag,
+            metadata: meta,
+            stackTrace: stack);
+      case _InitSeverity.error:
+        logger.error('$tag init failed',
+            category: LogCategory.lifecycle,
+            tag: tag,
+            metadata: meta,
+            stackTrace: stack);
+      case _InitSeverity.warning:
+        logger.warning('$tag init failed - using defaults',
+            category: LogCategory.lifecycle, tag: tag, metadata: meta);
+    }
+  }
 }
 
 /// Non-critical services deferred to run in parallel while the splash screen
@@ -473,6 +419,12 @@ Future<void> _initDeferredServices(AppLoggerService logger) async {
   }
 
   await Future.wait([
+    // Phase 9.X.D.B hot-fix #12: moved out of the blocking Firebase block.
+    // logAppOpen + perf monitoring + health monitoring are non-critical
+    // and were each adding 100–300ms of synchronous round-trip to startup.
+    init(() => AnalyticsService().logAppOpen(), 'Analytics'),
+    init(() => PerformanceMonitoringService().initialize(), 'Performance'),
+    init(() async => AppHealthService().startMonitoring(), 'AppHealth'),
     init(() => HomeWidgetService.initialize(), 'HomeWidget'),
     init(() => SyncService.instance.initialize(), 'Sync'),
     init(() => UnifiedNotificationService().initialize(), 'Notifications'),
