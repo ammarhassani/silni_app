@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/providers/pattern_animation_provider.dart';
 import '../../core/theme/app_themes.dart';
 import 'islamic_pattern_background.dart';
-import 'pattern_animation_controller.dart';
 
-/// Animated Islamic pattern background with touch interactivity.
+/// Pass-through to the static [IslamicPatternBackground].
 ///
-/// Replaces [IslamicPatternBackground] when animations are enabled.
-/// Automatically falls back to static version when animations disabled.
-class AnimatedIslamicPatternBackground extends ConsumerStatefulWidget {
+/// Phase 9.X.D.B hot-fix #11 (heat): this widget previously hosted a
+/// [PatternAnimationController] driving 3 infinite [AnimationController]s
+/// (vertical-flow, pulse, shimmer) which each notified listeners at 60fps.
+/// That drove a [CustomPaint] with `willChange: true` (which disables
+/// Flutter's GPU raster cache), so every gradient-bg screen sat at full GPU
+/// utilization continuously — the iPhone 15 Pro got noticeably warm after
+/// ~2 minutes of normal use.
+///
+/// Hard pass-through to the static pattern. The motion infrastructure
+/// ([PatternAnimationController], [PatternAnimationSettings]) lives on
+/// untouched in case we add a per-user "background motion" opt-in toggle in
+/// settings later, but no caller currently reaches it.
+///
+/// Kept as a `ConsumerWidget` (not deleted) because dozens of callers
+/// import this name; deleting would touch every gradient-bg screen.
+class AnimatedIslamicPatternBackground extends ConsumerWidget {
   final AppThemeType themeType;
   final Widget child;
   final double opacity;
@@ -24,160 +35,11 @@ class AnimatedIslamicPatternBackground extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<AnimatedIslamicPatternBackground> createState() =>
-      _AnimatedIslamicPatternBackgroundState();
-}
-
-class _AnimatedIslamicPatternBackgroundState
-    extends ConsumerState<AnimatedIslamicPatternBackground>
-    with TickerProviderStateMixin, WidgetsBindingObserver {
-  PatternAnimationController? _animationController;
-  PatternAnimationSettings? _lastSettings;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _initializeAnimations();
-    _setupScrollListener();
-  }
-
-  void _initializeAnimations() {
-    final settings = ref.read(patternAnimationProvider);
-    _lastSettings = settings;
-
-    if (settings.isAnimationEnabled) {
-      _animationController = PatternAnimationController(
-        vsync: this,
-        settings: settings,
-      );
-    }
-  }
-
-  void _setupScrollListener() {
-    widget.scrollController?.addListener(_onScroll);
-  }
-
-  void _onScroll() {
-    if (widget.scrollController == null || _animationController == null) return;
-    _animationController!.updateScrollParallax(widget.scrollController!.offset);
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Battery efficiency: pause when backgrounded
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
-      _animationController?.pause();
-    } else if (state == AppLifecycleState.resumed) {
-      _animationController?.resume();
-    }
-  }
-
-  @override
-  void didUpdateWidget(AnimatedIslamicPatternBackground oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    // Handle scroll controller changes
-    if (oldWidget.scrollController != widget.scrollController) {
-      oldWidget.scrollController?.removeListener(_onScroll);
-      widget.scrollController?.addListener(_onScroll);
-    }
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    widget.scrollController?.removeListener(_onScroll);
-    _animationController?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final settings = ref.watch(patternAnimationProvider);
-
-    // Handle settings changes
-    if (_lastSettings != settings) {
-      _handleSettingsChange(settings);
-      _lastSettings = settings;
-    }
-
-    // Fall back to static version if animations disabled
-    if (!settings.isAnimationEnabled || _animationController == null) {
-      return IslamicPatternBackground(
-        themeType: widget.themeType,
-        opacity: widget.opacity,
-        child: widget.child,
-      );
-    }
-
-    return Stack(
-      children: [
-        // Animated pattern layer with touch detection
-        Positioned.fill(
-          child: RepaintBoundary(
-            child: GestureDetector(
-              onTapDown: (details) {
-                _animationController?.addRipple(details.localPosition);
-              },
-              onPanStart: (details) {
-                _animationController?.updateTouchPosition(details.localPosition);
-              },
-              onPanUpdate: (details) {
-                _animationController?.updateTouchPosition(details.localPosition);
-              },
-              onPanEnd: (_) {
-                _animationController?.updateTouchPosition(null);
-              },
-              onPanCancel: () {
-                _animationController?.updateTouchPosition(null);
-              },
-              behavior: HitTestBehavior.translucent,
-              child: AnimatedBuilder(
-                animation: _animationController!,
-                builder: (context, _) {
-                  return CustomPaint(
-                    painter: getAnimatedPatternPainter(
-                      themeType: widget.themeType,
-                      opacity: widget.opacity,
-                      pulseMultiplier: _animationController!.pulseMultiplier,
-                      parallaxOffset: _animationController!.parallaxOffset,
-                      shimmerPosition: _animationController!.shimmerPosition,
-                      ripples: _animationController!.ripples,
-                      touchPosition: _animationController!.touchPosition,
-                    ),
-                    willChange: true,
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-        // Content on top
-        widget.child,
-      ],
+  Widget build(BuildContext context, WidgetRef ref) {
+    return IslamicPatternBackground(
+      themeType: themeType,
+      opacity: opacity,
+      child: child,
     );
-  }
-
-  void _handleSettingsChange(PatternAnimationSettings newSettings) {
-    // Initialize controller if needed
-    if (newSettings.isAnimationEnabled && _animationController == null) {
-      _animationController = PatternAnimationController(
-        vsync: this,
-        settings: newSettings,
-      );
-    }
-
-    // Update existing controller
-    if (_animationController != null) {
-      _animationController!.updateSettings(newSettings);
-    }
-
-    // Dispose controller if no longer needed
-    if (!newSettings.isAnimationEnabled && _animationController != null) {
-      _animationController?.dispose();
-      _animationController = null;
-    }
   }
 }

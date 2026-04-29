@@ -29,12 +29,18 @@ class PatternAnimationSettings {
   final double animationIntensity;
 
   const PatternAnimationSettings({
-    this.rotationEnabled = true,
-    this.pulseEnabled = true,
-    this.parallaxEnabled = true,
-    this.shimmerEnabled = false, // Off by default (battery consideration)
-    this.touchRippleEnabled = true,
-    this.followTouchEnabled = true,
+    // Phase 9.X.D.B hot-fix #11: all animation flags default to false. The
+    // AnimatedIslamicPatternBackground was running 3 infinite AnimationControllers
+    // notifying at 60fps on every gradient-bg screen, heating iPhone 15 Pro
+    // noticeably after ~2 minutes. Defense-in-depth — the widget already
+    // bypasses the animated path now, but defaulting these to false ensures
+    // any future code path that reads the settings gets the heat-safe default.
+    this.rotationEnabled = false,
+    this.pulseEnabled = false,
+    this.parallaxEnabled = false,
+    this.shimmerEnabled = false,
+    this.touchRippleEnabled = false,
+    this.followTouchEnabled = false,
     this.animationIntensity = 0.7,
   });
 

@@ -57,13 +57,12 @@ class GradientBackground extends ConsumerWidget {
       }
     }
 
-    if (animated) {
-      return AnimatedGradientBackground(
-        gradient: gradient ?? defaultGradient,
-        child: backgroundChild,
-      );
-    }
-
+    // Phase 9.X.D.B hot-fix #11 (heat): the `animated: true` callers used to
+    // route through AnimatedGradientBackground, which repeated a 6-second
+    // color tween at 60fps on every screen — a constant fullscreen GPU
+    // redraw. Rendering the static gradient instead. Animation infrastructure
+    // kept intact below in case we add an opt-in "background motion" toggle
+    // later, but no caller currently reaches it.
     return Container(
       decoration: BoxDecoration(gradient: gradient ?? defaultGradient),
       child: backgroundChild,
