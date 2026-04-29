@@ -1017,6 +1017,8 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         validator: validator,
         keyboardType: keyboardType,
         maxLines: maxLines,
+        // Dark keyboard variant matches the gradient backdrop on iOS.
+        keyboardAppearance: Brightness.dark,
         style: AppTypography.bodyMedium.copyWith(color: Colors.white),
         decoration: InputDecoration(
           labelText: label,

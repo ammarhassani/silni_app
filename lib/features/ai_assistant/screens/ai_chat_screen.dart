@@ -398,6 +398,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
                     textDirection: TextDirection.rtl,
                     textAlign: TextAlign.right,
                     cursorColor: dialogTheme.textOnGradient,
+                    keyboardAppearance: Brightness.dark,
                     style: AppTypography.bodyMedium.copyWith(color: dialogTheme.textOnGradient),
                     decoration: InputDecoration(
                       hintText: 'اكتب رسالتك المعدلة...',
@@ -639,6 +640,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
                   textDirection: TextDirection.rtl,
                   textAlign: TextAlign.right,
                   cursorColor: themeColors.textOnGradient,
+                  keyboardAppearance: Brightness.dark,
                   style: AppTypography.bodyMedium.copyWith(
                     color: themeColors.textOnGradient,
                   ),

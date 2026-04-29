@@ -588,6 +588,10 @@ class _ConfirmNameStepState extends ConsumerState<_ConfirmNameStep> {
         child: TextField(
           controller: _nameController,
           textAlign: TextAlign.center,
+          // Dark keyboard variant matches the wizard's dark gradient
+          // backdrop. Without this, iOS draws a light keyboard which
+          // looks like a stray white panel under the field.
+          keyboardAppearance: Brightness.dark,
           style: AppTypography.bodyLarge.copyWith(color: onGradient),
           cursorColor: onGradient,
           decoration: InputDecoration(

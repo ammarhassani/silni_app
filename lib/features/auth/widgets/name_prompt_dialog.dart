@@ -166,6 +166,7 @@ class _NamePromptDialogState extends State<NamePromptDialog> {
               controller: _nameController,
               textAlign: TextAlign.center,
               textDirection: TextDirection.rtl,
+              keyboardAppearance: Brightness.dark,
               style: AppTypography.bodyLarge.copyWith(
                 color: Colors.white,
               ),

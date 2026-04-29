@@ -899,6 +899,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   controller: _emailController,
                                   keyboardType: TextInputType.emailAddress,
                                   textDirection: TextDirection.ltr,
+                                  keyboardAppearance: Brightness.dark,
                                   style: AppTypography.bodyMedium.copyWith(
                                     color: themeColors.textOnGradient,
                                   ),
@@ -965,6 +966,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   controller: _passwordController,
                                   obscureText: _obscurePassword,
                                   textDirection: TextDirection.ltr,
+                                  keyboardAppearance: Brightness.dark,
                                   style: AppTypography.bodyMedium.copyWith(
                                     color: themeColors.textOnGradient,
                                   ),

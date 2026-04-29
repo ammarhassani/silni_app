@@ -529,6 +529,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         keyboardType: keyboardType,
         obscureText: obscureText,
         textDirection: textDirection,
+        keyboardAppearance: Brightness.dark,
         style: AppTypography.bodyMedium.copyWith(
           color: themeColors.textOnGradient,
         ),
