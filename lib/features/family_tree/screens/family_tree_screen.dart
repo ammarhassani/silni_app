@@ -468,8 +468,9 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                           }
                           return Column(
                             children: [
-                              if (groupInfo == null && relatives.isNotEmpty)
-                                _buildShareTreeBanner(context),
+                              // Banner removed — duplicated the header's
+                              // group_add_rounded icon, which already prompts
+                              // users without a group. One affordance is enough.
                               Expanded(
                                 child: _buildTreeContent(
                                   context,
@@ -510,83 +511,6 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
           ),
         ],
       ),
-      ),
-    );
-  }
-
-  Widget _buildShareTreeBanner(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppColors.calmBlue.withValues(alpha: 0.15),
-              AppColors.premiumGold.withValues(alpha: 0.10),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-          border: Border.all(
-            color: AppColors.calmBlue.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.family_restroom_rounded,
-              color: AppColors.calmBlue,
-              size: 36,
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'شارك شجرتك مع أفراد عائلتك',
-                    style: AppTypography.titleSmall.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'أنشئ مجموعة عائلية ليتمكن أقاربك من رؤية الشجرة والمشاركة فيها',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: Colors.white.withValues(alpha: 0.7),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  SizedBox(
-                    height: 32,
-                    child: ElevatedButton(
-                      onPressed: () => context.push(AppRoutes.createFamilyGroup),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.calmBlue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                        ),
-                      ),
-                      child: Text(
-                        'إنشاء مجموعة عائلية ✨',
-                        style: AppTypography.labelMedium.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
