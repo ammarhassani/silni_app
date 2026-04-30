@@ -154,10 +154,16 @@ serve(async (req) => {
 
       // Fetch relatives info — also pull last_contact_date for the
       // recent-contact suppression check (Phase 9.X.D Track A3).
+      //
+      // is_self=false filter is a defensive belt-and-suspenders: if a
+      // self-node ID ever leaks into a schedule's relative_ids array
+      // (e.g. through a buggy import path), we silently drop it here
+      // rather than send the user a reminder to contact themselves.
       const { data: relatives, error: relativesError } = await supabase
         .from("relatives")
         .select("id, full_name, user_id, last_contact_date, relative_category")
-        .in("id", relativeIds);
+        .in("id", relativeIds)
+        .eq("is_self", false);
 
       if (relativesError) {
         console.error(`   ❌ Error fetching relatives:`, relativesError);

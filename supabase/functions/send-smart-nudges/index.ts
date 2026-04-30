@@ -235,14 +235,27 @@ serve(async (req) => {
 
     console.log(`📋 Loaded ${templates.length} active nudge templates`);
 
-    // 2. Fetch all non-archived relatives with gap >= MIN_GAP_DAYS
+    // 2. Fetch all non-archived, non-self relatives with gap >= MIN_GAP_DAYS.
+    //
+    // CRITICAL: is_self=false filter prevents the user's own self-node (the
+    // anchor row with their own name) from being treated as a "relative
+    // overdue for contact" — without this, users get nudges telling them
+    // they haven't heard from themselves in N days. Phase 9.X.D.B fix.
+    //
+    // Also dropped the `last_contact_date IS NULL` branch from the .or():
+    // never-contacted relatives are excluded from the smart-nudge stream
+    // because the {{days}} substitution would otherwise become a meaningless
+    // sentinel ("له 999 يوم"). They'll still appear in scheduled reminders
+    // (which use the schedule's own logic, not last_contact_date).
     const cutoffDate = new Date(now.getTime() - MIN_GAP_DAYS * 24 * 60 * 60 * 1000);
 
     const { data: relatives, error: relativesError } = await supabase
       .from("relatives")
       .select("id, user_id, full_name, relationship_type, gender, family_side, last_contact_date, is_archived")
       .eq("is_archived", false)
-      .or(`last_contact_date.is.null,last_contact_date.lte.${cutoffDate.toISOString()}`);
+      .eq("is_self", false)
+      .not("last_contact_date", "is", null)
+      .lte("last_contact_date", cutoffDate.toISOString());
 
     if (relativesError) {
       console.error("❌ Error fetching relatives:", relativesError);
@@ -266,12 +279,12 @@ serve(async (req) => {
     const userRelatives = new Map<string, Array<RelativeRow & { daysSince: number }>>();
 
     for (const rel of relatives as RelativeRow[]) {
-      const daysSince = rel.last_contact_date
-        ? Math.floor(
-            (now.getTime() - new Date(rel.last_contact_date).getTime()) /
-              (1000 * 60 * 60 * 24)
-          )
-        : 999; // Never contacted
+      // last_contact_date is guaranteed non-null by the query filter above
+      // (was previously a 999-day sentinel that leaked into notifications).
+      const daysSince = Math.floor(
+        (now.getTime() - new Date(rel.last_contact_date!).getTime()) /
+          (1000 * 60 * 60 * 24)
+      );
 
       if (daysSince < MIN_GAP_DAYS) continue;
 
