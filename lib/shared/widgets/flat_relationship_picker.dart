@@ -31,10 +31,10 @@ List<_Section> _buildSections() {
       entries: [
         (type: RelationshipType.father, side: null, gender: Gender.male, label: 'أب', emoji: '🧔'),
         (type: RelationshipType.mother, side: null, gender: Gender.female, label: 'أم', emoji: '🧕'),
-        (type: RelationshipType.grandfather, side: FamilySide.paternal, gender: Gender.male, label: 'جد أبوي', emoji: '👴'),
-        (type: RelationshipType.grandmother, side: FamilySide.paternal, gender: Gender.female, label: 'جدة أبوية', emoji: '👵'),
+        (type: RelationshipType.grandfather, side: FamilySide.paternal, gender: Gender.male, label: 'جد أبي', emoji: '👴'),
+        (type: RelationshipType.grandmother, side: FamilySide.paternal, gender: Gender.female, label: 'جدة أبي', emoji: '👵'),
         (type: RelationshipType.grandfather, side: FamilySide.maternal, gender: Gender.male, label: 'جد أمي', emoji: '👴'),
-        (type: RelationshipType.grandmother, side: FamilySide.maternal, gender: Gender.female, label: 'جدة أمية', emoji: '👵'),
+        (type: RelationshipType.grandmother, side: FamilySide.maternal, gender: Gender.female, label: 'جدة أمي', emoji: '👵'),
       ],
     ),
     (
