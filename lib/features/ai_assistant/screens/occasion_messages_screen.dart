@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:silni_app/core/utils/contact_launcher.dart';
+import '../../../shared/widgets/directional_icon.dart';
 
 import 'package:silni_app/core/constants/app_animations.dart';
 import 'package:silni_app/core/constants/app_spacing.dart';
@@ -142,7 +143,7 @@ class _OccasionMessagesScreenState
           ),
           centerTitle: true,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios, color: themeColors.textPrimary),
+            icon: DirectionalIcon(Icons.arrow_back_ios, color: themeColors.textPrimary),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),

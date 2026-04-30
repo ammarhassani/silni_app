@@ -12,6 +12,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../../shared/widgets/directional_icon.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/services/session_cleanup_service.dart';
@@ -56,6 +57,21 @@ class SettingsScreen extends ConsumerWidget {
                   // In-App Messages
                   const MessageWidget(screenPath: '/settings'),
                   const SizedBox(height: AppSpacing.md),
+
+                  // ── الاشتراك (Subscription) — promoted to top ──
+                  _buildSectionHeader('الاشتراك', themeColors),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final isMax = ref.watch(isMaxProvider);
+                      return SubscriptionCard(compact: isMax);
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // ── المظهر (Theme) — promoted to top ──
+                  _buildSectionHeader('المظهر', themeColors),
+                  const ThemePickerButton(),
+                  const SizedBox(height: AppSpacing.lg),
 
                   // ── الحساب (Account) ────────────────────────────
                   _buildSectionHeader('الحساب', themeColors),
@@ -133,8 +149,6 @@ class SettingsScreen extends ConsumerWidget {
 
                   // ── التطبيق (App) ───────────────────────────────
                   _buildSectionHeader('التطبيق', themeColors),
-                  const ThemePickerButton(),
-                  const SizedBox(height: AppSpacing.sm),
                   _buildSettingsTile(
                     icon: Icons.notifications,
                     title: 'الإشعارات',
@@ -175,16 +189,6 @@ class SettingsScreen extends ConsumerWidget {
                           appStoreId: '6738029498',
                         );
                       }
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // ── الاشتراك (Subscription) ─────────────────────
-                  _buildSectionHeader('الاشتراك', themeColors),
-                  Consumer(
-                    builder: (context, ref, _) {
-                      final isMax = ref.watch(isMaxProvider);
-                      return SubscriptionCard(compact: isMax);
                     },
                   ),
 
@@ -244,7 +248,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ),
         trailing: showChevron
-            ? Icon(
+            ? DirectionalIcon(
                 trailingIcon,
                 color: themeColors.textOnGradient.withValues(alpha: 0.5),
                 size: 20,

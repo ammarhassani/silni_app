@@ -14,6 +14,7 @@ import '../../../shared/services/notification_history_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
 import '../../../shared/utils/ui_helpers.dart';
+import '../../../shared/widgets/directional_icon.dart';
 
 /// Screen that shows notification history
 class NotificationHistoryScreen extends ConsumerStatefulWidget {
@@ -77,7 +78,7 @@ class _NotificationHistoryScreenState
             button: true,
             child: IconButton(
               onPressed: () => context.pop(),
-              icon: Icon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
+              icon: DirectionalIcon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),

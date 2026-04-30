@@ -25,6 +25,7 @@ import '../../family_tree/providers/family_graph_providers.dart';
 import '../../family_tree/services/family_graph_service.dart';
 import '../../home/providers/home_providers.dart';
 import '../../../shared/utils/ui_helpers.dart';
+import '../../../shared/widgets/directional_icon.dart';
 
 class ContactImportScreen extends ConsumerStatefulWidget {
   /// When true, the screen acts as a single-contact picker:
@@ -480,7 +481,7 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
             button: true,
             child: IconButton(
               onPressed: () => context.pop(),
-              icon: Icon(Icons.arrow_forward_rounded, color: themeColors.textOnGradient),
+              icon: DirectionalIcon(Icons.arrow_forward_rounded, color: themeColors.textOnGradient),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),

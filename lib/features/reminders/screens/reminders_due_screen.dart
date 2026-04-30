@@ -22,6 +22,7 @@ import '../../family_tree/providers/family_graph_providers.dart';
 import '../../home/providers/home_providers.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
 import '../../../shared/utils/ui_helpers.dart';
+import '../../../shared/widgets/directional_icon.dart';
 
 /// Screen that shows relatives due for contact from reminder notifications
 class RemindersDueScreen extends ConsumerStatefulWidget {
@@ -94,7 +95,7 @@ class _RemindersDueScreenState extends ConsumerState<RemindersDueScreen> {
             button: true,
             child: IconButton(
               onPressed: () => context.pop(),
-              icon: Icon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
+              icon: DirectionalIcon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),

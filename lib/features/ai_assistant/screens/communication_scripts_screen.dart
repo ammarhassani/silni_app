@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../../shared/widgets/directional_icon.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -213,7 +214,7 @@ class _CommunicationScriptsScreenState
         backgroundColor: themeColors.background1,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          icon: const DirectionalIcon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: GlassPillTitle(

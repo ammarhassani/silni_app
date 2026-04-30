@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../shared/widgets/directional_icon.dart';
 
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -168,7 +169,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                         button: true,
                         child: IconButton(
                           onPressed: () => context.pop(),
-                          icon: Icon(Icons.arrow_back_ios_rounded,
+                          icon: DirectionalIcon(Icons.arrow_back_ios_rounded,
                               color: themeColors.textOnGradient),
                         ),
                       ),

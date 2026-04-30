@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../../shared/widgets/directional_icon.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -793,7 +794,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
             label: 'رجوع',
             button: true,
             child: IconButton(
-              icon: Icon(Icons.arrow_back_rounded, color: themeColors.textOnGradient),
+              icon: DirectionalIcon(Icons.arrow_back_rounded, color: themeColors.textOnGradient),
               onPressed: () => context.pop(),
             ),
           ),

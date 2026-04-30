@@ -7,6 +7,7 @@
 // SharedPreferences keys preserved so v1.1 can read prior user intent.
 
 import 'dart:io' show Platform;
+import '../../../shared/widgets/directional_icon.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -173,7 +174,7 @@ class NotificationsScreen extends ConsumerWidget {
             button: true,
             child: IconButton(
               onPressed: () => context.pop(),
-              icon: Icon(Icons.arrow_forward_rounded,
+              icon: DirectionalIcon(Icons.arrow_forward_rounded,
                   color: themeColors.textOnGradient),
             ),
           ),

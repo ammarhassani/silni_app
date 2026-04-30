@@ -4,6 +4,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+import '../../../shared/widgets/directional_icon.dart';
 
 import '../../../core/ai/ai_identity.dart';
 import '../../../core/ai/ai_models.dart';
@@ -325,7 +326,7 @@ $personality
         children: [
           IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back_ios_rounded,
+            icon: const DirectionalIcon(Icons.arrow_back_ios_rounded,
                 color: Colors.white),
           ),
           const SizedBox(width: AppSpacing.sm),

@@ -42,6 +42,7 @@ import '../services/family_graph_service.dart';
 import '../services/family_tree_layout_service.dart';
 import '../widgets/placeholder_node_widget.dart';
 import '../widgets/tree_node_widget.dart';
+import '../../../shared/widgets/directional_icon.dart';
 
 class FamilyTreeScreen extends ConsumerStatefulWidget {
   const FamilyTreeScreen({super.key});
@@ -612,7 +613,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                   context.go(AppRoutes.home);
                 }
               },
-              icon: Icon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
+              icon: DirectionalIcon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -1526,7 +1527,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                             context.go(AppRoutes.home);
                           }
                         },
-                        icon: Icon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
+                        icon: DirectionalIcon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       Text(

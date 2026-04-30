@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../shared/widgets/directional_icon.dart';
 
 import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_spacing.dart';
@@ -171,7 +172,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
         label: 'رجوع',
         button: true,
         child: IconButton(
-          icon: Icon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
+          icon: DirectionalIcon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
           onPressed: () => context.pop(),
         ),
       ),
