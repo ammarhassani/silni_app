@@ -50,8 +50,15 @@ class _UnscheduledRelativesSectionState
     // Note: viewer's own node is already excluded by the parent screen,
     // so we don't need !r.isSelf here (which would wrongly exclude
     // other users' claimed nodes in group mode).
+    //
+    // Household members are NEVER candidates for reminders — the
+    // onboarding wizard explicitly tells the user "we won't disturb
+    // you about people you see daily." Surfacing them here as "needs
+    // a reminder" contradicts that promise.
     return widget.relatives
-        .where((r) => !allScheduledIds.contains(r.id))
+        .where((r) =>
+            r.relativeCategory != RelativeCategory.household &&
+            !allScheduledIds.contains(r.id))
         .toList();
   }
 

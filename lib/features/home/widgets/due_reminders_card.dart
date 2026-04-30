@@ -52,9 +52,16 @@ class DueRemindersCard extends ConsumerWidget {
     // If no due reminders today
     if (dueRelatives.isEmpty) {
       // Check if there are relatives not assigned to any schedule
+      // Household relatives are never candidates for reminders — the
+      // onboarding wizard promises "we won't disturb you about people
+      // you see daily." Excluding them here keeps the home nudge
+      // consistent with that promise.
       final scheduledIds = schedules.expand((s) => s.relativeIds).toSet();
-      final unscheduledCount =
-          relatives.where((r) => !scheduledIds.contains(r.id)).length;
+      final unscheduledCount = relatives
+          .where((r) =>
+              r.relativeCategory != RelativeCategory.household &&
+              !scheduledIds.contains(r.id))
+          .length;
 
       if (unscheduledCount > 0) {
         return _buildUnscheduledNudge(context, themeColors, unscheduledCount);
