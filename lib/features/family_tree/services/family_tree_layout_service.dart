@@ -577,6 +577,11 @@ class FamilyTreeLayoutService {
     // ── 7. Remaining unpositioned nodes ──
     for (final r in relatives) {
       if (r.isArchived) continue;
+      // Skip the self-row — same reason as section 5: positions is keyed
+      // by auth userId but the self-row carries its own relative.id, so
+      // this catchall would otherwise re-place the user as a phantom
+      // node at centerX + 250.
+      if (r.isSelf) continue;
       if (positions.containsKey(r.id)) continue;
       final gen = generations[r.id] ?? 0;
       positions[r.id] = Offset(centerX + 250, userGenY + gen * verticalSpacing);
