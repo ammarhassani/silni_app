@@ -601,13 +601,12 @@ void main() {
     });
 
     // -----------------------------------------------------
-    // Cache Config
+    // Cache Config — what survived the Tier 2 read-cache rip
     // -----------------------------------------------------
     group('Cache Config', () {
       test('should have correct box names', () {
-        expect(CacheConfig.relativesBox, equals('relatives'));
-        expect(CacheConfig.interactionsBox, equals('interactions'));
-        expect(CacheConfig.reminderSchedulesBox, equals('reminder_schedules'));
+        expect(CacheConfig.offlineQueueBox, equals('offline_queue'));
+        expect(CacheConfig.syncMetadataBox, equals('sync_metadata'));
       });
 
       test('should have correct limits', () {
@@ -619,17 +618,10 @@ void main() {
         expect(CacheConfig.backgroundSyncInterval, equals(const Duration(minutes: 5)));
       });
 
-      test('should generate correct sync keys', () {
-        expect(CacheConfig.lastSyncRelativesKey, equals('lastSync_relatives'));
-        expect(CacheConfig.lastSyncRemindersKey, equals('lastSync_reminders'));
-        expect(CacheConfig.lastSyncInteractionsKey('rel-123'), equals('lastSync_interactions_rel-123'));
-      });
-
       test('should have unique type IDs', () {
         final typeIds = [
-          CacheConfig.relativeTypeId,
-          CacheConfig.interactionTypeId,
-          CacheConfig.reminderScheduleTypeId,
+          CacheConfig.operationTypeTypeId,
+          CacheConfig.offlineOperationTypeId,
           CacheConfig.syncMetadataTypeId,
         ];
 

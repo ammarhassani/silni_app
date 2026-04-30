@@ -210,28 +210,16 @@ void main() {
 
   group('CacheConfig', () {
     test('should have correct box names', () {
-      expect(CacheConfig.relativesBox, equals('relatives'));
-      expect(CacheConfig.interactionsBox, equals('interactions'));
-      expect(CacheConfig.reminderSchedulesBox, equals('reminder_schedules'));
+      // Tier 2 rip dropped relatives/interactions/reminderSchedules boxes;
+      // only the offline queue + sync metadata remain.
       expect(CacheConfig.offlineQueueBox, equals('offline_queue'));
       expect(CacheConfig.syncMetadataBox, equals('sync_metadata'));
     });
 
     test('should have correct type IDs', () {
-      // Core models: 0-9
-      expect(CacheConfig.relativeTypeId, equals(0));
-      expect(CacheConfig.interactionTypeId, equals(1));
-      expect(CacheConfig.reminderScheduleTypeId, equals(2));
-
-      // Enums: 10-19
-      expect(CacheConfig.relationshipTypeTypeId, equals(10));
-      expect(CacheConfig.genderTypeId, equals(11));
-      expect(CacheConfig.avatarTypeTypeId, equals(12));
-      expect(CacheConfig.interactionTypeTypeId, equals(13));
-      expect(CacheConfig.reminderFrequencyTypeId, equals(14));
+      // Tier 2 rip dropped the model + enum adapters tied to the read-cache.
+      // OperationType + OfflineOperation + SyncMetadata are what's left.
       expect(CacheConfig.operationTypeTypeId, equals(15));
-
-      // Cache models: 20-29
       expect(CacheConfig.offlineOperationTypeId, equals(20));
       expect(CacheConfig.syncMetadataTypeId, equals(21));
     });
@@ -240,13 +228,6 @@ void main() {
       expect(CacheConfig.maxInteractionsPerRelative, equals(100));
       expect(CacheConfig.staleCacheThreshold, equals(const Duration(minutes: 5)));
       expect(CacheConfig.maxRetryAttempts, equals(5));
-    });
-
-    test('lastSyncInteractionsKey should format correctly', () {
-      expect(
-        CacheConfig.lastSyncInteractionsKey('rel-123'),
-        equals('lastSync_interactions_rel-123'),
-      );
     });
   });
 }
