@@ -225,7 +225,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.reminders,
         name: 'reminders',
         pageBuilder: (context, state) =>
-            _buildPageWithTransition(context, state, const RemindersScreen()),
+            _buildPageWithNavigation(context, state, const RemindersScreen()),
       ),
       GoRoute(
         path: AppRoutes.remindersDue,

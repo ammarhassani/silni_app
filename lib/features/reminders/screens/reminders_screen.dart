@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/directional_icon.dart';
+import '../../../shared/widgets/persistent_bottom_nav.dart';
 
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
@@ -212,11 +213,11 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         usedFrequencies.length >= ReminderFrequency.values.length;
 
     return ListView(
-      padding: const EdgeInsets.only(
+      padding: EdgeInsets.only(
         top: 100, // Clearance for floating header + subtitle
         left: AppSpacing.md,
         right: AppSpacing.md,
-        bottom: AppSpacing.xxl,
+        bottom: PersistentBottomNav.totalHeight + AppSpacing.md,
       ),
       children: [
         // Unscheduled relatives banner
