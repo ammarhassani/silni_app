@@ -103,6 +103,8 @@ class SwipeableRelativeCard extends ConsumerWidget {
   }
 
   Widget _buildCard(BuildContext context, ThemeColors themeColors) {
+    final isHousehold =
+        relative.relativeCategory == RelativeCategory.household;
     final needsAttention = relative.needsContact;
 
     final displayLabel = relationshipLabel ?? getSideAwareLabel(relative.relationshipType, relative.familySide, relative.gender);
@@ -275,7 +277,25 @@ class SwipeableRelativeCard extends ConsumerWidget {
                           ),
                         ),
                       ],
-                      if (needsAttention) ...[
+                      // Household → positive "أهل البيت" badge instead of any
+                      // contact-status text. They're definitionally always in
+                      // contact (you live with them), so the schedule/days
+                      // indicator below is suppressed by needsContact=false.
+                      if (isHousehold) ...[
+                        const SizedBox(width: 6),
+                        Icon(
+                          Icons.home_rounded,
+                          size: 12,
+                          color: themeColors.textSecondary,
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          'أهل البيت',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: themeColors.textSecondary,
+                          ),
+                        ),
+                      ] else if (needsAttention) ...[
                         const SizedBox(width: 6),
                         Icon(
                           Icons.schedule_rounded,

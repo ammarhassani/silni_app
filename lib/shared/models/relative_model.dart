@@ -566,8 +566,14 @@ class Relative {
     return DateTime.now().difference(lastContactDate!).inDays;
   }
 
-  /// Check if needs contact (based on priority)
+  /// Check if needs contact (based on priority).
+  ///
+  /// Household relatives short-circuit to false — by the wizard's contract
+  /// ("لن نزعجك بتذكيرات لمن تراهم كل يوم"), people you live with are
+  /// definitionally always in contact and shouldn't trigger contact-status
+  /// alerts anywhere in the app.
   bool get needsContact {
+    if (relativeCategory == RelativeCategory.household) return false;
     if (lastContactDate == null) return true;
     final days = daysSinceLastContact!;
 
@@ -625,8 +631,18 @@ class Relative {
     return (totalScore / totalWeight).round();
   }
 
-  /// Get health status as enum value
+  /// Get health status as enum value.
+  ///
+  /// Household relatives are always reported as healthy regardless of
+  /// `lastContactDate` — the wizard contract excludes them from
+  /// contact-status tracking. Without this short-circuit, a household
+  /// member with no logged interactions would show a red atRisk badge,
+  /// which directly contradicts "we won't disturb you about people you
+  /// see daily."
   RelationshipHealthStatus get healthStatus2 {
+    if (relativeCategory == RelativeCategory.household) {
+      return RelationshipHealthStatus.healthy;
+    }
     final score = healthScore;
     if (score == null) return RelationshipHealthStatus.unknown;
     if (score >= 70) return RelationshipHealthStatus.healthy;
