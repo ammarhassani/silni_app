@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/constants/app_colors.dart';
-import '../../core/providers/pattern_animation_provider.dart';
 import '../../core/theme/theme_provider.dart';
-import 'animated_islamic_pattern_background.dart';
 import 'islamic_pattern_background.dart';
 
+/// Static gradient background with the Islamic star pattern overlay.
+///
+/// `animated: true` was historically a flag that routed through an
+/// `AnimatedGradientBackground` (6s color tween at 60fps) — that path was
+/// removed in the iPhone 15 Pro heat fix and the orphaned class has been
+/// dropped entirely. The flag is kept on the API for backward compat with
+/// existing callers but is now a no-op.
 class GradientBackground extends ConsumerWidget {
   final Widget child;
   final Gradient? gradient;
   final bool animated;
   final bool showPattern;
   final double patternOpacity;
-
-  /// Optional scroll controller for parallax effect on pattern
-  final ScrollController? scrollController;
 
   const GradientBackground({
     super.key,
@@ -23,174 +24,26 @@ class GradientBackground extends ConsumerWidget {
     this.animated = false,
     this.showPattern = true,
     this.patternOpacity = 0.08,
-    this.scrollController,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeType = ref.watch(themeProvider);
     final themeColors = ref.watch(themeColorsProvider);
-    final isPatternAnimationEnabled = ref.watch(isPatternAnimationEnabledProvider);
-
-    // Use theme-aware gradient
     final defaultGradient = themeColors.backgroundGradient;
 
     Widget backgroundChild = child;
-
-    // Wrap with Islamic pattern if enabled
     if (showPattern) {
-      if (isPatternAnimationEnabled) {
-        // Use animated pattern with touch and motion effects
-        backgroundChild = AnimatedIslamicPatternBackground(
-          themeType: themeType,
-          opacity: patternOpacity,
-          scrollController: scrollController,
-          child: child,
-        );
-      } else {
-        // Use static pattern for better battery life
-        backgroundChild = IslamicPatternBackground(
-          themeType: themeType,
-          opacity: patternOpacity,
-          child: child,
-        );
-      }
+      backgroundChild = IslamicPatternBackground(
+        themeType: themeType,
+        opacity: patternOpacity,
+        child: child,
+      );
     }
 
-    // Phase 9.X.D.B hot-fix #11 (heat): the `animated: true` callers used to
-    // route through AnimatedGradientBackground, which repeated a 6-second
-    // color tween at 60fps on every screen — a constant fullscreen GPU
-    // redraw. Rendering the static gradient instead. Animation infrastructure
-    // kept intact below in case we add an opt-in "background motion" toggle
-    // later, but no caller currently reaches it.
     return Container(
       decoration: BoxDecoration(gradient: gradient ?? defaultGradient),
       child: backgroundChild,
-    );
-  }
-}
-
-class AnimatedGradientBackground extends StatefulWidget {
-  final Widget child;
-  final Gradient gradient;
-
-  const AnimatedGradientBackground({
-    super.key,
-    required this.child,
-    required this.gradient,
-  });
-
-  @override
-  State<AnimatedGradientBackground> createState() =>
-      _AnimatedGradientBackgroundState();
-}
-
-class _AnimatedGradientBackgroundState extends State<AnimatedGradientBackground>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<Color?> _colorAnimation1;
-  late Animation<Color?> _colorAnimation2;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(seconds: 6),
-      vsync: this,
-    )..repeat(reverse: true);
-
-    _updateAnimations();
-  }
-
-  @override
-  void didUpdateWidget(AnimatedGradientBackground oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Update animations when gradient changes (theme change)
-    if (oldWidget.gradient != widget.gradient) {
-      _updateAnimations();
-    }
-  }
-
-  void _updateAnimations() {
-    if (widget.gradient is! LinearGradient) return;
-
-    final colors = (widget.gradient as LinearGradient).colors;
-    if (colors.isEmpty) return;
-
-    final color1 = colors[0];
-    final color2 = colors.length > 1 ? colors[1] : color1;
-    final color3 = colors.length > 2 ? colors[2] : color2;
-
-    _colorAnimation1 = ColorTween(
-      begin: color1,
-      end: color2,
-    ).animate(_controller);
-
-    _colorAnimation2 = ColorTween(
-      begin: color2,
-      end: color3,
-    ).animate(_controller);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                _colorAnimation1.value ?? Colors.transparent,
-                _colorAnimation2.value ?? Colors.transparent,
-              ],
-            ),
-          ),
-          child: widget.child,
-        );
-      },
-    );
-  }
-}
-
-/// Dramatic Background with Particles Effect
-class DramaticBackground extends StatelessWidget {
-  final Widget child;
-  final List<Color>? colors;
-
-  const DramaticBackground({super.key, required this.child, this.colors});
-
-  @override
-  Widget build(BuildContext context) {
-    final defaultColors = [
-      AppColors.islamicGreenDark,
-      AppColors.islamicGreenPrimary,
-      AppColors.islamicGreenLight,
-    ];
-
-    return Stack(
-      children: [
-        // Base gradient
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: colors ?? defaultColors,
-            ),
-          ),
-        ),
-        // Content (removed overlay pattern since assets/images/pattern.png doesn't exist)
-        child,
-      ],
     );
   }
 }

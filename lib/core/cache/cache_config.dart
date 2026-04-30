@@ -1,47 +1,33 @@
-/// Configuration constants for the local cache system.
+/// Configuration constants for what's left of the local cache system.
+///
+/// Phase 9.X.D.B Tier 2 stripped the read-cache (relatives / interactions /
+/// reminderSchedules boxes + their type IDs + per-resource sync keys). What
+/// remains: the offline write queue + sync metadata, plus a single tunable
+/// for capping interaction-list rendering per relative.
 class CacheConfig {
   CacheConfig._();
 
-  // Box names
-  static const String relativesBox = 'relatives';
-  static const String interactionsBox = 'interactions';
-  static const String reminderSchedulesBox = 'reminder_schedules';
+  // Box names — only the ones still opened by HiveInitializer.
   static const String offlineQueueBox = 'offline_queue';
   static const String syncMetadataBox = 'sync_metadata';
 
-  // Type IDs for Hive adapters
-  // Core models: 0-9
-  static const int relativeTypeId = 0;
-  static const int interactionTypeId = 1;
-  static const int reminderScheduleTypeId = 2;
-
-  // Enums: 10-19
-  static const int relationshipTypeTypeId = 10;
-  static const int genderTypeId = 11;
-  static const int avatarTypeTypeId = 12;
-  static const int interactionTypeTypeId = 13;
-  static const int reminderFrequencyTypeId = 14;
+  // Type IDs for Hive adapters — only the ones still registered.
   static const int operationTypeTypeId = 15;
-
-  // Cache models: 20-29
   static const int offlineOperationTypeId = 20;
   static const int syncMetadataTypeId = 21;
 
-  // Cache limits
+  // Render tunable — used by InteractionsRepository to cap the per-relative
+  // interaction list before yielding to the UI.
   static const int maxInteractionsPerRelative = 100;
 
-  // Sync settings
-  static const Duration staleCacheThreshold = Duration(minutes: 5);
-  static const Duration backgroundSyncInterval = Duration(minutes: 5);
-
-  // Retry settings
+  // Retry settings used by the offline queue replayer.
   static const int maxRetryAttempts = 5;
   static const Duration initialRetryDelay = Duration(seconds: 1);
   static const double retryBackoffMultiplier = 2.0;
 
-  // Sync metadata keys
-  static const String lastSyncRelativesKey = 'lastSync_relatives';
-  static const String lastSyncRemindersKey = 'lastSync_reminders';
-  static String lastSyncInteractionsKey(String relativeId) =>
-      'lastSync_interactions_$relativeId';
+  // Background sync polling interval.
+  static const Duration backgroundSyncInterval = Duration(minutes: 5);
+
+  // Stale-cache threshold — preserved for any future use, currently unread.
+  static const Duration staleCacheThreshold = Duration(minutes: 5);
 }
