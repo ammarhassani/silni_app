@@ -1445,7 +1445,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Image.asset(
-                'assets/images/silni_branding.png',
+                'assets/images/app_icon.png',
                 width: 50,
                 height: 50,
               ),
