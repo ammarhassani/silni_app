@@ -81,3 +81,17 @@ supabase/.temp/
 
 # Investigation files with production data
 docs/plans/data investigation
+
+# Node modules (npm deps in any subdir — admin / landing / scripts)
+**/node_modules/
+
+# Next.js / static build outputs
+**/.next/
+silni-landing/out/
+
+# Build / test output logs at root
+xcode_build_output.txt
+test_output.txt
+signup_test_output.txt
+**/*build_output.txt
+**/*test_output.txt
