@@ -221,24 +221,11 @@ class OnboardingConfigService {
       actionType: 'set_reminder_pref_and_permission',
       metadata: const {'default_time': '09:00', 'default_frequency': 'daily'},
     ),
-    OnboardingScreenConfig(
-      id: 'fallback-5',
-      screenOrder: 5,
-      titleAr: 'تعرّف على أنيس',
-      titleEn: 'Meet Anees',
-      subtitleAr: 'أنيس مساعدك الذكي في صِلْني. يساعدك على كتابة الرسائل، اقتراح أوقات الزيارة، والتفكير في كيف تعيد التواصل بعد فترة. متى احتجت ساعدك.',
-      subtitleEn: 'Anees is your AI assistant in Silni — drafting messages, suggesting visit times, and helping you think through reconnection. Always there when you need.',
-      animationName: 'anees',
-      backgroundColor: '#FFFFFF',
-      textColor: '#1F2937',
-      buttonTextAr: 'جاهز',
-      buttonTextEn: 'Ready',
-      skipEnabled: false,
-      showForTiers: ['free', 'max'],
-      isActive: true,
-      actionType: 'finish',
-      metadata: const {},
-    ),
+    // Anees "finish" step removed (founder request 2026-04-30): paywall
+    // takes its place at the end of the wizard. The DB row was set to
+    // is_active=false; the fallback list mirrors that. The wizard now
+    // detects "last step reached" on the reminder step and runs the
+    // finish flow directly, which pushes the paywall.
   ];
 
   /// Initialize the service (call on app start)

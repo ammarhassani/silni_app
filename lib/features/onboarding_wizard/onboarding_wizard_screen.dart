@@ -37,6 +37,7 @@ import '../../shared/widgets/glass_card.dart';
 import '../../shared/widgets/gradient_background.dart';
 import '../../shared/widgets/gradient_button.dart';
 import '../relatives/screens/add_relative_screen.dart';
+import '../subscription/screens/paywall_screen.dart';
 
 // =============================================================================
 // Reminder frequency — 5 cadences the wizard exposes (matches the app's
@@ -257,7 +258,25 @@ class _OnboardingWizardScreenState
         metadata: {'error': e.toString()},
       );
     }
-    if (mounted) context.go(AppRoutes.home);
+    if (!mounted) return;
+    // Non-skip finish path now pushes the paywall instead of the deleted
+    // "Meet Anees" step. We replace the whole stack with home first so
+    // dismissing the paywall lands the user on home (not back on the
+    // wizard which is now setup-complete and would redirect-loop anyway).
+    if (!skipped) {
+      context.go(AppRoutes.home);
+      // Brief delay to let go() commit before pushing on top.
+      await Future.delayed(const Duration(milliseconds: 50));
+      if (!mounted) return;
+      await Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const PaywallScreen(),
+          fullscreenDialog: true,
+        ),
+      );
+    } else {
+      context.go(AppRoutes.home);
+    }
   }
 
   // ── Per-step actions ───────────────────────────────────────────────
@@ -385,7 +404,17 @@ class _OnboardingWizardScreenState
     // OS permission prompt fires here — user has chosen their cadence so the
     // prompt has context (Phase 9.X.D Track A7's deferral pays off).
     await FCMNotificationService().requestPermission();
-    if (mounted) _next();
+    if (!mounted) return;
+    // Reminder is now the LAST step (Anees "finish" page deactivated in
+    // admin_onboarding_screens). If we're at the last index, run the
+    // finish flow directly — _next() would otherwise clamp back to here.
+    final screens =
+        OnboardingConfigService.instance.getScreens(forTier: 'free');
+    if (_currentStep >= screens.length - 1) {
+      await _markSetupComplete(skipped: false);
+    } else {
+      _next();
+    }
   }
 
   /// Map the wizard's ReminderFrequency to the value the
