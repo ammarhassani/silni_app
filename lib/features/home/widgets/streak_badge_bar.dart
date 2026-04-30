@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/models/subscription_tier.dart';
 import '../../../core/providers/subscription_provider.dart';
@@ -222,7 +223,7 @@ class _StreakBadgeBarState extends ConsumerState<StreakBadgeBar> {
       children: [
         // Emoji with glow and animation
         Container(
-          padding: const EdgeInsets.all(2),
+          padding: const EdgeInsets.all(AppSpacing.xs),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             boxShadow: streak > 0

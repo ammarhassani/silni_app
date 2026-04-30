@@ -543,7 +543,7 @@ class _ThemePreviewCard extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(AppSpacing.sm - 2),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 colors: [
@@ -911,7 +911,7 @@ class _MiniAppPreview extends StatelessWidget {
   Widget _miniGlassCard({required Widget child}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
         color: themeColors.glassBackground,
         borderRadius: BorderRadius.circular(8),
