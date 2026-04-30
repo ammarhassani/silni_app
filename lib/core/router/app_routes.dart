@@ -3,7 +3,6 @@ class AppRoutes {
 
   // Auth routes (public - no authentication required)
   static const String splash = '/';
-  static const String onboarding = '/onboarding';
   static const String login = '/login';
   static const String signup = '/signup';
   static const String emailVerification = '/email-verification';
@@ -15,7 +14,6 @@ class AppRoutes {
   /// Routes that don't require authentication
   static const Set<String> publicRoutes = {
     splash,
-    onboarding,
     login,
     signup,
     emailVerification,

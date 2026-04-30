@@ -36,7 +36,6 @@ import 'app_logger_service.dart';
 /// Per-user SharedPreferences keys with fixed names. Cleared on logout/delete.
 const _exactPerUserKeys = <String>[
   // Onboarding gates — survival = mis-routed fresh account
-  'onboarding_completed', // marketing carousel cold-start gate
   'setup_complete', // Phase 9.X.D.B wizard completion mirror (cleared on
                     // logout/delete so the next account's router sees a
                     // fresh state)

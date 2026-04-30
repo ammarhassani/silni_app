@@ -10,7 +10,6 @@ import '../providers/realtime_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../models/subscription_tier.dart';
 import '../../features/auth/screens/splash_screen.dart';
-import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/signup_screen.dart';
 import '../../features/auth/screens/email_verification_screen.dart';
@@ -129,14 +128,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'splash',
         pageBuilder: (context, state) =>
             _buildPageWithTransition(context, state, const SplashScreen()),
-      ),
-
-      // Onboarding
-      GoRoute(
-        path: AppRoutes.onboarding,
-        name: 'onboarding',
-        pageBuilder: (context, state) =>
-            _buildPageWithTransition(context, state, const OnboardingScreen()),
       ),
 
       // Auth Routes

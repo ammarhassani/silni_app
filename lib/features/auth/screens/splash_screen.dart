@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:silni_app/core/constants/app_typography.dart';
 import 'package:silni_app/core/router/app_routes.dart';
 import 'package:silni_app/core/theme/theme_provider.dart';
@@ -164,16 +163,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (isAuthenticated) {
       if (mounted) context.go(AppRoutes.home);
     } else {
-      final prefs = await SharedPreferences.getInstance();
-      final hasSeenOnboarding = prefs.getBool('onboarding_completed') ?? false;
-
-      if (!mounted) return;
-
-      if (hasSeenOnboarding) {
-        context.go(AppRoutes.login);
-      } else {
-        context.go(AppRoutes.onboarding);
-      }
+      // Marketing carousel deleted (founder request). Splash → login directly.
+      if (mounted) context.go(AppRoutes.login);
     }
   }
 

@@ -625,11 +625,6 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
           session != null) {
         unawaited(_ensureUserRecord(session.user.id, logger));
         // Mark onboarding as complete on first authenticated session.
-        // The onboarding screen no longer writes the flag — see
-        // onboarding_screen.dart#_finish — so a user who tapped "تخطي"
-        // without ever signing up will see the carousel again on next
-        // cold-start.
-        unawaited(_markOnboardingCompleted());
         // Phase 9.X.D Track A7: legacy one-shot notification permission
         // ask for existing users. New users get the prompt from the Track B
         // wizard step. The flag is server-side (users.onboarding_metadata->>
@@ -678,20 +673,6 @@ class _SilniAppState extends ConsumerState<SilniApp> with WidgetsBindingObserver
         tag: 'main',
         metadata: {'userId': userId, 'error': e.toString()},
       );
-    }
-  }
-
-  /// Set the `onboarding_completed` SharedPreferences flag on first
-  /// authenticated session. Idempotent — checks the existing value first
-  /// so we don't pay the disk write on every sign-in.
-  Future<void> _markOnboardingCompleted() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (prefs.getBool('onboarding_completed') == true) return;
-      await prefs.setBool('onboarding_completed', true);
-    } catch (_) {
-      // Disk failure here just means the user might see the carousel
-      // again next cold-start. Not user-visible enough to surface.
     }
   }
 
