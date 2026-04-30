@@ -659,7 +659,7 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
                 height: 4,
                 margin: const EdgeInsets.only(top: 12),
                 decoration: BoxDecoration(
-                  color: themeColors.textHint.withValues(alpha: 0.4),
+                  color: themeColors.textOnGradient.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(2),
                 ),
               )

@@ -283,7 +283,7 @@ class _NotificationHistoryScreenState
                           Text(
                             _formatTime(notification.sentAt),
                             style: AppTypography.labelSmall.copyWith(
-                              color: themeColors.textOnGradient.withValues(alpha: 0.5),
+                              color: themeColors.textOnGradient.withValues(alpha: 0.6),
                             ),
                           ),
                         ],
@@ -400,7 +400,7 @@ class _NotificationHistoryScreenState
           Text(
             'ستظهر إشعاراتك هنا',
             style: AppTypography.bodyMedium.copyWith(
-              color: themeColors.textOnGradient.withValues(alpha: 0.5),
+              color: themeColors.textOnGradient.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -416,7 +416,7 @@ class _NotificationHistoryScreenState
           Icon(
             Icons.error_outline,
             size: 60,
-            color: themeColors.textOnGradient.withValues(alpha: 0.5),
+            color: themeColors.textOnGradient.withValues(alpha: 0.6),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(

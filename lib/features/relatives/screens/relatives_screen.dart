@@ -258,7 +258,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
                 child: Container(
                   width: 1,
                   height: 20,
-                  color: themeColors.textOnGradient.withValues(alpha: 0.2),
+                  color: themeColors.textOnGradient.withValues(alpha: 0.4),
                 ),
               ),
               const SizedBox(width: 12),
@@ -293,10 +293,10 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           gradient: isSelected ? LinearGradient(colors: [themeColors.primary, themeColors.primaryLight]) : null,
-          color: isSelected ? null : themeColors.textOnGradient.withValues(alpha: 0.12),
+          color: isSelected ? null : themeColors.textOnGradient.withValues(alpha: 0.18),
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           border: Border.all(
-            color: themeColors.textOnGradient.withValues(alpha: isSelected ? 0.5 : 0.15),
+            color: themeColors.textOnGradient.withValues(alpha: isSelected ? 0.7 : 0.4),
           ),
         ),
         child: Text(

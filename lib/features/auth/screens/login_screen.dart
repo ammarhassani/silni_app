@@ -917,20 +917,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     ),
                                     hintText: 'بريدك الإلكتروني',
                                     hintStyle: AppTypography.bodyMedium.copyWith(
-                                      color: themeColors.textOnGradient.withValues(alpha: 0.5),
+                                      color: themeColors.textOnGradient.withValues(alpha: 0.55),
                                     ),
                                     prefixIcon: Icon(
                                       Icons.email_outlined,
                                       color: themeColors.textOnGradient.withValues(alpha: 0.7),
                                     ),
                                     filled: true,
-                                    fillColor: themeColors.textOnGradient.withValues(alpha: 0.1),
+                                    fillColor: themeColors.textOnGradient.withValues(alpha: 0.15),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(
                                         AppSpacing.radiusLg,
                                       ),
                                       borderSide: BorderSide(
-                                        color: themeColors.textOnGradient.withValues(alpha: 0.3),
+                                        color: themeColors.textOnGradient.withValues(alpha: 0.4),
                                       ),
                                     ),
                                     enabledBorder: OutlineInputBorder(
@@ -938,7 +938,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         AppSpacing.radiusLg,
                                       ),
                                       borderSide: BorderSide(
-                                        color: themeColors.textOnGradient.withValues(alpha: 0.3),
+                                        color: themeColors.textOnGradient.withValues(alpha: 0.4),
                                       ),
                                     ),
                                     focusedBorder: OutlineInputBorder(
@@ -984,7 +984,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     ),
                                     hintText: '••••••••',
                                     hintStyle: AppTypography.bodyMedium.copyWith(
-                                      color: themeColors.textOnGradient.withValues(alpha: 0.5),
+                                      color: themeColors.textOnGradient.withValues(alpha: 0.55),
                                     ),
                                     prefixIcon: Icon(
                                       Icons.lock_outline,
@@ -1004,13 +1004,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       },
                                     ),
                                     filled: true,
-                                    fillColor: themeColors.textOnGradient.withValues(alpha: 0.1),
+                                    fillColor: themeColors.textOnGradient.withValues(alpha: 0.15),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(
                                         AppSpacing.radiusLg,
                                       ),
                                       borderSide: BorderSide(
-                                        color: themeColors.textOnGradient.withValues(alpha: 0.3),
+                                        color: themeColors.textOnGradient.withValues(alpha: 0.4),
                                       ),
                                     ),
                                     enabledBorder: OutlineInputBorder(
@@ -1018,7 +1018,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         AppSpacing.radiusLg,
                                       ),
                                       borderSide: BorderSide(
-                                        color: themeColors.textOnGradient.withValues(alpha: 0.3),
+                                        color: themeColors.textOnGradient.withValues(alpha: 0.4),
                                       ),
                                     ),
                                     focusedBorder: OutlineInputBorder(
@@ -1098,7 +1098,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   children: [
                                     Expanded(
                                       child: Divider(
-                                        color: themeColors.textOnGradient.withValues(alpha: 0.3),
+                                        color: themeColors.textOnGradient.withValues(alpha: 0.4),
                                       ),
                                     ),
                                     Padding(
@@ -1114,7 +1114,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     ),
                                     Expanded(
                                       child: Divider(
-                                        color: themeColors.textOnGradient.withValues(alpha: 0.3),
+                                        color: themeColors.textOnGradient.withValues(alpha: 0.4),
                                       ),
                                     ),
                                   ],
@@ -1136,7 +1136,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       ),
                                       style: OutlinedButton.styleFrom(
                                         side: BorderSide(
-                                          color: themeColors.textOnGradient.withValues(alpha: 0.5),
+                                          color: themeColors.textOnGradient.withValues(alpha: 0.55),
                                         ),
                                         padding: const EdgeInsets.symmetric(
                                           vertical: AppSpacing.md,

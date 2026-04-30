@@ -929,7 +929,7 @@ class _MiniAppPreview extends StatelessWidget {
       child: Container(
         height: 4,
         decoration: BoxDecoration(
-          color: themeColors.textSecondary.withValues(alpha: 0.3),
+          color: themeColors.textOnGradient.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(2),
         ),
       ),

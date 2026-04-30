@@ -166,7 +166,7 @@ class _AIFeatureCard extends ConsumerWidget {
           Icon(
             Icons.arrow_back_ios_rounded,
             size: 16,
-            color: themeColors.textOnGradient.withValues(alpha: 0.5),
+            color: themeColors.textOnGradient.withValues(alpha: 0.6),
           ),
         ],
         ),

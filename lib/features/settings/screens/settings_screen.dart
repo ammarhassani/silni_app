@@ -250,7 +250,7 @@ class SettingsScreen extends ConsumerWidget {
         trailing: showChevron
             ? DirectionalIcon(
                 trailingIcon,
-                color: themeColors.textOnGradient.withValues(alpha: 0.5),
+                color: themeColors.textOnGradient.withValues(alpha: 0.6),
                 size: 20,
               )
             : null,

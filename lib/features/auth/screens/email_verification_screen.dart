@@ -328,7 +328,7 @@ class _EmailVerificationScreenState
                                     ),
                                     style: OutlinedButton.styleFrom(
                                       side: BorderSide(
-                                        color: themeColors.textOnGradient.withValues(alpha: 0.3),
+                                        color: themeColors.textOnGradient.withValues(alpha: 0.4),
                                       ),
                                       padding: const EdgeInsets.symmetric(
                                         vertical: AppSpacing.md,

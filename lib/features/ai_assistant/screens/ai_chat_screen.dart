@@ -370,7 +370,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
                 color: dialogTheme.background2,
                 borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
                 border: Border.all(
-                  color: dialogTheme.textOnGradient.withValues(alpha: 0.2),
+                  color: dialogTheme.textOnGradient.withValues(alpha: 0.4),
                 ),
               ),
               child: Column(
@@ -411,13 +411,13 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                         borderSide: BorderSide(
-                          color: dialogTheme.textOnGradient.withValues(alpha: 0.2),
+                          color: dialogTheme.textOnGradient.withValues(alpha: 0.4),
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                         borderSide: BorderSide(
-                          color: dialogTheme.textOnGradient.withValues(alpha: 0.2),
+                          color: dialogTheme.textOnGradient.withValues(alpha: 0.4),
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
@@ -697,7 +697,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           color: themeColors.background2,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
           border: Border.all(
-            color: themeColors.textOnGradient.withValues(alpha: 0.2),
+            color: themeColors.textOnGradient.withValues(alpha: 0.4),
           ),
         ),
         child: Column(

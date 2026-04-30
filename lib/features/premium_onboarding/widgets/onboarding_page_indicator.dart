@@ -41,7 +41,7 @@ class OnboardingPageIndicator extends ConsumerWidget {
                 ? null
                 : isPast
                     ? themeColors.textOnGradient.withValues(alpha: 0.6)
-                    : themeColors.textOnGradient.withValues(alpha: 0.3),
+                    : themeColors.textOnGradient.withValues(alpha: 0.45),
             borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
             boxShadow: isActive
                 ? [
@@ -97,8 +97,8 @@ class NumberedPageIndicator extends ConsumerWidget {
             color: isActive
                 ? null
                 : isPast
-                    ? themeColors.textOnGradient.withValues(alpha: 0.4)
-                    : themeColors.textOnGradient.withValues(alpha: 0.2),
+                    ? themeColors.textOnGradient.withValues(alpha: 0.55)
+                    : themeColors.textOnGradient.withValues(alpha: 0.45),
             shape: BoxShape.circle,
             boxShadow: isActive
                 ? [

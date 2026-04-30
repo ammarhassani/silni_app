@@ -291,7 +291,7 @@ class _FamilyTreeHeroCard extends StatelessWidget {
                     // Arrow
                     Icon(
                       Icons.arrow_back_ios_rounded,
-                      color: themeColors.textOnGradient.withValues(alpha: 0.5),
+                      color: themeColors.textOnGradient.withValues(alpha: 0.6),
                       size: 16,
                     ),
                   ],

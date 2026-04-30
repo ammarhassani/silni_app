@@ -551,17 +551,17 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           ),
           suffixIcon: suffixIcon,
           filled: true,
-          fillColor: themeColors.textOnGradient.withValues(alpha: 0.1),
+          fillColor: themeColors.textOnGradient.withValues(alpha: 0.15),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             borderSide: BorderSide(
-              color: themeColors.textOnGradient.withValues(alpha: 0.3),
+              color: themeColors.textOnGradient.withValues(alpha: 0.4),
             ),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             borderSide: BorderSide(
-              color: themeColors.textOnGradient.withValues(alpha: 0.3),
+              color: themeColors.textOnGradient.withValues(alpha: 0.4),
             ),
           ),
           focusedBorder: OutlineInputBorder(
