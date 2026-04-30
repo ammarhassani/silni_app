@@ -79,6 +79,11 @@ class _OnboardingWizardScreenState
     extends ConsumerState<OnboardingWizardScreen> {
   // ── Step navigation ────────────────────────────────────────────────
   int _currentStep = 0;
+  /// Highest step index the user has navigated to (forward) — including
+  /// via "Skip". Once they've passed a step, swiping back and then forward
+  /// across it shouldn't re-trigger the data gate; that's a revisit, not a
+  /// new progression. Founder rationale: skipping IS a choice.
+  int _maxStepReached = 0;
   late final PageController _pageController;
 
   // ── User-input state ───────────────────────────────────────────────
@@ -147,7 +152,10 @@ class _OnboardingWizardScreenState
 
   void _next() {
     HapticFeedback.lightImpact();
-    setState(() => _currentStep++);
+    setState(() {
+      _currentStep++;
+      if (_currentStep > _maxStepReached) _maxStepReached = _currentStep;
+    });
     _pageController.animateToPage(
       _currentStep,
       duration: const Duration(milliseconds: 300),
@@ -531,8 +539,15 @@ class _OnboardingWizardScreenState
                     physics: const BouncingScrollPhysics(),
                     itemCount: screens.length,
                     onPageChanged: (page) {
-                      // Forward swipe past a gate: snap back.
+                      // Forward swipe gate: only block when the user is
+                      // crossing INTO new territory. If they've already
+                      // reached `page` before (via Next or Skip), this
+                      // is a revisit — let them through. Skipping IS a
+                      // choice; the user shouldn't be re-trapped at the
+                      // same gate after they already passed it.
+                      final isNewTerritory = page > _maxStepReached;
                       if (page > _currentStep &&
+                          isNewTerritory &&
                           !_isStepComplete(_currentStep, screens)) {
                         _showGateBlockedFeedback();
                         WidgetsBinding.instance
@@ -547,7 +562,12 @@ class _OnboardingWizardScreenState
                         return;
                       }
                       if (_currentStep != page) {
-                        setState(() => _currentStep = page);
+                        setState(() {
+                          _currentStep = page;
+                          if (page > _maxStepReached) {
+                            _maxStepReached = page;
+                          }
+                        });
                       }
                     },
                     itemBuilder: (context, index) {
