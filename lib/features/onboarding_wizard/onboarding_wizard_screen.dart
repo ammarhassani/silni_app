@@ -679,6 +679,7 @@ class _ConfirmNameStepState extends ConsumerState<_ConfirmNameStep> {
     final onGradient = colors.textOnGradient;
     return _StepShell(
       screen: widget.screen,
+      reassuranceText: 'يمكنك تغيير اسمك في أي وقت من الإعدادات',
       bodyExtra: Padding(
         padding: const EdgeInsets.only(top: AppSpacing.lg),
         child: TextField(
@@ -762,6 +763,9 @@ class _AddRelativeStep extends ConsumerWidget {
 
     return _StepShell(
       screen: screen,
+      reassuranceText: mode == WizardMode.householdOnly
+          ? 'تستطيع إضافة أو تعديل أهل البيت لاحقاً من قائمة الأقارب'
+          : 'تستطيع إضافة أو تعديل الأقارب لاحقاً من قائمة الأقارب',
       bodyExtra: count > 0
           ? Padding(
               padding: const EdgeInsets.only(top: AppSpacing.lg),
@@ -865,6 +869,8 @@ class _ReminderPrefStepState extends ConsumerState<_ReminderPrefStep> {
 
     return _StepShell(
       screen: widget.screen,
+      reassuranceText:
+          'يمكنك تغيير التذكيرات أو إضافة جداول جديدة من شاشة التذكيرات',
       bodyExtra: Padding(
         padding: const EdgeInsets.only(top: AppSpacing.lg),
         child: Column(
@@ -1051,6 +1057,7 @@ class _StepShell extends ConsumerWidget {
     this.onTertiary,
     this.skipLabel,
     this.onSkip,
+    this.reassuranceText,
   });
 
   final OnboardingScreenConfig screen;
@@ -1063,6 +1070,10 @@ class _StepShell extends ConsumerWidget {
   final VoidCallback? onTertiary;
   final String? skipLabel;
   final VoidCallback? onSkip;
+  /// Small reassurance line shown right above the primary CTA — tells the
+  /// user this step's data isn't a one-shot commitment ("you can change
+  /// this later"). Reduces commitment-anxiety during first-run setup.
+  final String? reassuranceText;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1129,6 +1140,31 @@ class _StepShell extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
+          if (reassuranceText != null) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    color: onGradient.withValues(alpha: 0.6),
+                    size: 14,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Flexible(
+                    child: Text(
+                      reassuranceText!,
+                      style: AppTypography.labelMedium.copyWith(
+                        color: onGradient.withValues(alpha: 0.7),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           if (onContinue != null)
             GradientButton(
               text: continueLabel ?? screen.buttonTextAr,
