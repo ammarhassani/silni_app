@@ -389,6 +389,12 @@ class FamilyTreeLayoutService {
       final sideNodes = <String>[];
       for (final r in relatives) {
         if (r.isArchived) continue;
+        // Skip the user's own self-node — the spine slot at `userId`
+        // already represents them. Without this, the self-row's
+        // relative.id (different from auth userId) doesn't match
+        // anything in `positions` and gets re-placed as an unanchored
+        // orphan on the right side.
+        if (r.isSelf) continue;
         if (generations[r.id] != gen) continue;
         if (positions.containsKey(r.id)) continue;
         sideNodes.add(r.id);
