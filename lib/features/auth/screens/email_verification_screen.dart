@@ -195,11 +195,12 @@ class _EmailVerificationScreenState
     final user = Supabase.instance.client.auth.currentUser;
     final email = user?.email ?? '';
 
-    return Scaffold(
-      body: Semantics(
-        label: 'شاشة التحقق من البريد الإلكتروني',
-        child: GradientBackground(
-          animated: true,
+    return GradientBackground(
+      animated: true,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Semantics(
+          label: 'شاشة التحقق من البريد الإلكتروني',
           child: SafeArea(
             child: Center(
               child: SingleChildScrollView(

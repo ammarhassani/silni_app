@@ -25,6 +25,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show UserAttributes;
 import '../../core/config/supabase_config.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
+import '../../core/providers/cache_provider.dart';
 import '../../core/router/app_router.dart' as router;
 import '../../core/router/app_routes.dart';
 import '../../core/services/app_logger_service.dart';
@@ -81,8 +82,13 @@ class _OnboardingWizardScreenState
 
   // ── User-input state ───────────────────────────────────────────────
   String? _confirmedName;
-  int _householdAddedCount = 0;
-  int _extendedAddedCount = 0;
+  // IDs (not just counts) — needed to build the reminder_schedules row
+  // at finish-time so the user actually receives reminders. Counts derive
+  // from list length.
+  final List<String> _householdRelativeIds = [];
+  final List<String> _extendedRelativeIds = [];
+  int get _householdAddedCount => _householdRelativeIds.length;
+  int get _extendedAddedCount => _extendedRelativeIds.length;
   TimeOfDay? _reminderTime;
   ReminderFrequency _reminderFrequency = ReminderFrequency.daily;
 
@@ -282,9 +288,9 @@ class _OnboardingWizardScreenState
     if (result != null && mounted) {
       setState(() {
         if (mode == WizardMode.householdOnly) {
-          _householdAddedCount++;
+          _householdRelativeIds.add(result);
         } else {
-          _extendedAddedCount++;
+          _extendedRelativeIds.add(result);
         }
       });
     }
@@ -304,6 +310,7 @@ class _OnboardingWizardScreenState
     ReminderFrequency frequency,
     TimeOfDay? time,
   ) async {
+    final logger = AppLoggerService();
     final user = SupabaseConfig.client.auth.currentUser;
     if (user != null) {
       try {
@@ -329,6 +336,47 @@ class _OnboardingWizardScreenState
       } catch (_) {
         // Non-blocking
       }
+
+      // Phase 9.X.D.B fix: also create an actual reminder_schedules row so
+      // the cron edge functions have something to fire on. Previously only
+      // onboarding_metadata was written and the user never received reminders
+      // despite picking frequency + time. Targets the EXTENDED relatives
+      // only (the wizard copy explicitly says household members aren't
+      // reminded — "we won't disturb you about people you see daily").
+      final scheduleFreq = _wizardFrequencyToScheduleFrequency(frequency);
+      if (scheduleFreq != null && _extendedRelativeIds.isNotEmpty) {
+        try {
+          final payload = <String, dynamic>{
+            'user_id': user.id,
+            'frequency': scheduleFreq,
+            'is_active': true,
+            'relative_ids': _extendedRelativeIds,
+            if (frequency.usesTimeOfDay && time != null)
+              'time':
+                  '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
+          };
+          await ref
+              .read(reminderSchedulesRepositoryProvider)
+              .createSchedule(payload);
+          logger.info(
+            'Onboarding reminder schedule created',
+            category: LogCategory.service,
+            tag: 'OnboardingWizard',
+            metadata: {
+              'frequency': scheduleFreq,
+              'relativeCount': _extendedRelativeIds.length,
+            },
+          );
+        } catch (e, stack) {
+          logger.error(
+            'Onboarding reminder schedule creation failed (non-blocking)',
+            category: LogCategory.service,
+            tag: 'OnboardingWizard',
+            metadata: {'error': e.toString()},
+            stackTrace: stack,
+          );
+        }
+      }
     }
     setState(() {
       _reminderFrequency = frequency;
@@ -338,6 +386,25 @@ class _OnboardingWizardScreenState
     // prompt has context (Phase 9.X.D Track A7's deferral pays off).
     await FCMNotificationService().requestPermission();
     if (mounted) _next();
+  }
+
+  /// Map the wizard's ReminderFrequency to the value the
+  /// `reminder_schedules.frequency` column accepts. Returns null for
+  /// "occasions" — no scheduled-cron equivalent exists; that flow is
+  /// handled separately by the special-occasion notification path.
+  String? _wizardFrequencyToScheduleFrequency(ReminderFrequency f) {
+    switch (f) {
+      case ReminderFrequency.daily:
+        return 'daily';
+      case ReminderFrequency.weekly:
+        return 'weekly';
+      case ReminderFrequency.fridays:
+        return 'friday';
+      case ReminderFrequency.monthly:
+        return 'monthly';
+      case ReminderFrequency.occasions:
+        return null;
+    }
   }
 
   // ── Step gating ────────────────────────────────────────────────────

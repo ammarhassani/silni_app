@@ -88,11 +88,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
 
-    return Scaffold(
-      body: Semantics(
-        label: 'شاشة التعريف بالتطبيق',
-        child: GradientBackground(
-          animated: true,
+    return GradientBackground(
+      animated: true,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Semantics(
+          label: 'شاشة التعريف بالتطبيق',
           child: SafeArea(
             child: Column(
               children: [

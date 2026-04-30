@@ -245,11 +245,14 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
 
-    return Scaffold(
-      body: Semantics(
-        label: 'شاشة إنشاء حساب جديد',
-        child: GradientBackground(
-          animated: true,
+    // GradientBackground OUTSIDE the Scaffold so the gradient covers behind
+    // the keyboard when it opens (otherwise the Scaffold's default bg shows).
+    return GradientBackground(
+      animated: true,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Semantics(
+          label: 'شاشة إنشاء حساب جديد',
           child: SafeArea(
             child: Center(
               child: SingleChildScrollView(

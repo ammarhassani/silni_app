@@ -798,10 +798,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
 
-    return Scaffold(
-      body: GradientBackground(
-          animated: true,
-          child: SafeArea(
+    // GradientBackground OUTSIDE the Scaffold so the gradient + Islamic
+    // pattern persist across the full screen — including behind the
+    // keyboard when a TextField opens it. Without this, body resize for
+    // keyboard inset reveals the Scaffold's default backgroundColor (off-
+    // white in light theme) as a strip behind the keyboard. Same pattern
+    // ai_chat_screen and the onboarding wizard use.
+    return GradientBackground(
+      animated: true,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
                 return SingleChildScrollView(
