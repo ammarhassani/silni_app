@@ -439,22 +439,27 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
                           alignment: Alignment.topLeft,
                           child: Padding(
                             padding: const EdgeInsets.all(12),
-                            child: GestureDetector(
-                              onTap: () {
-                                confettiController.dispose();
-                                Navigator.of(dialogContext).pop();
-                                _dismissMessage(message);
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: themeColors.divider.withValues(alpha: 0.5),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.close_rounded,
-                                  size: 18,
-                                  color: themeColors.textHint,
+                            child: Semantics(
+                              button: true,
+                              label: 'إخفاء',
+                              child: GestureDetector(
+                                onTap: () {
+                                  confettiController.dispose();
+                                  Navigator.of(dialogContext).pop();
+                                  _dismissMessage(message);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        themeColors.divider.withValues(alpha: 0.5),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.close_rounded,
+                                    size: 18,
+                                    color: themeColors.textHint,
+                                  ),
                                 ),
                               ),
                             ),
@@ -570,16 +575,20 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
                             // Skip text link
                             if (message.isDismissible && message.hasAction) ...[
                               const SizedBox(height: 12),
-                              GestureDetector(
-                                onTap: () {
-                                  confettiController.dispose();
-                                  Navigator.of(dialogContext).pop();
-                                  _dismissMessage(message);
-                                },
-                                child: Text(
-                                  'تخطي',
-                                  style: AppTypography.labelSmall.copyWith(
-                                    color: themeColors.textHint,
+                              Semantics(
+                                button: true,
+                                label: 'تخطي',
+                                child: GestureDetector(
+                                  onTap: () {
+                                    confettiController.dispose();
+                                    Navigator.of(dialogContext).pop();
+                                    _dismissMessage(message);
+                                  },
+                                  child: Text(
+                                    'تخطي',
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: themeColors.textHint,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -722,21 +731,25 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
                         // Close button
                         if (message.isDismissible && !message.hasAction) ...[
                           const SizedBox(width: 12),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.of(sheetContext).pop();
-                              _dismissMessage(message);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: themeColors.divider.withValues(alpha: 0.5),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.close_rounded,
-                                size: 18,
-                                color: themeColors.textHint,
+                          Semantics(
+                            button: true,
+                            label: 'إغلاق',
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.of(sheetContext).pop();
+                                _dismissMessage(message);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: themeColors.divider.withValues(alpha: 0.5),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  size: 18,
+                                  color: themeColors.textHint,
+                                ),
                               ),
                             ),
                           ),
@@ -984,15 +997,19 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
                       // CTA Button - glassmorphic style
                       Padding(
                         padding: const EdgeInsets.all(24),
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.of(dialogContext).pop();
-                            if (message.hasAction) {
-                              _handleMessageTap(message);
-                            } else {
-                              _dismissMessage(message);
-                            }
-                          },
+                        child: Semantics(
+                          button: true,
+                          label: message.ctaTextAr ??
+                              (message.hasAction ? 'شارك إنجازك' : 'رائع!'),
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.of(dialogContext).pop();
+                              if (message.hasAction) {
+                                _handleMessageTap(message);
+                              } else {
+                                _dismissMessage(message);
+                              }
+                            },
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(16),
                             child: BackdropFilter(
@@ -1022,6 +1039,7 @@ class _MessageWidgetState extends ConsumerState<MessageWidget> {
                             ),
                           ),
                         ),
+                      ),
                       )
                           .animate()
                           .fadeIn(delay: 800.ms, duration: 300.ms)

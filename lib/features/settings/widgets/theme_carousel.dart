@@ -752,6 +752,7 @@ class ThemeBrandLogo extends StatelessWidget {
           width: size * 0.65,
           height: size * 0.65,
           fit: BoxFit.cover,
+          semanticLabel: 'صِلْني',
         ),
       );
     }
