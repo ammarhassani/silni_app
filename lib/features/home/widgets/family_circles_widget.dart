@@ -94,9 +94,12 @@ class FamilyCirclesWidget extends ConsumerWidget {
                   TextButton(
                     onPressed: () => context.push(AppRoutes.relatives),
                     style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.xs,
+                      ),
+                      // Default 48×48 tap target — the previous shrinkWrap
+                      // override clipped it to ~28×32 (WCAG 2.5.5 fail).
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,

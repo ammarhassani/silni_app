@@ -703,8 +703,8 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
             onPressed: _zoomOut,
             icon: const Icon(Icons.remove_rounded, color: Colors.white, size: 20),
             tooltip: 'تصغير',
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-            padding: EdgeInsets.zero,
+            // 44×44 minimum tap target — Material default applies.
+            padding: const EdgeInsets.all(AppSpacing.xs),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
@@ -717,8 +717,8 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
             onPressed: _zoomIn,
             icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
             tooltip: 'تكبير',
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-            padding: EdgeInsets.zero,
+            // 44×44 minimum tap target — Material default applies.
+            padding: const EdgeInsets.all(AppSpacing.xs),
           ),
           Container(
             width: 1,
@@ -730,8 +730,8 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
             onPressed: _resetZoom,
             icon: const Icon(Icons.center_focus_strong_rounded, color: Colors.white, size: 20),
             tooltip: 'إعادة ضبط',
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-            padding: EdgeInsets.zero,
+            // 44×44 minimum tap target — Material default applies.
+            padding: const EdgeInsets.all(AppSpacing.xs),
           ),
         ],
       ),

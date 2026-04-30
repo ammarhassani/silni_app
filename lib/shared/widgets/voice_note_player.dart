@@ -122,9 +122,14 @@ class _VoiceNotePlayerState extends State<VoiceNotePlayer> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        GestureDetector(
-          onTap: _toggle,
-          child: Icon(
+        // IconButton instead of bare GestureDetector — gives a 48×48
+        // hit area (WCAG 2.5.5) without changing the icon's visual size.
+        IconButton(
+          onPressed: _toggle,
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
+          tooltip: _isPlaying ? 'إيقاف' : 'تشغيل',
+          icon: Icon(
             _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
             color: color,
             size: 20,

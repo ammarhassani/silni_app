@@ -350,10 +350,14 @@ class VoiceNoteRecorderState extends State<VoiceNoteRecorder>
             ),
           ),
           const SizedBox(width: 4),
-          // Delete
-          GestureDetector(
-            onTap: _deleteRecording,
-            child: Icon(Icons.delete_outline_rounded, color: Colors.red.shade400, size: 20),
+          // Delete — IconButton for the 48×48 hit area (WCAG 2.5.5).
+          IconButton(
+            onPressed: _deleteRecording,
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            tooltip: 'حذف التسجيل',
+            icon: Icon(Icons.delete_outline_rounded,
+                color: Colors.red.shade400, size: 20),
           ),
         ],
       ),
