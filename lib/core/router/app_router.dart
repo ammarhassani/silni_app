@@ -258,7 +258,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.familyTree,
         name: 'familyTree',
         pageBuilder: (context, state) =>
-            _buildPageWithTransition(context, state, const FamilyTreeScreen()),
+            _buildPageWithNavigation(context, state, const FamilyTreeScreen()),
       ),
 
       // /statistics is a legacy alias for the AI Hub — kept for deep links

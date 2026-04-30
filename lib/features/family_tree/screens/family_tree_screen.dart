@@ -43,6 +43,7 @@ import '../services/family_tree_layout_service.dart';
 import '../widgets/placeholder_node_widget.dart';
 import '../widgets/tree_node_widget.dart';
 import '../../../shared/widgets/directional_icon.dart';
+import '../../../shared/widgets/persistent_bottom_nav.dart';
 
 class FamilyTreeScreen extends ConsumerStatefulWidget {
   const FamilyTreeScreen({super.key});
@@ -491,17 +492,17 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
               ],
             ),
           ),
-          // Floating zoom controls
+          // Floating zoom controls — bottom offset clears the persistent nav.
           Positioned(
-            bottom: AppSpacing.xl,
+            bottom: PersistentBottomNav.totalHeight + AppSpacing.sm,
             right: AppSpacing.md,
             child: SafeArea(
               child: _buildZoomControls(),
             ),
           ),
-          // FAB fallback — manual add button
+          // FAB fallback — manual add button. Same nav-clearance offset.
           Positioned(
-            bottom: AppSpacing.xl,
+            bottom: PersistentBottomNav.totalHeight + AppSpacing.sm,
             left: AppSpacing.md,
             child: SafeArea(
               child: _buildAddFab(userId),

@@ -137,6 +137,11 @@ class _PersistentBottomNavState extends ConsumerState<PersistentBottomNav>
         route: AppRoutes.relatives,
       ),
       (
+        icon: Icons.account_tree_rounded,
+        label: 'الشجرة',
+        route: AppRoutes.familyTree,
+      ),
+      (
         icon: Icons.notifications_active_rounded,
         label: 'التذكيرات',
         route: AppRoutes.reminders,
@@ -284,18 +289,21 @@ class _PersistentBottomNavState extends ConsumerState<PersistentBottomNav>
         location.startsWith(AppRoutes.addRelative)) {
       return 1;
     }
-    if (location.startsWith(AppRoutes.reminders)) {
+    if (location.startsWith(AppRoutes.familyTree)) {
       return 2;
+    }
+    if (location.startsWith(AppRoutes.reminders)) {
+      return 3;
     }
     if (location.startsWith(AppRoutes.aiHub) ||
         location.startsWith(AppRoutes.aiChat) ||
         location.startsWith(AppRoutes.aiScripts) ||
         location.startsWith(AppRoutes.aiReport)) {
-      return 3;
+      return 4;
     }
     if (location.startsWith(AppRoutes.profile) ||
         location.startsWith(AppRoutes.settings)) {
-      return 4;
+      return 5;
     }
 
     return 0; // Default to home
