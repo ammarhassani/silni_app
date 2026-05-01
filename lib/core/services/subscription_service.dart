@@ -793,7 +793,11 @@ class SubscriptionService {
         return;
       }
 
-      final status = state.tier == SubscriptionTier.max ? 'premium' : 'free';
+      // Standardized on 'max' across the stack (DB column, sync-subscription
+      // VALID_STATUSES, deepseek-proxy tier check, SubscriptionTier.fromString).
+      // Previously wrote 'premium' which never matched anywhere — see the
+      // 2026-05-01 premium→max standardization fix.
+      final status = state.tier == SubscriptionTier.max ? 'max' : 'free';
 
       await supabase.functions.invoke(
         'sync-subscription',

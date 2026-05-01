@@ -6,7 +6,10 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
-const VALID_STATUSES = ["free", "premium"];
+// Tier values match the app's SubscriptionTier enum. 'premium' was the
+// legacy name that drifted away from the rest of the stack; standardized
+// on 'max' on 2026-05-01.
+const VALID_STATUSES = ["free", "max"];
 
 serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req);

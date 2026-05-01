@@ -137,9 +137,12 @@ serve(async (req: Request) => {
     });
 
     // If user record not found or no status, assume they're authenticated
-    // and give them base limit (app-side handles actual feature gating)
+    // and give them base limit (app-side handles actual feature gating).
+    // Tier value is 'max' to match the app's SubscriptionTier enum and the
+    // sync-subscription writer; 'premium' is the legacy spelling that never
+    // existed in the DB but was checked here — fixed 2026-05-01.
     let isPremium = false;
-    if (!userError && userData?.subscription_status === "premium") {
+    if (!userError && userData?.subscription_status === "max") {
       isPremium = true;
     }
 
