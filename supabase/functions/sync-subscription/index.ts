@@ -62,8 +62,13 @@ serve(async (req: Request) => {
     const body = await req.json();
     const { status, product_id, expires_at, trial_active } = body;
 
-    // Validate status
-    if (!status || !VALID_STATUSES.includes(status)) {
+    // Backward-compat alias: pre-Phase-X app builds send "premium" for the paid tier.
+    // Normalize to "max" so existing App Store users keep syncing correctly.
+    // TODO: remove this alias after forcing an app version update (probably v3.0).
+    const normalizedStatus = status === "premium" ? "max" : status;
+
+    // Validate status (post-normalization)
+    if (!normalizedStatus || !VALID_STATUSES.includes(normalizedStatus)) {
       return new Response(
         JSON.stringify({
           error: `Invalid status. Must be one of: ${VALID_STATUSES.join(", ")}`,
@@ -77,7 +82,8 @@ serve(async (req: Request) => {
     }
 
     console.log("[sync-subscription] Syncing for user:", user.id, {
-      status,
+      status: normalizedStatus,
+      raw_status: status,
       product_id,
       expires_at,
       trial_active,
@@ -94,7 +100,7 @@ serve(async (req: Request) => {
     // When trial_active is false, do NOT include trial_started_at or trial_used
     // to prevent erasing trial history
     const updatePayload: Record<string, unknown> = {
-      subscription_status: status,
+      subscription_status: normalizedStatus,
       subscription_product_id: product_id ?? null,
       subscription_expires_at: expires_at ?? null,
     };
