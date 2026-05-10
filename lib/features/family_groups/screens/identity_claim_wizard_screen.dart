@@ -123,7 +123,7 @@ class _IdentityClaimWizardScreenState
 
       final relativesData = await client
           .from('relatives')
-          .select('id, full_name, gender, family_side')
+          .select('id, full_name, gender, family_side, relationship_type, is_self')
           .eq('family_group_id', widget.groupId)
           .eq('is_archived', false)
           .order('full_name', ascending: true);
@@ -134,6 +134,9 @@ class _IdentityClaimWizardScreenState
                 id: r['id'] as String,
                 name: r['full_name'] as String,
                 gender: r['gender'] as String?,
+                relationshipType: r['relationship_type'] as String?,
+                familySide: r['family_side'] as String?,
+                isSelf: r['is_self'] as bool? ?? false,
               ))
           .toList();
 
@@ -532,20 +535,32 @@ class _IdentityClaimWizardScreenState
             icon: Icons.check_rounded,
           ),
           const SizedBox(height: AppSpacing.md),
-          OutlinedButton.icon(
-            onPressed: _treeMembers.isEmpty ? null : _showAnchorPicker,
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-              side: BorderSide(color: themeColors.onSurface.withValues(alpha: 0.4)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.sm),
+          // Secondary CTA — visually distinct from the primary GradientButton
+          // but still clearly a tappable button (user feedback: previous
+          // OutlinedButton looked like a label, not a control).
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.tonalIcon(
+              onPressed: _treeMembers.isEmpty ? null : _showAnchorPicker,
+              icon: const Icon(Icons.people_outline_rounded),
+              label: Text(
+                'أنا قريب لشخص آخر في العائلة',
+                style: AppTypography.bodyLarge.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            icon: Icon(Icons.people_outline_rounded, color: themeColors.onSurface),
-            label: Text(
-              'أنا قريب لشخص آخر في العائلة',
-              style: AppTypography.bodyLarge.copyWith(
-                color: themeColors.onSurface,
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.white.withValues(alpha: 0.18),
+                foregroundColor: themeColors.onSurface,
+                padding:
+                    const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.md),
+                  side: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.35),
+                    width: 1.2,
+                  ),
+                ),
               ),
             ),
           ),
@@ -567,7 +582,10 @@ class _IdentityClaimWizardScreenState
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => _AnchorPickerSheet(members: _treeMembers),
+      builder: (ctx) => _AnchorPickerSheet(
+        members: _treeMembers,
+        adminName: _adminName ?? '',
+      ),
     );
     if (picked != null && mounted) {
       setState(() {
@@ -796,23 +814,39 @@ class _IdentityClaimWizardScreenState
             ),
           const SizedBox(height: AppSpacing.md),
           if (isAddMeAllowed)
-            TextButton.icon(
-              onPressed: _isSubmitting
-                  ? null
-                  : () {
-                      // Pre-fill name from auth metadata.
-                      final user = SupabaseConfig.client.auth.currentUser;
-                      final authName =
-                          (user?.userMetadata?['full_name'] as String?) ?? '';
-                      _proposedNameController.text = authName;
-                      _goTo(4);
-                    },
-              icon: Icon(Icons.person_add_rounded,
-                  color: themeColors.onSurface),
-              label: Text(
-                'ما أحد منهم أنا — أضِفني للشجرة',
-                style: AppTypography.bodyLarge.copyWith(
-                  color: themeColors.onSurface,
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonalIcon(
+                onPressed: _isSubmitting
+                    ? null
+                    : () {
+                        // Pre-fill name from auth metadata.
+                        final user = SupabaseConfig.client.auth.currentUser;
+                        final authName =
+                            (user?.userMetadata?['full_name'] as String?) ??
+                                '';
+                        _proposedNameController.text = authName;
+                        _goTo(4);
+                      },
+                icon: const Icon(Icons.person_add_rounded),
+                label: Text(
+                  'ما أحد منهم أنا — أضِفني للشجرة',
+                  style: AppTypography.bodyLarge.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(alpha: 0.18),
+                  foregroundColor: themeColors.onSurface,
+                  padding:
+                      const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSpacing.md),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.35),
+                      width: 1.2,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -990,8 +1024,78 @@ class _TreeMember {
   final String id;
   final String name;
   final String? gender;
-  const _TreeMember(
-      {required this.id, required this.name, required this.gender});
+  final String? relationshipType;
+  final String? familySide;
+  final bool isSelf;
+  const _TreeMember({
+    required this.id,
+    required this.name,
+    required this.gender,
+    this.relationshipType,
+    this.familySide,
+    this.isSelf = false,
+  });
+}
+
+/// Renders a member's relationship from the *admin's* perspective so the
+/// joiner can read the picker without confusion. The admin's own labels
+/// in `relatives.full_name` (e.g. "خالي غرم الله" — MY uncle) are
+/// admin-centric and read incorrectly to the joiner; the subtitle
+/// disambiguates: "خال [admin]".
+String _adminPerspectiveLabel(_TreeMember m, String adminName) {
+  if (m.isSelf) return 'صاحب المجموعة';
+  switch (m.relationshipType) {
+    case 'father':
+      return 'والد $adminName';
+    case 'mother':
+      return 'والدة $adminName';
+    case 'brother':
+      return 'أخ $adminName';
+    case 'sister':
+      return 'أخت $adminName';
+    case 'son':
+      return 'ابن $adminName';
+    case 'daughter':
+      return 'ابنة $adminName';
+    case 'husband':
+      return 'زوج $adminName';
+    case 'wife':
+      return 'زوجة $adminName';
+    case 'grandfather':
+      if (m.familySide == 'paternal') return 'جد $adminName لأب';
+      if (m.familySide == 'maternal') return 'جد $adminName لأم';
+      return 'جد $adminName';
+    case 'grandmother':
+      if (m.familySide == 'paternal') return 'جدة $adminName لأب';
+      if (m.familySide == 'maternal') return 'جدة $adminName لأم';
+      return 'جدة $adminName';
+    case 'uncle':
+      if (m.familySide == 'paternal') return 'عم $adminName';
+      if (m.familySide == 'maternal') return 'خال $adminName';
+      return 'عم/خال $adminName';
+    case 'aunt':
+      if (m.familySide == 'paternal') return 'عمة $adminName';
+      if (m.familySide == 'maternal') return 'خالة $adminName';
+      return 'عمة/خالة $adminName';
+    case 'nephew':
+      return 'ابن أخ/أخت $adminName';
+    case 'niece':
+      return 'بنت أخ/أخت $adminName';
+    case 'cousin':
+      if (m.familySide == 'paternal') {
+        return m.gender == 'female'
+            ? 'بنت عم/عمة $adminName'
+            : 'ابن عم/عمة $adminName';
+      }
+      if (m.familySide == 'maternal') {
+        return m.gender == 'female'
+            ? 'بنت خال/خالة $adminName'
+            : 'ابن خال/خالة $adminName';
+      }
+      return 'ابن/بنت عم/خال $adminName';
+    default:
+      return '';
+  }
 }
 
 /// Categories shown in step 1 (relationship class). Each maps to a list of
@@ -1251,7 +1355,11 @@ class _CandidateRow extends StatelessWidget {
 
 class _AnchorPickerSheet extends StatefulWidget {
   final List<_TreeMember> members;
-  const _AnchorPickerSheet({required this.members});
+  final String adminName;
+  const _AnchorPickerSheet({
+    required this.members,
+    required this.adminName,
+  });
 
   @override
   State<_AnchorPickerSheet> createState() => _AnchorPickerSheetState();
@@ -1335,6 +1443,7 @@ class _AnchorPickerSheetState extends State<_AnchorPickerSheet> {
                 itemCount: filtered.length,
                 itemBuilder: (ctx, i) {
                   final m = filtered[i];
+                  final subtitle = _adminPerspectiveLabel(m, widget.adminName);
                   return ListTile(
                     leading: CircleAvatar(
                       backgroundColor:
@@ -1346,6 +1455,15 @@ class _AnchorPickerSheetState extends State<_AnchorPickerSheet> {
                     ),
                     title: Text(m.name,
                         style: const TextStyle(color: Colors.white)),
+                    subtitle: subtitle.isNotEmpty
+                        ? Text(
+                            subtitle,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.55),
+                              fontSize: 12,
+                            ),
+                          )
+                        : null,
                     onTap: () => Navigator.pop(context, m),
                   );
                 },
