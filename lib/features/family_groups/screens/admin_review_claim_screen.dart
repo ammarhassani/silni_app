@@ -225,6 +225,7 @@ class _AdminReviewClaimScreenState
         'مستخدم';
     final birth = claim.proposedBirthYear?.toString();
     final city = claim.proposedCity;
+    final phone = claim.proposedPhoneNumber;
     return GlassCard(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -238,6 +239,8 @@ class _AdminReviewClaimScreenState
           ),
           const SizedBox(height: AppSpacing.sm),
           _profileRow(themeColors, Icons.person_outline_rounded, fullName),
+          if (phone != null && phone.isNotEmpty)
+            _profileRow(themeColors, Icons.phone_outlined, phone),
           if (birth != null)
             _profileRow(
                 themeColors, Icons.cake_outlined, 'سنة الميلاد: $birth'),

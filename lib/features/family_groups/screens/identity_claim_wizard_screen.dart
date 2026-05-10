@@ -72,6 +72,7 @@ class _IdentityClaimWizardScreenState
   final _addMeFormKey = GlobalKey<FormState>();
   final _proposedNameController = TextEditingController();
   final _proposedCityController = TextEditingController();
+  final _proposedPhoneController = TextEditingController();
   int? _proposedBirthYear;
 
   bool _isSubmitting = false;
@@ -87,6 +88,7 @@ class _IdentityClaimWizardScreenState
     _pageController.dispose();
     _proposedNameController.dispose();
     _proposedCityController.dispose();
+    _proposedPhoneController.dispose();
     super.dispose();
   }
 
@@ -279,6 +281,9 @@ class _IdentityClaimWizardScreenState
             parentSide: _role!.parentSide,
             gender: _role!.gender,
             proposedFullName: _proposedNameController.text.trim(),
+            proposedPhoneNumber: _proposedPhoneController.text.trim().isEmpty
+                ? null
+                : _proposedPhoneController.text.trim(),
             proposedGender: _role!.gender,
             proposedBirthYear: _proposedBirthYear,
             proposedCity: _proposedCityController.text.trim().isEmpty
@@ -869,6 +874,39 @@ class _IdentityClaimWizardScreenState
                 validator: (v) {
                   if (v == null || v.trim().length < 2) {
                     return 'يرجى إدخال اسمك';
+                  }
+                  return null;
+                },
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            GlassCard(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
+              ),
+              child: TextFormField(
+                controller: _proposedPhoneController,
+                keyboardType: TextInputType.phone,
+                style: AppTypography.bodyLarge.copyWith(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'رقم الجوال (اختياري — يساعد المسؤول للتحقق)',
+                  hintStyle: AppTypography.bodyMedium.copyWith(
+                    color: Colors.white.withValues(alpha: 0.5),
+                  ),
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  prefixIcon: Icon(Icons.phone_outlined,
+                      color: Colors.white.withValues(alpha: 0.7)),
+                ),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return null;
+                  final cleaned = v.trim().replaceAll(RegExp(r'\s+'), '');
+                  if (cleaned.length < 7 || cleaned.length > 16) {
+                    return 'رقم الجوال غير صالح';
                   }
                   return null;
                 },

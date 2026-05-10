@@ -47,6 +47,7 @@ class NodeClaimService {
     int? proposedBirthYear,
     String? proposedCity,
     String? proposedPhotoUrl,
+    String? proposedPhoneNumber,
   }) async {
     final result = await _supabase.rpc('create_node_claim', params: {
       'p_group_id': groupId,
@@ -60,6 +61,7 @@ class NodeClaimService {
       'p_proposed_birth_year': proposedBirthYear,
       'p_proposed_city': proposedCity,
       'p_proposed_photo_url': proposedPhotoUrl,
+      'p_proposed_phone_number': proposedPhoneNumber,
     });
     return NodeClaim.fromJson(result as Map<String, dynamic>);
   }

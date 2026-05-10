@@ -30,6 +30,7 @@ class NodeClaim {
   final int? proposedBirthYear;
   final String? proposedCity;
   final String? proposedPhotoUrl;
+  final String? proposedPhoneNumber;
 
   final String status; // pending | approved | rejected | cancelled
   final String? rejectionReason;
@@ -59,6 +60,7 @@ class NodeClaim {
     this.proposedBirthYear,
     this.proposedCity,
     this.proposedPhotoUrl,
+    this.proposedPhoneNumber,
     required this.status,
     this.rejectionReason,
     this.decidedBy,
@@ -92,6 +94,7 @@ class NodeClaim {
       proposedBirthYear: json['proposed_birth_year'] as int?,
       proposedCity: json['proposed_city'] as String?,
       proposedPhotoUrl: json['proposed_photo_url'] as String?,
+      proposedPhoneNumber: json['proposed_phone_number'] as String?,
       status: json['status'] as String? ?? 'pending',
       rejectionReason: json['rejection_reason'] as String?,
       decidedBy: json['decided_by'] as String?,
