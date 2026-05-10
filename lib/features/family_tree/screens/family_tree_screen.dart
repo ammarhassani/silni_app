@@ -34,7 +34,9 @@ import '../../relatives/services/relationship_inference_service.dart';
 import '../../../shared/widgets/flat_relationship_picker.dart';
 import '../../subscription/screens/paywall_screen.dart';
 import '../../family_groups/services/family_sharing_service.dart';
+import '../../family_groups/models/node_claim_model.dart';
 import '../../family_groups/providers/node_claim_providers.dart';
+import '../../family_groups/services/node_claim_service.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../models/placeholder_node.dart';
 import '../models/family_graph.dart';
@@ -1553,11 +1555,19 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   // ---------------------------------------------------------------------------
 
   /// Banner surfaced at the top of the family-tree screen when the user
-  /// is a group member but their `relative_id_in_tree` is null — i.e.
-  /// they joined via the invite link but never finished the wizard, OR
-  /// their previous claim was rejected/cancelled. Without this CTA, an
-  /// unlinked member has no in-app path back into the wizard.
+  /// is a group member but their `relative_id_in_tree` is null. Two
+  /// flavors:
+  ///   - has a pending claim → "في انتظار تأكيد المسؤول" (no tap action,
+  ///     they already submitted; gives a "cancel and re-pick" affordance)
+  ///   - no pending claim    → "حدد مكانك في الشجرة" CTA → wizard
   Widget _buildUnlinkedMemberBanner(BuildContext context, String groupId) {
+    final myClaimsAsync = ref.watch(myPendingClaimsProvider);
+    final pendingForThisGroup = myClaimsAsync.valueOrNull
+            ?.where((c) => c.groupId == groupId)
+            .toList() ??
+        const [];
+    final hasPendingClaim = pendingForThisGroup.isNotEmpty;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0,
@@ -1566,7 +1576,10 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(AppSpacing.md),
-          onTap: () => context.push('${AppRoutes.identityClaim}/$groupId'),
+          onTap: hasPendingClaim
+              ? () => _showPendingClaimSheet(
+                    context, groupId, pendingForThisGroup.first)
+              : () => context.push('${AppRoutes.identityClaim}/$groupId'),
           child: Ink(
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.12),
@@ -1583,21 +1596,30 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.account_tree_rounded, color: Colors.white),
+                  Icon(
+                    hasPendingClaim
+                        ? Icons.hourglass_top_rounded
+                        : Icons.account_tree_rounded,
+                    color: Colors.white,
+                  ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'حدد مكانك في الشجرة',
+                          hasPendingClaim
+                              ? 'في انتظار تأكيد المسؤول'
+                              : 'حدد مكانك في الشجرة',
                           style: AppTypography.titleSmall.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         Text(
-                          'لم يتم تحديد مكانك بعد — اضغط للبدء',
+                          hasPendingClaim
+                              ? 'تم إرسال طلبك — اضغط لإلغائه أو تعديله'
+                              : 'لم يتم تحديد مكانك بعد — اضغط للبدء',
                           style: AppTypography.labelSmall.copyWith(
                             color: Colors.white.withValues(alpha: 0.7),
                           ),
@@ -1612,6 +1634,87 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Bottom sheet shown when joiner taps the "pending claim" banner —
+  /// summary of what they submitted plus a button to cancel-and-restart.
+  Future<void> _showPendingClaimSheet(
+    BuildContext context,
+    String groupId,
+    NodeClaim claim,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                child: Text(
+                  'طلبك قيد المراجعة',
+                  style: AppTypography.titleLarge
+                      .copyWith(color: Colors.white),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                claim.proposedFullName != null
+                    ? 'أرسلت طلب إضافة "${claim.proposedFullName}" للشجرة'
+                    : 'أرسلت طلب تأكيد مكانك في الشجرة',
+                style: AppTypography.bodyMedium
+                    .copyWith(color: Colors.white.withValues(alpha: 0.85)),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              FilledButton.tonalIcon(
+                onPressed: () async {
+                  Navigator.of(sheetCtx).pop();
+                  try {
+                    await ref
+                        .read(nodeClaimServiceProvider)
+                        .cancelClaim(claim.id);
+                    ref.invalidate(myPendingClaimsProvider);
+                    if (!context.mounted) return;
+                    UIHelpers.showSnackBar(
+                        context, 'تم إلغاء الطلب');
+                    // Push wizard so they can re-pick fresh.
+                    context.push('${AppRoutes.identityClaim}/$groupId');
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    UIHelpers.showSnackBar(
+                        context, 'تعذّر إلغاء الطلب: $e',
+                        isError: true);
+                  }
+                },
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('إلغاء الطلب وإعادة الاختيار'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(alpha: 0.18),
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextButton(
+                onPressed: () => Navigator.of(sheetCtx).pop(),
+                child: const Text('متابعة الانتظار',
+                    style: TextStyle(color: Colors.white70)),
+              ),
+            ],
           ),
         ),
       ),

@@ -863,20 +863,33 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
   /// Admin tapped an unlinked-member row. Look up their pending
   /// node_claim in this group; if found, navigate to the admin review
   /// screen. If not, surface a snackbar explaining the state.
+  ///
+  /// Force-invalidates the provider before reading so a claim that
+  /// landed via realtime AFTER the screen first rendered is picked up.
   Future<void> _openClaimForMember(FamilyGroupMember member) async {
-    final claimsAsync = ref.read(groupPendingClaimsProvider(widget.groupId));
-    final claims = claimsAsync.valueOrNull ?? const [];
-    final match = claims.where((c) => c.claimantUserId == member.userId);
-    if (match.isNotEmpty) {
-      final claimId = match.first.id;
+    ref.invalidate(groupPendingClaimsProvider(widget.groupId));
+    try {
+      final claims = await ref
+          .read(groupPendingClaimsProvider(widget.groupId).future);
+      final match = claims.where((c) => c.claimantUserId == member.userId);
+      if (match.isNotEmpty) {
+        final claimId = match.first.id;
+        if (!mounted) return;
+        context.push('${AppRoutes.reviewClaim}/$claimId');
+        return;
+      }
       if (!mounted) return;
-      context.push('${AppRoutes.reviewClaim}/$claimId');
-      return;
+      UIHelpers.showSnackBar(
+        context,
+        'هذا العضو لم يقدم طلب انضمام بعد. اطلب منه فتح التطبيق وإكمال "تأكيد المكان".',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      UIHelpers.showSnackBar(
+        context,
+        'تعذّر تحميل الطلبات: $e',
+        isError: true,
+      );
     }
-    if (!mounted) return;
-    UIHelpers.showSnackBar(
-      context,
-      'هذا العضو لم يقدم طلب انضمام بعد. اطلب منه فتح التطبيق وإكمال "تأكيد المكان".',
-    );
   }
 }
