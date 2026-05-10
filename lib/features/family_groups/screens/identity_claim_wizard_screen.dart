@@ -61,6 +61,7 @@ class _IdentityClaimWizardScreenState
   // Step 4 state — fetched candidates.
   List<CandidateRelative> _candidates = const [];
   bool _candidatesLoading = false;
+  String? _candidatesError;
   String? _selectedCandidateId;
 
   // Step 5 state — add-me form.
@@ -167,6 +168,7 @@ class _IdentityClaimWizardScreenState
       _role = role;
       _candidates = const [];
       _candidatesLoading = true;
+      _candidatesError = null;
       _selectedCandidateId = null;
     });
     HapticFeedback.lightImpact();
@@ -174,7 +176,10 @@ class _IdentityClaimWizardScreenState
 
     // Fetch candidates.
     if (_anchorRelativeId == null) {
-      setState(() => _candidatesLoading = false);
+      setState(() {
+        _candidatesLoading = false;
+        _candidatesError = 'Anchor not resolved (admin has no tree node yet).';
+      });
       return;
     }
 
@@ -191,11 +196,15 @@ class _IdentityClaimWizardScreenState
         setState(() {
           _candidates = list;
           _candidatesLoading = false;
+          _candidatesError = null;
         });
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _candidatesLoading = false);
+        setState(() {
+          _candidatesLoading = false;
+          _candidatesError = e.toString();
+        });
         UIHelpers.showSnackBar(context, 'حدث خطأ في البحث: $e', isError: true);
       }
     }
@@ -551,6 +560,51 @@ class _IdentityClaimWizardScreenState
     if (_candidatesLoading) {
       return Center(
           child: CircularProgressIndicator(color: themeColors.onSurface));
+    }
+
+    if (_candidatesError != null) {
+      return Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Center(
+          child: GlassCard(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline_rounded,
+                    size: AppSpacing.iconXl, color: themeColors.onSurface),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'تعذّر جلب المرشحين',
+                  style: AppTypography.titleMedium
+                      .copyWith(color: themeColors.onSurface),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                SelectableText(
+                  _candidatesError!,
+                  style: AppTypography.bodySmall.copyWith(
+                    color: themeColors.onSurface.withValues(alpha: 0.7),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextButton.icon(
+                  onPressed: () {
+                    final r = _role;
+                    if (r != null) _onRolePicked(r);
+                  },
+                  icon: Icon(Icons.refresh_rounded,
+                      color: themeColors.onSurface),
+                  label: Text('إعادة المحاولة',
+                      style: AppTypography.bodyLarge
+                          .copyWith(color: themeColors.onSurface)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
     final isAddMeAllowed = const {'parent', 'child', 'spouse', 'sibling'}

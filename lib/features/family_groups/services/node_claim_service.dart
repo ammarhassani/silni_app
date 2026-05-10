@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -82,6 +83,10 @@ class NodeClaimService {
   /// Compute the candidate list for a declared role (the picker step in
   /// the discovery wizard). Returns [] when the graph yields nothing —
   /// the UI should fall through to the "add me" path.
+  ///
+  /// Hard timeout of 12s — if the RPC hangs (network blip, auth issue,
+  /// Supabase outage), surface that as a clear TimeoutException instead
+  /// of an infinite spinner.
   Future<List<CandidateRelative>> findCandidates({
     required String groupId,
     required String anchorRelativeId,
@@ -89,18 +94,41 @@ class NodeClaimService {
     String? parentSide,
     required String gender,
   }) async {
-    final result = await _supabase.rpc('get_candidate_relatives', params: {
-      'p_group_id': groupId,
-      'p_anchor_relative_id': anchorRelativeId,
-      'p_edge_path': edgePath,
-      'p_parent_side': parentSide,
-      'p_gender': gender,
-    });
-    final list = result as List<dynamic>;
-    return list
-        .map((e) => CandidateRelative.fromJson(e as Map<String, dynamic>))
-        .where((c) => !c.isSelf && !c.isAlreadyClaimed)
-        .toList();
+    debugPrint(
+      '[NodeClaimService.findCandidates] → group=$groupId anchor=$anchorRelativeId '
+      'edge=$edgePath side=$parentSide gender=$gender',
+    );
+    try {
+      final result = await _supabase.rpc(
+        'get_candidate_relatives',
+        params: {
+          'p_group_id': groupId,
+          'p_anchor_relative_id': anchorRelativeId,
+          'p_edge_path': edgePath,
+          'p_parent_side': parentSide,
+          'p_gender': gender,
+        },
+      ).timeout(const Duration(seconds: 12));
+
+      debugPrint(
+        '[NodeClaimService.findCandidates] ← raw runtimeType=${result.runtimeType} '
+        'value=$result',
+      );
+
+      if (result == null) return const [];
+      final list = result as List<dynamic>;
+      final parsed = list
+          .map((e) => CandidateRelative.fromJson(e as Map<String, dynamic>))
+          .where((c) => !c.isSelf && !c.isAlreadyClaimed)
+          .toList();
+      debugPrint(
+        '[NodeClaimService.findCandidates] parsed ${parsed.length} candidates',
+      );
+      return parsed;
+    } catch (e, st) {
+      debugPrint('[NodeClaimService.findCandidates] ✗ $e\n$st');
+      rethrow;
+    }
   }
 
   // ----------------------------------------------------------------- Admin
