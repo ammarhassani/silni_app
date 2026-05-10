@@ -21,6 +21,7 @@ import '../providers/family_group_providers.dart';
 import '../services/family_group_service.dart';
 import '../widgets/family_activity_card.dart';
 import '../widgets/family_activity_feed.dart';
+import '../providers/node_claim_providers.dart';
 import '../widgets/invite_link_card.dart';
 import '../widgets/pending_claims_card.dart';
 
@@ -725,12 +726,21 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
         // Admin can remove non-admin members (not themselves)
         final canRemove =
             isAdmin && !member.isAdmin && member.userId != currentUserId;
+        final isUnlinked = !member.isAdmin && member.relativeIdInTree == null;
 
         return Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-          child: GlassCard(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Row(
+          child: InkWell(
+            // Admin-only: tap an unlinked-member row to review their
+            // pending node_claim (or get a hint that they haven't
+            // submitted yet). Non-admins / linked members: no-op.
+            onTap: (isAdmin && isUnlinked)
+                ? () => _openClaimForMember(member)
+                : null,
+            borderRadius: BorderRadius.circular(AppSpacing.md),
+            child: GlassCard(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Row(
               children: [
                 // Avatar
                 CircleAvatar(
@@ -842,10 +852,31 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
                           ),
                   ),
               ],
+              ),
             ),
           ),
         );
       }).toList(),
+    );
+  }
+
+  /// Admin tapped an unlinked-member row. Look up their pending
+  /// node_claim in this group; if found, navigate to the admin review
+  /// screen. If not, surface a snackbar explaining the state.
+  Future<void> _openClaimForMember(FamilyGroupMember member) async {
+    final claimsAsync = ref.read(groupPendingClaimsProvider(widget.groupId));
+    final claims = claimsAsync.valueOrNull ?? const [];
+    final match = claims.where((c) => c.claimantUserId == member.userId);
+    if (match.isNotEmpty) {
+      final claimId = match.first.id;
+      if (!mounted) return;
+      context.push('${AppRoutes.reviewClaim}/$claimId');
+      return;
+    }
+    if (!mounted) return;
+    UIHelpers.showSnackBar(
+      context,
+      'هذا العضو لم يقدم طلب انضمام بعد. اطلب منه فتح التطبيق وإكمال "تأكيد المكان".',
     );
   }
 }
