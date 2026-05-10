@@ -48,6 +48,7 @@ class _IdentityClaimWizardScreenState
   // Step 1 state
   String? _adminName;
   String? _adminRelativeId;
+  String? _groupName;
   // The chosen anchor for the claim (defaults to admin's relative_id_in_tree).
   String? _anchorRelativeId;
   String? _anchorName;
@@ -102,32 +103,21 @@ class _IdentityClaimWizardScreenState
     try {
       final client = SupabaseConfig.client;
 
-      final memberRows = await client
-          .from('family_group_members')
-          .select('user_id, role, relative_id_in_tree')
-          .eq('group_id', widget.groupId);
+      // Single SECURITY DEFINER RPC that returns group + admin info.
+      // Using the RPC (instead of two direct queries) because the
+      // public.users RLS only lets a user read their OWN profile, so the
+      // joiner can't directly read the admin's name. The RPC pulls the
+      // admin's display name from auth.users.raw_user_meta_data.
+      final anchorInfo = await client
+          .rpc('get_group_anchor_info', params: {
+            'p_group_id': widget.groupId,
+          })
+          .timeout(const Duration(seconds: 10));
 
-      // Cast to a precisely-typed list so firstWhere's `orElse` types
-      // match (the original `orElse: () => {}` returned
-      // Map<dynamic, dynamic> and threw a Platform Error at runtime).
-      final members = (memberRows as List).cast<Map<String, dynamic>>();
-      final adminMember = members.firstWhere(
-        (m) => m['role'] == 'admin',
-        orElse: () => <String, dynamic>{},
-      );
-
-      final adminUserId = adminMember['user_id'] as String?;
-      final adminTreeId = adminMember['relative_id_in_tree'] as String?;
-
-      String adminName = 'مسؤول العائلة';
-      if (adminUserId != null) {
-        final profile = await client
-            .from('users')
-            .select('full_name')
-            .eq('id', adminUserId)
-            .maybeSingle();
-        adminName = (profile?['full_name'] as String?) ?? adminName;
-      }
+      final info = anchorInfo as Map<String, dynamic>;
+      final String adminName = info['admin_name'] as String;
+      final String? adminTreeId = info['admin_relative_id'] as String?;
+      final String groupName = info['group_name'] as String;
 
       final relativesData = await client
           .from('relatives')
@@ -146,12 +136,13 @@ class _IdentityClaimWizardScreenState
           .toList();
 
       debugPrint(
-        '[IdentityClaimWizard] bootstrap ✓ admin=$adminName '
+        '[IdentityClaimWizard] bootstrap ✓ group=$groupName admin=$adminName '
         'adminTreeId=$adminTreeId members=${treeMembers.length}',
       );
 
       if (mounted) {
         setState(() {
+          _groupName = groupName;
           _adminName = adminName;
           _adminRelativeId = adminTreeId;
           _anchorRelativeId = adminTreeId;
@@ -465,12 +456,49 @@ class _IdentityClaimWizardScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.lg),
+          // Group name banner — orienting context for the joiner who may
+          // not know who the group's "admin" is by name.
+          if (_groupName != null)
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              decoration: BoxDecoration(
+                color: themeColors.onSurface.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(AppSpacing.lg),
+                border: Border.all(
+                  color: themeColors.onSurface.withValues(alpha: 0.20),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.family_restroom_rounded,
+                      size: 18, color: themeColors.onSurface),
+                  const SizedBox(width: AppSpacing.sm),
+                  Flexible(
+                    child: Text(
+                      _groupName!,
+                      style: AppTypography.titleSmall.copyWith(
+                        color: themeColors.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: AppSpacing.lg),
           Icon(Icons.account_tree_rounded,
               size: AppSpacing.iconXxl, color: themeColors.onSurface),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'هل أنت من أقارب $_adminName؟',
+            'كيف تنتمي لهذه العائلة؟',
             style: AppTypography.headlineSmall.copyWith(
               color: themeColors.onSurface,
             ),
@@ -478,7 +506,8 @@ class _IdentityClaimWizardScreenState
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'سنحتاج لمعرفة كيف تنتمي للعائلة لنضعك في المكان الصحيح في الشجرة',
+            'أرسل لك $_adminName هذه الدعوة. سنحتاج لمعرفة كيف تنتمي للعائلة '
+            'لنضعك في المكان الصحيح في الشجرة.',
             style: AppTypography.bodyLarge.copyWith(
               color: themeColors.onSurface.withValues(alpha: 0.7),
             ),
@@ -486,7 +515,7 @@ class _IdentityClaimWizardScreenState
           ),
           const SizedBox(height: AppSpacing.xl),
           GradientButton(
-            text: 'نعم، أنا قريب لـ $_adminName',
+            text: 'أنا قريب لـ $_adminName',
             onPressed: () {
               // Anchor stays on admin (default).
               setState(() {
@@ -507,13 +536,21 @@ class _IdentityClaimWizardScreenState
                 borderRadius: BorderRadius.circular(AppSpacing.sm),
               ),
             ),
-            icon: Icon(Icons.swap_horiz_rounded, color: themeColors.onSurface),
+            icon: Icon(Icons.people_outline_rounded, color: themeColors.onSurface),
             label: Text(
-              'لا، أنا قريب لشخص آخر في العائلة',
+              'أنا قريب لشخص آخر في العائلة',
               style: AppTypography.bodyLarge.copyWith(
                 color: themeColors.onSurface,
               ),
             ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'إذا لم تكن تعرف $_adminName شخصياً، اضغط هنا واختر شخصاً تعرفه من العائلة',
+            style: AppTypography.bodySmall.copyWith(
+              color: themeColors.onSurface.withValues(alpha: 0.5),
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
