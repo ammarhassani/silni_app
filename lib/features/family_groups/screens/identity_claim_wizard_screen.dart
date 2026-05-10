@@ -53,6 +53,9 @@ class _IdentityClaimWizardScreenState
   String? _anchorName;
   // Tree members for the anchor switcher.
   List<_TreeMember> _treeMembers = const [];
+  // Set when _bootstrapAdminAndTree throws — anchor step renders an error
+  // card with retry instead of an indefinite spinner.
+  String? _bootstrapError;
 
   // Step 2/3 state — the declared role.
   _RoleCategory? _category;
@@ -91,54 +94,77 @@ class _IdentityClaimWizardScreenState
   Future<void> _bootstrapAdminAndTree() async {
     // Fetch the admin's name + relative_id_in_tree, and the full list of
     // tree members (for the anchor switcher). One round trip if possible.
-    final client = SupabaseConfig.client;
+    //
+    // Wrapped in try/catch so a runtime error here doesn't leave the wizard
+    // sitting on the anchor-step spinner forever — surface the failure to
+    // the user instead.
+    debugPrint('[IdentityClaimWizard] bootstrap → group=${widget.groupId}');
+    try {
+      final client = SupabaseConfig.client;
 
-    final memberData = await client
-        .from('family_group_members')
-        .select('user_id, role, relative_id_in_tree')
-        .eq('group_id', widget.groupId);
+      final memberRows = await client
+          .from('family_group_members')
+          .select('user_id, role, relative_id_in_tree')
+          .eq('group_id', widget.groupId);
 
-    final adminMember = (memberData as List).firstWhere(
-      (m) => m['role'] == 'admin',
-      orElse: () => {},
-    ) as Map<String, dynamic>;
+      // Cast to a precisely-typed list so firstWhere's `orElse` types
+      // match (the original `orElse: () => {}` returned
+      // Map<dynamic, dynamic> and threw a Platform Error at runtime).
+      final members = (memberRows as List).cast<Map<String, dynamic>>();
+      final adminMember = members.firstWhere(
+        (m) => m['role'] == 'admin',
+        orElse: () => <String, dynamic>{},
+      );
 
-    final adminUserId = adminMember['user_id'] as String?;
-    final adminTreeId = adminMember['relative_id_in_tree'] as String?;
+      final adminUserId = adminMember['user_id'] as String?;
+      final adminTreeId = adminMember['relative_id_in_tree'] as String?;
 
-    String adminName = 'مسؤول العائلة';
-    if (adminUserId != null) {
-      final profile = await client
-          .from('users')
-          .select('full_name')
-          .eq('id', adminUserId)
-          .maybeSingle();
-      adminName = (profile?['full_name'] as String?) ?? adminName;
-    }
+      String adminName = 'مسؤول العائلة';
+      if (adminUserId != null) {
+        final profile = await client
+            .from('users')
+            .select('full_name')
+            .eq('id', adminUserId)
+            .maybeSingle();
+        adminName = (profile?['full_name'] as String?) ?? adminName;
+      }
 
-    final relativesData = await client
-        .from('relatives')
-        .select('id, full_name, gender, family_side')
-        .eq('family_group_id', widget.groupId)
-        .eq('is_archived', false)
-        .order('full_name', ascending: true);
+      final relativesData = await client
+          .from('relatives')
+          .select('id, full_name, gender, family_side')
+          .eq('family_group_id', widget.groupId)
+          .eq('is_archived', false)
+          .order('full_name', ascending: true);
 
-    final members = (relativesData as List)
-        .map((r) => _TreeMember(
-              id: r['id'] as String,
-              name: r['full_name'] as String,
-              gender: r['gender'] as String?,
-            ))
-        .toList();
+      final treeMembers = (relativesData as List)
+          .cast<Map<String, dynamic>>()
+          .map((r) => _TreeMember(
+                id: r['id'] as String,
+                name: r['full_name'] as String,
+                gender: r['gender'] as String?,
+              ))
+          .toList();
 
-    if (mounted) {
-      setState(() {
-        _adminName = adminName;
-        _adminRelativeId = adminTreeId;
-        _anchorRelativeId = adminTreeId;
-        _anchorName = adminName;
-        _treeMembers = members;
-      });
+      debugPrint(
+        '[IdentityClaimWizard] bootstrap ✓ admin=$adminName '
+        'adminTreeId=$adminTreeId members=${treeMembers.length}',
+      );
+
+      if (mounted) {
+        setState(() {
+          _adminName = adminName;
+          _adminRelativeId = adminTreeId;
+          _anchorRelativeId = adminTreeId;
+          _anchorName = adminName;
+          _treeMembers = treeMembers;
+          _bootstrapError = null;
+        });
+      }
+    } catch (e, st) {
+      debugPrint('[IdentityClaimWizard] bootstrap ✗ $e\n$st');
+      if (mounted) {
+        setState(() => _bootstrapError = e.toString());
+      }
     }
   }
 
@@ -385,6 +411,50 @@ class _IdentityClaimWizardScreenState
   // ----- Step 0: Anchor question
 
   Widget _buildAnchorStep(ThemeColors themeColors) {
+    if (_bootstrapError != null) {
+      return Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Center(
+          child: GlassCard(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline_rounded,
+                    size: AppSpacing.iconXl, color: themeColors.onSurface),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'تعذّر تحميل بيانات المجموعة',
+                  style: AppTypography.titleMedium
+                      .copyWith(color: themeColors.onSurface),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                SelectableText(
+                  _bootstrapError!,
+                  style: AppTypography.bodySmall.copyWith(
+                    color: themeColors.onSurface.withValues(alpha: 0.7),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() => _bootstrapError = null);
+                    _bootstrapAdminAndTree();
+                  },
+                  icon: Icon(Icons.refresh_rounded,
+                      color: themeColors.onSurface),
+                  label: Text('إعادة المحاولة',
+                      style: AppTypography.bodyLarge
+                          .copyWith(color: themeColors.onSurface)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     if (_adminName == null) {
       return Center(
         child: CircularProgressIndicator(color: themeColors.onSurface),
