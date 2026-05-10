@@ -1100,10 +1100,14 @@ String _adminPerspectiveLabel(_TreeMember m, String adminName) {
 
 /// Categories shown in step 1 (relationship class). Each maps to a list of
 /// specific [_ClaimRole]s shown in step 2.
+// Order = vertical order shown to the joiner. Grandparent generation
+// promoted above uncle/aunt because users misread "older generation" as
+// any generation older (including grandparents); making it appear earlier
+// + with an explicit label removes that confusion entirely.
 enum _RoleCategory {
   household,
-  olderGeneration,
   grandparentGeneration,
+  olderGeneration,
   cousins,
   youngerGeneration,
   grandchildGeneration,
@@ -1113,17 +1117,17 @@ extension _RoleCategoryX on _RoleCategory {
   String get label {
     switch (this) {
       case _RoleCategory.household:
-        return 'من أهل البيت';
-      case _RoleCategory.olderGeneration:
-        return 'جيل أكبر (عم/خال)';
+        return 'الوالدان أو الإخوة أو الزوج/ة أو الأبناء';
       case _RoleCategory.grandparentGeneration:
-        return 'جيل الأجداد';
+        return 'جد أو جدة';
+      case _RoleCategory.olderGeneration:
+        return 'عم أو عمة أو خال أو خالة';
       case _RoleCategory.cousins:
-        return 'ابن/بنت عم أو خال';
+        return 'ابن/بنت عم أو خال أو خالة أو عمة';
       case _RoleCategory.youngerGeneration:
         return 'ابن/بنت أخ أو أخت';
       case _RoleCategory.grandchildGeneration:
-        return 'حفيد/حفيدة';
+        return 'حفيد أو حفيدة';
     }
   }
 
