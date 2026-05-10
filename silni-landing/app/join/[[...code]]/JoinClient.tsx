@@ -10,26 +10,27 @@ const PLAY_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.silni.app";
 
 export default function JoinClient() {
-  const [showStoreLinks, setShowStoreLinks] = useState(false);
+  const [deepLink, setDeepLink] = useState<string | null>(null);
+  const [platform, setPlatform] = useState<"ios" | "android" | "desktop">(
+    "desktop"
+  );
 
   useEffect(() => {
-    // Extract invite code from URL path client-side
+    // 1. Detect platform.
+    const ua = navigator.userAgent || "";
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as unknown as { MSStream?: unknown }).MSStream;
+    const isAndroid = /android/i.test(ua);
+    setPlatform(isIOS ? "ios" : isAndroid ? "android" : "desktop");
+
+    // 2. Extract + sanitize the invite code from the URL path.
     const path = window.location.pathname;
     const match = path.match(/^\/join\/(.+)/);
-    if (!match) {
-      // No code in URL — just show store links immediately
-      setShowStoreLinks(true);
-      return;
-    }
+    if (!match) return;
 
     const rawCode = match[1];
+    if (!/^[a-zA-Z0-9_-]{4,64}$/.test(rawCode)) return;
 
-    // Sanitize: only allow alphanumeric, hyphens, underscores
-    const code = /^[a-zA-Z0-9_-]+$/.test(rawCode)
-      ? rawCode
-      : encodeURIComponent(rawCode);
-
-    // Build safe query string — only pass recognized params
+    // 3. Build deep link with optional rid query.
     const searchParams = new URLSearchParams(window.location.search);
     let safeQuery = "";
     const rid = searchParams.get("rid");
@@ -42,29 +43,26 @@ export default function JoinClient() {
       safeQuery = `?rid=${rid}`;
     }
 
-    const deepLink = `com.silni.app://join/${code}${safeQuery}`;
-
-    // Try to open the app via hidden iframe (works if app installed)
-    const iframe = document.createElement("iframe");
-    iframe.style.display = "none";
-    iframe.src = deepLink;
-    document.body.appendChild(iframe);
-
-    // Clean up iframe and show store links after delay
-    const timer = setTimeout(() => {
-      if (iframe.parentNode) {
-        document.body.removeChild(iframe);
-      }
-      setShowStoreLinks(true);
-    }, 2000);
-
-    return () => {
-      clearTimeout(timer);
-      if (iframe.parentNode) {
-        document.body.removeChild(iframe);
-      }
-    };
+    setDeepLink(`com.silni.app://join/${rawCode}${safeQuery}`);
   }, []);
+
+  // Best-of-both: when on iOS or Android with the deep link ready, auto-attempt
+  // it via window.location (which iOS treats as a user-initiated navigation
+  // when it happens early after a real link tap from another app like Mail or
+  // Messages). Modern iOS Safari blocks iframe-based attempts silently, so we
+  // skip that pattern. The visible "Open in app" button below is the reliable
+  // path — it always works on direct user tap.
+  useEffect(() => {
+    if (!deepLink) return;
+    if (platform !== "ios" && platform !== "android") return;
+    // Tiny delay so the page can paint first.
+    const t = setTimeout(() => {
+      // Mobile browsers will either open the app or do nothing if it's not
+      // installed. Either way, the user can still tap the visible button.
+      window.location.href = deepLink;
+    }, 250);
+    return () => clearTimeout(t);
+  }, [deepLink, platform]);
 
   return (
     <section className="min-h-screen gradient-hero flex items-center justify-center px-md py-3xl">
@@ -90,26 +88,27 @@ export default function JoinClient() {
           حمّل التطبيق وانضم لعائلتك لتتابعوا صلة الرحم معًا
         </p>
 
-        {!showStoreLinks && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-white/50 text-body-md mb-lg"
-          >
-            جاري فتح التطبيق...
-          </motion.div>
-        )}
+        <div className="flex flex-col gap-sm">
+          {deepLink && (platform === "ios" || platform === "android") && (
+            <a
+              href={deepLink}
+              className="flex items-center justify-center gap-[10px] py-[14px] px-lg rounded-2xl bg-white text-black font-bold text-body-lg transition-transform active:scale-[0.97]"
+            >
+              <svg
+                className="w-[22px] h-[22px]"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" />
+              </svg>
+              افتح في تطبيق صِلني
+            </a>
+          )}
 
-        {showStoreLinks && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="flex flex-col gap-sm"
-          >
+          {platform === "ios" && (
             <a
               href={APP_STORE_URL}
-              className="flex items-center justify-center gap-[10px] py-[14px] px-lg rounded-2xl bg-white text-black font-semibold text-body-lg transition-transform active:scale-[0.97]"
+              className="flex items-center justify-center gap-[10px] py-[14px] px-lg rounded-2xl bg-white/15 text-white border border-white/20 font-semibold text-body-lg transition-transform active:scale-[0.97]"
             >
               <svg
                 className="w-[22px] h-[22px]"
@@ -118,24 +117,37 @@ export default function JoinClient() {
               >
                 <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
               </svg>
-              App Store
+              لا يعمل؟ حمّل من App Store
             </a>
+          )}
 
-            <a
-              href={PLAY_STORE_URL}
-              className="flex items-center justify-center gap-[10px] py-[14px] px-lg rounded-2xl bg-white/15 text-white border border-white/20 font-semibold text-body-lg transition-transform active:scale-[0.97]"
-            >
-              <svg
-                className="w-[22px] h-[22px]"
-                viewBox="0 0 24 24"
-                fill="currentColor"
+          {platform === "android" && (
+            <span className="flex items-center justify-center gap-[10px] py-[14px] px-lg rounded-2xl bg-white/[0.05] text-white/40 border border-white/[0.08] font-medium text-body-lg">
+              قريباً على Google Play
+            </span>
+          )}
+
+          {platform === "desktop" && (
+            <>
+              <p className="text-white/60 text-body-md mb-sm leading-relaxed">
+                افتح هذا الرابط من جوالك للانضمام
+              </p>
+              <a
+                href={APP_STORE_URL}
+                className="flex items-center justify-center gap-[10px] py-[14px] px-lg rounded-2xl bg-white/15 text-white border border-white/20 font-semibold text-body-lg transition-transform active:scale-[0.97]"
               >
-                <path d="M3.18 23.04l8.85-8.84L3.2.96C2.83 1.17 2.57 1.6 2.57 2.1v19.81c0 .5.25.93.61 1.13zm1.57 1.13l9.78-5.52-2.78-2.78-7 6.99v1.31zm12.95-7.33l2.61-1.47c.49-.27.49-.95 0-1.22l-2.61-1.47-3.03 3.03 3.03 3.13zM4.75.24L13 8.49l-2.78 2.78L4.75.24z" />
-              </svg>
-              Google Play
-            </a>
-          </motion.div>
-        )}
+                <svg
+                  className="w-[22px] h-[22px]"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+                </svg>
+                App Store
+              </a>
+            </>
+          )}
+        </div>
 
         <div className="h-px bg-white/10 my-lg" />
         <p className="text-[13px] text-white/40 leading-relaxed">
