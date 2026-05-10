@@ -181,8 +181,10 @@ class NodeClaimService {
     });
   }
 
-  /// Admin defers decision until [until]. Claim stays pending; just hidden
-  /// from the queue until the snooze passes.
+  /// Admin deprioritizes (NOT hides) the claim until [until]. Claim
+  /// stays pending and visible; renders dimmed with a "مؤجَّل" badge.
+  /// Admin can still tap and approve/reject anytime, or call
+  /// [unsnoozeClaim] to clear the snooze ahead of schedule.
   Future<void> snoozeClaim({
     required String claimId,
     required DateTime until,
@@ -190,6 +192,14 @@ class NodeClaimService {
     await _supabase.rpc('snooze_node_claim', params: {
       'p_claim_id': claimId,
       'p_until': until.toUtc().toIso8601String(),
+    });
+  }
+
+  /// Clear an active snooze on a claim. Restores it to a normal
+  /// queue position immediately.
+  Future<void> unsnoozeClaim(String claimId) async {
+    await _supabase.rpc('unsnooze_node_claim', params: {
+      'p_claim_id': claimId,
     });
   }
 }

@@ -76,54 +76,91 @@ class _ClaimTile extends ConsumerWidget {
     final claimantName =
         claim.claimantName ?? claim.proposedFullName ?? 'مستخدم';
     final roleSummary = _summary(claim);
+    final isSnoozed =
+        claim.snoozedUntil != null && claim.snoozedUntil!.isAfter(DateTime.now());
 
-    return InkWell(
-      onTap: () =>
-          context.push('${AppRoutes.reviewClaim}/${claim.id}'),
-      borderRadius: BorderRadius.circular(AppSpacing.sm),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: AppSpacing.sm,
-          horizontal: AppSpacing.xs,
-        ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor:
-                  themeColors.onSurface.withValues(alpha: 0.1),
-              child: Text(
-                claimantName.isNotEmpty
-                    ? claimantName.characters.first
-                    : '?',
-                style: TextStyle(color: themeColors.onSurface),
+    return Opacity(
+      // Dim snoozed rows so they read as "deprioritized" but remain
+      // tappable — admin can override the 24h snooze any time.
+      opacity: isSnoozed ? 0.55 : 1.0,
+      child: InkWell(
+        onTap: () =>
+            context.push('${AppRoutes.reviewClaim}/${claim.id}'),
+        borderRadius: BorderRadius.circular(AppSpacing.sm),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.sm,
+            horizontal: AppSpacing.xs,
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor:
+                    themeColors.onSurface.withValues(alpha: 0.1),
+                child: Text(
+                  claimantName.isNotEmpty
+                      ? claimantName.characters.first
+                      : '?',
+                  style: TextStyle(color: themeColors.onSurface),
+                ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    claimantName,
-                    style: AppTypography.bodyLarge.copyWith(
-                      color: themeColors.onSurface,
-                      fontWeight: FontWeight.w600,
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            claimantName,
+                            style: AppTypography.bodyLarge.copyWith(
+                              color: themeColors.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isSnoozed) ...[
+                          const SizedBox(width: AppSpacing.xs),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: themeColors.onSurface
+                                  .withValues(alpha: 0.15),
+                              borderRadius:
+                                  BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'مؤجَّل',
+                              style: AppTypography.labelSmall.copyWith(
+                                color: themeColors.onSurface
+                                    .withValues(alpha: 0.85),
+                                fontSize: 10,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                  ),
-                  Text(
-                    roleSummary,
-                    style: AppTypography.bodySmall.copyWith(
-                      color:
-                          themeColors.onSurface.withValues(alpha: 0.7),
+                    Text(
+                      roleSummary,
+                      style: AppTypography.bodySmall.copyWith(
+                        color:
+                            themeColors.onSurface.withValues(alpha: 0.7),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Icon(Icons.chevron_left_rounded,
-                color: themeColors.onSurface.withValues(alpha: 0.5)),
-          ],
+              Icon(Icons.chevron_left_rounded,
+                  color: themeColors.onSurface.withValues(alpha: 0.5)),
+            ],
+          ),
         ),
       ),
     );
