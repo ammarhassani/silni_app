@@ -59,7 +59,7 @@ export default function StreamingConfigPage() {
     });
   };
 
-  const sampleText = "السلام عليكم! أنا واصل، مساعدك الشخصي. كيف يمكنني مساعدتك اليوم؟";
+  const sampleText = "السلام عليكم! أنا أنيس، مساعدك الشخصي. كيف يمكنني مساعدتك اليوم؟";
 
   const runPreview = async () => {
     setIsPreviewRunning(true);
@@ -309,10 +309,10 @@ export default function StreamingConfigPage() {
             <div className="min-h-40 p-4 bg-muted/50 rounded-lg border">
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
-                  <span className="text-white text-sm">و</span>
+                  <span className="text-white text-sm">أ</span>
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-sm mb-1">واصل</p>
+                  <p className="font-medium text-sm mb-1">أنيس</p>
                   <p className="text-base leading-relaxed">
                     {previewText || (
                       <span className="text-muted-foreground">

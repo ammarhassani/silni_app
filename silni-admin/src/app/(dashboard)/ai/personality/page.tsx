@@ -70,7 +70,7 @@ export default function AIPersonalityPage() {
             <div className="flex-1">
               <h3 className="font-semibold">نظام الشخصية</h3>
               <p className="text-muted-foreground text-sm mt-1">
-                هذه الأقسام تُدمج معاً لتشكل شخصية واصل الكاملة. كل قسم يضيف جانباً مختلفاً
+                هذه الأقسام تُدمج معاً لتشكل شخصية أنيس الكاملة. كل قسم يضيف جانباً مختلفاً
                 من شخصيته وأسلوب تعامله مع المستخدمين.
               </p>
               <div className="flex gap-2 mt-3">

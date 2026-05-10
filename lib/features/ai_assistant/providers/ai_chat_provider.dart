@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/ai/ai_context_engine.dart';
 import '../../../core/ai/ai_models.dart';
 import '../../../core/ai/ai_service.dart';
 import '../../../core/ai/ai_prompts.dart';
@@ -91,19 +92,15 @@ final aiChatProvider =
   final aiService = ref.watch(aiServiceProvider);
   final chatHistoryService = ref.watch(chatHistoryServiceProvider);
 
-  // Use read instead of watch - we only need initial values for context
-  // Watching these causes provider rebuild when invalidated, losing chat state
-  final relatives = ref.read(viewerFilteredRelativesProvider).valueOrNull ?? [];
-  final memories = ref.read(aiMemoriesProvider).valueOrNull ?? [];
-
-  // Use pre-computed perspective labels from shared provider
+  // Phase γ.2-prep — relatives + memories now flow through AIContextEngine
+  // (a 5-min cached source built into the prompt at send time). The notifier
+  // only needs the perspective-aware labels, which AIContextEngine doesn't
+  // compute — those are derived from family-group membership upstream.
   final relationshipLabels = ref.read(perspectiveLabelsProvider);
 
   return AIChatNotifier(
     aiService: aiService,
     chatHistoryService: chatHistoryService,
-    allRelatives: relatives,
-    memories: memories,
     relationshipLabels: relationshipLabels,
     onHistoryChanged: () {
       ref.invalidate(chatHistoryProvider);
@@ -181,8 +178,6 @@ class AIChatState {
 class AIChatNotifier extends StateNotifier<AIChatState> {
   final AIService _aiService;
   final ChatHistoryService _chatHistoryService;
-  final List<Relative> _allRelatives;
-  final List<AIMemory> _memories;
   final Map<String, String> _relationshipLabels;
   final RefreshHistoryCallback? _onHistoryChanged;
   final _uuid = const Uuid();
@@ -190,14 +185,10 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
   AIChatNotifier({
     required AIService aiService,
     required ChatHistoryService chatHistoryService,
-    required List<Relative> allRelatives,
-    required List<AIMemory> memories,
     Map<String, String> relationshipLabels = const {},
     RefreshHistoryCallback? onHistoryChanged,
   })  : _aiService = aiService,
         _chatHistoryService = chatHistoryService,
-        _allRelatives = allRelatives,
-        _memories = memories,
         _relationshipLabels = relationshipLabels,
         _onHistoryChanged = onHistoryChanged,
         super(const AIChatState());
@@ -330,12 +321,18 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
     }
 
     try {
-      // Build system prompt with FULL context (all relatives + memories)
-      final systemPrompt = AIPrompts.buildChatSystemPrompt(
+      // Phase γ.2-prep — switch to AIContextEngine + buildEnhancedChatSystemPrompt.
+      // The enhanced builder includes the user's full_name (so the AI can
+      // address them by name), interaction-count + active-streak summary,
+      // health summary across all relatives, and upcoming birthdays —
+      // everything AIContext fetches and caches but the thin builder
+      // ignored. Phase γ.1 inventory finding 5.
+      final aiContext = await AIContextEngine.instance.buildContext(
+        focusRelative: relativeContext,
+      );
+      final systemPrompt = AIPrompts.buildEnhancedChatSystemPrompt(
         mode: mode,
-        relative: relativeContext,
-        allRelatives: _allRelatives,
-        memories: _memories,
+        context: aiContext,
         relationshipLabels: _relationshipLabels.isNotEmpty ? _relationshipLabels : null,
       );
 
@@ -427,12 +424,17 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
     }
 
     try {
-      // Build system prompt with full context
-      final systemPrompt = AIPrompts.buildChatSystemPrompt(
+      // Phase γ.2-prep — same enhanced-prompt switch as sendMessage above.
+      // AIContextEngine fetches user_full_name + relatives + memories +
+      // streaks + occasions + health summary, all on a 5-min cache. The
+      // enhanced builder weaves them into the system prompt so the AI
+      // sees who it's talking to.
+      final aiContext = await AIContextEngine.instance.buildContext(
+        focusRelative: relativeContext,
+      );
+      final systemPrompt = AIPrompts.buildEnhancedChatSystemPrompt(
         mode: mode,
-        relative: relativeContext,
-        allRelatives: _allRelatives,
-        memories: _memories,
+        context: aiContext,
         relationshipLabels: _relationshipLabels.isNotEmpty ? _relationshipLabels : null,
       );
 

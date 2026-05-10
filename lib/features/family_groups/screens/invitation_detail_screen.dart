@@ -12,6 +12,7 @@ import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
+import '../../../shared/widgets/glass_dialog.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../home/providers/home_providers.dart';
@@ -144,47 +145,27 @@ class _InvitationDetailScreenState
   Future<void> _declineInvitation() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) {
-        final themeColors = ref.read(themeColorsProvider);
-        return AlertDialog(
-          backgroundColor: themeColors.surface,
-          title: Text(
-            'رفض الدعوة',
-            style: AppTypography.headlineSmall.copyWith(
-              color: themeColors.onSurface,
-            ),
-            textAlign: TextAlign.center,
+      builder: (ctx) => GlassDialog(
+        icon: Icons.cancel_rounded,
+        iconAccent: const Color(0xFFD32F2F),
+        title: 'رفض الدعوة',
+        subtitle: 'هل تريد رفض الدعوة؟',
+        content: const SizedBox.shrink(),
+        actions: [
+          GlassActionButton(
+            text: 'إلغاء',
+            onPressed: () => Navigator.of(ctx).pop(false),
           ),
-          content: Text(
-            'هل تريد رفض الدعوة؟',
-            style: AppTypography.bodyLarge.copyWith(
-              color: themeColors.onSurface,
+          GradientButton(
+            text: 'نعم، رفض',
+            icon: Icons.cancel_rounded,
+            onPressed: () => Navigator.of(ctx).pop(true),
+            gradient: const LinearGradient(
+              colors: [Color(0xFFD32F2F), Color(0xFF8B1F1F)],
             ),
-            textAlign: TextAlign.center,
           ),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(
-                'إلغاء',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: themeColors.onSurface,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(
-                'نعم، رفض',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: themeColors.statusError,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+        ],
+      ),
     );
 
     if (confirmed == true && mounted) {

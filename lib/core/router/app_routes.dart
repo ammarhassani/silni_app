@@ -74,6 +74,12 @@ class AppRoutes {
   // Invitation routes
   static const String invitationDetail = '/invitation';
 
+  // Identity claim wizard (post-join discovery flow)
+  static const String identityClaim = '/identity-claim';
+
+  // Admin's claim review screen
+  static const String reviewClaim = '/review-claim';
+
   // Occasion messages
   static const String occasionMessages = '/occasion-messages';
 }

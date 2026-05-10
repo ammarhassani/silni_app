@@ -59,7 +59,6 @@ class SwipeableRelativeCard extends ConsumerWidget {
               backgroundColor: themeColors.primary,
               foregroundColor: themeColors.onPrimary,
               icon: Icons.phone_rounded,
-              label: 'اتصال',
               borderRadius: const BorderRadius.horizontal(right: Radius.circular(AppSpacing.radiusLg)),
             ),
             SlidableAction(
@@ -67,7 +66,6 @@ class SwipeableRelativeCard extends ConsumerWidget {
               backgroundColor: themeColors.secondary,
               foregroundColor: themeColors.onSecondary,
               icon: Icons.message_rounded,
-              label: 'رسالة',
             ),
           ],
           if (relative.email != null)
@@ -76,7 +74,6 @@ class SwipeableRelativeCard extends ConsumerWidget {
               backgroundColor: AppColors.emotionalPurple,
               foregroundColor: Colors.white,
               icon: Icons.email_rounded,
-              label: 'بريد',
             ),
           if (onMarkContacted != null)
             SlidableAction(
@@ -93,7 +90,6 @@ class SwipeableRelativeCard extends ConsumerWidget {
               backgroundColor: AppColors.joyfulOrange,
               foregroundColor: Colors.white,
               icon: Icons.check_circle_rounded,
-              label: 'تواصلت',
               borderRadius: const BorderRadius.horizontal(left: Radius.circular(AppSpacing.radiusLg)),
             ),
         ],
@@ -118,8 +114,11 @@ class SwipeableRelativeCard extends ConsumerWidget {
       child: GestureDetector(
         onTap: onTap,
         child: GlassCard(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
-        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
         gradient: needsAttention
             ? LinearGradient(
                 colors: [
@@ -258,7 +257,7 @@ class SwipeableRelativeCard extends ConsumerWidget {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: AppSpacing.xs),
                   Row(
                     children: [
                       Text(

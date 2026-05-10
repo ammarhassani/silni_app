@@ -23,6 +23,7 @@ import 'package:silni_app/shared/models/relative_model.dart';
 import 'package:silni_app/shared/utils/relationship_label_helper.dart';
 import 'package:silni_app/shared/widgets/glass_card.dart';
 import 'package:silni_app/shared/widgets/glass_pill_title.dart';
+import 'package:silni_app/shared/widgets/glass_dialog.dart';
 import 'package:silni_app/shared/widgets/gradient_background.dart';
 import 'package:silni_app/shared/widgets/share_bottom_sheet.dart';
 import 'package:silni_app/shared/widgets/share_cards/occasion_share_card.dart';
@@ -142,9 +143,19 @@ class _OccasionMessagesScreenState
             ),
           ),
           centerTitle: true,
-          leading: IconButton(
-            icon: DirectionalIcon(Icons.arrow_back_ios, color: themeColors.textPrimary),
-            onPressed: () => Navigator.of(context).pop(),
+          leading: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+            child: Center(
+              child: GlassIconButton(
+                tooltip: 'رجوع',
+                icon: DirectionalIcon(
+                  Icons.arrow_back_ios_rounded,
+                  color: themeColors.textOnGradient,
+                  size: 18,
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
           ),
         ),
         body: relativesAsync.when(

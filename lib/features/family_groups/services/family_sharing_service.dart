@@ -32,20 +32,55 @@ class FamilySharingService {
       userId: userId,
     );
 
-    // 2. Create self node
-    final selfNodeId = const Uuid().v4();
-    await client.from('relatives').insert({
-      'id': selfNodeId,
-      'user_id': userId,
-      'full_name': userDisplayName,
-      'relationship_type': 'other',
-      'gender': userGender?.value ?? 'male',
-      'priority': 1,
-      'avatar_type': userGender == Gender.female ? 'adult_woman' : 'adult_man',
-      'is_self': true,
-      'family_group_id': group.id,
-      'added_by': userId,
-    });
+    // 2. Find or create the self-node for this group.
+    //
+    // The self_node_on_signup trigger (migration 20260428620000) auto-creates
+    // a personal self-node (is_self=true, family_group_id=NULL) when a user
+    // signs up. If we blindly INSERT a brand-new shared self-node here AND
+    // then migrate all personal relatives into the group in step 5, the
+    // existing personal self-node also gets family_group_id=group.id — and
+    // that collides with the new one on idx_relatives_self_per_user_group
+    // (UNIQUE on (user_id, family_group_id) WHERE is_self=true AND
+    // family_group_id IS NOT NULL).
+    //
+    // Promote the existing personal self-node into the group if one exists.
+    // Fall back to INSERT for legacy accounts that pre-date the trigger.
+    final existingSelfRows = await client
+        .from('relatives')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('is_self', true)
+        .isFilter('family_group_id', null)
+        .limit(1);
+
+    final String selfNodeId;
+    if (existingSelfRows.isNotEmpty) {
+      selfNodeId = existingSelfRows.first['id'] as String;
+      // Backfill gender on promotion if the trigger left it NULL — the
+      // perspective engine and side-of-family layout rely on it.
+      // Don't touch full_name: the user may have curated it.
+      await client
+          .from('relatives')
+          .update({
+            'family_group_id': group.id,
+            if (userGender != null) 'gender': userGender.value,
+          })
+          .eq('id', selfNodeId);
+    } else {
+      selfNodeId = const Uuid().v4();
+      await client.from('relatives').insert({
+        'id': selfNodeId,
+        'user_id': userId,
+        'full_name': userDisplayName,
+        'relationship_type': 'other',
+        'gender': userGender?.value ?? 'male',
+        'priority': 1,
+        'avatar_type': userGender == Gender.female ? 'adult_woman' : 'adult_man',
+        'is_self': true,
+        'family_group_id': group.id,
+        'added_by': userId,
+      });
+    }
 
     // 3. Link user to their self node in group membership
     await client

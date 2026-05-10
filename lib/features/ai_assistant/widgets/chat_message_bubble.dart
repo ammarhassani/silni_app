@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
@@ -187,95 +186,6 @@ class ChatMessageBubble extends StatelessWidget {
   }
 }
 
-/// Typing indicator widget
-class TypingIndicator extends StatelessWidget {
-  const TypingIndicator({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.xs,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm + 4,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(AppSpacing.radiusLg),
-                  topRight: Radius.circular(AppSpacing.radiusLg),
-                  bottomLeft: Radius.circular(AppSpacing.radiusLg),
-                  bottomRight: Radius.circular(4),
-                ),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(
-                  3,
-                  (index) => Container(
-                    width: 8,
-                    height: 8,
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.6),
-                    ),
-                  )
-                      .animate(
-                        onPlay: (controller) => controller.repeat(),
-                      )
-                      .fadeIn(
-                        delay: Duration(milliseconds: index * 200),
-                        duration: const Duration(milliseconds: 400),
-                      )
-                      .then()
-                      .fadeOut(
-                        duration: const Duration(milliseconds: 400),
-                      ),
-                ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: AppColors.primaryGradient,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.islamicGreenPrimary.withValues(alpha: 0.4),
-                    blurRadius: 8,
-                    spreadRadius: 1,
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.smart_toy_rounded,
-                size: 18,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 /// Suggested prompt chip widget
 class SuggestedPromptChip extends StatelessWidget {

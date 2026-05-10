@@ -19,6 +19,7 @@ class GradientButton extends ConsumerStatefulWidget {
   final bool enabled;
   final String? semanticsHint;
   final bool enableShimmer;
+  final Color? textColor;
 
   const GradientButton({
     super.key,
@@ -33,6 +34,7 @@ class GradientButton extends ConsumerStatefulWidget {
     this.enabled = true,
     this.semanticsHint,
     this.enableShimmer = false,
+    this.textColor,
   });
 
   @override
@@ -86,7 +88,7 @@ class _GradientButtonState extends ConsumerState<GradientButton>
     final themeColors = ref.watch(themeColorsProvider);
     final gradient = widget.gradient ?? themeColors.primaryGradient;
     final height = widget.height ?? AppSpacing.buttonHeight;
-    final textColor = themeColors.onPrimary;
+    final textColor = widget.textColor ?? themeColors.onPrimary;
 
     Widget button = Semantics(
       label: widget.text,

@@ -238,62 +238,38 @@ ${mode.modeInstructions}
     }
   }
 
-  /// Build full system prompt for chat with full context
-  /// Uses dynamic config from admin panel with fallback to hardcoded values
-  static String buildChatSystemPrompt({
-    required CounselingMode mode,
-    Relative? relative,
-    List<Relative>? allRelatives,
-    List<AIMemory>? memories,
-    Map<String, String>? relationshipLabels,
-  }) {
-    // Use dynamic personality from admin config (falls back to hardcoded if not loaded)
-    final buffer = StringBuffer(dynamicPersonality);
-    buffer.writeln();
-    // Use dynamic mode instructions from admin config
-    buffer.writeln(getDynamicModeInstructions(mode.name));
-
-    // Add all relatives context if available
-    if (allRelatives != null && allRelatives.isNotEmpty) {
-      buffer.writeln(buildAllRelativesContext(allRelatives, relationshipLabels: relationshipLabels));
-    }
-
-    // Add specific relative context if talking about one
-    if (relative != null) {
-      buffer.writeln('\n## القريب المحدد في هذه المحادثة:');
-      buffer.writeln(buildRelativeContext(relative, relationshipLabels: relationshipLabels));
-    }
-
-    // Add memories context (prioritize memories about the specific relative if any)
-    if (memories != null && memories.isNotEmpty) {
-      buffer.writeln(buildMemoriesContext(memories, relativeId: relative?.id));
-    }
-
-    return buffer.toString();
-  }
-
-  /// Build enhanced system prompt using AIContext from AIContextEngine
+  /// Build the chat system prompt using [AIContext] from [AIContextEngine].
   ///
-  /// This provides richer context including:
-  /// - Gamification data (level, points, streaks)
-  /// - Upcoming occasions
-  /// - Health summary across all relatives
-  /// - Recent interactions
+  /// Composes the persona (from `admin_ai_personality`), the active mode's
+  /// instructions, the user's full name, an interaction-count + active-streak
+  /// summary, health summary across all relatives, upcoming birthdays, the
+  /// relatives list (with perspective-aware labels), the focus relative if
+  /// any, and extracted memories.
+  ///
+  /// Phase 9.X dropped gamification (badges/points/level); only streak counts
+  /// remain and are surfaced here. [relationshipLabels] threads through the
+  /// perspective-aware labels (e.g., "عمي" rather than "عم/خال") that
+  /// [perspectiveLabelsProvider] computes for shared-tree members.
   static String buildEnhancedChatSystemPrompt({
     required CounselingMode mode,
     required AIContext context,
+    Map<String, String>? relationshipLabels,
   }) {
     final buffer = StringBuffer(dynamicPersonality);
     buffer.writeln();
     buffer.writeln(getDynamicModeInstructions(mode.name));
 
-    // Add user context
-    buffer.writeln('''
-
-## معلومات المستخدم:
-- إجمالي التفاعلات: ${context.totalInteractions}
-- الشعلات النشطة: ${context.totalActiveStreaks}
-''');
+    // Add user context — including the user's name so the assistant can
+    // address them naturally in conversation. Address-by-name should feel
+    // like context, not a tic — γ.2 prompt content will tune the cadence.
+    buffer.writeln();
+    buffer.writeln('## معلومات المستخدم:');
+    if (context.userFullName != null && context.userFullName!.trim().isNotEmpty) {
+      buffer.writeln('- الاسم: ${context.userFullName}');
+    }
+    buffer.writeln('- إجمالي التفاعلات: ${context.totalInteractions}');
+    buffer.writeln('- الشعلات النشطة: ${context.totalActiveStreaks}');
+    buffer.writeln();
 
     // Add health summary
     buffer.writeln('''
@@ -311,15 +287,21 @@ ${mode.modeInstructions}
       }
     }
 
-    // Add relatives context
+    // Add relatives context (with perspective-aware labels)
     if (context.relatives.isNotEmpty) {
-      buffer.writeln(buildAllRelativesContext(context.relatives));
+      buffer.writeln(buildAllRelativesContext(
+        context.relatives,
+        relationshipLabels: relationshipLabels,
+      ));
     }
 
     // Add focus relative context if present
     if (context.focusRelative != null) {
       buffer.writeln('\n## القريب المحدد في هذه المحادثة:');
-      buffer.writeln(buildRelativeContext(context.focusRelative!));
+      buffer.writeln(buildRelativeContext(
+        context.focusRelative!,
+        relationshipLabels: relationshipLabels,
+      ));
 
       // Add streak info for focus relative
       final streak = context.getStreakFor(context.focusRelative!.id);
@@ -912,16 +894,13 @@ ${context != null ? '## سياق إضافي: $context' : ''}
 ''';
   }
 
-  /// System prompt for weekly report reflection
-  static const String weeklyReportPrompt = '''
-أنت محلل علاقات عائلية. بناءً على البيانات المقدمة، اكتب تأملاً قصيراً (2-3 جمل)
-يشجع المستخدم على صلة الرحم ويقدم نصيحة عملية واحدة للأسبوع القادم.
-
-يجب أن يكون التأمل:
-- إيجابياً ومشجعاً
-- عملياً وقابلاً للتطبيق
-- يعكس قيم صلة الرحم
-''';
+  // Phase δ.A — `weeklyReportPrompt` const was unused (no callers in lib/
+  // or test/). Production weekly-report prompts live inline in
+  // lib/features/ai_assistant/screens/weekly_report_screen.dart
+  // (`_generateAIInsights` builds them at the call site). Migration of
+  // those inline prompts to admin_ai_touch_points is deferred to a future
+  // session — δ.A's runbook framing assumed this const was the production
+  // path; live audit found otherwise.
 
   /// System prompt for relationship health analysis
   /// Uses dynamic personality from admin config

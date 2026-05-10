@@ -105,7 +105,7 @@ const navigation: NavItem[] = [
     title: "الذكاء الاصطناعي",
     href: "/ai",
     icon: Brain,
-    badge: "واصل",
+    badge: "أنيس",
     children: [
       { title: "المحادثات", href: "/ai/conversations", icon: BarChart3 },
       { title: "الهوية", href: "/ai/identity", icon: Sparkles },
@@ -114,7 +114,6 @@ const navigation: NavItem[] = [
       { title: "الاقتراحات", href: "/ai/prompts", icon: Quote },
       { title: "المعاملات", href: "/ai/parameters", icon: Sliders },
       { title: "المناسبات والنبرات", href: "/ai/occasions", icon: Star },
-      { title: "الذاكرة", href: "/ai/memory", icon: Brain },
       { title: "البث المباشر", href: "/ai/streaming", icon: Zap },
       { title: "سيناريوهات التواصل", href: "/ai/scenarios", icon: MessageSquare },
       { title: "رسائل الأخطاء", href: "/ai/errors", icon: AlertCircle },

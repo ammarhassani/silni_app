@@ -148,7 +148,7 @@ function buildSystemPrompt(
   prompt += `- تقارير سنوية وشهرية — ملخص تواصلك مع عائلتك (annual & monthly wrapped reports)\n`;
   prompt += `- استيراد جهات الاتصال من الجوال (import contacts from phone)\n`;
   prompt += `### MAX (Premium) Features:\n`;
-  prompt += `- مركز واصل — محادثة ذكية مع AI عن علاقاتك العائلية (AI chat about family relationships)\n`;
+  prompt += `- مركز أنيس — محادثة ذكية مع AI عن علاقاتك العائلية (AI chat about family relationships)\n`;
   prompt += `- محرر رسائل ذكي — AI يكتب لك رسائل مخصصة لكل قريب (AI message composer for each relative)\n`;
   prompt += `- تحليل العلاقات — تقييم قوة العلاقة مع كل قريب (relationship strength analysis)\n`;
   prompt += `- تقارير أسبوعية ذكية (AI weekly reports)\n`;

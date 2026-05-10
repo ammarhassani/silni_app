@@ -36,6 +36,7 @@ import '../../shared/utils/ui_helpers.dart';
 import '../../shared/widgets/glass_card.dart';
 import '../../shared/widgets/gradient_background.dart';
 import '../../shared/widgets/gradient_button.dart';
+import '../../shared/widgets/glass_dialog.dart';
 import '../relatives/screens/add_relative_screen.dart';
 import '../subscription/screens/paywall_screen.dart';
 
@@ -177,19 +178,22 @@ class _OnboardingWizardScreenState
     if (_currentStep == 0) {
       final exit = await showDialog<bool>(
         context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('هل تريد الخروج من الإعداد؟'),
-          content: const Text(
-            'لن تجد دليلاً لإعداد التطبيق لاحقاً. تستطيع الإكمال متى أردت من الإعدادات.',
-          ),
+        builder: (ctx) => GlassDialog(
+          icon: Icons.exit_to_app_rounded,
+          title: 'هل تريد الخروج من الإعداد؟',
+          subtitle:
+              'لن تجد دليلاً لإعداد التطبيق لاحقاً. تستطيع الإكمال متى أردت من الإعدادات.',
+          content: const SizedBox.shrink(),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('متابعة الإعداد'),
-            ),
-            TextButton(
+            GlassActionButton(
+              text: 'خروج',
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('خروج'),
+              isDestructive: true,
+            ),
+            GradientButton(
+              text: 'متابعة الإعداد',
+              icon: Icons.arrow_forward_rounded,
+              onPressed: () => Navigator.of(ctx).pop(false),
             ),
           ],
         ),

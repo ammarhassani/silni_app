@@ -15,6 +15,9 @@ class LayoutNode {
   final bool isUser;
   /// True when a real user has claimed this node in the family group.
   final bool isLinkedMember;
+  /// True when there is a pending node_claim against this node awaiting
+  /// admin decision. Visualised as a distinct ring (Phase 4).
+  final bool hasPendingClaim;
   /// 0.0 (never contacted) to 1.0 (just contacted). Drives node fill color.
   final double healthRatio;
   /// Active streak days. 0 = no streak. Shows fire badge when > 0.
@@ -31,10 +34,31 @@ class LayoutNode {
     required this.generation,
     required this.isUser,
     this.isLinkedMember = false,
+    this.hasPendingClaim = false,
     required this.healthRatio,
     required this.streakDays,
     required this.radius,
   });
+
+  LayoutNode copyWith({
+    bool? hasPendingClaim,
+    bool? isLinkedMember,
+  }) {
+    return LayoutNode(
+      id: id,
+      position: position,
+      emoji: emoji,
+      name: name,
+      label: label,
+      generation: generation,
+      isUser: isUser,
+      isLinkedMember: isLinkedMember ?? this.isLinkedMember,
+      hasPendingClaim: hasPendingClaim ?? this.hasPendingClaim,
+      healthRatio: healthRatio,
+      streakDays: streakDays,
+      radius: radius,
+    );
+  }
 
   HealthColor get healthColor {
     if (isUser) return HealthColor.green;

@@ -96,7 +96,7 @@ export default function AIIdentityPage() {
                 <Bot className="h-8 w-8 text-white" />
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-bold">{identity?.ai_name || "واصل"}</h3>
+                <h3 className="text-xl font-bold">{identity?.ai_name || "أنيس"}</h3>
                 <p className="text-muted-foreground text-sm">{identity?.ai_role_ar}</p>
                 <div className="mt-3 p-3 rounded-lg bg-background/80 border">
                   <p className="text-sm">{identity?.greeting_message_ar}</p>
@@ -121,7 +121,7 @@ export default function AIIdentityPage() {
                 <Input
                   id="ai_name"
                   {...register("ai_name")}
-                  placeholder="واصل"
+                  placeholder="أنيس"
                 />
                 {errors.ai_name && (
                   <p className="text-sm text-destructive">{errors.ai_name.message}</p>
@@ -132,7 +132,7 @@ export default function AIIdentityPage() {
                 <Input
                   id="ai_name_en"
                   {...register("ai_name_en")}
-                  placeholder="Wasel"
+                  placeholder="Anees"
                   dir="ltr"
                 />
               </div>
@@ -177,7 +177,7 @@ export default function AIIdentityPage() {
                 id="greeting_message_ar"
                 {...register("greeting_message_ar")}
                 rows={3}
-                placeholder="السلام عليكم! أنا واصل، مساعدك الشخصي لصلة الرحم..."
+                placeholder="السلام عليكم! أنا أنيس، مساعدك الشخصي لصلة الرحم..."
               />
               {errors.greeting_message_ar && (
                 <p className="text-sm text-destructive">{errors.greeting_message_ar.message}</p>
@@ -190,7 +190,7 @@ export default function AIIdentityPage() {
                 id="greeting_message_en"
                 {...register("greeting_message_en")}
                 rows={3}
-                placeholder="Hello! I'm Wasel, your personal assistant for family connections..."
+                placeholder="Hello! I'm Anees, your personal assistant for family connections..."
                 dir="ltr"
               />
             </div>
@@ -212,7 +212,7 @@ export default function AIIdentityPage() {
                 id="personality_summary_ar"
                 {...register("personality_summary_ar")}
                 rows={4}
-                placeholder="يتميز واصل بأسلوبه الودي والمحترم، ويستند في نصائحه إلى القيم الإسلامية..."
+                placeholder="يتميز أنيس بأسلوبه الودي والمحترم، ويستند في نصائحه إلى القيم الإسلامية..."
               />
             </div>
           </CardContent>

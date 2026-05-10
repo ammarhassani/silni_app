@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/router/app_router.dart' as router;
-import '../../../shared/services/auth_service.dart';
+import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
@@ -16,13 +16,11 @@ import '../../../shared/widgets/directional_icon.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/services/session_cleanup_service.dart';
-import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/message_widget.dart';
 import '../../../shared/widgets/glass_pill_title.dart';
 import '../../../shared/widgets/persistent_bottom_nav.dart';
 import '../../../core/config/env/env.dart';
 import '../../../core/providers/subscription_provider.dart';
-import '../../profile/widgets/profile_dialogs.dart';
 import '../widgets/subscription_card.dart';
 import '../widgets/theme_carousel.dart';
 
@@ -75,92 +73,71 @@ class SettingsScreen extends ConsumerWidget {
 
                   // ── الحساب (Account) ────────────────────────────
                   _buildSectionHeader('الحساب', themeColors),
-                  _buildSettingsTile(
-                    icon: Icons.person,
-                    title: 'الملف الشخصي',
+                  _buildIdentityTile(
+                    ref: ref,
                     themeColors: themeColors,
                     onTap: () => context.push(AppRoutes.profile),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  _buildSettingsTile(
-                    icon: Icons.lock_outline,
-                    title: 'تغيير كلمة المرور',
-                    themeColors: themeColors,
-                    onTap: () => _showChangePasswordDialog(context, ref),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  _buildSettingsTile(
-                    icon: Icons.logout,
-                    title: 'تسجيل الخروج',
-                    themeColors: themeColors,
-                    showChevron: false,
-                    onTap: () async {
-                      final userId =
-                          Supabase.instance.client.auth.currentUser?.id;
-                      final authService = ref.read(authServiceProvider);
-                      await authService.signOut();
-                      clearUserSessionFromWidget(
-                        ref,
-                        previousUserId: userId,
-                      );
-                      if (context.mounted) {
-                        context.go(AppRoutes.login);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  // Phase 9.X.D.B Track B6 — re-run setup wizard. De-emphasized
-                  // escape hatch for power users / support cases. Confirms
-                  // before clearing setupComplete and pushing the wizard.
-                  _buildSettingsTile(
-                    icon: Icons.replay_rounded,
-                    title: 'إعادة الإعداد',
-                    themeColors: themeColors,
-                    onTap: () => _confirmRerunSetup(context, ref),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  _buildSettingsTile(
-                    icon: Icons.download_rounded,
-                    title: 'تصدير بياناتي',
-                    themeColors: themeColors,
-                    onTap: () => showExportDataDialogFlow(
-                      context: context,
-                      ref: ref,
-                      themeColors: themeColors,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  // Delete account dialog handles the 2-step warning +
-                  // typed-confirm + password re-auth.
-                  _buildSettingsTile(
-                    icon: Icons.delete_forever_rounded,
-                    title: 'حذف الحساب',
-                    themeColors: themeColors,
-                    iconColor: themeColors.statusError,
-                    titleColor: themeColors.statusError,
-                    showChevron: false,
-                    onTap: () => showDeleteAccountDialog(
-                      context: context,
-                      ref: ref,
-                      themeColors: themeColors,
-                    ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
 
                   // ── التطبيق (App) ───────────────────────────────
                   _buildSectionHeader('التطبيق', themeColors),
-                  _buildSettingsTile(
-                    icon: Icons.notifications,
+                  _buildPremiumTile(
+                    icon: Icons.notifications_active_outlined,
                     title: 'الإشعارات',
+                    subtitle: 'إدارة التذكيرات والتنبيهات',
+                    leading: _LeadingStyle.bell,
+                    accentColor: themeColors.levelMax,
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [
+                        themeColors.levelMax.withValues(alpha: 0.22),
+                        AppColors.premiumGoldDark.withValues(alpha: 0.2),
+                        themeColors.primary.withValues(alpha: 0.18),
+                      ],
+                    ),
                     themeColors: themeColors,
                     onTap: () => context.push(AppRoutes.notifications),
                   ),
                   const SizedBox(height: AppSpacing.sm),
+                  // Phase 9.X.D.B Track B6 — re-run setup wizard. De-emphasized
+                  // escape hatch for power users / support cases. Confirms
+                  // before clearing setupComplete and pushing the wizard.
+                  _buildPremiumTile(
+                    icon: Icons.restart_alt_rounded,
+                    title: 'إعادة الإعداد',
+                    subtitle: 'أعد عرض دليل البداية',
+                    leading: _LeadingStyle.ring,
+                    accentColor: themeColors.secondary,
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [
+                        themeColors.secondary.withValues(alpha: 0.25),
+                        themeColors.primary.withValues(alpha: 0.22),
+                        themeColors.accent.withValues(alpha: 0.1),
+                      ],
+                    ),
+                    themeColors: themeColors,
+                    onTap: () => _confirmRerunSetup(context, ref),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
                   Builder(
-                    builder: (ctx) => _buildSettingsTile(
+                    builder: (ctx) => _buildPremiumTile(
                       icon: Icons.person_add_alt_1_rounded,
                       title: 'دعوة صديق',
-                      trailingIcon: Icons.share_rounded,
+                      subtitle: 'صِلْ رحمك بمشاركة التطبيق',
+                      accentColor: AppColors.calmBlue,
+                      gradient: LinearGradient(
+                        begin: Alignment.topRight,
+                        end: Alignment.bottomLeft,
+                        colors: [
+                          AppColors.calmBlue.withValues(alpha: 0.28),
+                          themeColors.primary.withValues(alpha: 0.32),
+                          AppColors.premiumGold.withValues(alpha: 0.08),
+                        ],
+                      ),
                       themeColors: themeColors,
                       onTap: () {
                         final box = ctx.findRenderObject() as RenderBox;
@@ -176,9 +153,20 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  _buildSettingsTile(
+                  _buildPremiumTile(
                     icon: Icons.star_rate_rounded,
                     title: 'قيّم التطبيق',
+                    subtitle: 'ساعدنا بنجمة في المتجر',
+                    accentColor: AppColors.premiumGold,
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [
+                        AppColors.premiumGold.withValues(alpha: 0.22),
+                        AppColors.premiumGoldDark.withValues(alpha: 0.28),
+                        themeColors.primary.withValues(alpha: 0.18),
+                      ],
+                    ),
                     themeColors: themeColors,
                     onTap: () async {
                       final inAppReview = InAppReview.instance;
@@ -188,6 +176,37 @@ class SettingsScreen extends ConsumerWidget {
                         await inAppReview.openStoreListing(
                           appStoreId: '6738029498',
                         );
+                      }
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildPremiumTile(
+                    icon: Icons.logout_rounded,
+                    title: 'تسجيل الخروج',
+                    subtitle: 'إنهاء جلستك على هذا الجهاز',
+                    leading: _LeadingStyle.circle,
+                    accentColor:
+                        themeColors.textOnGradient.withValues(alpha: 0.55),
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [
+                        themeColors.textOnGradient.withValues(alpha: 0.08),
+                        themeColors.textOnGradient.withValues(alpha: 0.03),
+                      ],
+                    ),
+                    themeColors: themeColors,
+                    onTap: () async {
+                      final userId =
+                          Supabase.instance.client.auth.currentUser?.id;
+                      final authService = ref.read(authServiceProvider);
+                      await authService.signOut();
+                      clearUserSessionFromWidget(
+                        ref,
+                        previousUserId: userId,
+                      );
+                      if (context.mounted) {
+                        context.go(AppRoutes.login);
                       }
                     },
                   ),
@@ -227,36 +246,333 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  /// Build a consistent settings tile. Reduces the previous row duplication.
-  Widget _buildSettingsTile({
+  /// Build a rich, distinctive action card. Multi-stop gradient + decorative
+  /// orbs + accent-colored leading shape + title/subtitle + arrow chip. The
+  /// leading-shape vocabulary (circle / square / ring / bell) keeps a column
+  /// of these tiles reading as varied rather than templated.
+  Widget _buildPremiumTile({
     required IconData icon,
     required String title,
+    required String subtitle,
+    required Gradient gradient,
+    required Color accentColor,
     required dynamic themeColors,
     required VoidCallback onTap,
-    IconData trailingIcon = Icons.arrow_forward_ios_rounded,
-    bool showChevron = true,
-    Color? iconColor,
-    Color? titleColor,
+    _LeadingStyle leading = _LeadingStyle.circle,
   }) {
-    return GlassCard(
-      child: ListTile(
-        leading: Icon(icon, color: iconColor ?? themeColors.textOnGradient),
-        title: Text(
-          title,
-          style: AppTypography.titleMedium.copyWith(
-            color: titleColor ?? themeColors.textOnGradient,
+    return Semantics(
+      label: '$title - $subtitle',
+      button: true,
+      child: GlassCard(
+        onTap: onTap,
+        padding: EdgeInsets.zero,
+        gradient: gradient,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          child: Stack(
+            children: [
+              // Radial glow (top-right)
+              Positioned(
+                top: -28,
+                right: -28,
+                child: Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        accentColor.withValues(alpha: 0.32),
+                        accentColor.withValues(alpha: 0.0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // Orb (bottom-left)
+              Positioned(
+                left: -16,
+                bottom: -20,
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: accentColor.withValues(alpha: 0.14),
+                  ),
+                ),
+              ),
+              // Small accent orb (mid-right)
+              Positioned(
+                right: 40,
+                top: 8,
+                child: Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: accentColor.withValues(alpha: 0.18),
+                  ),
+                ),
+              ),
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
+                  children: [
+                    _buildLeading(
+                      leading,
+                      icon,
+                      accentColor,
+                      themeColors,
+                      size: 48,
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            title,
+                            style: AppTypography.titleMedium.copyWith(
+                              color: themeColors.textOnGradient,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            style: AppTypography.bodySmall.copyWith(
+                              color: themeColors.textOnGradient
+                                  .withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.14),
+                      ),
+                      child: DirectionalIcon(
+                        Icons.arrow_back_ios_rounded,
+                        color: themeColors.textOnGradient
+                            .withValues(alpha: 0.85),
+                        size: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-        trailing: showChevron
-            ? DirectionalIcon(
-                trailingIcon,
-                color: themeColors.textOnGradient.withValues(alpha: 0.6),
-                size: 20,
-              )
-            : null,
-        onTap: onTap,
       ),
     );
+  }
+
+  /// Identity tile — Profile entry. Avatar gradient circle showing user's
+  /// first initial, name + email subtitle, theme primary tint background.
+  Widget _buildIdentityTile({
+    required WidgetRef ref,
+    required dynamic themeColors,
+    required VoidCallback onTap,
+  }) {
+    final user = ref.watch(currentUserProvider);
+    final email = user?.email ?? '';
+    final initial = email.isNotEmpty ? email[0].toUpperCase() : '؟';
+    final displayName = (user?.userMetadata?['full_name'] as String?)?.trim();
+    final subtitle = (displayName != null && displayName.isNotEmpty)
+        ? email
+        : 'الملف الشخصي';
+    final title = (displayName != null && displayName.isNotEmpty)
+        ? displayName
+        : 'الملف الشخصي';
+
+    return Semantics(
+      label: 'الملف الشخصي - $email',
+      button: true,
+      child: GlassCard(
+        onTap: onTap,
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [
+            themeColors.primary.withValues(alpha: 0.18),
+            themeColors.primaryDark.withValues(alpha: 0.12),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    themeColors.primary,
+                    themeColors.primaryDark,
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: themeColors.primary.withValues(alpha: 0.4),
+                    blurRadius: 10,
+                    spreadRadius: -2,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  initial,
+                  style: AppTypography.titleLarge.copyWith(
+                    color: themeColors.onPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: AppTypography.titleMedium.copyWith(
+                      color: themeColors.textOnGradient,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: AppTypography.bodySmall.copyWith(
+                        color: themeColors.textOnGradient
+                            .withValues(alpha: 0.65),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            DirectionalIcon(
+              Icons.arrow_forward_ios_rounded,
+              color: themeColors.textOnGradient.withValues(alpha: 0.55),
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Render the leading shape vocabulary. Each style is intentionally
+  /// distinct (circle / squircle / open ring / bell-with-dot) so a column
+  /// of these tiles reads as a varied list rather than a uniform template.
+  Widget _buildLeading(
+    _LeadingStyle style,
+    IconData icon,
+    Color accent,
+    dynamic themeColors, {
+    double size = 44,
+  }) {
+    final iconSize = size * 0.5;
+    final radius = size * 0.27;
+    final dotSize = size * 0.23;
+    switch (style) {
+      case _LeadingStyle.circle:
+        return Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: accent.withValues(alpha: 0.22),
+            border: Border.all(
+              color: accent.withValues(alpha: 0.5),
+              width: 1.5,
+            ),
+          ),
+          child: Icon(icon, color: accent, size: iconSize),
+        );
+      case _LeadingStyle.square:
+        return Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(radius),
+            color: accent.withValues(alpha: 0.22),
+            border: Border.all(
+              color: accent.withValues(alpha: 0.5),
+              width: 1.5,
+            ),
+          ),
+          child: Icon(icon, color: accent, size: iconSize),
+        );
+      case _LeadingStyle.ring:
+        return Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.transparent,
+            border: Border.all(color: accent, width: 2.5),
+          ),
+          child: Icon(icon, color: accent, size: iconSize),
+        );
+      case _LeadingStyle.bell:
+        return SizedBox(
+          width: size,
+          height: size,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: accent.withValues(alpha: 0.22),
+                  border: Border.all(
+                    color: accent.withValues(alpha: 0.5),
+                    width: 1.5,
+                  ),
+                ),
+                child: Icon(icon, color: accent, size: iconSize),
+              ),
+              Positioned(
+                top: 2,
+                right: 2,
+                child: Container(
+                  width: dotSize,
+                  height: dotSize,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: themeColors.statusError,
+                    border: Border.all(
+                      color: themeColors.textOnGradient.withValues(alpha: 0.85),
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+    }
   }
 
   /// Build environment badge for admin user only
@@ -302,291 +618,6 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ),
       ),
-    );
-  }
-
-  Future<void> _showChangePasswordDialog(BuildContext context, WidgetRef ref) async {
-    final currentPasswordController = TextEditingController();
-    final newPasswordController = TextEditingController();
-    final confirmPasswordController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    bool isLoading = false;
-    bool obscureCurrentPassword = true;
-    bool obscureNewPassword = true;
-    bool obscureConfirmPassword = true;
-
-    await showDialog(
-      context: context,
-      barrierDismissible: false, // Prevent dismissing by tapping outside
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setState) {
-          final themeColors = ref.watch(themeColorsProvider);
-
-          return AlertDialog(
-            backgroundColor: themeColors.background1.withValues(alpha: 0.95),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-            ),
-            titlePadding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.sm,
-            ),
-            contentPadding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              0,
-              AppSpacing.lg,
-              AppSpacing.md,
-            ),
-            actionsPadding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              0,
-              AppSpacing.lg,
-              AppSpacing.lg,
-            ),
-            title: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.lock_outline,
-                  color: themeColors.primary,
-                  size: 32,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  'تغيير كلمة المرور',
-                  style: AppTypography.titleLarge.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-            content: SingleChildScrollView(
-              child: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Current password
-                    _buildThemedPasswordField(
-                      controller: currentPasswordController,
-                      label: 'كلمة المرور الحالية',
-                      obscureText: obscureCurrentPassword,
-                      onToggleVisibility: () => setState(() => obscureCurrentPassword = !obscureCurrentPassword),
-                      themeColors: themeColors,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'الرجاء إدخال كلمة المرور الحالية';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    // New password
-                    _buildThemedPasswordField(
-                      controller: newPasswordController,
-                      label: 'كلمة المرور الجديدة',
-                      obscureText: obscureNewPassword,
-                      onToggleVisibility: () => setState(() => obscureNewPassword = !obscureNewPassword),
-                      themeColors: themeColors,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'الرجاء إدخال كلمة المرور الجديدة';
-                        }
-                        if (value.length < 8) {
-                          return 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
-                        }
-                        if (!RegExp(r'[A-Z]').hasMatch(value)) {
-                          return 'يجب أن تحتوي على حرف كبير واحد على الأقل';
-                        }
-                        if (!RegExp(r'[a-z]').hasMatch(value)) {
-                          return 'يجب أن تحتوي على حرف صغير واحد على الأقل';
-                        }
-                        if (!RegExp(r'[0-9]').hasMatch(value)) {
-                          return 'يجب أن تحتوي على رقم واحد على الأقل';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    // Confirm new password
-                    _buildThemedPasswordField(
-                      controller: confirmPasswordController,
-                      label: 'تأكيد كلمة المرور الجديدة',
-                      obscureText: obscureConfirmPassword,
-                      onToggleVisibility: () => setState(() => obscureConfirmPassword = !obscureConfirmPassword),
-                      themeColors: themeColors,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'الرجاء تأكيد كلمة المرور الجديدة';
-                        }
-                        if (value != newPasswordController.text) {
-                          return 'كلمة المرور غير متطابقة';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: isLoading ? null : () => Navigator.of(dialogContext).pop(),
-                child: Text(
-                  'إلغاء',
-                  style: TextStyle(color: themeColors.primary),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: isLoading
-                    ? null
-                    : () async {
-                        if (!formKey.currentState!.validate()) return;
-
-                        setState(() => isLoading = true);
-
-                        try {
-                          final authService = ref.read(authServiceProvider);
-                          final user = authService.currentUser;
-
-                          if (user?.email == null) {
-                            throw Exception('المستخدم غير موجود');
-                          }
-
-                          // Re-authenticate with current password first
-                          await authService.signInWithEmail(
-                            email: user!.email!,
-                            password: currentPasswordController.text,
-                          );
-
-                          // Update to new password
-                          await authService.updatePassword(newPasswordController.text);
-
-                          if (dialogContext.mounted) {
-                            Navigator.of(dialogContext).pop();
-                          }
-
-                          if (context.mounted) {
-                            UIHelpers.showSnackBar(
-                              context,
-                              'تم تغيير كلمة المرور بنجاح',
-                              backgroundColor: themeColors.statusSuccess,
-                            );
-                          }
-                        } on AuthException catch (e) {
-                          setState(() => isLoading = false);
-                          if (context.mounted) {
-                            UIHelpers.showSnackBar(
-                              context,
-                              AuthService.getErrorMessage(e.message),
-                              isError: true,
-                            );
-                          }
-                        } catch (e) {
-                          setState(() => isLoading = false);
-                          if (context.mounted) {
-                            UIHelpers.showSnackBar(
-                              context,
-                              'حدث خطأ أثناء تغيير كلمة المرور',
-                              isError: true,
-                            );
-                          }
-                        }
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: themeColors.primary,
-                  foregroundColor: Colors.white,
-                ),
-                child: isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : const Text('تغيير'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-    // Note: Controllers are local variables and will be garbage collected.
-    // Manual dispose was removed because it caused issues when the dialog
-    // is still animating out after Navigator.pop() is called.
-  }
-
-  /// Build a themed password field with visibility toggle
-  Widget _buildThemedPasswordField({
-    required TextEditingController controller,
-    required String label,
-    required bool obscureText,
-    required VoidCallback onToggleVisibility,
-    required dynamic themeColors,
-    required String? Function(String?) validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText,
-      style: const TextStyle(color: Colors.white, fontSize: 16),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(
-          color: Colors.white.withValues(alpha: 0.7),
-          fontSize: 14,
-        ),
-        prefixIcon: Icon(
-          Icons.lock_outline,
-          color: Colors.white.withValues(alpha: 0.7),
-        ),
-        suffixIcon: IconButton(
-          icon: Icon(
-            obscureText ? Icons.visibility : Icons.visibility_off,
-            color: Colors.white.withValues(alpha: 0.7),
-          ),
-          onPressed: onToggleVisibility,
-        ),
-        filled: true,
-        fillColor: themeColors.background2,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          borderSide: BorderSide(
-            color: themeColors.primary.withValues(alpha: 0.3),
-            width: 1.0,
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          borderSide: BorderSide(
-            color: themeColors.primary.withValues(alpha: 0.3),
-            width: 1.0,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          borderSide: BorderSide(color: themeColors.primary, width: 2.0),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          borderSide: const BorderSide(color: Colors.red, width: 1.0),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          borderSide: const BorderSide(color: Colors.red, width: 2.0),
-        ),
-        errorStyle: const TextStyle(color: Colors.red, fontSize: 12),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.md,
-        ),
-      ),
-      validator: validator,
     );
   }
 
@@ -646,3 +677,9 @@ class SettingsScreen extends ConsumerWidget {
     if (context.mounted) context.go(AppRoutes.onboardingWizard);
   }
 }
+
+/// Leading-shape vocabulary for [_buildDistinctTile]. Each style produces a
+/// visually distinct icon container so a column of mixed tiles reads as
+/// hand-crafted rather than a uniform template.
+enum _LeadingStyle { circle, square, ring, bell }
+

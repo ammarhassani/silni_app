@@ -365,7 +365,7 @@ export default function AITouchPointsPage() {
                   <Textarea
                     value={formData.prompt_template}
                     onChange={(e) => setFormData({ ...formData, prompt_template: e.target.value })}
-                    placeholder="أنت واصل، مساعد صلة الرحم. اكتب تحية قصيرة..."
+                    placeholder="أنت أنيس، مساعد صلة الرحم. اكتب تحية قصيرة..."
                     dir="rtl"
                     rows={12}
                     className="font-mono text-sm"

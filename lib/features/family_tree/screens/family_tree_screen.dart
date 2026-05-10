@@ -20,6 +20,8 @@ import '../../../core/providers/cache_provider.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../shared/widgets/glass_dialog.dart';
+import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../contacts/screens/contact_import_screen.dart';
@@ -32,6 +34,7 @@ import '../../relatives/services/relationship_inference_service.dart';
 import '../../../shared/widgets/flat_relationship_picker.dart';
 import '../../subscription/screens/paywall_screen.dart';
 import '../../family_groups/services/family_sharing_service.dart';
+import '../../family_groups/providers/node_claim_providers.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../models/placeholder_node.dart';
 import '../models/family_graph.dart';
@@ -194,23 +197,21 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     final choice = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text(
-          'نقل أقاربك إلى الشجرة المشتركة؟',
-          textAlign: TextAlign.center,
-        ),
-        content: Text(
-          'الأقارب اللي عندك حالياً: $count. تبي تنقلهم للشجرة المشتركة عشان أهل المجموعة يقدرون يشوفونهم؟',
-          textAlign: TextAlign.right,
-        ),
+      builder: (dialogContext) => GlassDialog(
+        icon: Icons.account_tree_rounded,
+        title: 'نقل أقاربك إلى الشجرة المشتركة؟',
+        subtitle:
+            'الأقارب اللي عندك حالياً: $count. تبي تنقلهم للشجرة المشتركة عشان أهل المجموعة يقدرون يشوفونهم؟',
+        content: const SizedBox.shrink(),
         actions: [
-          TextButton(
+          GlassActionButton(
+            text: 'اتركهم منفصلين',
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('اتركهم منفصلين'),
           ),
-          ElevatedButton(
+          GradientButton(
+            text: 'انقلهم',
+            icon: Icons.swap_horiz_rounded,
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('انقلهم'),
           ),
         ],
       ),
@@ -223,28 +224,19 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
 
   void _initScreenshotDetection() {
     _screenshotCallback.addListener(() {
-      // User took a screenshot — show watermark, hide placeholders
-      if (mounted) {
-        setState(() {
-          _showWatermark = true;
-          _showPlaceholders = false;
-        });
-        ScaffoldMessenger.of(context).clearSnackBars();
-        UIHelpers.showSnackBar(
-          context,
-          'شجرة عائلتي من صِلْني 🌳',
-          backgroundColor: AppColors.islamicGreenDark,
-          duration: const Duration(seconds: 3),
-        );
-        Future.delayed(const Duration(seconds: 3), () {
-          if (mounted) {
-            setState(() {
-              _showWatermark = false;
-              _showPlaceholders = true;
-            });
-          }
-        });
-      }
+      // The corner brand badge is always rendered, so the screenshot the
+      // user just took already includes the logo — no need to flash a
+      // second-pass watermark and ask them to re-capture. Confirm + offer
+      // a properly-branded share via the share-capture pipeline if they
+      // want a richer header.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
+      UIHelpers.showSnackBar(
+        context,
+        'شعار صِلْني مدمج في الصورة 🌳 — اضغط على المشاركة لنسخة أوضح',
+        backgroundColor: AppColors.islamicGreenDark,
+        duration: const Duration(seconds: 4),
+      );
     });
   }
 
@@ -448,7 +440,10 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                     loading: () => const Center(
                       child: CircularProgressIndicator(color: Colors.white),
                     ),
-                    error: (_, _) => _buildError(),
+                    error: (e, st) {
+                      debugPrint('TREE-DEBUG groupInfoAsync error: $e\n$st');
+                      return _buildError(e);
+                    },
                     data: (groupInfo) {
                       final relativesAsync = groupInfo != null
                           ? ref.watch(groupRelativesStreamProvider(groupInfo.groupId))
@@ -485,7 +480,10 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                         loading: () => const Center(
                           child: CircularProgressIndicator(color: Colors.white),
                         ),
-                        error: (_, _) => _buildError(),
+                        error: (e, st) {
+                          debugPrint('TREE-DEBUG relativesAsync error: $e\n$st');
+                          return _buildError(e);
+                        },
                       );
                     },
                   ),
@@ -915,7 +913,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         );
 
         // Compute layout from graph (includes placeholder positions)
-        final layout = FamilyTreeLayoutService.computeLayout(
+        final rawLayout = FamilyTreeLayoutService.computeLayout(
           userId: effectiveUserId,
           userName: userName,
           graph: graph,
@@ -925,6 +923,34 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
           userGender: userGender,
           linkedMemberNodeIds: linkedMemberNodeIds,
         );
+
+        // Enrich nodes with pending-claim flags so admin can spot claim
+        // targets at a glance (Phase 4 of identity-claim design). Only when
+        // the viewer is admin of the shared group — RPC RLS would deny
+        // for non-admins anyway, but skip the watch to avoid the request.
+        final pendingClaimIds = groupInfo != null
+            ? (ref.watch(groupPendingClaimsProvider(groupInfo.groupId))
+                    .valueOrNull
+                    ?.map((c) => c.claimedRelativeId)
+                    .whereType<String>()
+                    .toSet() ??
+                <String>{})
+            : <String>{};
+
+        final layout = pendingClaimIds.isEmpty
+            ? rawLayout
+            : FamilyTreeLayout(
+                nodes: rawLayout.nodes
+                    .map((n) => pendingClaimIds.contains(n.id)
+                        ? n.copyWith(hasPendingClaim: true)
+                        : n)
+                    .toList(),
+                edges: rawLayout.edges,
+                junctions: rawLayout.junctions,
+                placeholders: rawLayout.placeholders,
+                bounds: rawLayout.bounds,
+                userPosition: rawLayout.userPosition,
+              );
 
         // The hybrid approach: painted edges + widget nodes + placeholder widgets
         final boundsSize = layout.bounds.size;
@@ -1027,8 +1053,15 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                 ),
               ),
             ),
-            // Watermark overlay
-            if (_showWatermark) _buildWatermark(),
+            // Persistent corner brand — small enough to be unobtrusive,
+            // present on every screenshot so the user can't accidentally
+            // share an unbranded image. Lives inside the RepaintBoundary so
+            // share-captures pick it up too.
+            _buildCornerBrand(),
+            // Loud share-time banner (logo + name + tagline). Only renders
+            // during the share-capture window. Combined with the corner
+            // brand, this gives layered branding that's hard to crop out.
+            if (_showWatermark) _buildShareBanner(),
           ],
         ),
         );
@@ -1344,45 +1377,164 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   // Watermark
   // ---------------------------------------------------------------------------
 
-  Widget _buildWatermark() {
+  /// Persistent corner brand badge — always rendered so any phone-level
+  /// screenshot or in-app share inherits the logo. Sits bottom-right above
+  /// the bottom nav, glass-styled to read as part of the UI rather than a
+  /// loud watermark.
+  Widget _buildCornerBrand() {
     return Positioned(
-      bottom: AppSpacing.xxl,
-      left: 0,
-      right: 0,
-      child: Center(
+      right: AppSpacing.md,
+      bottom: PersistentBottomNav.totalHeight + AppSpacing.md,
+      child: IgnorePointer(
         child: Container(
           padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md,
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.xs,
           ),
           decoration: BoxDecoration(
-            color: AppColors.islamicGreenDark.withValues(alpha: 0.9),
+            color: AppColors.islamicGreenDark.withValues(alpha: 0.78),
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.18),
+              width: 1,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 10,
-                spreadRadius: 2,
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Image.asset(
-                'assets/images/app_icon.png',
-                width: 50,
-                height: 50,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.asset(
+                  'assets/images/app_icon.png',
+                  width: 22,
+                  height: 22,
+                ),
               ),
-              const SizedBox(width: AppSpacing.md),
+              const SizedBox(width: AppSpacing.xs),
               Text(
-                'شجرة عائلتي',
-                style: AppTypography.headlineSmall.copyWith(
+                'صِلْني',
+                style: AppTypography.labelMedium.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
+                  letterSpacing: 0.3,
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Loud share-time banner. Bigger logo + app name + tagline. Only shown
+  /// during the share-capture window so the resulting image leads with the
+  /// brand. Combined with the persistent [_buildCornerBrand], this gives
+  /// layered branding that's hard to crop entirely.
+  Widget _buildShareBanner() {
+    return Positioned(
+      top: AppSpacing.lg,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: IgnorePointer(
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: [
+                  AppColors.islamicGreenDark.withValues(alpha: 0.95),
+                  AppColors.islamicGreenPrimary.withValues(alpha: 0.92),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              border: Border.all(
+                color: AppColors.premiumGold.withValues(alpha: 0.5),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  blurRadius: 14,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.premiumGold.withValues(alpha: 0.45),
+                        blurRadius: 14,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/images/app_icon.png',
+                      width: 52,
+                      height: 52,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'شجرة عائلتي',
+                      style: AppTypography.headlineSmall.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'من ',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
+                        ),
+                        Text(
+                          'صِلْني',
+                          style: AppTypography.labelMedium.copyWith(
+                            color: AppColors.premiumGoldLight,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                        Text(
+                          ' • صِلْ رحمك',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1393,7 +1545,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   // Empty / Error states
   // ---------------------------------------------------------------------------
 
-  Widget _buildError() {
+  Widget _buildError([Object? error]) {
     return Center(
       child: GlassCard(
         margin: const EdgeInsets.all(AppSpacing.xl),
@@ -1412,6 +1564,16 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
               style: AppTypography.bodyLarge.copyWith(color: Colors.white),
               textAlign: TextAlign.center,
             ),
+            if (error != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              SelectableText(
+                error.toString(),
+                style: AppTypography.bodySmall.copyWith(
+                  color: Colors.white.withValues(alpha: 0.7),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ],
         ),
       ),

@@ -32,6 +32,8 @@ import '../../features/notifications/screens/notification_history_screen.dart';
 import '../../features/family_groups/screens/create_group_screen.dart';
 import '../../features/family_groups/screens/family_group_screen.dart';
 import '../../features/family_groups/screens/join_group_screen.dart';
+import '../../features/family_groups/screens/identity_claim_wizard_screen.dart';
+import '../../features/family_groups/screens/admin_review_claim_screen.dart';
 import '../../features/wrapped/screens/monthly_wrapped_screen.dart';
 import '../../features/ai_assistant/screens/ai_chat_screen.dart';
 import '../../features/ai_assistant/screens/communication_scripts_screen.dart';
@@ -363,6 +365,34 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Phone-invite detail route was cut from v1 launch (CTO 2026-04-26).
       // Any stale notification or deep-link to /invitation/:id falls
       // through to the catch-all and routes the user to home.
+
+      // Identity-claim wizard (post-join discovery flow). Launched from
+      // join_group_screen after a successful join when no pre-existing
+      // phone-invitation matches the joiner.
+      GoRoute(
+        path: '${AppRoutes.identityClaim}/:groupId',
+        name: 'identityClaim',
+        pageBuilder: (context, state) {
+          final groupId = state.pathParameters['groupId']!;
+          return _buildPageWithTransition(
+            context,
+            state,
+            IdentityClaimWizardScreen(groupId: groupId),
+          );
+        },
+      ),
+      GoRoute(
+        path: '${AppRoutes.reviewClaim}/:claimId',
+        name: 'reviewClaim',
+        pageBuilder: (context, state) {
+          final claimId = state.pathParameters['claimId']!;
+          return _buildPageWithTransition(
+            context,
+            state,
+            AdminReviewClaimScreen(claimId: claimId),
+          );
+        },
+      ),
 
       // Short alias for deep link: silni.app/join/<code>
       GoRoute(

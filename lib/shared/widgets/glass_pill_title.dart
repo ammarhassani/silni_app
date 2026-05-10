@@ -16,6 +16,7 @@ class GlassPillTitle extends ConsumerWidget {
   final Widget? leading;
   final Widget? trailing;
   final Widget? subtitle;
+  final bool centered;
 
   const GlassPillTitle({
     super.key,
@@ -24,6 +25,7 @@ class GlassPillTitle extends ConsumerWidget {
     this.leading,
     this.trailing,
     this.subtitle,
+    this.centered = false,
   });
 
   @override
@@ -70,15 +72,29 @@ class GlassPillTitle extends ConsumerWidget {
           Flexible(
             child: subtitle != null
                 ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: centered
+                        ? CrossAxisAlignment.center
+                        : CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(text, style: titleStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text(
+                        text,
+                        style: titleStyle,
+                        textAlign: centered ? TextAlign.center : null,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       const SizedBox(height: 2),
                       subtitle!,
                     ],
                   )
-                : Text(text, style: titleStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
+                : Text(
+                    text,
+                    style: titleStyle,
+                    textAlign: centered ? TextAlign.center : null,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
           ),
           if (trailing != null) ...[
             const SizedBox(width: AppSpacing.sm),

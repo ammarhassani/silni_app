@@ -146,7 +146,7 @@ export default function DashboardPage() {
     },
     {
       title: "الذكاء الاصطناعي",
-      description: "إعداد واصل - الهوية والشخصية والذاكرة",
+      description: "إعداد أنيس - الهوية والشخصية والذاكرة",
       icon: Brain,
       href: "/ai/identity",
       color: "bg-green-500/10 text-green-500",

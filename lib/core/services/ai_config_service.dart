@@ -413,7 +413,7 @@ class AIIdentityConfig {
   factory AIIdentityConfig.fallback() {
     return AIIdentityConfig(
       aiName: 'أنيس',
-      aiNameEn: 'Wasel',
+      aiNameEn: 'Anees',
       aiRoleAr: 'مساعد ذكي متخصص في صلة الرحم والعلاقات الأسرية',
       aiRoleEn: 'Smart assistant for family connections',
       greetingMessageAr: 'السلام عليكم! أنا أنيس، مساعدك الشخصي لصلة الرحم. كيف يمكنني مساعدتك اليوم؟',

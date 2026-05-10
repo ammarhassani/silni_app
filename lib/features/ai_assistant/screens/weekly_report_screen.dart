@@ -478,7 +478,7 @@ $personality
               textDirection: TextDirection.rtl,
               child: MarkdownBody(
                 data: _aiInsight ?? 'جاري تحليل بياناتك...',
-                styleSheet: buildCardMarkdownStyle(context),
+                styleSheet: buildCardMarkdownStyle(context, themeColors),
                 selectable: true,
                 softLineBreak: true,
               ),
@@ -918,7 +918,7 @@ $personality
               child: MarkdownBody(
                 data: _weeklyTip ??
                     'صلة الرحم تزيد في الرزق وتبارك في العمر.',
-                styleSheet: buildCardMarkdownStyle(context),
+                styleSheet: buildCardMarkdownStyle(context, themeColors),
                 selectable: true,
                 softLineBreak: true,
               ),

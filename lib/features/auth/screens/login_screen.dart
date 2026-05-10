@@ -28,6 +28,7 @@ import '../../../core/services/error_reporter.dart';
 import '../widgets/social_login_button.dart';
 import '../widgets/name_prompt_dialog.dart';
 import '../../../shared/widgets/theme_aware_dialog.dart';
+import '../../../shared/widgets/glass_dialog.dart';
 import 'package:universal_html/html.dart' as html;
 import 'dart:io' show Platform;
 
@@ -512,95 +513,49 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _showForgotPasswordDialog() async {
     final emailController = TextEditingController();
     final formKey = GlobalKey<FormState>();
-    final themeColors = ref.read(themeColorsProvider);
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => Dialog(
-        backgroundColor: themeColors.background1.withValues(alpha: 0.95),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        ),
-        insetPadding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.xxl,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Title
-                Text(
-                  'إعادة تعيين كلمة المرور',
-                  style: AppTypography.titleLarge.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                // Description
-                Text(
-                  'سنرسل لك رابط لإعادة تعيين كلمة المرور',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                // Email field
-                ThemeAwareTextField(
-                  controller: emailController,
-                  label: 'البريد الإلكتروني',
-                  hintText: 'بريدك الإلكتروني',
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'يرجى إدخال البريد الإلكتروني';
-                    }
-                    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-                    if (!emailRegex.hasMatch(value)) {
-                      return 'يرجى إدخال بريد إلكتروني صحيح';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                // Actions
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(false),
-                      child: Text(
-                        'إلغاء',
-                        style: AppTypography.buttonMedium.copyWith(
-                          color: themeColors.primary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (formKey.currentState!.validate()) {
-                          Navigator.of(dialogContext).pop(true);
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: themeColors.primary,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(0, AppSpacing.buttonHeightSmall),
-                      ),
-                      child: const Text('إرسال'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+      builder: (dialogContext) => GlassDialog(
+        icon: Icons.lock_reset_rounded,
+        title: 'إعادة تعيين كلمة المرور',
+        subtitle: 'سنرسل لك رابط لإعادة تعيين كلمة المرور',
+        content: Form(
+          key: formKey,
+          child: ThemeAwareTextField(
+            controller: emailController,
+            label: 'البريد الإلكتروني',
+            hintText: 'بريدك الإلكتروني',
+            keyboardType: TextInputType.emailAddress,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'يرجى إدخال البريد الإلكتروني';
+              }
+              final emailRegex = RegExp(
+                r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+              );
+              if (!emailRegex.hasMatch(value)) {
+                return 'يرجى إدخال بريد إلكتروني صحيح';
+              }
+              return null;
+            },
           ),
         ),
+        actions: [
+          GlassActionButton(
+            text: 'إلغاء',
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+          ),
+          GradientButton(
+            text: 'إرسال',
+            icon: Icons.send_rounded,
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.of(dialogContext).pop(true);
+              }
+            },
+          ),
+        ],
       ),
     );
 
@@ -1120,34 +1075,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: AppSpacing.md),
-                                SizedBox(
-                                    width: double.infinity,
-                                    child: OutlinedButton.icon(
-                                      onPressed: _isLoading ? null : _authenticateWithBiometrics,
-                                      icon: Icon(
-                                        Icons.face,
-                                        color: themeColors.textOnGradient,
-                                      ),
-                                      label: Text(
-                                        'تسجيل الدخول بـ Face ID',
-                                        style: AppTypography.labelLarge.copyWith(
-                                          color: themeColors.textOnGradient,
-                                        ),
-                                      ),
-                                      style: OutlinedButton.styleFrom(
-                                        side: BorderSide(
-                                          color: themeColors.textOnGradient.withValues(alpha: 0.55),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: AppSpacing.md,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            AppSpacing.radiusLg,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
+                                GlassActionButton(
+                                  text: 'تسجيل الدخول بـ Face ID',
+                                  icon: Icons.face_rounded,
+                                  onPressed: _isLoading ? () {} : _authenticateWithBiometrics,
                                 ),
                               ],
                             ],

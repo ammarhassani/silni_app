@@ -2,22 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 
-/// Builds a theme-matched MarkdownStyleSheet for the AI chat
-/// Supports RTL Arabic text with proper styling
-MarkdownStyleSheet buildChatMarkdownStyle(BuildContext context) {
-  return MarkdownStyleSheet(
-    // Base paragraph text
-    p: AppTypography.bodyMedium.copyWith(
-      color: Colors.white,
-      height: 1.7,
-    ),
-    pPadding: const EdgeInsets.only(bottom: AppSpacing.sm),
+/// Builds a theme-matched MarkdownStyleSheet for the AI chat.
+/// Supports RTL Arabic text with proper styling.
+///
+/// β6 — themeColors is required so quotes (scripture pull-quote treatment),
+/// inline code, links, and the bullet glyph all adopt the active theme's
+/// accent color instead of the hardcoded Islamic-green.
+MarkdownStyleSheet buildChatMarkdownStyle(
+  BuildContext context,
+  dynamic themeColors,
+) {
+  final Color accent = themeColors.accent;
 
-    // Headers - decreasing sizes
+  return MarkdownStyleSheet(
+    p: AppTypography.bodyMedium.copyWith(
+      color: Colors.white.withValues(alpha: 0.95),
+      height: 1.55,
+      fontSize: 16.5,
+      fontWeight: FontWeight.w400,
+      letterSpacing: 0.1,
+    ),
+    pPadding: const EdgeInsets.only(bottom: AppSpacing.xs),
+
+    // Headers — decreasing sizes
     h1: AppTypography.headlineMedium.copyWith(
       color: Colors.white,
       fontWeight: FontWeight.bold,
@@ -46,7 +56,6 @@ MarkdownStyleSheet buildChatMarkdownStyle(BuildContext context) {
       fontWeight: FontWeight.w600,
     ),
 
-    // Bold and italic
     strong: const TextStyle(
       fontWeight: FontWeight.bold,
       color: Colors.white,
@@ -56,59 +65,66 @@ MarkdownStyleSheet buildChatMarkdownStyle(BuildContext context) {
       color: Colors.white,
     ),
 
-    // Inline code
+    // β6 — inline code: theme-accent foreground on a dim background.
     code: GoogleFonts.firaCode(
-      color: AppColors.islamicGreenLight,
+      color: accent,
       backgroundColor: Colors.black.withValues(alpha: 0.3),
       fontSize: 13,
     ),
 
-    // Code blocks with glass effect
+    // β6 — code block: theme-accent border + faint surface, monospace
+    // body. Used for the rare AI snippets that include code.
     codeblockDecoration: BoxDecoration(
-      color: Colors.black.withValues(alpha: 0.4),
+      color: Colors.white.withValues(alpha: 0.05),
       borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       border: Border.all(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: accent.withValues(alpha: 0.2),
         width: 1,
       ),
     ),
-    codeblockPadding: const EdgeInsets.all(AppSpacing.md),
+    codeblockPadding: const EdgeInsets.all(AppSpacing.sm + 4),
 
-    // Blockquotes with Islamic green accent (right border for RTL)
+    // β6 — pull-quote treatment for blockquotes. The AI primarily uses
+    // blockquotes for scripture references (hadiths, Quranic citations),
+    // so all blockquotes adopt the reverent pull-quote treatment:
+    // theme-accent thick border + faint accent surface + italic body.
     blockquote: AppTypography.bodyMedium.copyWith(
-      color: Colors.white70,
+      color: Colors.white,
       fontStyle: FontStyle.italic,
-      height: 1.6,
+      height: 1.7,
+      fontSize: 16,
     ),
     blockquoteDecoration: BoxDecoration(
+      color: accent.withValues(alpha: 0.05),
+      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
       border: Border(
         right: BorderSide(
-          color: AppColors.islamicGreenPrimary,
+          color: accent,
           width: 3,
         ),
       ),
     ),
-    blockquotePadding: const EdgeInsets.only(
-      right: AppSpacing.md,
-      top: AppSpacing.xs,
-      bottom: AppSpacing.xs,
-    ),
+    blockquotePadding: const EdgeInsets.all(AppSpacing.md),
 
-    // Lists (RTL - padding on right side)
+    // Lists — RTL: tighten the indent so continuation lines wrap closer to
+    // the right edge instead of sliding toward the center (β.fix#3 — the
+    // 24px indent was making numbered-list continuation feel "hugged to
+    // the middle" because each wrap would drift inward by 24px).
     listBullet: AppTypography.bodyMedium.copyWith(
-      color: AppColors.islamicGreenLight,
+      color: accent,
+      fontSize: 16.5,
+      fontWeight: FontWeight.w600,
     ),
-    listIndent: 24,
-    listBulletPadding: const EdgeInsets.only(right: AppSpacing.sm),
+    listIndent: 14,
+    listBulletPadding: const EdgeInsets.only(right: AppSpacing.xs),
 
     // Links
     a: AppTypography.bodyMedium.copyWith(
-      color: AppColors.islamicGreenLight,
+      color: accent,
       decoration: TextDecoration.underline,
-      decorationColor: AppColors.islamicGreenLight,
+      decorationColor: accent,
     ),
 
-    // Horizontal rule
     horizontalRuleDecoration: BoxDecoration(
       border: Border(
         top: BorderSide(
@@ -118,7 +134,6 @@ MarkdownStyleSheet buildChatMarkdownStyle(BuildContext context) {
       ),
     ),
 
-    // Table styling
     tableHead: AppTypography.labelMedium.copyWith(
       color: Colors.white,
       fontWeight: FontWeight.bold,
@@ -133,26 +148,37 @@ MarkdownStyleSheet buildChatMarkdownStyle(BuildContext context) {
     tableHeadAlign: TextAlign.right, // RTL
     tableCellsPadding: const EdgeInsets.all(AppSpacing.sm),
 
-    // Checkbox for task lists
     checkbox: AppTypography.bodyMedium.copyWith(
-      color: AppColors.islamicGreenPrimary,
+      color: accent,
     ),
 
-    // Text alignment for RTL
-    textAlign: WrapAlignment.end,
+    // RTL alignment — α1 fix preserved.
+    textAlign: WrapAlignment.start,
+    h1Align: WrapAlignment.start,
+    h2Align: WrapAlignment.start,
+    h3Align: WrapAlignment.start,
+    h4Align: WrapAlignment.start,
+    h5Align: WrapAlignment.start,
+    h6Align: WrapAlignment.start,
+    unorderedListAlign: WrapAlignment.start,
+    orderedListAlign: WrapAlignment.start,
+    blockquoteAlign: WrapAlignment.start,
   );
 }
 
 /// Builds a markdown style for AI content in cards (reports, analysis).
 /// Adds text shadows for readability on gradient backgrounds.
-MarkdownStyleSheet buildCardMarkdownStyle(BuildContext context) {
+MarkdownStyleSheet buildCardMarkdownStyle(
+  BuildContext context,
+  dynamic themeColors,
+) {
   final shadow = [
     Shadow(
       color: Colors.black.withValues(alpha: 0.4),
       blurRadius: 6,
     ),
   ];
-  final base = buildChatMarkdownStyle(context);
+  final base = buildChatMarkdownStyle(context, themeColors);
   return base.copyWith(
     p: base.p?.copyWith(
       color: Colors.white.withValues(alpha: 0.9),
@@ -168,11 +194,13 @@ MarkdownStyleSheet buildCardMarkdownStyle(BuildContext context) {
   );
 }
 
-/// Builds a compact markdown style for streaming content
-MarkdownStyleSheet buildStreamingMarkdownStyle(BuildContext context) {
-  final baseStyle = buildChatMarkdownStyle(context);
+/// Builds a compact markdown style for streaming content.
+MarkdownStyleSheet buildStreamingMarkdownStyle(
+  BuildContext context,
+  dynamic themeColors,
+) {
+  final baseStyle = buildChatMarkdownStyle(context, themeColors);
   return baseStyle.copyWith(
-    // Reduce padding during streaming for smoother appearance
     pPadding: EdgeInsets.zero,
     h1Padding: const EdgeInsets.only(bottom: AppSpacing.xs),
     h2Padding: const EdgeInsets.only(bottom: AppSpacing.xs),

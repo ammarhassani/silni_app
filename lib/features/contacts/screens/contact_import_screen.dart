@@ -16,6 +16,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
+import '../../../shared/widgets/glass_dialog.dart';
 import '../../../shared/widgets/relationship_specification_dialog.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../core/providers/cache_provider.dart';
@@ -152,48 +153,59 @@ class _ContactImportScreenState extends ConsumerState<ContactImportScreen> {
     final controller = TextEditingController();
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
-        title: Text(
-          'أدخل الاسم',
-          style: AppTypography.titleLarge.copyWith(color: Colors.white),
-        ),
+      builder: (ctx) => GlassDialog(
+        icon: Icons.person_add_alt_1_rounded,
+        title: 'أدخل الاسم',
+        subtitle: 'سيتم إضافة هذا القريب يدوياً',
         content: TextField(
           controller: controller,
           autofocus: true,
           style: AppTypography.bodyMedium.copyWith(color: Colors.white),
           decoration: InputDecoration(
             hintText: 'اسم القريب',
-            hintStyle: AppTypography.bodyMedium.copyWith(
-              color: Colors.white54,
+            hintStyle: AppTypography.bodyMedium.copyWith(color: Colors.white54),
+            filled: true,
+            fillColor: Colors.white.withValues(alpha: 0.1),
+            contentPadding: const EdgeInsets.all(AppSpacing.md),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.25),
+                width: 1,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.25),
+                width: 1,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              borderSide: BorderSide(
+                color: AppColors.islamicGreenPrimary.withValues(alpha: 0.7),
+                width: 1.5,
+              ),
             ),
           ),
         ),
         actions: [
-          TextButton(
+          GlassActionButton(
+            text: 'إلغاء',
             onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'إلغاء',
-              style: AppTypography.labelLarge.copyWith(
-                color: Colors.white70,
-              ),
-            ),
           ),
-          TextButton(
+          GradientButton(
+            text: 'إضافة',
+            icon: Icons.add_rounded,
             onPressed: () {
               final name = controller.text.trim();
               if (name.isNotEmpty) {
-                Navigator.pop(ctx); // close dialog
+                Navigator.pop(ctx);
                 final manualContact = Contact(displayName: name);
-                Navigator.pop(context, manualContact); // return to caller
+                Navigator.pop(context, manualContact);
               }
             },
-            child: Text(
-              'إضافة',
-              style: AppTypography.labelLarge.copyWith(
-                color: AppColors.islamicGreenPrimary,
-              ),
-            ),
           ),
         ],
       ),

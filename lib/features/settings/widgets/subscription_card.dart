@@ -10,6 +10,8 @@ import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../shared/widgets/gradient_button.dart';
+import '../../../shared/widgets/glass_dialog.dart';
 import '../../../core/models/subscription_tier.dart';
 import '../../../core/providers/subscription_provider.dart';
 import '../../../core/services/subscription_service.dart';
@@ -303,43 +305,29 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
               // Action row
               Row(
                 children: [
-                  // Manage button
                   Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () =>
-                          _openSubscriptionManagement(context),
-                      icon: const Icon(Icons.settings_outlined, size: 16),
-                      label: const Text('إدارة'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: themeColors.textOnGradient,
-                        side: BorderSide(
-                          color: AppColors.premiumGold
-                              .withValues(alpha: 0.5),
-                        ),
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
+                    child: GlassActionButton(
+                      text: 'إدارة',
+                      icon: Icons.settings_outlined,
+                      onPressed: () => _openSubscriptionManagement(context),
                     ),
                   ),
                   if (canUpgrade) ...[
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
-                      child: ElevatedButton.icon(
+                      child: GradientButton(
+                        text: 'ترقية لـ MAX',
+                        icon: Icons.arrow_upward_rounded,
                         onPressed: () => _openPaywall(context),
-                        icon: const Icon(Icons.arrow_upward_rounded,
-                            size: 16),
-                        label: const Text('ترقية لـ MAX'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.premiumGold,
-                          foregroundColor: Colors.black87,
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
+                        textColor: Colors.black87,
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppColors.premiumGoldLight,
+                            AppColors.premiumGold,
+                            AppColors.premiumGoldDark,
+                          ],
                         ),
                       ),
                     ),
@@ -485,31 +473,19 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
           ),
           const SizedBox(height: AppSpacing.md),
           // Gold upgrade button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => _openPaywall(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.premiumGold,
-                foregroundColor: Colors.black87,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.star_rounded, size: 18),
-                  const SizedBox(width: 6),
-                  Text(
-                    'ترقية الآن',
-                    style: AppTypography.titleSmall.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
+          GradientButton(
+            text: 'ترقية الآن',
+            icon: Icons.star_rounded,
+            onPressed: () => _openPaywall(context),
+            textColor: Colors.black87,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.premiumGoldLight,
+                AppColors.premiumGold,
+                AppColors.premiumGoldDark,
+              ],
             ),
           ),
         ],

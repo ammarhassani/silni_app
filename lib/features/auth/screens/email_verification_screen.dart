@@ -312,33 +312,39 @@ class _EmailVerificationScreenState
                                   ),
                                 )
                               else
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: OutlinedButton.icon(
-                                    onPressed: null,
-                                    icon: Icon(
-                                      Icons.timer_outlined,
-                                      color: themeColors.textOnGradient.withValues(alpha: 0.5),
+                                Container(
+                                  height: AppSpacing.buttonHeight,
+                                  decoration: BoxDecoration(
+                                    color: themeColors.textOnGradient
+                                        .withValues(alpha: 0.05),
+                                    borderRadius: BorderRadius.circular(
+                                      AppSpacing.radiusLg,
                                     ),
-                                    label: Text(
-                                      'انتظر $_resendCooldown ثانية',
-                                      style: AppTypography.labelLarge.copyWith(
-                                        color: themeColors.textOnGradient.withValues(alpha: 0.5),
-                                      ),
+                                    border: Border.all(
+                                      color: themeColors.textOnGradient
+                                          .withValues(alpha: 0.2),
+                                      width: 1,
                                     ),
-                                    style: OutlinedButton.styleFrom(
-                                      side: BorderSide(
-                                        color: themeColors.textOnGradient.withValues(alpha: 0.4),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.timer_outlined,
+                                        color: themeColors.textOnGradient
+                                            .withValues(alpha: 0.5),
+                                        size: 18,
                                       ),
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: AppSpacing.md,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(
-                                          AppSpacing.radiusLg,
+                                      const SizedBox(width: AppSpacing.sm),
+                                      Text(
+                                        'انتظر $_resendCooldown ثانية',
+                                        style:
+                                            AppTypography.labelLarge.copyWith(
+                                          color: themeColors.textOnGradient
+                                              .withValues(alpha: 0.55),
                                         ),
                                       ),
-                                    ),
+                                    ],
                                   ),
                                 ),
 

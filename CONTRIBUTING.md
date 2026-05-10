@@ -22,6 +22,19 @@ inventory of issues we are working through).
 - Migrations are append-only. Don't edit existing migrations. Write a
   new one. The CI history is what's actually been applied to staging
   and prod; rewriting it desyncs us from reality.
+- **Applied migrations are immutable history, even when their content
+  references deprecated names.** If a historical migration has the old
+  persona name (`واصل` / `Wasel`), an old feature (`gamification level
+  titles`), or an old subscription tier (`premium`), leave it alone.
+  The source of truth is what the live DB currently contains, not what
+  the migration files say. To fix stale references, ship a new
+  migration that updates the live data.
+- **Reseed migrations have a search-and-replace contract.** If you
+  ever write a "reseed all admin tables" migration that mass-overwrites
+  rows, search the file for `واصل`, `Wasel`, `premium` (the legacy
+  subscription tier), and any other names dropped between the original
+  reseed authorship and now. Substitute current values BEFORE applying.
+  This is a known latent risk per `V1_1_BACKLOG.md`.
 - New migrations should use `CREATE TABLE IF NOT EXISTS`,
   `CREATE OR REPLACE FUNCTION`, `ADD COLUMN IF NOT EXISTS`, and
   similar idempotent forms wherever possible. They should be safe to

@@ -232,7 +232,7 @@ export default function SuggestedPromptsPage() {
             <div className="flex-1">
               <h3 className="font-semibold">الاقتراحات الذكية</h3>
               <p className="text-muted-foreground text-sm mt-1">
-                هذه الاقتراحات تظهر للمستخدم عند بدء محادثة جديدة لتسهيل التفاعل مع واصل.
+                هذه الاقتراحات تظهر للمستخدم عند بدء محادثة جديدة لتسهيل التفاعل مع أنيس.
               </p>
               <div className="flex gap-2 mt-3">
                 <Badge variant="outline">{allPrompts?.length || 0} اقتراح</Badge>

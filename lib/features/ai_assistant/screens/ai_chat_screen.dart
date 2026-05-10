@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -9,7 +11,7 @@ import '../../../core/constants/app_animations.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
-import '../../../shared/widgets/glass_pill_title.dart';
+import '../../../shared/widgets/glass_dialog.dart';
 import '../../../core/ai/ai_identity.dart';
 import '../../../core/ai/ai_models.dart';
 import '../../../shared/widgets/gradient_background.dart';
@@ -19,6 +21,7 @@ import '../widgets/chat_message_bubble.dart';
 import '../widgets/conversation_message.dart';
 import '../widgets/chat_history_drawer.dart';
 import '../widgets/memory_indicator.dart';
+import '../widgets/persona_greeting_block.dart';
 
 /// AI Chat Screen - Family Counselor (أنيس)
 class AIChatScreen extends ConsumerStatefulWidget {
@@ -39,14 +42,26 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
   final FocusNode _focusNode = FocusNode();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  // Tracks whether the composer has any text. Drives send-button enabled
+  // animation (β3) and dismisses the suggested-prompt chip row.
+  bool _hasComposerText = false;
+
   @override
   void initState() {
     super.initState();
-    // Conversation is created lazily when user sends first message
+    _messageController.addListener(_onComposerChanged);
+  }
+
+  void _onComposerChanged() {
+    final hasText = _messageController.text.trim().isNotEmpty;
+    if (hasText != _hasComposerText) {
+      setState(() => _hasComposerText = hasText);
+    }
   }
 
   @override
   void dispose() {
+    _messageController.removeListener(_onComposerChanged);
     _messageController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
@@ -111,8 +126,6 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
   @override
   Widget build(BuildContext context) {
     final chatState = ref.watch(aiChatProvider);
-    final currentMode = ref.watch(counselingModeProvider);
-    final suggestedPrompts = ref.watch(suggestedPromptsProvider);
     final themeColors = ref.watch(themeColorsProvider);
 
     // Listen for new messages to scroll
@@ -126,6 +139,9 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
       child: Scaffold(
         key: _scaffoldKey,
         backgroundColor: Colors.transparent,
+        // Custom scrim — replaces Material's grey overlay with a deep
+        // glass-tinted dim that matches the rest of the app's modal pattern.
+        drawerScrimColor: Colors.black.withValues(alpha: 0.55),
         appBar: _buildAppBar(context, themeColors),
         endDrawer: ChatHistoryDrawer(
           onNewChat: _startNewChat,
@@ -135,11 +151,11 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
           label: 'محادثة ${AIIdentity.name} المساعد الذكي',
           child: Column(
             children: [
-              // Chat messages
+              // Chat messages — always renders. The persona greeting block
+              // sits at index 0 of the list; suggested prompts (when the
+              // conversation is empty) live above the composer per β3.
               Expanded(
-                child: chatState.messages.isEmpty && !chatState.isStreaming && !chatState.isLoading
-                    ? _buildEmptyState(currentMode, suggestedPrompts, themeColors)
-                    : _buildMessagesList(chatState, themeColors),
+                child: _buildMessagesList(chatState, themeColors),
               ),
 
               // Memory saved indicator (like ChatGPT)
@@ -165,187 +181,44 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context, dynamic themeColors) {
+    // β8 — minimal AppBar. The persona pill (avatar + name + mode subtitle)
+    // moved into the in-conversation PersonaGreetingBlock; the AppBar now
+    // carries only navigation chrome so the conversation is the focus.
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      leading: Semantics(
-        label: 'رجوع',
-        button: true,
-        child: IconButton(
-          icon: DirectionalIcon(Icons.arrow_back_ios_rounded, color: themeColors.textOnGradient),
-          onPressed: () => context.pop(),
-        ),
-      ),
-      title: GlassPillTitle(
-        text: AIIdentity.name,
-        style: AppTypography.titleMedium.copyWith(
-          color: themeColors.textOnGradient,
-          fontWeight: FontWeight.bold,
-        ),
-        leading: Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [themeColors.primary, themeColors.primaryLight],
+      toolbarHeight: 56,
+      leadingWidth: 64,
+      leading: Padding(
+        padding: const EdgeInsetsDirectional.only(start: AppSpacing.sm),
+        child: Center(
+          child: GlassIconButton(
+            tooltip: 'رجوع',
+            icon: DirectionalIcon(
+              Icons.arrow_back_ios_rounded,
+              color: themeColors.textOnGradient,
+              size: 18,
             ),
-          ),
-          child: Icon(
-            Icons.smart_toy_rounded,
-            size: 18,
-            color: themeColors.textOnGradient,
-          ),
-        ),
-        subtitle: Text(
-          ref.watch(counselingModeProvider).arabicName,
-          style: AppTypography.labelSmall.copyWith(
-            color: themeColors.textOnGradient.withValues(alpha: 0.6),
+            onPressed: () => context.pop(),
           ),
         ),
       ),
+      title: const SizedBox.shrink(),
       actions: [
-        Semantics(
-          label: 'المحادثات السابقة',
-          button: true,
-          child: IconButton(
-            icon: Icon(Icons.history_rounded, color: themeColors.textOnGradient.withValues(alpha: 0.7)),
-            onPressed: _openHistoryDrawer,
-            tooltip: 'المحادثات السابقة',
-          ),
-        ),
-        Semantics(
-          label: 'محادثة جديدة',
-          button: true,
-          child: IconButton(
-            icon: Icon(Icons.refresh_rounded, color: themeColors.textOnGradient.withValues(alpha: 0.7)),
-            onPressed: () {
-              HapticFeedback.mediumImpact();
-              _showClearConfirmation(themeColors);
-            },
-            tooltip: 'محادثة جديدة',
+        Padding(
+          padding: const EdgeInsetsDirectional.only(end: AppSpacing.md),
+          child: Center(
+            child: _ChatHeaderControlCluster(
+              themeColors: themeColors,
+              onHistory: _openHistoryDrawer,
+              onNewChat: () {
+                HapticFeedback.mediumImpact();
+                _showClearConfirmation(themeColors);
+              },
+            ),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildEmptyState(CounselingMode mode, List<String> prompts, dynamic themeColors) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        children: [
-          const SizedBox(height: AppSpacing.xl),
-
-          // Welcome message — 3-layer glow halo avatar
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [themeColors.primary, themeColors.primaryLight],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: themeColors.primary.withValues(alpha: 0.5),
-                  blurRadius: 16,
-                  spreadRadius: 2,
-                ),
-                BoxShadow(
-                  color: themeColors.primary.withValues(alpha: 0.3),
-                  blurRadius: 32,
-                  spreadRadius: 4,
-                ),
-                BoxShadow(
-                  color: themeColors.primary.withValues(alpha: 0.15),
-                  blurRadius: 48,
-                  spreadRadius: 6,
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.smart_toy_rounded,
-              size: 44,
-              color: themeColors.textOnGradient,
-            ),
-          )
-              .animate(onPlay: (controller) => controller.repeat())
-              .shimmer(
-                duration: AppAnimations.loop,
-                color: themeColors.textOnGradient.withValues(alpha: 0.24),
-              ),
-
-          const SizedBox(height: AppSpacing.lg),
-
-          Text(
-            'مرحباً، أنا ${AIIdentity.name}',
-            style: AppTypography.headlineSmall.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              shadows: [
-                Shadow(
-                  color: Colors.black.withValues(alpha: 0.6),
-                  blurRadius: 10,
-                ),
-                Shadow(
-                  color: themeColors.primary.withValues(alpha: 0.4),
-                  blurRadius: 20,
-                ),
-              ],
-            ),
-          ).animate().fadeIn(duration: AppAnimations.normal).slideY(begin: 0.2, end: 0),
-
-          const SizedBox(height: AppSpacing.xs),
-
-          Text(
-            'مساعدك الذكي في صلة الرحم',
-            style: AppTypography.bodyMedium.copyWith(
-              color: Colors.white.withValues(alpha: 0.8),
-              shadows: [
-                Shadow(
-                  color: Colors.black.withValues(alpha: 0.4),
-                  blurRadius: 8,
-                ),
-              ],
-            ),
-          ).animate(delay: AppAnimations.instant).fadeIn(duration: AppAnimations.normal),
-
-          const SizedBox(height: AppSpacing.xl),
-
-          // Suggested prompts
-          Text(
-            'جرب أحد هذه الأسئلة',
-            style: AppTypography.titleSmall.copyWith(
-              color: Colors.white.withValues(alpha: 0.7),
-              shadows: [
-                Shadow(
-                  color: Colors.black.withValues(alpha: 0.4),
-                  blurRadius: 6,
-                ),
-              ],
-            ),
-          ).animate(delay: AppAnimations.modal).fadeIn(duration: AppAnimations.normal),
-
-          const SizedBox(height: AppSpacing.md),
-
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            alignment: WrapAlignment.center,
-            children: prompts.asMap().entries.map((entry) {
-              return SuggestedPromptChip(
-                text: entry.value,
-                onTap: () => _selectSuggestedPrompt(entry.value),
-              )
-                  .animate(
-                      delay: Duration(milliseconds: 500 + (entry.key * 100)))
-                  .fadeIn(duration: AppAnimations.normal)
-                  .scale(begin: const Offset(0.8, 0.8), end: const Offset(1, 1));
-            }).toList(),
-          ),
-        ],
-      ),
     );
   }
 
@@ -493,31 +366,48 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
   }
 
   Widget _buildMessagesList(AIChatState chatState, dynamic themeColors) {
+    // β.fix#3 (rev 6) — turn-box rendering. Each user question + its
+    // AI response is grouped into one boxed turn with a continuous neon
+    // rail on the box's left edge. The persona greeting block stays at
+    // index 0; turns follow.
+    final turns = groupMessagesIntoTurns(chatState.messages);
+    final hasActivity = chatState.isStreaming || chatState.isLoading;
+
+    // If there's activity but no turns yet (very transient), append a
+    // synthesized empty turn so the typing indicator has somewhere to live.
+    final renderTurns = (hasActivity && turns.isEmpty) ? [Turn()] : turns;
+
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.sm),
-      itemCount: chatState.messages.length +
-          (chatState.isLoading || chatState.isStreaming ? 1 : 0),
+      padding: const EdgeInsets.only(top: AppSpacing.xs, bottom: AppSpacing.xl),
+      itemCount: 1 + renderTurns.length,
       itemBuilder: (context, index) {
-        // Show typing indicator or streaming content at the end
-        if (index == chatState.messages.length) {
-          if (chatState.isStreaming && chatState.currentStreamContent.isNotEmpty) {
-            return StreamingMessage(content: chatState.currentStreamContent)
-                .animate()
-                .fadeIn(duration: AppAnimations.fast);
-          }
-          return const TypingIndicator().animate().fadeIn(duration: AppAnimations.fast);
+        if (index == 0) {
+          return const PersonaGreetingBlock();
         }
 
-        final message = chatState.messages[index];
-        final isLast = index == chatState.messages.length - 1;
-        final isUser = message.role == MessageRole.user;
+        final turnIndex = index - 1;
+        final turn = renderTurns[turnIndex];
+        final isLastTurn = turnIndex == renderTurns.length - 1;
 
-        return ConversationMessage(
-          message: message,
-          isLast: isLast,
-          onEdit: isUser ? () => _showEditDialog(message) : null,
-          onRegenerate: !isUser && isLast ? _regenerateLastResponse : null,
+        final showStream = isLastTurn &&
+            chatState.isStreaming &&
+            chatState.currentStreamContent.isNotEmpty;
+        final showTyping = isLastTurn &&
+            (chatState.isLoading ||
+                (chatState.isStreaming &&
+                    chatState.currentStreamContent.isEmpty));
+
+        return ConversationTurn(
+          turn: turn,
+          streamingContent: showStream ? chatState.currentStreamContent : null,
+          showTyping: showTyping,
+          onEdit: turn.userMessage != null
+              ? () => _showEditDialog(turn.userMessage!)
+              : null,
+          onRegenerate: isLastTurn && turn.aiMessages.isNotEmpty
+              ? _regenerateLastResponse
+              : null,
         ).animate().fadeIn(duration: AppAnimations.fast);
       },
     );
@@ -557,130 +447,154 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
 
   Widget _buildInputArea(AIChatState chatState, dynamic themeColors) {
     final isDisabled = chatState.isLoading || chatState.isStreaming;
+    final canSend = _hasComposerText && !isDisabled;
+    final showPromptChips = chatState.messages.isEmpty &&
+        !chatState.isStreaming &&
+        !chatState.isLoading &&
+        !_hasComposerText;
+    final suggestedPrompts = ref.watch(suggestedPromptsProvider);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.3),
-        border: Border(
-          top: BorderSide(
-            color: themeColors.textOnGradient.withValues(alpha: 0.1),
-          ),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          0,
+          AppSpacing.lg,
+          AppSpacing.md,
         ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          textDirection: TextDirection.rtl, // RTL: send button on right
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Send button (on right for RTL)
-            Semantics(
-              label: 'إرسال الرسالة',
-              button: true,
-              child: GestureDetector(
-                onTap: isDisabled ? null : _sendMessage,
-                child: Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: isDisabled
-                        ? LinearGradient(
-                            colors: [
-                              Colors.grey.shade600,
-                              Colors.grey.shade700,
-                            ],
-                          )
-                        : LinearGradient(
-                            colors: [themeColors.primary, themeColors.primaryLight],
-                          ),
-                    boxShadow: isDisabled
-                        ? null
-                        : [
-                            BoxShadow(
-                              color: themeColors.primary.withValues(alpha: 0.5),
-                              blurRadius: 12,
-                              spreadRadius: 1,
-                            ),
-                            BoxShadow(
-                              color: themeColors.primary.withValues(alpha: 0.25),
-                              blurRadius: 24,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                  ),
-                  child: Transform.rotate(
-                    angle: 3.14159, // Rotate 180 degrees for RTL send icon
-                    child: Icon(
-                      Icons.send_rounded,
-                      color: themeColors.textOnGradient.withValues(alpha: isDisabled ? 0.5 : 1.0),
-                      size: 22,
-                    ),
-                  ),
-                ),
-              ),
+            // β3 — empty-conversation suggested prompt chips. Fade out as
+            // soon as the user starts typing.
+            AnimatedSwitcher(
+              duration: AppAnimations.normal,
+              child: showPromptChips
+                  ? _buildPromptChipRow(
+                      suggestedPrompts.take(3).toList(),
+                      themeColors,
+                    )
+                  : const SizedBox.shrink(),
             ),
-
-            const SizedBox(width: AppSpacing.sm),
-
-            // Text field (on left for RTL)
-            Expanded(
-              child: Semantics(
-                label: 'حقل كتابة الرسالة',
-                textField: true,
-                child: TextField(
-                  controller: _messageController,
-                  focusNode: _focusNode,
-                  enabled: !isDisabled,
-                  maxLines: 4,
-                  minLines: 1,
-                  textDirection: TextDirection.rtl,
-                  textAlign: TextAlign.right,
-                  cursorColor: themeColors.textOnGradient,
-                  keyboardAppearance: Brightness.dark,
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: themeColors.textOnGradient,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'اكتب رسالتك...',
-                    hintStyle: AppTypography.bodyMedium.copyWith(
-                      color: themeColors.textOnGradient.withValues(alpha: 0.54),
-                    ),
-                    filled: true,
-                    fillColor: themeColors.primary.withValues(alpha: 0.2),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide(
-                        color: themeColors.primary.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide(
-                        color: themeColors.primary.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide(
-                        color: themeColors.primary,
-                        width: 1.5,
-                      ),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm + 4,
-                    ),
-                  ),
-                  onSubmitted: (_) => _sendMessage(),
-                ),
-              ),
+            // β3 — glass-pill composer.
+            _buildGlassComposer(
+              themeColors: themeColors,
+              isDisabled: isDisabled,
+              canSend: canSend,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPromptChipRow(List<String> prompts, dynamic themeColors) {
+    return Padding(
+      key: const ValueKey('prompt-chip-row'),
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Wrap(
+        spacing: AppSpacing.xs,
+        runSpacing: AppSpacing.xs,
+        alignment: WrapAlignment.center,
+        children: prompts.map((p) {
+          return SuggestedPromptChip(
+            text: p,
+            onTap: () => _selectSuggestedPrompt(p),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildGlassComposer({
+    required dynamic themeColors,
+    required bool isDisabled,
+    required bool canSend,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          decoration: BoxDecoration(
+            color: themeColors.surface.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.15),
+              width: 1,
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xs + 2,
+            vertical: AppSpacing.xs + 2,
+          ),
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            textDirection: TextDirection.rtl,
+            children: [
+              // Text input — sits at the start of reading direction (right
+              // edge in RTL) and grows leftward.
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.only(
+                    start: AppSpacing.md,
+                  ),
+                  child: Semantics(
+                    label: 'حقل كتابة الرسالة',
+                    textField: true,
+                    child: TextField(
+                      controller: _messageController,
+                      focusNode: _focusNode,
+                      enabled: !isDisabled,
+                      maxLines: 5,
+                      minLines: 1,
+                      textDirection: TextDirection.rtl,
+                      textAlign: TextAlign.right,
+                      cursorColor: themeColors.textOnGradient,
+                      keyboardAppearance: Brightness.dark,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: themeColors.textOnGradient,
+                        fontSize: 16,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'اسأل ${AIIdentity.name}...',
+                        hintStyle: AppTypography.bodyMedium.copyWith(
+                          color: themeColors.textOnGradient
+                              .withValues(alpha: 0.4),
+                          fontSize: 16,
+                        ),
+                        // β.fix#1 — opt out of the global InputDecorationTheme
+                        // (filled: true + fillColor: Colors.white) which was
+                        // painting an opaque white over the glass surface.
+                        filled: false,
+                        fillColor: Colors.transparent,
+                        isDense: true,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.sm,
+                        ),
+                      ),
+                      onSubmitted: (_) => _sendMessage(),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              // β3 — embedded send button. Sits at the end of the row,
+              // which in RTL is the physical LEFT edge of the composer.
+              _ComposerSendButton(
+                themeColors: themeColors,
+                enabled: canSend,
+                onTap: _sendMessage,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -770,6 +684,195 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Segmented glass-pill control cluster used in the AI chat header.
+/// Fuses the two header actions (history + new-chat) into one pill so the
+/// AppBar reads as a coherent control row, not two floating circles.
+class _ChatHeaderControlCluster extends StatelessWidget {
+  const _ChatHeaderControlCluster({
+    required this.themeColors,
+    required this.onHistory,
+    required this.onNewChat,
+  });
+
+  final dynamic themeColors;
+  final VoidCallback onHistory;
+  final VoidCallback onNewChat;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = themeColors.textOnGradient as Color;
+    return Container(
+      decoration: BoxDecoration(
+        color: fg.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
+        border: Border.all(
+          color: fg.withValues(alpha: 0.25),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ClusterButton(
+            tooltip: 'المحادثات السابقة',
+            icon: Icons.history_rounded,
+            color: fg,
+            onPressed: onHistory,
+          ),
+          Container(
+            width: 1,
+            height: 20,
+            color: fg.withValues(alpha: 0.18),
+          ),
+          _ClusterButton(
+            tooltip: 'محادثة جديدة',
+            icon: Icons.refresh_rounded,
+            color: fg,
+            onPressed: onNewChat,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ClusterButton extends StatelessWidget {
+  const _ClusterButton({
+    required this.tooltip,
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.xs,
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// β3 composer send button. Embedded inside the glass-pill composer.
+/// Disabled state = outline only; enabled = gradient fill with subtle glow.
+/// Animates on enable (scale + shimmer cue) and on press (squash).
+class _ComposerSendButton extends StatefulWidget {
+  const _ComposerSendButton({
+    required this.themeColors,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final dynamic themeColors;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  State<_ComposerSendButton> createState() => _ComposerSendButtonState();
+}
+
+class _ComposerSendButtonState extends State<_ComposerSendButton> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final tc = widget.themeColors;
+    final Color accent = tc.accent;
+    final scale = _isPressed ? 0.92 : (widget.enabled ? 1.0 : 0.9);
+
+    return Semantics(
+      label: 'إرسال الرسالة',
+      button: true,
+      enabled: widget.enabled,
+      child: GestureDetector(
+        onTapDown: widget.enabled
+            ? (_) => setState(() => _isPressed = true)
+            : null,
+        onTapUp: widget.enabled
+            ? (_) {
+                setState(() => _isPressed = false);
+                HapticFeedback.lightImpact();
+                widget.onTap();
+              }
+            : null,
+        onTapCancel: widget.enabled
+            ? () => setState(() => _isPressed = false)
+            : null,
+        child: AnimatedScale(
+          scale: scale,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutBack,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: widget.enabled
+                  ? LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [tc.primary, tc.primaryLight],
+                    )
+                  : null,
+              color: widget.enabled ? null : Colors.transparent,
+              border: widget.enabled
+                  ? null
+                  : Border.all(
+                      color: accent.withValues(alpha: 0.35),
+                      width: 1.2,
+                    ),
+              boxShadow: widget.enabled
+                  ? [
+                      BoxShadow(
+                        color: tc.primary.withValues(alpha: 0.45),
+                        blurRadius: 12,
+                        spreadRadius: 0,
+                      ),
+                    ]
+                  : null,
+            ),
+            // β.fix#2 — Icons.send_rounded points right by default. In RTL
+            // we want it pointing left (toward where the text reads to).
+            // Previous Transform.rotate(angle: pi) rotated 180° which also
+            // flipped vertically — the wing curvature was inverted, reading
+            // as a wrong/upside-down arrow. Transform.flip(flipX: true) is
+            // a horizontal mirror only.
+            child: Transform.flip(
+              flipX: true,
+              child: Icon(
+                Icons.send_rounded,
+                color: widget.enabled
+                    ? tc.textOnGradient
+                    : tc.textOnGradient.withValues(alpha: 0.45),
+                size: 18,
+              ),
+            ),
+          ),
         ),
       ),
     );

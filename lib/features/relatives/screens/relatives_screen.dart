@@ -159,10 +159,10 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
   Widget _buildHeader(BuildContext context, dynamic themeColors) {
     return Padding(
           padding: const EdgeInsets.only(
-            top: AppSpacing.xs,
+            top: AppSpacing.md,
             left: AppSpacing.md,
             right: AppSpacing.md,
-            bottom: AppSpacing.xs,
+            bottom: AppSpacing.md,
           ),
           child: Row(
             children: [
@@ -179,14 +179,17 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
 
   Widget _buildSearchBar(dynamic themeColors) {
     return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
           child: Semantics(
             label: 'البحث عن قريب',
             textField: true,
             child: GlassCard(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.md,
-                vertical: 4,
+                vertical: AppSpacing.xs,
               ),
               child: TextField(
                 controller: _searchController,
@@ -233,9 +236,9 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
 
   Widget _buildCombinedFilters(dynamic themeColors) {
     return Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
           child: SizedBox(
-          height: 40,
+          height: 48,
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -244,15 +247,15 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
               _buildChip('الكل', isSelected: _filterType == 'all' && _categoryFilter == null, onTap: () {
                 setState(() { _filterType = 'all'; _categoryFilter = null; });
               }, themeColors: themeColors),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               _buildChip('يحتاجون تواصل', isSelected: _filterType == 'needs_contact', onTap: () {
                 setState(() { _filterType = _filterType == 'needs_contact' ? 'all' : 'needs_contact'; });
               }, themeColors: themeColors),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               _buildChip('المفضلة', isSelected: _filterType == 'favorites', onTap: () {
                 setState(() { _filterType = _filterType == 'favorites' ? 'all' : 'favorites'; });
               }, themeColors: themeColors),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.md),
               // Divider
               Center(
                 child: Container(
@@ -261,16 +264,16 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
                   color: themeColors.textOnGradient.withValues(alpha: 0.4),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.md),
               // Category filters
               _buildChip('🏠 أهل البيت', isSelected: _categoryFilter == RelativeCategory.household, onTap: () {
                 setState(() { _categoryFilter = _categoryFilter == RelativeCategory.household ? null : RelativeCategory.household; });
               }, themeColors: themeColors),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               _buildChip('📞 ممتدة', isSelected: _categoryFilter == RelativeCategory.extended, onTap: () {
                 setState(() { _categoryFilter = _categoryFilter == RelativeCategory.extended ? null : RelativeCategory.extended; });
               }, themeColors: themeColors),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               _buildChip('🌙 مناسبات', isSelected: _categoryFilter == RelativeCategory.distant, onTap: () {
                 setState(() { _categoryFilter = _categoryFilter == RelativeCategory.distant ? null : RelativeCategory.distant; });
               }, themeColors: themeColors),
@@ -284,13 +287,17 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
   }
 
   Widget _buildChip(String label, {required bool isSelected, required VoidCallback onTap, required dynamic themeColors}) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    return Center(
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.xs,
+          ),
         decoration: BoxDecoration(
           gradient: isSelected ? LinearGradient(colors: [themeColors.primary, themeColors.primaryLight]) : null,
           color: isSelected ? null : themeColors.textOnGradient.withValues(alpha: 0.18),
@@ -305,6 +312,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
             color: themeColors.textOnGradient,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
+        ),
         ),
       ),
     );

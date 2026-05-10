@@ -18,6 +18,8 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/widgets/ai_generated_badge.dart';
 import '../../../shared/widgets/glass_pill_title.dart';
+import '../../../shared/widgets/glass_dialog.dart';
+import '../../../shared/widgets/gradient_background.dart';
 import '../../home/providers/home_providers.dart';
 import '../providers/ai_chat_provider.dart';
 import '../widgets/ai_error_card.dart';
@@ -208,14 +210,25 @@ class _CommunicationScriptsScreenState
     final state = ref.watch(communicationScriptsProvider);
     final themeColors = ref.watch(themeColorsProvider);
 
-    return Scaffold(
-      backgroundColor: themeColors.background1,
+    return GradientBackground(
+      child: Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: themeColors.background1,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const DirectionalIcon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+        leading: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          child: Center(
+            child: GlassIconButton(
+              tooltip: 'رجوع',
+              icon: DirectionalIcon(
+                Icons.arrow_back_ios_rounded,
+                color: themeColors.textOnGradient,
+                size: 18,
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
         ),
         title: GlassPillTitle(
           text: 'سيناريوهات التواصل',
@@ -227,11 +240,20 @@ class _CommunicationScriptsScreenState
         centerTitle: true,
         actions: [
           if (state.generatedScript != null)
-            IconButton(
-              icon: const Icon(Icons.refresh_rounded, color: Colors.white70),
-              onPressed: () =>
-                  ref.read(communicationScriptsProvider.notifier).reset(),
-              tooltip: 'البدء من جديد',
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.sm),
+              child: Center(
+                child: GlassIconButton(
+                  tooltip: 'البدء من جديد',
+                  icon: Icon(
+                    Icons.refresh_rounded,
+                    color: themeColors.textOnGradient,
+                    size: 20,
+                  ),
+                  onPressed: () =>
+                      ref.read(communicationScriptsProvider.notifier).reset(),
+                ),
+              ),
             ),
         ],
       ),
@@ -244,6 +266,7 @@ class _CommunicationScriptsScreenState
             _buildContent(context, ref, state, themeColors),
           ],
         ),
+      ),
       ),
     );
   }

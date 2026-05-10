@@ -43,7 +43,7 @@ export default function AIConversationsPage() {
         <div>
           <h1 className="text-3xl font-bold">محادثات الذكاء الاصطناعي</h1>
           <p className="text-muted-foreground mt-1">
-            إحصائيات ونظرة عامة على استخدام واصل
+            إحصائيات ونظرة عامة على استخدام أنيس
           </p>
         </div>
       </div>

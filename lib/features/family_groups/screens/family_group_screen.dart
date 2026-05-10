@@ -8,6 +8,8 @@ import '../../../core/services/error_reporter.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../../shared/widgets/glass_dialog.dart';
+import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
@@ -20,6 +22,7 @@ import '../services/family_group_service.dart';
 import '../widgets/family_activity_card.dart';
 import '../widgets/family_activity_feed.dart';
 import '../widgets/invite_link_card.dart';
+import '../widgets/pending_claims_card.dart';
 
 /// Screen showing the detail view of a family group.
 ///
@@ -76,39 +79,26 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
   Future<void> _removeMember(FamilyGroupMember member) async {
     if (_removingMemberId != null) return; // Guard against double-tap
 
-    final themeColors = ref.read(themeColorsProvider);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: themeColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        ),
-        title: Text(
-          'إزالة العضو',
-          style: AppTypography.titleMedium.copyWith(
-            color: themeColors.onSurface,
-          ),
-        ),
-        content: Text(
-          'هل تريد إزالة ${member.displayName ?? 'هذا العضو'} من المجموعة؟',
-          style: AppTypography.bodyMedium.copyWith(
-            color: themeColors.onSurface,
-          ),
-        ),
+      builder: (ctx) => GlassDialog(
+        icon: Icons.person_remove_rounded,
+        iconAccent: const Color(0xFFD32F2F),
+        title: 'إزالة العضو',
+        subtitle:
+            'هل تريد إزالة ${member.displayName ?? 'هذا العضو'} من المجموعة؟',
+        content: const SizedBox.shrink(),
         actions: [
-          TextButton(
+          GlassActionButton(
+            text: 'إلغاء',
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(
-              'إلغاء',
-              style: TextStyle(color: themeColors.textSecondary),
-            ),
           ),
-          TextButton(
+          GradientButton(
+            text: 'إزالة',
+            icon: Icons.person_remove_rounded,
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(
-              'إزالة',
-              style: TextStyle(color: themeColors.statusError),
+            gradient: const LinearGradient(
+              colors: [Color(0xFFD32F2F), Color(0xFF8B1F1F)],
             ),
           ),
         ],
@@ -180,36 +170,26 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: themeColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        ),
-        title: Text(
-          'مغادرة المجموعة',
-          style: AppTypography.titleMedium.copyWith(
-            color: themeColors.onSurface,
-          ),
-        ),
-        content: Text(
-          leaveMessage,
-          style: AppTypography.bodyMedium.copyWith(
-            color: themeColors.onSurface,
-          ),
-        ),
+      builder: (ctx) => GlassDialog(
+        icon: Icons.exit_to_app_rounded,
+        iconAccent: themeColors.statusWarning,
+        title: 'مغادرة المجموعة',
+        subtitle: leaveMessage,
+        content: const SizedBox.shrink(),
         actions: [
-          TextButton(
+          GlassActionButton(
+            text: 'إلغاء',
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(
-              'إلغاء',
-              style: TextStyle(color: themeColors.textSecondary),
-            ),
           ),
-          TextButton(
+          GradientButton(
+            text: 'مغادرة',
+            icon: Icons.logout_rounded,
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(
-              'مغادرة',
-              style: TextStyle(color: themeColors.statusError),
+            gradient: LinearGradient(
+              colors: [
+                themeColors.statusWarning,
+                themeColors.statusWarning.withValues(alpha: 0.7),
+              ],
             ),
           ),
         ],
@@ -261,17 +241,11 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
   ) async {
     return showDialog<FamilyGroupMember>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: themeColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        ),
-        title: Text(
-          'اختر المسؤول الجديد',
-          style: AppTypography.titleMedium.copyWith(
-            color: themeColors.onSurface,
-          ),
-        ),
+      builder: (ctx) => GlassDialog(
+        icon: Icons.admin_panel_settings_rounded,
+        iconAccent: themeColors.accent,
+        title: 'اختر المسؤول الجديد',
+        subtitle: 'اختر العضو الذي سيتولى إدارة المجموعة بعد مغادرتك',
         content: SizedBox(
           width: double.maxFinite,
           child: ListView.builder(
@@ -279,34 +253,72 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
             itemCount: candidates.length,
             itemBuilder: (ctx, i) {
               final member = candidates[i];
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor:
-                      themeColors.onSurface.withValues(alpha: 0.15),
-                  child: Icon(
-                    Icons.person_rounded,
-                    size: AppSpacing.iconSm,
-                    color: themeColors.onSurface,
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => Navigator.of(ctx).pop(member),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                    child: Container(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.06),
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusLg),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: themeColors.accent.withValues(alpha: 0.22),
+                              border: Border.all(
+                                color: themeColors.accent
+                                    .withValues(alpha: 0.5),
+                                width: 1.2,
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.person_rounded,
+                              color: themeColors.accent,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Text(
+                              member.displayName ?? 'عضو',
+                              style: AppTypography.bodyMedium.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            color: Colors.white.withValues(alpha: 0.4),
+                            size: 14,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-                title: Text(
-                  member.displayName ?? 'عضو',
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: themeColors.onSurface,
-                  ),
-                ),
-                onTap: () => Navigator.of(ctx).pop(member),
               );
             },
           ),
         ),
         actions: [
-          TextButton(
+          GlassActionButton(
+            text: 'إلغاء',
             onPressed: () => Navigator.of(ctx).pop(null),
-            child: Text(
-              'إلغاء',
-              style: TextStyle(color: themeColors.textSecondary),
-            ),
           ),
         ],
       ),
@@ -315,39 +327,26 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
 
   Future<void> _deleteGroup() async {
     if (_isDeleting) return; // Guard against double-tap
-    final themeColors = ref.read(themeColorsProvider);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: themeColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        ),
-        title: Text(
-          'حذف المجموعة',
-          style: AppTypography.titleMedium.copyWith(
-            color: themeColors.onSurface,
-          ),
-        ),
-        content: Text(
-          'سيتم حذف المجموعة وجميع البيانات المشتركة نهائيًا. هل تريد المتابعة؟',
-          style: AppTypography.bodyMedium.copyWith(
-            color: themeColors.onSurface,
-          ),
-        ),
+      builder: (ctx) => GlassDialog(
+        icon: Icons.delete_forever_rounded,
+        iconAccent: const Color(0xFFD32F2F),
+        title: 'حذف المجموعة',
+        subtitle:
+            'سيتم حذف المجموعة وجميع البيانات المشتركة نهائيًا. هل تريد المتابعة؟',
+        content: const SizedBox.shrink(),
         actions: [
-          TextButton(
+          GlassActionButton(
+            text: 'إلغاء',
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(
-              'إلغاء',
-              style: TextStyle(color: themeColors.textSecondary),
-            ),
           ),
-          TextButton(
+          GradientButton(
+            text: 'حذف',
+            icon: Icons.delete_forever_rounded,
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(
-              'حذف',
-              style: TextStyle(color: themeColors.statusError),
+            gradient: const LinearGradient(
+              colors: [Color(0xFFD32F2F), Color(0xFF8B1F1F)],
             ),
           ),
         ],
@@ -564,6 +563,10 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
                   }
                 },
               ),
+              const SizedBox(height: AppSpacing.md),
+
+              // Pending identity-claim queue (hidden when empty).
+              PendingClaimsCard(groupId: widget.groupId),
               const SizedBox(height: AppSpacing.md),
             ],
 

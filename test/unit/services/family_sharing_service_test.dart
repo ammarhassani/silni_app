@@ -273,5 +273,169 @@ void main() {
       expect(momToBro, hasLength(1),
           reason: 'Mother should have parentOf edge to brother');
     });
+
+    // -----------------------------------------------------------------------
+    // Phase δ.fix / δ.fix.2 — orphan recovery in shared-tree generation
+    // -----------------------------------------------------------------------
+    // generateSharedEdges loops relatives in list order. Even if the list
+    // puts an orphan-prone relative (aunt) BEFORE its anchor (father), the
+    // forward-bug fix in inferEdges + the order-independent `existingRelatives`
+    // (full list visible from the start) means every edge that should exist
+    // does exist after the loop. These tests pin that property.
+
+    test('aunt-before-father order still yields aunt↔father siblingOf edge', () {
+      // List order intentionally puts the aunt BEFORE the father — this is
+      // the bug-prone order from the personal-tree founder repro, replayed
+      // here for the shared-tree path.
+      final relatives = [
+        makeRelative(
+          'aunt-1',
+          'Aunt',
+          RelationshipType.aunt,
+          Gender.female,
+          familySide: FamilySide.paternal,
+        ),
+        makeRelative('dad-1', 'Dad', RelationshipType.father, Gender.male),
+      ];
+
+      final edges = FamilySharingService.generateSharedEdges(
+        authUserId: 'user-1',
+        selfNodeId: selfNodeId,
+        relatives: relatives,
+        groupId: groupId,
+      );
+
+      // siblingOf aunt↔father must exist regardless of list order.
+      final auntToDad = edges.where((e) =>
+          e.type == EdgeType.siblingOf &&
+          ((e.fromId == 'aunt-1' && e.toId == 'dad-1') ||
+              (e.fromId == 'dad-1' && e.toId == 'aunt-1')));
+      expect(auntToDad, isNotEmpty,
+          reason: 'Aunt-before-father order must still produce siblingOf edge');
+    });
+
+    test('grandfather-before-father order yields grandfather→father parentOf', () {
+      final relatives = [
+        makeRelative(
+          'gf-1',
+          'Grandfather',
+          RelationshipType.grandfather,
+          Gender.male,
+          familySide: FamilySide.paternal,
+        ),
+        makeRelative('dad-1', 'Dad', RelationshipType.father, Gender.male),
+      ];
+
+      final edges = FamilySharingService.generateSharedEdges(
+        authUserId: 'user-1',
+        selfNodeId: selfNodeId,
+        relatives: relatives,
+        groupId: groupId,
+      );
+
+      // parentOf grandfather→father must exist regardless of list order.
+      final gfToDad = edges.where((e) =>
+          e.type == EdgeType.parentOf &&
+          e.fromId == 'gf-1' &&
+          e.toId == 'dad-1');
+      expect(gfToDad, isNotEmpty,
+          reason:
+              'Grandfather-before-father order must still produce parentOf');
+    });
+
+    test('cousin-before-uncle order yields uncle→cousin parentOf', () {
+      final relatives = [
+        makeRelative('cousin-1', 'Cousin', RelationshipType.cousin, Gender.male),
+        makeRelative(
+          'uncle-1',
+          'Uncle',
+          RelationshipType.uncle,
+          Gender.male,
+          familySide: FamilySide.paternal,
+        ),
+      ];
+
+      final edges = FamilySharingService.generateSharedEdges(
+        authUserId: 'user-1',
+        selfNodeId: selfNodeId,
+        relatives: relatives,
+        groupId: groupId,
+      );
+
+      final uncleToCousin = edges.where((e) =>
+          e.type == EdgeType.parentOf &&
+          e.fromId == 'uncle-1' &&
+          e.toId == 'cousin-1');
+      expect(uncleToCousin, isNotEmpty,
+          reason: 'Cousin-before-uncle order must still produce parentOf');
+    });
+
+    test('nephew-before-brother order yields brother→nephew parentOf', () {
+      final relatives = [
+        makeRelative('nephew-1', 'Nephew', RelationshipType.nephew, Gender.male),
+        makeRelative('bro-1', 'Brother', RelationshipType.brother, Gender.male),
+      ];
+
+      final edges = FamilySharingService.generateSharedEdges(
+        authUserId: 'user-1',
+        selfNodeId: selfNodeId,
+        relatives: relatives,
+        groupId: groupId,
+      );
+
+      final broToNephew = edges.where((e) =>
+          e.type == EdgeType.parentOf &&
+          e.fromId == 'bro-1' &&
+          e.toId == 'nephew-1');
+      expect(broToNephew, isNotEmpty,
+          reason: 'Nephew-before-brother order must still produce parentOf');
+    });
+
+    test('full founder repro: aunt + father + grandfather in worst order', () {
+      // Paternal aunt added before father, then grandfather. The full chain
+      // for layout placement: grandfather→aunt + grandfather→father + aunt↔father
+      // all need to exist in the final edges list.
+      final relatives = [
+        makeRelative(
+          'aunt-1',
+          'Aunt Fatima',
+          RelationshipType.aunt,
+          Gender.female,
+          familySide: FamilySide.paternal,
+        ),
+        makeRelative(
+          'gf-1',
+          'Grandfather',
+          RelationshipType.grandfather,
+          Gender.male,
+          familySide: FamilySide.paternal,
+        ),
+        makeRelative('dad-1', 'Dad', RelationshipType.father, Gender.male),
+      ];
+
+      final edges = FamilySharingService.generateSharedEdges(
+        authUserId: 'user-1',
+        selfNodeId: selfNodeId,
+        relatives: relatives,
+        groupId: groupId,
+      );
+
+      final hasAuntDadSibling = edges.any((e) =>
+          e.type == EdgeType.siblingOf &&
+          ((e.fromId == 'aunt-1' && e.toId == 'dad-1') ||
+              (e.fromId == 'dad-1' && e.toId == 'aunt-1')));
+      final hasGfDadParent = edges.any((e) =>
+          e.type == EdgeType.parentOf &&
+          e.fromId == 'gf-1' &&
+          e.toId == 'dad-1');
+      final hasGfAuntParent = edges.any((e) =>
+          e.type == EdgeType.parentOf &&
+          e.fromId == 'gf-1' &&
+          e.toId == 'aunt-1');
+
+      expect(hasAuntDadSibling, isTrue, reason: 'aunt↔father siblingOf missing');
+      expect(hasGfDadParent, isTrue, reason: 'grandfather→father parentOf missing');
+      expect(hasGfAuntParent, isTrue, reason: 'grandfather→aunt parentOf missing');
+    });
   });
 }

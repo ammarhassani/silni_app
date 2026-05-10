@@ -515,6 +515,299 @@ void main() {
   });
 
   // =========================================================================
+  // 2.5 Phase δ.fix / δ.fix.2 — orphan recovery on anchor-add
+  // =========================================================================
+  // When a relative R is added before its semantic anchor A exists,
+  // inferEdges produced an empty edge list and R was orphaned. The fix:
+  // when A is added later, A's case backfills the missing R↔A edge.
+  // These tests verify the recovery path (the forward bug class).
+  group('FamilyGraphService.inferEdges — orphan recovery', () {
+    test('father-add backfills siblingOf to existing paternal aunt orphan', () {
+      // Aunt was created first with paternal side, no edges.
+      final auntOrphan = makeRelative(
+        id: auntId,
+        type: RelationshipType.aunt,
+      ).copyWith(familySide: FamilySide.paternal);
+
+      // Now adding father.
+      final edges = FamilyGraphService.inferEdges(
+        userId: userId,
+        newRelativeId: fatherId,
+        relationshipType: RelationshipType.father,
+        existingEdges: const [],
+        existingRelatives: [auntOrphan],
+      );
+
+      // Father→user parentOf + aunt↔father siblingOf
+      expect(edges, hasLength(2));
+      expect(
+        edges.any((e) =>
+            e.type == EdgeType.parentOf &&
+            e.fromId == fatherId &&
+            e.toId == userId),
+        isTrue,
+        reason: 'father→user parentOf missing',
+      );
+      expect(
+        edges.any((e) =>
+            e.type == EdgeType.siblingOf &&
+            e.fromId == auntId &&
+            e.toId == fatherId),
+        isTrue,
+        reason: 'aunt→father siblingOf backfill missing',
+      );
+    });
+
+    test('mother-add backfills siblingOf to existing maternal uncle orphan', () {
+      final uncleOrphan = makeRelative(
+        id: uncleId,
+        type: RelationshipType.uncle,
+      ).copyWith(familySide: FamilySide.maternal);
+
+      final edges = FamilyGraphService.inferEdges(
+        userId: userId,
+        newRelativeId: motherId,
+        relationshipType: RelationshipType.mother,
+        existingEdges: const [],
+        existingRelatives: [uncleOrphan],
+      );
+
+      expect(
+        edges.any((e) =>
+            e.type == EdgeType.siblingOf &&
+            e.fromId == uncleId &&
+            e.toId == motherId),
+        isTrue,
+      );
+    });
+
+    test('father-add does NOT backfill maternal aunt (wrong side)', () {
+      final auntMaternal = makeRelative(
+        id: auntId,
+        type: RelationshipType.aunt,
+      ).copyWith(familySide: FamilySide.maternal);
+
+      final edges = FamilyGraphService.inferEdges(
+        userId: userId,
+        newRelativeId: fatherId,
+        relationshipType: RelationshipType.father,
+        existingEdges: const [],
+        existingRelatives: [auntMaternal],
+      );
+
+      // Only father→user parentOf, no aunt link (wrong side)
+      expect(edges, hasLength(1));
+      expect(edges.first.type, EdgeType.parentOf);
+    });
+
+    test('uncle-add deepens to grandfather (parentOf grandfather→uncle)', () {
+      final father = makeRelative(id: fatherId, type: RelationshipType.father);
+      // Grandfather already linked to father
+      final grandfatherEdge = makeEdge(
+        fromId: grandfatherId,
+        toId: fatherId,
+        type: EdgeType.parentOf,
+      );
+
+      final edges = FamilyGraphService.inferEdges(
+        userId: userId,
+        newRelativeId: uncleId,
+        relationshipType: RelationshipType.uncle,
+        side: FamilySide.paternal,
+        existingEdges: [grandfatherEdge],
+        existingRelatives: [father],
+      );
+
+      // siblingOf uncle↔father + parentOf grandfather→uncle
+      expect(edges, hasLength(2));
+      expect(
+        edges.any((e) =>
+            e.type == EdgeType.parentOf &&
+            e.fromId == grandfatherId &&
+            e.toId == uncleId),
+        isTrue,
+        reason: 'grandfather→uncle parentOf missing (deepening fix)',
+      );
+    });
+
+    test('brother-add backfills parentOf to existing nephew orphan', () {
+      // Nephew added first, no anchor. Zero edges.
+      final nephewOrphan = makeRelative(
+        id: 'nephew-1',
+        type: RelationshipType.nephew,
+      );
+
+      final edges = FamilyGraphService.inferEdges(
+        userId: userId,
+        newRelativeId: brotherId,
+        relationshipType: RelationshipType.brother,
+        existingEdges: const [],
+        existingRelatives: [nephewOrphan],
+      );
+
+      // user↔brother siblingOf + brother→nephew parentOf
+      expect(
+        edges.any((e) =>
+            e.type == EdgeType.parentOf &&
+            e.fromId == brotherId &&
+            e.toId == 'nephew-1'),
+        isTrue,
+        reason: 'brother→nephew parentOf backfill missing',
+      );
+    });
+
+    test('sister-add does NOT re-parent nephew already linked to brother', () {
+      // Nephew already has a parent (the existing brother).
+      final brother = makeRelative(id: brotherId, type: RelationshipType.brother);
+      final nephewLinked = makeRelative(
+        id: 'nephew-1',
+        type: RelationshipType.nephew,
+      );
+      final existingParentEdge = makeEdge(
+        fromId: brotherId,
+        toId: 'nephew-1',
+        type: EdgeType.parentOf,
+      );
+
+      final edges = FamilyGraphService.inferEdges(
+        userId: userId,
+        newRelativeId: sisterId,
+        relationshipType: RelationshipType.sister,
+        existingEdges: [existingParentEdge],
+        existingRelatives: [brother, nephewLinked],
+      );
+
+      // sister-add should NOT add sister→nephew (already parented).
+      final sisterToNephew = edges.where((e) =>
+          e.type == EdgeType.parentOf &&
+          e.fromId == sisterId &&
+          e.toId == 'nephew-1');
+      expect(sisterToNephew, isEmpty,
+          reason: 'sister should not re-parent nephew already linked to brother');
+    });
+
+    test('uncle-add backfills parentOf to existing cousin orphan', () {
+      final cousinOrphan = makeRelative(
+        id: 'cousin-1',
+        type: RelationshipType.cousin,
+      );
+
+      final edges = FamilyGraphService.inferEdges(
+        userId: userId,
+        newRelativeId: uncleId,
+        relationshipType: RelationshipType.uncle,
+        side: FamilySide.paternal,
+        existingEdges: const [],
+        existingRelatives: [cousinOrphan],
+      );
+
+      // Even though uncle has no parent anchor, cousin still gets uncle→cousin.
+      expect(
+        edges.any((e) =>
+            e.type == EdgeType.parentOf &&
+            e.fromId == uncleId &&
+            e.toId == 'cousin-1'),
+        isTrue,
+        reason: 'uncle→cousin parentOf backfill missing (orphan-to-orphan link)',
+      );
+    });
+
+    test('aunt-add does NOT re-parent cousin already linked', () {
+      final firstUncle = makeRelative(id: uncleId, type: RelationshipType.uncle);
+      final cousinLinked = makeRelative(
+        id: 'cousin-1',
+        type: RelationshipType.cousin,
+      );
+      final existingParentEdge = makeEdge(
+        fromId: uncleId,
+        toId: 'cousin-1',
+        type: EdgeType.parentOf,
+      );
+
+      final edges = FamilyGraphService.inferEdges(
+        userId: userId,
+        newRelativeId: auntId,
+        relationshipType: RelationshipType.aunt,
+        side: FamilySide.maternal,
+        existingEdges: [existingParentEdge],
+        existingRelatives: [firstUncle, cousinLinked],
+      );
+
+      final auntToCousin = edges.where((e) =>
+          e.type == EdgeType.parentOf &&
+          e.fromId == auntId &&
+          e.toId == 'cousin-1');
+      expect(auntToCousin, isEmpty,
+          reason: 'aunt should not re-parent already-linked cousin');
+    });
+
+    test('father-add backfills parentOf from existing paternal grandfather orphan', () {
+      // Grandfather added first (no parent existed), zero edges.
+      final grandfatherOrphan = makeRelative(
+        id: grandfatherId,
+        type: RelationshipType.grandfather,
+      ).copyWith(familySide: FamilySide.paternal);
+
+      final edges = FamilyGraphService.inferEdges(
+        userId: userId,
+        newRelativeId: fatherId,
+        relationshipType: RelationshipType.father,
+        existingEdges: const [],
+        existingRelatives: [grandfatherOrphan],
+      );
+
+      expect(
+        edges.any((e) =>
+            e.type == EdgeType.parentOf &&
+            e.fromId == grandfatherId &&
+            e.toId == fatherId),
+        isTrue,
+        reason: 'grandfather→father parentOf backfill missing',
+      );
+    });
+
+    test('father-add does NOT backfill maternal grandmother (wrong side)', () {
+      final maternalGrandma = makeRelative(
+        id: grandmotherId,
+        type: RelationshipType.grandmother,
+      ).copyWith(familySide: FamilySide.maternal);
+
+      final edges = FamilyGraphService.inferEdges(
+        userId: userId,
+        newRelativeId: fatherId,
+        relationshipType: RelationshipType.father,
+        existingEdges: const [],
+        existingRelatives: [maternalGrandma],
+      );
+
+      // Only father→user parentOf, no grandparent link (wrong side).
+      expect(edges, hasLength(1));
+      expect(edges.first.type, EdgeType.parentOf);
+      expect(edges.first.fromId, fatherId);
+      expect(edges.first.toId, userId);
+    });
+
+    test('father-add skips null-side grandparent (cannot disambiguate)', () {
+      final nullSideGrandfather = makeRelative(
+        id: grandfatherId,
+        type: RelationshipType.grandfather,
+      );
+      // No copyWith of familySide → defaults to null
+
+      final edges = FamilyGraphService.inferEdges(
+        userId: userId,
+        newRelativeId: fatherId,
+        relationshipType: RelationshipType.father,
+        existingEdges: const [],
+        existingRelatives: [nullSideGrandfather],
+      );
+
+      // Only father→user parentOf — null-side grandparent isn't auto-linked.
+      expect(edges, hasLength(1));
+    });
+  });
+
+  // =========================================================================
   // 3. getGeneration tests
   // =========================================================================
   group('FamilyGraph.getGeneration', () {

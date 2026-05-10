@@ -38,7 +38,7 @@ class TreeNodeWidget extends StatelessWidget {
             color: _cardBackground,
             border: Border.all(
               color: _cardBorderColor,
-              width: node.isUser ? 1.8 : 1.0,
+              width: node.hasPendingClaim ? 2.0 : (node.isUser ? 1.8 : 1.0),
             ),
             boxShadow: [
               BoxShadow(
@@ -51,6 +51,13 @@ class TreeNodeWidget extends StatelessWidget {
                 BoxShadow(
                   color: AppColors.premiumGold.withValues(alpha: 0.2),
                   blurRadius: 12,
+                  spreadRadius: 1,
+                ),
+              // Glow for nodes with a pending claim — draws admin's attention.
+              if (node.hasPendingClaim)
+                BoxShadow(
+                  color: const Color(0xFFFFA726).withValues(alpha: 0.35),
+                  blurRadius: 14,
                   spreadRadius: 1,
                 ),
             ],
@@ -171,6 +178,11 @@ class TreeNodeWidget extends StatelessWidget {
   }
 
   Color get _cardBorderColor {
+    // Pending identity claim: distinct orange ring so admin can spot the
+    // node at a glance without a notification. Outranks health-color border.
+    if (node.hasPendingClaim) {
+      return const Color(0xFFFFA726); // amber-orange — distinct from health amber
+    }
     if (node.isUser) {
       return AppColors.premiumGold.withValues(alpha: 0.5);
     }

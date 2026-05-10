@@ -385,6 +385,60 @@ class FamilyGraphService {
             ));
           }
         }
+        // Phase δ.fix — backfill orphan aunts/uncles. If a paternal aunt
+        // was added BEFORE the father existed, inferEdges returned an
+        // empty list (no anchor to link to), leaving her with zero edges
+        // in the graph → layout misplaces her. Now that the father is
+        // being added, sweep matching-side aunts/uncles and create the
+        // missing siblingOf edges.
+        final orphanSide = relationshipType == RelationshipType.father
+            ? FamilySide.paternal
+            : FamilySide.maternal;
+        for (final r in existingRelatives) {
+          if ((r.relationshipType != RelationshipType.aunt &&
+                  r.relationshipType != RelationshipType.uncle) ||
+              r.familySide != orphanSide) {
+            continue;
+          }
+          final hasSibling = existingEdges.any((e) =>
+              e.type == EdgeType.siblingOf &&
+              ((e.fromId == r.id && e.toId == newRelativeId) ||
+                  (e.fromId == newRelativeId && e.toId == r.id)));
+          if (!hasSibling) {
+            inferred.add(FamilyEdge.create(
+              userId: userId,
+              fromId: r.id,
+              toId: newRelativeId,
+              type: EdgeType.siblingOf,
+            ));
+          }
+        }
+        // Phase δ.fix.2 — backfill orphan grandparents. If a paternal
+        // grandfather was added BEFORE the father existed, _findParentId
+        // returned null and the grandparent has zero edges. Now that the
+        // father is being added, claim parenthood from each matching-side
+        // grandparent (only with explicit family_side; null-side
+        // grandparents don't get auto-linked since we can't disambiguate
+        // paternal vs maternal).
+        for (final r in existingRelatives) {
+          if ((r.relationshipType != RelationshipType.grandfather &&
+                  r.relationshipType != RelationshipType.grandmother) ||
+              r.familySide != orphanSide) {
+            continue;
+          }
+          final hasEdge = existingEdges.any((e) =>
+              e.type == EdgeType.parentOf &&
+              e.fromId == r.id &&
+              e.toId == newRelativeId);
+          if (!hasEdge) {
+            inferred.add(FamilyEdge.create(
+              userId: userId,
+              fromId: r.id,
+              toId: newRelativeId,
+              type: EdgeType.parentOf,
+            ));
+          }
+        }
         break;
 
       // Siblings: siblingOf edge between sibling and user, plus shared parent edges
@@ -420,6 +474,27 @@ class FamilyGraphService {
             type: EdgeType.parentOf,
           ));
         }
+        // Phase δ.fix.2 — backfill orphan nephews/nieces. If a nephew was
+        // added BEFORE any sibling existed, _findFirstSibling returned null
+        // and the nephew has zero edges. Now that this brother/sister is
+        // being added, claim parenthood for any orphan nephew/niece.
+        // Skip nephews that already have a parent linked (a different
+        // sibling was added before this one).
+        for (final r in existingRelatives) {
+          if (r.relationshipType != RelationshipType.nephew &&
+              r.relationshipType != RelationshipType.niece) {
+            continue;
+          }
+          final hasParent = existingEdges.any((e) =>
+              e.type == EdgeType.parentOf && e.toId == r.id);
+          if (hasParent) continue;
+          inferred.add(FamilyEdge.create(
+            userId: userId,
+            fromId: newRelativeId,
+            toId: r.id,
+            type: EdgeType.parentOf,
+          ));
+        }
         break;
 
       // Children: parentOf edge from user to child
@@ -444,7 +519,10 @@ class FamilyGraphService {
         ));
         break;
 
-      // Grandparents: parentOf edge from grandparent to father/mother
+      // Grandparents: parentOf edge from grandparent to father/mother,
+      // PLUS parentOf edges to any existing aunts/uncles on the same side
+      // (Phase δ.fix backfill — if aunts/uncles were added before this
+      // grandparent existed, they're missing the grandparent→aunt edge).
       case RelationshipType.grandfather:
       case RelationshipType.grandmother:
         final parentId = _findParentId(
@@ -454,16 +532,50 @@ class FamilyGraphService {
           existingEdges: existingEdges,
         );
         if (parentId != null) {
-          inferred.add(FamilyEdge.create(
-            userId: userId,
-            fromId: newRelativeId,
-            toId: parentId,
-            type: EdgeType.parentOf,
-          ));
+          // Dedup against parent-case δ.fix.2 orphan-grandparent backfill.
+          final hasEdge = existingEdges.any((e) =>
+              e.type == EdgeType.parentOf &&
+              e.fromId == newRelativeId &&
+              e.toId == parentId);
+          if (!hasEdge) {
+            inferred.add(FamilyEdge.create(
+              userId: userId,
+              fromId: newRelativeId,
+              toId: parentId,
+              type: EdgeType.parentOf,
+            ));
+          }
+        }
+        // Backfill aunts/uncles on this side (only if side is specified).
+        if (side != null) {
+          for (final r in existingRelatives) {
+            if ((r.relationshipType != RelationshipType.aunt &&
+                    r.relationshipType != RelationshipType.uncle) ||
+                r.familySide != side) {
+              continue;
+            }
+            final hasEdge = existingEdges.any((e) =>
+                e.type == EdgeType.parentOf &&
+                e.fromId == newRelativeId &&
+                e.toId == r.id);
+            if (!hasEdge) {
+              inferred.add(FamilyEdge.create(
+                userId: userId,
+                fromId: newRelativeId,
+                toId: r.id,
+                type: EdgeType.parentOf,
+              ));
+            }
+          }
         }
         break;
 
-      // Uncle/aunt: siblingOf edge between uncle/aunt and father or mother
+      // Uncle/aunt: siblingOf edge between uncle/aunt and father or mother,
+      // PLUS parentOf edges from any existing grandparents on that side.
+      // The grandparent edges are required for the layout to anchor the
+      // uncle/aunt in the grandparents' children row — without them,
+      // [_enrichSiblingEdges] runs too late and the layout falls through
+      // to orphan placement (Phase δ.fix bug).
       case RelationshipType.uncle:
       case RelationshipType.aunt:
         final parentId = _findParentForSide(
@@ -473,11 +585,57 @@ class FamilyGraphService {
           existingEdges: existingEdges,
         );
         if (parentId != null) {
+          // Dedup: in shared-tree generateSharedEdges this loop runs over
+          // every relative; if the parent was processed first and its
+          // δ.fix orphan-aunt backfill already added uncle↔parent siblingOf,
+          // the same edge would be added again here.
+          final hasSibling = existingEdges.any((e) =>
+              e.type == EdgeType.siblingOf &&
+              ((e.fromId == newRelativeId && e.toId == parentId) ||
+                  (e.fromId == parentId && e.toId == newRelativeId)));
+          if (!hasSibling) {
+            inferred.add(FamilyEdge.create(
+              userId: userId,
+              fromId: newRelativeId,
+              toId: parentId,
+              type: EdgeType.siblingOf,
+            ));
+          }
+          // Link to existing grandparents (parents of the matching parent).
+          for (final edge in existingEdges) {
+            if (edge.type == EdgeType.parentOf && edge.toId == parentId) {
+              final hasGpEdge = existingEdges.any((e) =>
+                  e.type == EdgeType.parentOf &&
+                  e.fromId == edge.fromId &&
+                  e.toId == newRelativeId);
+              if (!hasGpEdge) {
+                inferred.add(FamilyEdge.create(
+                  userId: userId,
+                  fromId: edge.fromId,
+                  toId: newRelativeId,
+                  type: EdgeType.parentOf,
+                ));
+              }
+            }
+          }
+        }
+        // Phase δ.fix.2 — backfill orphan cousins. If a cousin was added
+        // BEFORE any uncle/aunt existed, _findFirstUncleOrAunt returned
+        // null and the cousin has zero edges. Now that this uncle/aunt is
+        // being added, claim parenthood for any orphan cousin (one with
+        // no incoming parentOf edge yet). Runs even if parentId is null
+        // (the uncle/aunt itself may be orphan, but cousin is still
+        // strictly more orphan and a child link is the right floor).
+        for (final r in existingRelatives) {
+          if (r.relationshipType != RelationshipType.cousin) continue;
+          final hasParent = existingEdges.any((e) =>
+              e.type == EdgeType.parentOf && e.toId == r.id);
+          if (hasParent) continue;
           inferred.add(FamilyEdge.create(
             userId: userId,
             fromId: newRelativeId,
-            toId: parentId,
-            type: EdgeType.siblingOf,
+            toId: r.id,
+            type: EdgeType.parentOf,
           ));
         }
         break;

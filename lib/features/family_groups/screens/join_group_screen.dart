@@ -157,8 +157,12 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
           debugPrint('Failed to check pending invitations: $e');
         }
 
+        // No matching phone-invitation → drop the joiner into the
+        // identity-claim wizard so they can self-identify against the tree.
+        // (Was: context.go(AppRoutes.familyTree) which left the joiner
+        // unlinked. See 2026-05-08-family-sharing-identity-claim-design.md.)
         if (mounted) {
-          context.go(AppRoutes.familyTree);
+          context.go('${AppRoutes.identityClaim}/${joinedGroup.id}');
         }
       }
     } catch (e) {

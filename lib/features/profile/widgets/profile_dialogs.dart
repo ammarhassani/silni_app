@@ -11,6 +11,8 @@ import '../../../core/services/error_reporter.dart';
 import '../../../shared/providers/data_export_provider.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/data_export_dialog.dart';
+import '../../../shared/widgets/glass_dialog.dart';
+import '../../../shared/widgets/gradient_button.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/providers/subscription_provider.dart';
 import '../../../core/models/subscription_tier.dart';
@@ -24,56 +26,114 @@ void showImageSourceDialog({
 }) {
   showDialog(
     context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        backgroundColor: themeColors.background1.withValues(alpha: 0.95),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        ),
-        title: Text(
-          'اختر مصدر الصورة',
-          style: AppTypography.titleLarge.copyWith(color: Colors.white),
-          textAlign: TextAlign.center,
-        ),
+    builder: (BuildContext dialogContext) {
+      return GlassDialog(
+        icon: Icons.photo_camera_rounded,
+        title: 'اختر مصدر الصورة',
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: Icon(Icons.photo_library, color: themeColors.primary),
-              title: Text(
-                'المعرض',
-                style: AppTypography.bodyMedium.copyWith(color: Colors.white),
-              ),
+            _ImageSourceOption(
+              icon: Icons.photo_library_rounded,
+              label: 'المعرض',
               onTap: () {
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
                 onSourceSelected(ImageSource.gallery);
               },
             ),
-            ListTile(
-              leading: Icon(Icons.camera_alt, color: themeColors.primary),
-              title: Text(
-                'الكاميرا',
-                style: AppTypography.bodyMedium.copyWith(color: Colors.white),
-              ),
+            const SizedBox(height: AppSpacing.sm),
+            _ImageSourceOption(
+              icon: Icons.camera_alt_rounded,
+              label: 'الكاميرا',
               onTap: () {
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
                 onSourceSelected(ImageSource.camera);
               },
             ),
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'إلغاء',
-              style: TextStyle(color: themeColors.primary),
-            ),
+          GlassActionButton(
+            text: 'إلغاء',
+            onPressed: () => Navigator.of(dialogContext).pop(),
           ),
         ],
       );
     },
   );
+}
+
+/// Distinct image-source row with leading squircle icon — replaces stock
+/// ListTile for the gallery/camera picker.
+class _ImageSourceOption extends ConsumerWidget {
+  const _ImageSourceOption({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = Theme.of(context);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.18),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: themeColors.primaryColor.withValues(alpha: 0.22),
+                  border: Border.all(
+                    color: themeColors.primaryColor.withValues(alpha: 0.5),
+                    width: 1.2,
+                  ),
+                ),
+                child: Icon(
+                  icon,
+                  color: themeColors.primaryColor,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTypography.titleMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: Colors.white.withValues(alpha: 0.4),
+                size: 14,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Show export data dialog
@@ -140,51 +200,54 @@ Future<void> showDeleteAccountDialog({
   // Step 1 — warning.
   final continueToStep2 = await showDialog<bool>(
     context: context,
-    builder: (dialogContext) => AlertDialog(
-      backgroundColor: themeColors.background1.withValues(alpha: 0.95),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-      ),
-      title: Text(
-        'حذف الحساب',
-        style: AppTypography.titleLarge.copyWith(color: Colors.white),
-        textAlign: TextAlign.center,
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'هل أنت متأكد من حذف حسابك؟ سيتم حذف جميع بياناتك بشكل نهائي ولا يمكن التراجع عن هذا الإجراء.',
-            style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'ملاحظة: اشتراك صِلْني MAX مرتبط بحساب Apple أو Google عندك، '
-            'وحذف الحساب لا يلغي الاشتراك. لإلغاء الاشتراك افتح إعدادات '
-            'متجر التطبيقات > الاشتراكات.',
-            style: AppTypography.bodySmall.copyWith(
-              color: Colors.amber.withValues(alpha: 0.9),
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dialogContext, false),
-          child: Text(
-            'إلغاء',
-            style: TextStyle(color: themeColors.primary),
+    builder: (dialogContext) => GlassDialog(
+      icon: Icons.warning_amber_rounded,
+      iconAccent: const Color(0xFFD32F2F),
+      title: 'حذف الحساب',
+      subtitle:
+          'هل أنت متأكد من حذف حسابك؟ سيتم حذف جميع بياناتك بشكل نهائي ولا يمكن التراجع عن هذا الإجراء.',
+      content: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: Colors.amber.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          border: Border.all(
+            color: Colors.amber.withValues(alpha: 0.4),
+            width: 1,
           ),
         ),
-        ElevatedButton(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.info_outline_rounded,
+              color: Colors.amber.withValues(alpha: 0.9),
+              size: 20,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                'اشتراك صِلْني MAX مرتبط بحساب Apple أو Google عندك، وحذف الحساب لا يلغي الاشتراك. لإلغاء الاشتراك افتح إعدادات متجر التطبيقات > الاشتراكات.',
+                style: AppTypography.bodySmall.copyWith(
+                  color: Colors.amber.withValues(alpha: 0.95),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        GlassActionButton(
+          text: 'إلغاء',
+          onPressed: () => Navigator.pop(dialogContext, false),
+        ),
+        GradientButton(
+          text: 'متابعة',
+          icon: Icons.arrow_forward_rounded,
           onPressed: () => Navigator.pop(dialogContext, true),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
+          gradient: const LinearGradient(
+            colors: [Color(0xFFD32F2F), Color(0xFF8B1F1F)],
           ),
-          child: const Text('متابعة'),
         ),
       ],
     ),
@@ -254,6 +317,20 @@ class _DeleteAccountConfirmDialogState
   bool _isVerifying = false;
   String? _inlineError;
 
+  /// True when the signed-in user has a password to verify against (i.e.
+  /// they signed up via email + password). Apple and Google sign-in users
+  /// have no password — for them, the typed-word confirmation is the only
+  /// re-auth step. App Store 5.1.1(v) requires deletion be available; the
+  /// two-step dialog (warning → typed "حذف") satisfies that on its own.
+  late final bool _requiresPassword = _detectRequiresPassword();
+
+  bool _detectRequiresPassword() {
+    final user = SupabaseConfig.client.auth.currentUser;
+    if (user == null) return true; // fail closed — show password
+    final provider = user.appMetadata['provider'] as String?;
+    return provider == null || provider == 'email';
+  }
+
   @override
   void dispose() {
     _confirmController.dispose();
@@ -261,12 +338,21 @@ class _DeleteAccountConfirmDialogState
     super.dispose();
   }
 
-  bool get _canSubmit =>
-      _confirmController.text.trim() == _confirmWord &&
-      _passwordController.text.isNotEmpty &&
-      !_isVerifying;
+  bool get _canSubmit {
+    final wordOk = _confirmController.text.trim() == _confirmWord;
+    if (_isVerifying) return false;
+    if (!_requiresPassword) return wordOk;
+    return wordOk && _passwordController.text.isNotEmpty;
+  }
 
   Future<void> _onSubmit() async {
+    // Social-auth users (Apple, Google) have no password to verify. The
+    // typed-word confirmation is the sole re-auth gate for them.
+    if (!_requiresPassword) {
+      Navigator.of(context).pop(true);
+      return;
+    }
+
     final email = SupabaseConfig.client.auth.currentUser?.email;
     if (email == null || email.isEmpty) {
       setState(() => _inlineError =
@@ -302,105 +388,155 @@ class _DeleteAccountConfirmDialogState
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: widget.themeColors.background1.withValues(alpha: 0.95),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-      ),
-      title: Text(
-        'تأكيد حذف الحساب',
-        style: AppTypography.titleLarge.copyWith(color: Colors.white),
-        textAlign: TextAlign.center,
-      ),
+    return GlassDialog(
+      icon: Icons.delete_forever_rounded,
+      iconAccent: const Color(0xFFD32F2F),
+      title: 'تأكيد حذف الحساب',
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'اكتب كلمة "$_confirmWord" لتأكيد طلبك:',
-            style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+            style: AppTypography.bodyMedium.copyWith(
+              color: Colors.white.withValues(alpha: 0.85),
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          TextField(
+          _GlassTextField(
             controller: _confirmController,
             onChanged: (_) => setState(() {}),
+            hintText: _confirmWord,
             textDirection: TextDirection.rtl,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: _confirmWord,
-              hintStyle:
-                  TextStyle(color: Colors.white.withValues(alpha: 0.4)),
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.08),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                borderSide: BorderSide.none,
+          ),
+          if (_requiresPassword) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'أدخل كلمة المرور لتأكيد هويتك:',
+              style: AppTypography.bodyMedium.copyWith(
+                color: Colors.white.withValues(alpha: 0.85),
               ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            'أدخل كلمة المرور لتأكيد هويتك:',
-            style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          TextField(
-            controller: _passwordController,
-            onChanged: (_) => setState(() {}),
-            obscureText: true,
-            textDirection: TextDirection.ltr,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
+            const SizedBox(height: AppSpacing.sm),
+            _GlassTextField(
+              controller: _passwordController,
+              onChanged: (_) => setState(() {}),
               hintText: 'كلمة المرور',
-              hintStyle:
-                  TextStyle(color: Colors.white.withValues(alpha: 0.4)),
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.08),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                borderSide: BorderSide.none,
-              ),
+              obscureText: true,
+              textDirection: TextDirection.ltr,
             ),
-          ),
+          ],
           if (_inlineError != null) ...[
             const SizedBox(height: AppSpacing.sm),
-            Text(
-              _inlineError!,
-              style: AppTypography.bodySmall.copyWith(color: Colors.red[200]),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD32F2F).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                border: Border.all(
+                  color: const Color(0xFFD32F2F).withValues(alpha: 0.5),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    color: Color(0xFFFFAFA3),
+                    size: 18,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      _inlineError!,
+                      style: AppTypography.bodySmall.copyWith(
+                        color: const Color(0xFFFFAFA3),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ],
       ),
       actions: [
-        TextButton(
+        GlassActionButton(
+          text: 'إلغاء',
           onPressed: _isVerifying
-              ? null
+              ? () {}
               : () => Navigator.of(context).pop(false),
-          child: Text(
-            'إلغاء',
-            style: TextStyle(color: widget.themeColors.primary),
-          ),
         ),
-        ElevatedButton(
-          onPressed: _canSubmit ? _onSubmit : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
-            disabledBackgroundColor: Colors.red.withValues(alpha: 0.3),
-            disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
+        GradientButton(
+          text: 'احذف الحساب',
+          icon: Icons.delete_forever_rounded,
+          isLoading: _isVerifying,
+          enabled: _canSubmit,
+          onPressed: _canSubmit ? _onSubmit : () {},
+          gradient: const LinearGradient(
+            colors: [Color(0xFFD32F2F), Color(0xFF8B1F1F)],
           ),
-          child: _isVerifying
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Text('احذف الحساب'),
         ),
       ],
+    );
+  }
+}
+
+/// Compact glass-styled TextField used inside delete-account dialog.
+class _GlassTextField extends StatelessWidget {
+  const _GlassTextField({
+    required this.controller,
+    required this.hintText,
+    required this.onChanged,
+    this.obscureText = false,
+    this.textDirection,
+  });
+
+  final TextEditingController controller;
+  final String hintText;
+  final ValueChanged<String> onChanged;
+  final bool obscureText;
+  final TextDirection? textDirection;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      obscureText: obscureText,
+      textDirection: textDirection,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4)),
+        filled: true,
+        fillColor: Colors.white.withValues(alpha: 0.1),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          borderSide: BorderSide(
+            color: Colors.white.withValues(alpha: 0.25),
+            width: 1,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          borderSide: BorderSide(
+            color: Colors.white.withValues(alpha: 0.25),
+            width: 1,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          borderSide: BorderSide(
+            color: Colors.white.withValues(alpha: 0.6),
+            width: 1.5,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -6,6 +6,7 @@ import 'package:purchases_flutter/purchases_flutter.dart' as rc;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../shared/widgets/gradient_button.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/models/subscription_tier.dart';
@@ -670,33 +671,28 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
-      child: ElevatedButton(
-        onPressed: _isPurchasing || isLoading ? null : () => _purchase(offerings),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.premiumGold,
-          foregroundColor: Colors.black,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          disabledBackgroundColor: AppColors.premiumGold.withValues(alpha: 0.5),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.sm,
+      ),
+      child: GradientButton(
+        text: buttonText,
+        icon: isTrialEligible ? Icons.bolt_rounded : Icons.workspace_premium_rounded,
+        isLoading: _isPurchasing,
+        enabled: !_isPurchasing && !isLoading,
+        dramatic: true,
+        enableShimmer: true,
+        onPressed: () => _purchase(offerings),
+        textColor: Colors.black87,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.premiumGoldLight,
+            AppColors.premiumGold,
+            AppColors.premiumGoldDark,
+          ],
         ),
-        child: _isPurchasing
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation(Colors.black),
-                ),
-              )
-            : Text(
-                buttonText,
-                style: AppTypography.titleMedium.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
       ),
     );
   }

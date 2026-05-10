@@ -24,6 +24,7 @@ import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/glass_pill_title.dart';
 import '../../../shared/widgets/gradient_button.dart';
+import '../../../shared/widgets/glass_dialog.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../core/providers/cache_provider.dart';
 import '../../../shared/services/supabase_storage_service.dart';
@@ -754,30 +755,22 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
     final themeColors = ref.read(themeColorsProvider);
     final result = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: themeColors.background1,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Text(
-          'هل تريد الخروج بدون حفظ؟',
-          textAlign: TextAlign.center,
-        ),
-        content: const Text(
-          'ستفقد المعلومات التي أدخلتها.',
-          textAlign: TextAlign.center,
-        ),
+      builder: (ctx) => GlassDialog(
+        icon: Icons.edit_off_rounded,
+        iconAccent: themeColors.statusWarning,
+        title: 'هل تريد الخروج بدون حفظ؟',
+        subtitle: 'ستفقد المعلومات التي أدخلتها.',
+        content: const SizedBox.shrink(),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('متابعة التعديل'),
-          ),
-          TextButton(
+          GlassActionButton(
+            text: 'تجاهل',
+            isDestructive: true,
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(
-              'تجاهل',
-              style: TextStyle(color: themeColors.statusError),
-            ),
+          ),
+          GradientButton(
+            text: 'متابعة التعديل',
+            icon: Icons.edit_rounded,
+            onPressed: () => Navigator.of(ctx).pop(false),
           ),
         ],
       ),

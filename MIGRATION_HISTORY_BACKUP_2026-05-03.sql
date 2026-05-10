@@ -1,0 +1,144 @@
+-- Migration history backup — Phase δ.B pre-reconciliation snapshot
+-- Captured: 2026-05-03
+-- Source: supabase_migrations.schema_migrations on bapwklwxmwhpucutyras
+--
+-- This is a manifest-only backup (version + name). Full SQL bodies live
+-- in `supabase_migrations.schema_migrations.statements` on the remote DB
+-- and can be re-queried if ever needed for forensic recovery:
+--
+--   SELECT version, name, statements FROM supabase_migrations.schema_migrations
+--   WHERE version = '<version>' ORDER BY version;
+--
+-- Captured stats:
+--   Total migrations: 195
+--   Total statements: 807
+--   Total SQL bytes:  ~350 KB
+--
+-- Why this file exists: γ.2 + δ.A applied 38 individual migrations directly
+-- via MCP `apply_migration` (per-row pattern after bulk-apply timeouts on
+-- Arabic content). The local `supabase/migrations/` directory does NOT
+-- contain these per-row files. δ.B reconciles by `supabase db pull`,
+-- regenerating local migrations from the current remote schema. Before
+-- that, this file captures what the migration history looked like.
+--
+-- Per CTO Approach A decision (2026-05-03): the audit trail for γ.2
+-- specifically is preserved in:
+--   - PHASE_GAMMA_2_TRACK_1_2_REPORT.md (Track 1's 9 rows)
+--   - PHASE_GAMMA_2_TRACK_3_REPORT.md (Track 3's 23 rows)
+--   - this file (raw migration history)
+-- Future contributors who need γ.2 row-by-row history consult the reports,
+-- not the migrations directory.
+
+-- ============================================================
+-- Pre-engagement migration history (predates local migrations dir)
+-- ============================================================
+-- These remote rows have NO local files. They predate when the
+-- engineer started maintaining `supabase/migrations/`. Approximately
+-- 75 entries from 2025-01-28 through 2026-02-06 fall in this category.
+-- They are presumed to represent valid early-development migrations
+-- applied directly to the DB before the migration-files-in-repo
+-- convention was established.
+
+-- Sample (truncated; full list is too long for a comment block):
+--   20250128100000  fix_profiles_sync_production
+--   20251215        create_storage_buckets
+--   20251220        add_last_streak_date
+--   20251221        redesign_streak_system
+--   20251222        add_ai_fields_to_relatives
+--   20251227100000  (unnamed)
+--   ... ~70 more unnamed rows from late-2025 / early-2026 ...
+--   20260111000000  sync_schema_to_staging
+--   20260111100000  fix_subscription_status_check
+--   20260111110000  reseed_hadith_quotes
+--   20260111120000  reseed_all_admin_tables
+--   20260111130000  restore_proper_themes
+--   ... etc through 20260206120000 family_sharing_hardening ...
+
+-- ============================================================
+-- Local-tracked migrations (Feb 2026 onward, version-mismatched)
+-- ============================================================
+-- These exist BOTH in remote schema_migrations AND in local
+-- supabase/migrations/. Some have timestamp mismatches between local
+-- file name and remote version: e.g., local file
+-- `20260428500000_drop_gamification_stack.sql` matches remote version
+-- `20260427215557 drop_gamification_stack`. Cause: the remote was
+-- applied with one timestamp; the local file was created later with
+-- a different timestamp. Content is the same.
+--
+-- Local-known timestamp mismatches:
+--   local 20260428500000_drop_gamification_stack.sql        ↔ remote 20260427215557 drop_gamification_stack
+--   local 20260428600000_drop_dead_user_columns.sql         ↔ remote 20260428122913 drop_dead_user_columns
+--   local 20260428610000_add_reminder_suppression.sql       ↔ remote 20260428122926 add_reminder_suppression
+--   local 20260428620000_self_node_on_signup.sql            ↔ remote 20260428122948 self_node_on_signup
+--   local 20260428630000_setup_complete_marker.sql          ↔ remote 20260428123005 setup_complete_marker
+--   local 20260428640000_seed_onboarding_ai_memory_rpc.sql  ↔ remote 20260428123018 seed_onboarding_ai_memory_rpc
+--   (no local file)                                          ↔ remote 20260428161706 onboarding_wizard_columns_and_seed
+-- Note: local timestamp `20260503100000_seed_admin_ai_identity.sql` ↔ remote `20260503095833 seed_admin_ai_identity`
+-- Note: local `20260503200000_seed_gamma_2_strict_match.sql` is a SINGLE-FILE
+--       canonical migration for γ.2 Track 1's 9 rows. The remote stores them
+--       as 10 separate rows (9 row-writes + self-verify) under different version
+--       numbers (20260503110011 through 20260503111017). Different shape, same
+--       end state.
+
+-- ============================================================
+-- γ.2 + δ.A per-row migrations (remote-only, no local files)
+-- ============================================================
+-- These 38 entries were applied via MCP per-row to work around bulk-
+-- apply timeouts on Arabic content. They have no local file equivalents.
+
+-- 20260503095833  seed_admin_ai_identity                                   (γ.2-prep)
+-- 20260503110011  pre_flight_test_warm_tone                                (γ.2 Track 1 pre-flight)
+-- 20260503110043  pre_flight_revert_warm_tone                              (γ.2 Track 1 pre-flight)
+-- 20260503110656  seed_gamma_2_row_1_home_greeting                         (γ.2 Track 1)
+-- 20260503110725  seed_gamma_2_row_2_general_mode                          (γ.2 Track 1)
+-- 20260503110730  seed_gamma_2_row_3_ramadan                               (γ.2 Track 1)
+-- 20260503110748  seed_gamma_2_row_4_newborn                               (γ.2 Track 1)
+-- 20260503110752  seed_gamma_2_row_5_recovery                              (γ.2 Track 1)
+-- 20260503110802  seed_gamma_2_row_6_graduation                            (γ.2 Track 1)
+-- 20260503110835  seed_gamma_2_row_7_apology_scenario                      (γ.2 Track 1)
+-- 20260503110842  seed_gamma_2_row_8_warm_tone                             (γ.2 Track 1)
+-- 20260503110851  seed_gamma_2_row_9_formal_tone                           (γ.2 Track 1)
+-- 20260503111017  seed_gamma_2_self_verify                                 (γ.2 Track 1)
+-- 20260503113903  gamma_2_t3_personality_base                              (γ.2 Track 3)
+-- 20260503113925  gamma_2_t3_personality_style                             (γ.2 Track 3)
+-- 20260503113949  gamma_2_t3_personality_precision_to_interaction_patterns (γ.2 Track 3)
+-- 20260503114101  gamma_2_t3_personality_values                            (γ.2 Track 3)
+-- 20260503114123  gamma_2_t3_personality_emotional_to_meta_behavior        (γ.2 Track 3)
+-- 20260503114156  gamma_2_t3_mode_relationship                             (γ.2 Track 3)
+-- 20260503114214  gamma_2_t3_mode_conflict                                 (γ.2 Track 3)
+-- 20260503114228  gamma_2_t3_mode_communication                            (γ.2 Track 3)
+-- 20260503114330  gamma_2_t3_occasion_condolence                           (γ.2 Track 3)
+-- 20260503114333  gamma_2_t3_occasion_wedding                              (γ.2 Track 3)
+-- 20260503114345  gamma_2_t3_occasion_eid                                  (γ.2 Track 3)
+-- 20260503114409  gamma_2_t3_occasion_birthday                             (γ.2 Track 3)
+-- 20260503114418  gamma_2_t3_occasion_checkin                              (γ.2 Track 3)
+-- 20260503114429  gamma_2_t3_occasion_apology                              (γ.2 Track 3)
+-- 20260503114449  gamma_2_t3_occasion_thanks                               (γ.2 Track 3)
+-- 20260503114455  gamma_2_t3_occasion_missing                              (γ.2 Track 3)
+-- 20260503114521  gamma_2_t3_scenario_reconnect                            (γ.2 Track 3)
+-- 20260503114530  gamma_2_t3_scenario_condolence                           (γ.2 Track 3)
+-- 20260503114539  gamma_2_t3_scenario_congratulate                         (γ.2 Track 3)
+-- 20260503114608  gamma_2_t3_scenario_thanks                               (γ.2 Track 3)
+-- 20260503114619  gamma_2_t3_scenario_checkin                              (γ.2 Track 3)
+-- 20260503114649  gamma_2_t3_tone_humorous                                 (γ.2 Track 3)
+-- 20260503114701  gamma_2_t3_tone_religious                                (γ.2 Track 3)
+-- 20260503114720  gamma_2_t3_self_verify                                   (γ.2 Track 3)
+-- 20260503120551  phase_delta_rename_ai_name_en_to_anees                   (δ.A Task 1)
+-- 20260503120838  phase_delta_fix_phone_invite_rpc_column_names            (δ.A Task 5)
+
+-- ============================================================
+-- Recovery procedure
+-- ============================================================
+-- If something goes wrong during δ.B reconciliation and you need to
+-- restore migration history visibility, the source of truth is the
+-- remote `supabase_migrations.schema_migrations` table. Query:
+--
+--   SELECT version, name, executed_at, statements
+--   FROM supabase_migrations.schema_migrations
+--   ORDER BY version;
+--
+-- This file documents the EXPECTED pre-δ.B state. After δ.B's
+-- `supabase db pull`, the local migrations dir will look very
+-- different — that's the whole point. If the remote `schema_migrations`
+-- table itself is corrupted or modified, restore by re-applying the
+-- migration files in the local dir + this file's manifest.

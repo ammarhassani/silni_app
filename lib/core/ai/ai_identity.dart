@@ -18,7 +18,7 @@ class AIIdentity {
   static const String defaultName = 'أنيس';
 
   /// Default AI name in English
-  static const String defaultNameEn = 'Wasel';
+  static const String defaultNameEn = 'Anees';
 
   /// Default AI role description in Arabic
   static const String defaultRoleAr =

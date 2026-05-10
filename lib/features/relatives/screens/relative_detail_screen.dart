@@ -10,6 +10,8 @@ import '../../../core/providers/cache_provider.dart';
 import '../../../core/providers/relative_streak_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/voice_note_button.dart';
+import '../../../shared/widgets/glass_dialog.dart';
+import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/services/supabase_storage_service.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../../shared/models/interaction_model.dart';
@@ -21,6 +23,7 @@ import '../widgets/detail/widgets.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/utils/relationship_label_helper.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
+import '../../family_groups/widgets/send_invitation_card.dart';
 
 /// Provider for watching a single relative (cache-first)
 final relativeDetailProvider =
@@ -127,6 +130,16 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                           relative,
                         ),
                       ),
+                    ),
+                  ),
+
+                  // Phone-OTP fast-path admin CTA — invite this specific
+                  // tree node directly. Self-hides for non-admins,
+                  // self-claimed nodes, and non-group relatives.
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      child: SendInvitationCard(relative: relative),
                     ),
                   ),
 
@@ -238,20 +251,10 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       useRootNavigator: true,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: themeColors.background1,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        icon: Icon(iconData, color: buttonColor, size: 32),
-        title: Text(
-          title,
-          style: AppTypography.titleLarge.copyWith(
-            color: themeColors.textOnGradient,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-        ),
+      builder: (dialogContext) => GlassDialog(
+        icon: iconData,
+        iconAccent: buttonColor,
+        title: title,
         content: StatefulBuilder(
           builder: (context, setDialogState) {
             return SingleChildScrollView(
@@ -266,18 +269,40 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
                         color: themeColors.textOnGradient
                             .withValues(alpha: 0.5),
                       ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
                       filled: true,
                       fillColor:
-                          themeColors.surface.withValues(alpha: 0.3),
+                          Colors.white.withValues(alpha: 0.1),
+                      contentPadding: const EdgeInsets.all(AppSpacing.md),
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusLg),
+                        borderSide: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          width: 1,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusLg),
+                        borderSide: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          width: 1,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusLg),
+                        borderSide: BorderSide(
+                          color: buttonColor.withValues(alpha: 0.7),
+                          width: 1.5,
+                        ),
+                      ),
                     ),
                     style: TextStyle(color: themeColors.textOnGradient),
                     maxLines: 3,
                     textDirection: TextDirection.rtl,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   VoiceNoteRecorder(
                     idleColor: themeColors.textOnGradient
                         .withValues(alpha: 0.7),
@@ -292,26 +317,16 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
           },
         ),
         actions: [
-          TextButton(
+          GlassActionButton(
+            text: 'إلغاء',
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(
-              'إلغاء',
-              style: AppTypography.labelLarge.copyWith(
-                color: themeColors.textOnGradient.withValues(alpha: 0.7),
-              ),
-            ),
           ),
-          ElevatedButton(
+          GradientButton(
+            text: 'تسجيل',
+            icon: Icons.check_rounded,
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: buttonColor,
-            ),
-            child: Text(
-              'تسجيل',
-              style: AppTypography.labelLarge.copyWith(
-                color: themeColors.onPrimary,
-                fontWeight: FontWeight.bold,
-              ),
+            gradient: LinearGradient(
+              colors: [buttonColor, buttonColor.withValues(alpha: 0.7)],
             ),
           ),
         ],
@@ -477,91 +492,101 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
   }
 
   Future<void> _showDeleteConfirmation(Relative relative) async {
-    final themeColors = ref.read(themeColorsProvider);
-
     final confirmed = await showDialog<bool>(
       context: context,
       useRootNavigator: true,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: themeColors.background1,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        icon: Icon(Icons.warning_rounded, color: themeColors.statusError, size: 32),
-        title: Text(
-          'تأكيد الحذف',
-          style: AppTypography.titleLarge.copyWith(
-            color: themeColors.textOnGradient,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'هل أنت متأكد من حذف هذا القريب؟',
-                style: AppTypography.bodyLarge.copyWith(color: themeColors.textOnGradient),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'اسم: ${relative.fullName}',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: themeColors.textOnGradient.withValues(alpha: 0.7),
-                  fontWeight: FontWeight.bold,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'صلة القرابة: ${getSideAwareLabel(relative.relationshipType, relative.familySide, relative.gender)}',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: themeColors.textOnGradient.withValues(alpha: 0.7),
-                  fontWeight: FontWeight.bold,
+      builder: (dialogContext) => GlassDialog(
+        icon: Icons.warning_amber_rounded,
+        iconAccent: const Color(0xFFD32F2F),
+        title: 'تأكيد الحذف',
+        subtitle: 'هل أنت متأكد من حذف هذا القريب؟',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.06),
+                borderRadius:
+                    BorderRadius.circular(AppSpacing.radiusMd),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  width: 1,
                 ),
               ),
-              const SizedBox(height: AppSpacing.md),
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: themeColors.statusError.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  border: Border.all(color: themeColors.statusError.withValues(alpha: 0.3)),
-                ),
-                child: Text(
-                  'هذا الإجراء لا يمكن التراجع عنه',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: themeColors.statusError,
-                    fontWeight: FontWeight.bold,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    relative.fullName,
+                    style: AppTypography.titleMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  textAlign: TextAlign.center,
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    getSideAwareLabel(
+                      relative.relationshipType,
+                      relative.familySide,
+                      relative.gender,
+                    ),
+                    style: AppTypography.bodySmall.copyWith(
+                      color: Colors.white.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD32F2F).withValues(alpha: 0.18),
+                borderRadius:
+                    BorderRadius.circular(AppSpacing.radiusMd),
+                border: Border.all(
+                  color: const Color(0xFFD32F2F).withValues(alpha: 0.5),
+                  width: 1,
                 ),
               ),
-            ],
-          ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    color: Color(0xFFFFAFA3),
+                    size: 18,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      'هذا الإجراء لا يمكن التراجع عنه',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: const Color(0xFFFFAFA3),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
-          TextButton(
+          GlassActionButton(
+            text: 'إلغاء',
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(
-              'إلغاء',
-              style: AppTypography.labelLarge.copyWith(color: themeColors.textOnGradient.withValues(alpha: 0.7)),
-            ),
           ),
-          ElevatedButton(
+          GradientButton(
+            text: 'حذف',
+            icon: Icons.delete_forever_rounded,
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: themeColors.statusError,
-            ),
-            child: Text(
-              'حذف',
-              style: AppTypography.labelLarge.copyWith(
-                color: themeColors.onPrimary,
-                fontWeight: FontWeight.bold,
-              ),
+            gradient: const LinearGradient(
+              colors: [Color(0xFFD32F2F), Color(0xFF8B1F1F)],
             ),
           ),
         ],

@@ -93,45 +93,50 @@ class DeepSeekAIService implements AIService {
           return;
         }
 
-        // Parse SSE stream
-        String buffer = '';
-        await for (final bytes in streamedResponse.stream) {
-          buffer += utf8.decode(bytes);
+        // Parse SSE stream.
+        //
+        // Critical: `utf8.decoder.bind(stream)` accumulates bytes across
+        // chunk boundaries before decoding, so a multi-byte UTF-8 sequence
+        // (Arabic characters are 2–3 bytes each) sliced by a TCP packet
+        // boundary doesn't blow up the parser. The naïve `utf8.decode(bytes)`
+        // per-chunk variant throws `FormatException: Unfinished UTF-8
+        // octet sequence` mid-stream — that produced the user-visible
+        // "حدث خطأ غير متوقع" within the first few seconds of any reply
+        // containing Arabic content (Phase δ.fix.4).
+        //
+        // `LineSplitter` then yields complete `\n`-terminated lines, so
+        // we don't need to manage a manual buffer.
+        await for (final line in streamedResponse.stream
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())) {
+          final trimmed = line.trim();
+          if (trimmed.isEmpty || trimmed.startsWith(':')) continue;
 
-          // Process complete SSE lines
-          while (buffer.contains('\n')) {
-            final newlineIndex = buffer.indexOf('\n');
-            final line = buffer.substring(0, newlineIndex).trim();
-            buffer = buffer.substring(newlineIndex + 1);
+          if (trimmed.startsWith('data: ')) {
+            final data = trimmed.substring(6);
 
-            if (line.isEmpty || line.startsWith(':')) continue;
+            if (data == '[DONE]') {
+              yield AIStreamChunk(content: '', isDone: true);
+              return;
+            }
 
-            if (line.startsWith('data: ')) {
-              final data = line.substring(6);
-
-              if (data == '[DONE]') {
-                yield AIStreamChunk(content: '', isDone: true);
+            try {
+              final parsed = jsonDecode(data) as Map<String, dynamic>;
+              if (parsed.containsKey('error')) {
+                yield AIStreamChunk(
+                  content: '',
+                  isDone: true,
+                  error: parsed['error'] as String? ??
+                      'حدث خطأ غير متوقع.',
+                );
                 return;
               }
-
-              try {
-                final parsed = jsonDecode(data) as Map<String, dynamic>;
-                if (parsed.containsKey('error')) {
-                  yield AIStreamChunk(
-                    content: '',
-                    isDone: true,
-                    error: parsed['error'] as String? ??
-                        'حدث خطأ غير متوقع.',
-                  );
-                  return;
-                }
-                final content = parsed['content'] as String?;
-                if (content != null && content.isNotEmpty) {
-                  yield AIStreamChunk(content: content);
-                }
-              } catch (_) {
-                // Skip malformed JSON chunks
+              final content = parsed['content'] as String?;
+              if (content != null && content.isNotEmpty) {
+                yield AIStreamChunk(content: content);
               }
+            } catch (_) {
+              // Skip malformed JSON chunks
             }
           }
         }

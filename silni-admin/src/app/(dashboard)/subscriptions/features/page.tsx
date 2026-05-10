@@ -361,7 +361,7 @@ export default function FeaturesPage() {
                   onChange={(e) =>
                     setFormData((f) => ({ ...f, description_ar: e.target.value }))
                   }
-                  placeholder="تحدث مع واصل للحصول على نصائح..."
+                  placeholder="تحدث مع أنيس للحصول على نصائح..."
                   rows={2}
                 />
               </div>
@@ -372,7 +372,7 @@ export default function FeaturesPage() {
                   onChange={(e) =>
                     setFormData((f) => ({ ...f, description_en: e.target.value }))
                   }
-                  placeholder="Chat with Wasel for advice..."
+                  placeholder="Chat with Anees for advice..."
                   rows={2}
                   dir="ltr"
                 />
