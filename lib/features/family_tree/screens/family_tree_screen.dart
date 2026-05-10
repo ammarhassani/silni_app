@@ -461,11 +461,18 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                               }
                             });
                           }
+                          // Unlinked-member banner: when the user is in a
+                          // group but hasn't claimed a tree node yet, surface
+                          // the identity-claim wizard CTA at the top so they
+                          // can re-enter it without going through the public
+                          // join link again.
+                          final isUnlinkedMember = groupInfo != null &&
+                              groupInfo.nodeId == null;
                           return Column(
                             children: [
-                              // Banner removed — duplicated the header's
-                              // group_add_rounded icon, which already prompts
-                              // users without a group. One affordance is enough.
+                              if (isUnlinkedMember)
+                                _buildUnlinkedMemberBanner(
+                                    context, groupInfo.groupId),
                               Expanded(
                                 child: _buildTreeContent(
                                   context,
@@ -1544,6 +1551,72 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   // ---------------------------------------------------------------------------
   // Empty / Error states
   // ---------------------------------------------------------------------------
+
+  /// Banner surfaced at the top of the family-tree screen when the user
+  /// is a group member but their `relative_id_in_tree` is null — i.e.
+  /// they joined via the invite link but never finished the wizard, OR
+  /// their previous claim was rejected/cancelled. Without this CTA, an
+  /// unlinked member has no in-app path back into the wizard.
+  Widget _buildUnlinkedMemberBanner(BuildContext context, String groupId) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppSpacing.md),
+          onTap: () => context.push('${AppRoutes.identityClaim}/$groupId'),
+          child: Ink(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppSpacing.md),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.30),
+                width: 1.2,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.account_tree_rounded, color: Colors.white),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'حدد مكانك في الشجرة',
+                          style: AppTypography.titleSmall.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          'لم يتم تحديد مكانك بعد — اضغط للبدء',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: Colors.white.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_left_rounded,
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildError([Object? error]) {
     return Center(
