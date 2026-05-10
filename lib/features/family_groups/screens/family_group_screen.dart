@@ -755,6 +755,21 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
+                      // Status sub-line: linked nodes get nothing; unlinked
+                      // members get a "hasn't picked their spot yet" hint so
+                      // admin can tell apart approved members from joiners
+                      // who are still mid-wizard or awaiting approval.
+                      if (member.relativeIdInTree == null && !member.isAdmin)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            'لم يُحدِّد مكانه في الشجرة بعد',
+                            style: AppTypography.labelSmall.copyWith(
+                              color:
+                                  themeColors.onSurface.withValues(alpha: 0.55),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -767,6 +782,18 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
                       size: AppSpacing.iconSm,
                       color: themeColors.onSurface,
                       semanticLabel: 'مرتبط بالشجرة',
+                    ),
+                  )
+                else if (!member.isAdmin)
+                  // Unlinked-member badge — clearer than the absence of the
+                  // verified mark
+                  Padding(
+                    padding: const EdgeInsets.only(left: AppSpacing.xs),
+                    child: Icon(
+                      Icons.help_outline_rounded,
+                      size: AppSpacing.iconSm,
+                      color: themeColors.onSurface.withValues(alpha: 0.55),
+                      semanticLabel: 'لم يُحدِّد مكانه',
                     ),
                   ),
                 // Role badge
