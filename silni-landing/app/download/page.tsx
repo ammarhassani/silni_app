@@ -4,7 +4,8 @@ import { useEffect } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 
-const APP_STORE_URL = "https://apps.apple.com/app/id6738029498";
+const APP_STORE_URL =
+  "https://apps.apple.com/sa/app/%D8%B5%D9%84%D9%86%D9%8A/id6756042988";
 const PLAY_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.silni.app";
 
