@@ -37,6 +37,7 @@ class _AdminReviewClaimScreenState
     extends ConsumerState<AdminReviewClaimScreen> {
   bool _isWorking = false;
   NodeClaim? _claim;
+  String? _loadError;
 
   @override
   void initState() {
@@ -45,37 +46,29 @@ class _AdminReviewClaimScreenState
   }
 
   Future<void> _loadClaim() async {
-    // The current API only exposes a list of pending claims per group;
-    // we look up by ID by scanning the joiner's "my pending" view first
-    // (works for self-cancellation flow) and falling back to the group
-    // queue via Riverpod when admin opens this from a notification.
-    // For v1, we accept that the screen needs a groupId override or an
-    // initial round-trip. The route is reached in two ways:
-    //   - admin queue → already has claim in memory (could pass via extra)
-    //   - push notification → only has claim_id
-    // We resolve via a query on node_claims directly with RLS handling.
+    // Single-RPC lookup gated on (claimant OR group admin) — works for
+    // every entry point: admin tap from PendingClaimsCard, admin tap on
+    // unlinked-member tile, joiner viewing their own claim status, deep
+    // link from a future push notification.
     try {
       final svc = ref.read(nodeClaimServiceProvider);
-      // Try: it's one of MY pending claims (joiner-self-cancel path).
-      final mine = await svc.getMyPendingClaims();
-      final found = mine.where((c) => c.id == widget.claimId).toList();
-      if (found.isNotEmpty) {
-        if (mounted) setState(() => _claim = found.first);
-        return;
+      final claim = await svc.getClaimById(widget.claimId);
+      if (mounted) {
+        setState(() {
+          _claim = claim;
+          _loadError = null;
+        });
       }
-    } catch (_) {/* fall through */}
-
-    // Otherwise: fetch via group queue. Need to know the group_id; without
-    // it we can't query. For now show an error and let the caller pass
-    // groupId via extra. Most production callers should use the admin
-    // queue (which provides the full claim object via Riverpod) — this
-    // direct-load fallback exists only for notification deep links.
-    if (mounted) {
-      UIHelpers.showSnackBar(
-        context,
-        'تعذّر تحميل الطلب — افتحه من قائمة الدعوات',
-        isError: true,
-      );
+    } catch (e) {
+      debugPrint('[AdminReviewClaim] _loadClaim ✗ $e');
+      if (mounted) {
+        setState(() => _loadError = e.toString());
+        UIHelpers.showSnackBar(
+          context,
+          'تعذّر تحميل الطلب: $e',
+          isError: true,
+        );
+      }
     }
   }
 
@@ -88,14 +81,74 @@ class _AdminReviewClaimScreenState
         children: [
           const GradientBackground(animated: true, child: SizedBox.expand()),
           SafeArea(
-            child: claim == null
-                ? Center(
-                    child: CircularProgressIndicator(
-                        color: themeColors.onSurface),
-                  )
-                : _buildContent(themeColors, claim),
+            child: _loadError != null
+                ? _buildLoadError(themeColors)
+                : claim == null
+                    ? Center(
+                        child: CircularProgressIndicator(
+                            color: themeColors.onSurface),
+                      )
+                    : _buildContent(themeColors, claim),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLoadError(ThemeColors themeColors) {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Center(
+        child: GlassCard(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline_rounded,
+                  size: AppSpacing.iconXl, color: themeColors.onSurface),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'تعذّر تحميل الطلب',
+                style: AppTypography.titleMedium
+                    .copyWith(color: themeColors.onSurface),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SelectableText(
+                _loadError ?? '',
+                style: AppTypography.bodySmall.copyWith(
+                  color: themeColors.onSurface.withValues(alpha: 0.7),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      setState(() => _loadError = null);
+                      _loadClaim();
+                    },
+                    icon: Icon(Icons.refresh_rounded,
+                        color: themeColors.onSurface),
+                    label: Text('إعادة المحاولة',
+                        style: AppTypography.bodyLarge
+                            .copyWith(color: themeColors.onSurface)),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  TextButton(
+                    onPressed: () => context.pop(),
+                    child: Text('رجوع',
+                        style: AppTypography.bodyLarge.copyWith(
+                          color: themeColors.onSurface
+                              .withValues(alpha: 0.7),
+                        )),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

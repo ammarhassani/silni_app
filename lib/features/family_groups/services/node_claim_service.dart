@@ -66,6 +66,17 @@ class NodeClaimService {
     return NodeClaim.fromJson(result as Map<String, dynamic>);
   }
 
+  /// Look up a single claim by id. Permission gated server-side:
+  /// caller must be the claimant OR an admin of the claim's group.
+  /// Used by AdminReviewClaimScreen to deep-link into a specific
+  /// claim from the queue, push notification, or unlinked-member tap.
+  Future<NodeClaim> getClaimById(String claimId) async {
+    final result = await _supabase
+        .rpc('get_node_claim_by_id', params: {'p_claim_id': claimId})
+        .timeout(const Duration(seconds: 10));
+    return NodeClaim.fromJson(result as Map<String, dynamic>);
+  }
+
   /// Joiner-side: pending claims for the current user across all groups.
   Future<List<NodeClaim>> getMyPendingClaims() async {
     final result = await _supabase.rpc('get_my_pending_claims');
