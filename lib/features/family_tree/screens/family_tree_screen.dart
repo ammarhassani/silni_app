@@ -990,9 +990,21 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         : ref.watch(familyGraphProvider(userId));
 
     // For shared trees, use the viewer's node ID as the layout anchor.
-    // If user isn't linked to a node yet, use their auth userId as fallback
-    // (won't match any node, but layout will still work).
-    final effectiveUserId = groupInfo?.nodeId ?? userId;
+    // For personal mode, look up the user's personal NULL-scope self-node
+    // and use its relative.id — the graph uses relative ids as node ids,
+    // not auth user UUIDs. Falling back to userId would leave the viewer
+    // off-graph, breaking perspective-aware labels (every relative would
+    // be labeled with its own full_name instead of a relationship).
+    // Final `?? userId` is a defensive fallback for users without a
+    // personal self-node (backfill should guarantee one).
+    String? personalSelfId;
+    for (final r in relatives) {
+      if (r.isSelf && r.familyGroupId == null && r.userId == userId) {
+        personalSelfId = r.id;
+        break;
+      }
+    }
+    final effectiveUserId = groupInfo?.nodeId ?? personalSelfId ?? userId;
 
     // In group mode, wait for the shared graph before rendering.
     // Without the graph, _inferGraph creates wrong edges from the adder's
@@ -1036,7 +1048,13 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         relativesMap: scopedMap,
       );
     } else {
-      visibleRelatives = relatives;
+      // Personal mode: filter out self-nodes that live in other group scopes.
+      // The user's personal NULL-scope self-node survives as the anchor; the
+      // in-group self-nodes from any groups they belong to are not part of
+      // their personal tree.
+      visibleRelatives = relatives
+          .where((r) => !r.isSelf || r.familyGroupId == null)
+          .toList();
     }
 
     final relativesMap = {for (final r in visibleRelatives) r.id: r};
