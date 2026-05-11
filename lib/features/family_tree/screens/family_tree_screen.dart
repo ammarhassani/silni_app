@@ -35,6 +35,7 @@ import '../../../shared/widgets/flat_relationship_picker.dart';
 import '../../subscription/screens/paywall_screen.dart';
 import '../../family_groups/services/family_sharing_service.dart';
 import '../../family_groups/models/node_claim_model.dart';
+import '../../family_groups/providers/family_group_providers.dart';
 import '../../family_groups/providers/node_claim_providers.dart';
 import '../../family_groups/services/node_claim_service.dart';
 import '../../../shared/utils/ui_helpers.dart';
@@ -82,7 +83,6 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   Timer? _graphTimeoutTimer;
   bool _graphLoadTimedOut = false;
 
-  String _familyName = 'شجرة العائلة';
   final _nameController = TextEditingController();
 
   OverlayEntry? _nodeOverlay;
@@ -92,25 +92,6 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   void initState() {
     super.initState();
     _initScreenshotDetection();
-
-    // Load persisted family name from user metadata
-    final user = SupabaseConfig.client.auth.currentUser;
-    final name = user?.userMetadata?['family_name'] as String?;
-    if (name != null && name.isNotEmpty) {
-      _familyName = name;
-    } else {
-      // Joiner may not have family_name in metadata — load from group
-      _loadGroupName();
-    }
-  }
-
-  Future<void> _loadGroupName() async {
-    final userId = SupabaseConfig.client.auth.currentUser?.id;
-    if (userId == null) return;
-    final group = await FamilySharingService.getUserGroup(userId);
-    if (group != null && mounted) {
-      setState(() => _familyName = group.name);
-    }
   }
 
   /// SharedPreferences key for the user's migration choice.
@@ -494,9 +475,24 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
               child: Column(
                 children: [
                   groupInfoAsync.when(
-                    loading: () => _buildHeader(context, themeColors, null),
-                    error: (_, _) => _buildHeader(context, themeColors, null),
-                    data: (groupInfo) => _buildHeader(context, themeColors, groupInfo),
+                    loading: () => _buildHeader(
+                      context,
+                      themeColors,
+                      null,
+                      _resolveHeaderTitle(null, user?.id),
+                    ),
+                    error: (_, _) => _buildHeader(
+                      context,
+                      themeColors,
+                      null,
+                      _resolveHeaderTitle(null, user?.id),
+                    ),
+                    data: (groupInfo) => _buildHeader(
+                      context,
+                      themeColors,
+                      groupInfo,
+                      _resolveHeaderTitle(groupInfo, user?.id),
+                    ),
                   ),
                   // Group switcher: surfaces the current active context
                   // (personal vs. a group name) and opens a picker. Hidden
@@ -630,10 +626,37 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
     );
   }
 
+  /// Resolves the header title reactively based on the active group.
+  ///
+  /// - Personal mode (no active group): "شجرتي" — matches the switcher chip.
+  /// - Group mode: the active group's name from [userGroupsProvider].
+  /// - Loading / stale states: generic "شجرة العائلة" fallback.
+  String _resolveHeaderTitle(
+    ({String groupId, String? nodeId, String? role})? groupInfo,
+    String? userId,
+  ) {
+    if (groupInfo == null) {
+      // Personal mode — mirror the switcher's wording.
+      return 'شجرتي';
+    }
+    if (userId == null || userId.isEmpty) return 'شجرة العائلة';
+    final groups = ref.watch(userGroupsProvider(userId)).valueOrNull;
+    if (groups == null) {
+      // Loading — generic placeholder until the list resolves.
+      return 'شجرة العائلة';
+    }
+    for (final g in groups) {
+      if (g.id == groupInfo.groupId) return g.name;
+    }
+    // Stale (user no longer in that group) — safe fallback.
+    return 'شجرة العائلة';
+  }
+
   Widget _buildHeader(
     BuildContext context,
     dynamic themeColors,
     ({String groupId, String? nodeId, String? role})? groupInfo,
+    String title,
   ) {
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -665,14 +688,18 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                     child: Row(
                       children: [
                         Flexible(
-                          child: Text(
-                            _familyName,
-                            style: AppTypography.headlineMedium.copyWith(
-                              color: themeColors.textOnGradient,
-                              fontWeight: FontWeight.bold,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Text(
+                              title,
+                              style: AppTypography.headlineMedium.copyWith(
+                                color: themeColors.textOnGradient,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: AppSpacing.xs),
@@ -684,15 +711,19 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                       ],
                     ),
                   )
-                : Text(
-                    _familyName,
-                    style: AppTypography.headlineMedium.copyWith(
-                      color: themeColors.textOnGradient,
-                      fontWeight: FontWeight.bold,
+                : FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.center,
+                    child: Text(
+                      title,
+                      style: AppTypography.headlineMedium.copyWith(
+                        color: themeColors.textOnGradient,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
           ),
           if (groupInfo == null)
