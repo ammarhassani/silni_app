@@ -80,6 +80,14 @@ final sharedFamilyEdgesStreamProvider =
 ///
 /// This lets the family tree merge a non-admin member's personal additions
 /// (which land in personal scope per Task A1/A2) into their group-tree view.
+///
+/// **Logical identity bridge**: when the viewer has BOTH a personal NULL-scope
+/// self-node AND an in-group self-node (different relative ids for logically
+/// the same person), personal edges reference the personal self id but the
+/// rendered tree uses the in-group self id as anchor. We rewrite any edge
+/// endpoint pointing at the personal self id to the in-group self id so the
+/// two halves of the graph join up visually. Idempotent: if the rewrite has
+/// already happened, the endpoints simply stay put.
 final groupTreeEdgesProvider =
     Provider.autoDispose.family<AsyncValue<List<FamilyEdge>>, String>((ref, groupId) {
   final user = ref.watch(currentUserProvider);
@@ -87,6 +95,9 @@ final groupTreeEdgesProvider =
 
   final groupAsync = ref.watch(sharedFamilyEdgesStreamProvider(groupId));
   final personalAsync = ref.watch(familyEdgesStreamProvider(user.id));
+  // Watch relatives streams to discover both self-node ids for the viewer.
+  final groupRelsAsync = ref.watch(groupRelativesStreamProvider(groupId));
+  final personalRelsAsync = ref.watch(relativesStreamProvider(user.id));
 
   if (groupAsync.isLoading && personalAsync.isLoading) {
     return const AsyncValue.loading();
@@ -116,7 +127,48 @@ final groupTreeEdgesProvider =
     byId.putIfAbsent(e.id, () => e);
   }
 
-  return AsyncValue.data(byId.values.toList());
+  // --- Bridging: rewrite personalSelfId → inGroupSelfId on edge endpoints. ---
+  String? inGroupSelfId;
+  for (final r in groupRelsAsync.valueOrNull ?? const <Relative>[]) {
+    if (r.isSelf && r.userId == user.id && r.familyGroupId == groupId) {
+      inGroupSelfId = r.id;
+      break;
+    }
+  }
+  String? personalSelfId;
+  for (final r in personalRelsAsync.valueOrNull ?? const <Relative>[]) {
+    if (r.isSelf && r.userId == user.id && r.familyGroupId == null) {
+      personalSelfId = r.id;
+      break;
+    }
+  }
+
+  final merged = byId.values.toList();
+  if (inGroupSelfId == null ||
+      personalSelfId == null ||
+      inGroupSelfId == personalSelfId) {
+    return AsyncValue.data(merged);
+  }
+
+  final bridged = <FamilyEdge>[];
+  for (final e in merged) {
+    final newFrom = e.fromId == personalSelfId ? inGroupSelfId : e.fromId;
+    final newTo = e.toId == personalSelfId ? inGroupSelfId : e.toId;
+    if (newFrom == e.fromId && newTo == e.toId) {
+      bridged.add(e);
+    } else {
+      bridged.add(FamilyEdge(
+        id: e.id,
+        userId: e.userId,
+        fromId: newFrom,
+        toId: newTo,
+        type: e.type,
+        createdAt: e.createdAt,
+        familyGroupId: e.familyGroupId,
+      ));
+    }
+  }
+  return AsyncValue.data(bridged);
 });
 
 /// Build a shared graph with a specific viewer as anchor.
@@ -407,5 +459,15 @@ final groupTreeRelativesProvider =
     byId.putIfAbsent(r.id, () => r);
   }
 
-  return AsyncValue.data(byId.values.toList());
+  // Logical identity bridge: the viewer's personal NULL-scope self-node is
+  // "merged" into the in-group self for display. The in-group self is the
+  // visible anchor; the personal self-row would otherwise render as a
+  // duplicate of the viewer (and its edges have been rewritten to point at
+  // the in-group self in [groupTreeEdgesProvider]).
+  final filtered = byId.values
+      .where((r) =>
+          !(r.isSelf && r.familyGroupId == null && r.userId == user.id))
+      .toList();
+
+  return AsyncValue.data(filtered);
 });
