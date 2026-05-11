@@ -146,9 +146,21 @@ final sharedFamilyGraphProvider = Provider.autoDispose
 /// SharedPreferences key for the persistent active-group selection.
 const _kActiveGroupIdPrefKey = 'active_group_id';
 
-/// Persistent user-selected active group. Null = personal-only view
-/// (or "no explicit selection yet" — see [activeFamilyGroupProvider] for
-/// fallback behaviour).
+/// Sentinel value stored in [activeGroupIdProvider] when the user has
+/// EXPLICITLY chosen personal mode. Distinct from `null` (unset) so the
+/// provider can default to first-group on first launch but respect an
+/// explicit personal selection thereafter.
+const String kPersonalModeSentinel = '__PERSONAL__';
+
+/// Persistent user-selected active group.
+///
+/// Three possible states:
+/// - `null` — unset (no persisted preference). Downstream falls back to the
+///   first available group membership (legacy first-launch behaviour).
+/// - [kPersonalModeSentinel] — user explicitly picked personal mode. The
+///   downstream [activeFamilyGroupProvider] resolves to `null` regardless
+///   of memberships.
+/// - `<group-uuid>` — user explicitly picked a specific group.
 ///
 /// Persists across app restarts via shared_preferences.
 final activeGroupIdProvider =
@@ -173,19 +185,22 @@ class ActiveGroupNotifier extends StateNotifier<String?> {
     // Guard against the notifier being disposed before the async load
     // completes (e.g. fast sign-out during cold start).
     if (!mounted) return;
+    // state is now:
+    //   null  → no persisted preference (unset, default-to-first behaviour)
+    //   kPersonalModeSentinel → user explicitly picked personal
+    //   <uuid> → user explicitly picked a group
     state = prefs.getString(_kActiveGroupIdPrefKey);
   }
 
-  /// Set the active group id (or clear it with `null` for personal-only view).
+  /// Set the active group id. Pass `null` to explicitly select personal
+  /// mode — this persists [kPersonalModeSentinel] so the next launch
+  /// honours the choice (instead of falling back to "first group").
   /// Updates state synchronously and persists asynchronously.
   Future<void> setActive(String? groupId) async {
-    state = groupId;
+    final persisted = groupId ?? kPersonalModeSentinel;
+    state = persisted;
     final prefs = await SharedPreferences.getInstance();
-    if (groupId == null) {
-      await prefs.remove(_kActiveGroupIdPrefKey);
-    } else {
-      await prefs.setString(_kActiveGroupIdPrefKey, groupId);
-    }
+    await prefs.setString(_kActiveGroupIdPrefKey, persisted);
   }
 }
 
@@ -228,10 +243,13 @@ final activeFamilyGroupProvider = StreamProvider.autoDispose<
       .map((rows) {
         if (rows.isEmpty) return null;
 
+        // Explicit personal mode → no active group, regardless of
+        // memberships. Banner hidden, personal scope.
+        if (activeId == kPersonalModeSentinel) return null;
+
         // Try to find a row matching the user's selected active group id.
-        // If activeId is null (no selection yet, or personal mode), or the
-        // user no longer belongs to the selected group, fall back to the
-        // first available membership row.
+        // If activeId is null (no selection yet — first launch) or stale
+        // (user left that group), fall back to the first membership row.
         Map<String, dynamic>? data;
         if (activeId != null) {
           for (final row in rows) {

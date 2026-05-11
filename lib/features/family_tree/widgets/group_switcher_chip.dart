@@ -26,8 +26,11 @@ class GroupSwitcherChip extends ConsumerWidget {
     final user = ref.watch(currentUserProvider);
     if (user == null) return const SizedBox.shrink();
 
-    final activeId = ref.watch(activeGroupIdProvider);
     final groupsAsync = ref.watch(userGroupsProvider(user.id));
+    // Derive label/state from the resolved active group rather than the raw
+    // pref — this correctly handles the "unset → default to first" fallback
+    // and the personal-sentinel case in one shot.
+    final resolvedGroupInfo = ref.watch(activeFamilyGroupProvider).valueOrNull;
 
     return groupsAsync.when(
       loading: () => const SizedBox.shrink(),
@@ -35,13 +38,16 @@ class GroupSwitcherChip extends ConsumerWidget {
       data: (groups) {
         if (groups.isEmpty) return const SizedBox.shrink();
 
-        // Find the active group; fall back to "Personal" label if no active
-        // id (or if activeId doesn't match any current group).
+        // Find the group matching the resolved active group id. If
+        // resolvedGroupInfo is null the user is in explicit-personal mode
+        // (or has no memberships — but we returned above in that case).
         FamilyGroup? activeGroup;
-        for (final g in groups) {
-          if (g.id == activeId) {
-            activeGroup = g;
-            break;
+        if (resolvedGroupInfo != null) {
+          for (final g in groups) {
+            if (g.id == resolvedGroupInfo.groupId) {
+              activeGroup = g;
+              break;
+            }
           }
         }
         final isPersonal = activeGroup == null;
@@ -54,7 +60,12 @@ class GroupSwitcherChip extends ConsumerWidget {
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-              onTap: () => _showPicker(context, ref, groups, activeId),
+              onTap: () => _showPicker(
+                context,
+                ref,
+                groups,
+                resolvedGroupInfo?.groupId,
+              ),
               child: Ink(
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.12),
@@ -112,7 +123,7 @@ class GroupSwitcherChip extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     List<FamilyGroup> groups,
-    String? activeId,
+    String? resolvedActiveGroupId,
   ) {
     showModalBottomSheet<void>(
       context: context,
@@ -120,7 +131,10 @@ class GroupSwitcherChip extends ConsumerWidget {
       isScrollControlled: true,
       builder: (sheetCtx) => _GroupPickerSheet(
         groups: groups,
-        activeId: activeId,
+        // Pass the *resolved* group id so checkmarks reflect what's
+        // actually active (including the unset → default-to-first case
+        // where no id is persisted yet but a group is effectively in use).
+        resolvedActiveGroupId: resolvedActiveGroupId,
         onSelect: (groupId) {
           ref.read(activeGroupIdProvider.notifier).setActive(groupId);
           Navigator.pop(sheetCtx);
@@ -141,13 +155,16 @@ class GroupSwitcherChip extends ConsumerWidget {
 /// rather than rendering as a flat default Material sheet.
 class _GroupPickerSheet extends ConsumerWidget {
   final List<FamilyGroup> groups;
-  final String? activeId;
+  /// The id of the group that is *currently effectively active*. May be null
+  /// when the user is in explicit personal mode (or has no memberships).
+  /// Drives which tile gets the checkmark.
+  final String? resolvedActiveGroupId;
   final ValueChanged<String?> onSelect;
   final VoidCallback onCreate;
 
   const _GroupPickerSheet({
     required this.groups,
-    required this.activeId,
+    required this.resolvedActiveGroupId,
     required this.onSelect,
     required this.onCreate,
   });
@@ -206,18 +223,23 @@ class _GroupPickerSheet extends ConsumerWidget {
                   ),
                 ),
               ),
-              // Personal option (always first)
+              // Personal option (always first). Checked when the resolved
+              // active group is null — i.e. user is effectively in personal
+              // mode (explicit sentinel, or no memberships at all).
               _PickerTile(
                 icon: Icons.person_rounded,
                 label: 'شخصي',
-                selected: activeId == null,
+                selected: resolvedActiveGroupId == null,
                 onTap: () => onSelect(null),
               ),
               for (final g in groups)
                 _PickerTile(
                   icon: Icons.groups_rounded,
                   label: g.name,
-                  selected: g.id == activeId,
+                  // Check against the *resolved* id so the first-group
+                  // default-fallback (when nothing is persisted) is also
+                  // reflected with a checkmark.
+                  selected: g.id == resolvedActiveGroupId,
                   onTap: () => onSelect(g.id),
                 ),
               Divider(
