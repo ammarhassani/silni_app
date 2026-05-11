@@ -228,6 +228,12 @@ class Relative {
   final String? familyGroupId; // FK to family_groups, null = personal
   final String? addedBy; // FK to auth.users, who added this shared relative
 
+  // Reciprocity: when this row is a "personal shadow" mirroring a canonical
+  // row in another scope (e.g. admin's group), this points to the canonical
+  // relative.id. Null for canonical rows. Used by addressBookRelativesProvider
+  // to dedup shadow + canonical when both are RLS-visible.
+  final String? mirrorsRelativeId;
+
   Relative({
     required this.id,
     required this.userId,
@@ -283,6 +289,8 @@ class Relative {
     // Shared tree fields
     this.familyGroupId,
     this.addedBy,
+    // Reciprocity shadow link
+    this.mirrorsRelativeId,
   });
 
   /// Create from Supabase JSON
@@ -373,6 +381,8 @@ class Relative {
       // Shared tree fields
       familyGroupId: json['family_group_id'] as String?,
       addedBy: json['added_by'] as String?,
+      // Reciprocity shadow link
+      mirrorsRelativeId: json['mirrors_relative_id'] as String?,
     );
   }
 
@@ -432,6 +442,8 @@ class Relative {
       // Shared tree fields
       if (familyGroupId != null) 'family_group_id': familyGroupId,
       if (addedBy != null) 'added_by': addedBy,
+      // Reciprocity shadow link
+      if (mirrorsRelativeId != null) 'mirrors_relative_id': mirrorsRelativeId,
       // Don't include id, created_at, updated_at - managed by database
     };
   }
@@ -492,6 +504,8 @@ class Relative {
     // Shared tree fields
     String? familyGroupId,
     String? addedBy,
+    // Reciprocity shadow link
+    String? mirrorsRelativeId,
   }) {
     return Relative(
       id: id ?? this.id,
@@ -548,6 +562,8 @@ class Relative {
       // Shared tree fields
       familyGroupId: familyGroupId ?? this.familyGroupId,
       addedBy: addedBy ?? this.addedBy,
+      // Reciprocity shadow link
+      mirrorsRelativeId: mirrorsRelativeId ?? this.mirrorsRelativeId,
     );
   }
 

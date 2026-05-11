@@ -73,10 +73,34 @@ final addressBookRelativesProvider =
   return SupabaseConfig.client
       .from('relatives')
       .stream(primaryKey: ['id'])
-      .map((rows) => rows
-          .map((json) => Relative.fromJson(json))
-          .where((r) => !r.isSelf && !r.isArchived)
-          .toList());
+      .map((rows) {
+        final all = rows
+            .map((json) => Relative.fromJson(json))
+            .where((r) => !r.isSelf && !r.isArchived)
+            .toList();
+
+        // Dedup canonical vs personal shadow (Task 5).
+        //
+        // After `approve_node_claim` runs, the joiner sees TWO rows for the
+        // same person: (1) the canonical row in the admin's group (visible
+        // via RLS), and (2) a personal shadow in NULL scope whose
+        // `mirrorsRelativeId` points at the canonical. Without dedup the
+        // address book lists the same person twice.
+        //
+        // Rule: prefer the canonical when both are visible; fall back to
+        // the shadow when only it is reachable (e.g. the user left the
+        // group, so RLS hides the canonical — the relationship still
+        // persists via the shadow).
+        final visibleIds = all.map((r) => r.id).toSet();
+        return all.where((r) {
+          if (r.mirrorsRelativeId == null) {
+            // Canonical row — always include
+            return true;
+          }
+          // Shadow — include only if its canonical is NOT visible
+          return !visibleIds.contains(r.mirrorsRelativeId);
+        }).toList();
+      });
 });
 
 /// Provider that returns relatives appropriate for the current user context.
