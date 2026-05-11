@@ -20,6 +20,7 @@ import '../../../core/services/error_reporter.dart';
 import '../../../shared/widgets/persistent_bottom_nav.dart';
 import '../../family_groups/providers/family_group_providers.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
+import '../../family_tree/widgets/group_switcher_chip.dart';
 import '../widgets/widgets.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/message_widget.dart';
@@ -702,83 +703,91 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   /// (e.g. for a different branch of the extended family).
   ///
   /// Quota gate: when the user's single admin slot is already filled, the
-  /// tile renders in a disabled/dim style with a "لديك بالفعل عائلتك"
-  /// subtitle and the tap handler is suppressed. We keep the tile visible
-  /// (rather than hiding it) so the explanation lands even for users who
-  /// land here looking for that exact action.
+  /// tile becomes a "replace" entry point — tapping fires the same
+  /// destructive-warning confirm dialog used by the group-switcher chip,
+  /// then on confirm leaves (deletes) the current admin group and pushes
+  /// to the create-group screen.
   Widget _buildCreateFamilyGroupTile(
     BuildContext context,
     WidgetRef ref,
     dynamic themeColors,
   ) {
-    final adminSlotFull = ref
-            .watch(myMembershipSlotsProvider)
-            .valueOrNull
-            ?.adminSlotFull ??
-        false;
-    final disabled = adminSlotFull;
-    final subtitle = disabled ? 'لديك بالفعل عائلتك' : 'ابدأ شجرة عائلة منفصلة';
-    final semanticsLabel = disabled
-        ? 'إنشاء مجموعة عائلية جديدة - معطل - لديك بالفعل عائلتك'
+    final slots = ref.watch(myMembershipSlotsProvider).valueOrNull;
+    final adminSlotFull = slots?.adminSlotFull ?? false;
+    final adminGroup = slots?.admin;
+    final isReplaceMode = adminSlotFull && adminGroup != null;
+    final subtitle = isReplaceMode
+        ? 'سيتم حذف بيانات ${adminGroup.name} الحالية'
+        : 'ابدأ شجرة عائلة منفصلة';
+    final semanticsLabel = isReplaceMode
+        ? 'حذف عائلتك وإنشاء جديدة - سيتم حذف بيانات ${adminGroup.name} الحالية'
         : 'إنشاء مجموعة عائلية جديدة - ابدأ شجرة عائلة منفصلة';
+    final title = isReplaceMode
+        ? 'حذف عائلتك وإنشاء جديدة'
+        : 'إنشاء مجموعة عائلية جديدة';
+    final iconData = isReplaceMode
+        ? Icons.swap_horizontal_circle_rounded
+        : Icons.group_add_rounded;
 
     return Semantics(
       label: semanticsLabel,
       button: true,
-      enabled: !disabled,
-      child: Opacity(
-        opacity: disabled ? 0.5 : 1.0,
-        child: GlassCard(
-          onTap: disabled ? null : () => context.push(AppRoutes.createFamilyGroup),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: themeColors.accent.withValues(alpha: 0.18),
-                  border: Border.all(
-                    color: themeColors.accent.withValues(alpha: 0.45),
-                    width: 1,
+      child: GlassCard(
+        onTap: isReplaceMode
+            ? () => confirmAndReplaceAdminGroup(
+                  context: context,
+                  ref: ref,
+                  adminGroup: adminGroup,
+                )
+            : () => context.push(AppRoutes.createFamilyGroup),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: themeColors.accent.withValues(alpha: 0.18),
+                border: Border.all(
+                  color: themeColors.accent.withValues(alpha: 0.45),
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                iconData,
+                color: themeColors.accent,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: AppTypography.titleMedium.copyWith(
+                      color: themeColors.textOnGradient,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                child: Icon(
-                  disabled ? Icons.lock_outline_rounded : Icons.group_add_rounded,
-                  color: themeColors.accent,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'إنشاء مجموعة عائلية جديدة',
-                      style: AppTypography.titleMedium.copyWith(
-                        color: themeColors.textOnGradient,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: AppTypography.bodySmall.copyWith(
+                      color: themeColors.textOnGradient.withValues(alpha: 0.6),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: AppTypography.bodySmall.copyWith(
-                        color: themeColors.textOnGradient.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: themeColors.textOnGradient.withValues(alpha: 0.5),
-                size: 16,
-              ),
-            ],
-          ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: themeColors.textOnGradient.withValues(alpha: 0.5),
+              size: 16,
+            ),
+          ],
         ),
       ),
     );

@@ -12,6 +12,7 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../family_tree/providers/family_graph_providers.dart';
 import '../models/family_group_model.dart';
 import '../providers/family_group_providers.dart';
 import '../services/family_group_service.dart';
@@ -40,6 +41,13 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
   bool _isJoining = false;
   bool _alreadyMember = false;
   String? _errorMessage;
+  // Member-slot replace flow: when the user is at the 2-member cap and
+  // tries to join a 3rd group, we surface a picker of their current 2
+  // groups instead of an error. `null` = no blocker; non-null = render
+  // the picker view in place of the normal join CTA.
+  List<FamilyGroup>? _memberSlotFullGroups;
+  // Id of the group currently being left (drives per-tile spinner / disable).
+  String? _leavingGroupId;
 
   @override
   void initState() {
@@ -121,18 +129,16 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
     }
 
     // Quota gate: the DB trigger caps member-role rows per user at 2. If
-    // the user is already at the cap, fail fast on this screen rather than
-    // letting them traverse the identity-claim wizard only to hit a server
-    // error at the end. Phase 3 will add a "leave one first" picker — for
-    // now we surface the explanation and stay put.
+    // the user is already at the cap, swap the join view for a "replace"
+    // picker so the user can leave one of their existing groups and
+    // continue without bouncing back home.
     setState(() => _isJoining = true);
     try {
       final slots = await ref.read(myMembershipSlotsProvider.future);
       if (slots.memberSlotFull && mounted) {
         setState(() {
           _isJoining = false;
-          _errorMessage =
-              'أنت بالفعل في عائلتَين. غادر إحداهما قبل الانضمام لهذه.';
+          _memberSlotFullGroups = slots.members;
         });
         return;
       }
@@ -248,7 +254,12 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
                           padding: const EdgeInsets.all(AppSpacing.md),
                           child: _errorMessage != null
                               ? _buildErrorView(themeColors)
-                              : _buildGroupPreview(themeColors, user != null),
+                              : _memberSlotFullGroups != null
+                                  ? _buildMemberCapView(themeColors)
+                                  : _buildGroupPreview(
+                                      themeColors,
+                                      user != null,
+                                    ),
                         ),
                 ),
               ],
@@ -257,6 +268,159 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
         ],
       ),
     );
+  }
+
+  /// Member-cap "replace" view — shown when the user is already in 2
+  /// groups and tries to join a 3rd. Lists their current member-role
+  /// groups with a "pick to leave" button on each. After a successful
+  /// leave we invalidate the slot provider and call `_joinGroup` again
+  /// so the wizard kicks off seamlessly.
+  Widget _buildMemberCapView(ThemeColors themeColors) {
+    final groups = _memberSlotFullGroups ?? const <FamilyGroup>[];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: AppSpacing.xl),
+        Icon(
+          Icons.swap_horizontal_circle_rounded,
+          size: AppSpacing.iconXxl,
+          color: themeColors.onSurface,
+          semanticLabel: 'استبدال مجموعة',
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          'للانضمام لهذه العائلة، عليك مغادرة إحدى عائلاتك',
+          style: AppTypography.bodyLarge.copyWith(
+            color: themeColors.onSurface,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        for (final group in groups) ...[
+          GlassCard(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.groups_rounded,
+                      color: themeColors.onSurface,
+                      size: AppSpacing.iconMd,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        group.name,
+                        style: AppTypography.titleMedium.copyWith(
+                          color: themeColors.onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                GradientButton(
+                  text: 'اختر للمغادرة',
+                  // Disable every tile while any leave is in flight so the
+                  // user can't double-tap or fire two leaves in parallel.
+                  enabled: _leavingGroupId == null,
+                  onPressed: () => _confirmAndLeave(group),
+                  isLoading: _leavingGroupId == group.id,
+                  icon: Icons.logout_rounded,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _confirmAndLeave(FamilyGroup group) async {
+    final themeColors = ref.read(themeColorsProvider);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: themeColors.background2,
+        title: Text(
+          'مغادرة ${group.name}',
+          style: AppTypography.titleMedium.copyWith(
+            color: themeColors.onSurface,
+          ),
+        ),
+        content: Text(
+          'سيتم إزالتك من هذه المجموعة قبل الانضمام للمجموعة الجديدة.',
+          style: AppTypography.bodyMedium.copyWith(
+            color: themeColors.onSurface,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: const Text('إلغاء'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: themeColors.statusError,
+            ),
+            child: const Text('مغادرة'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await _leaveAndContinue(group);
+  }
+
+  Future<void> _leaveAndContinue(FamilyGroup group) async {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+    setState(() => _leavingGroupId = group.id);
+    try {
+      // If the user is leaving their currently-active group, clear the
+      // active-group preference first so the rest of the UI doesn't keep
+      // pointing at a group the user no longer belongs to.
+      final activeGroupInfo =
+          ref.read(activeFamilyGroupProvider).valueOrNull;
+      if (activeGroupInfo?.groupId == group.id) {
+        await ref.read(activeGroupIdProvider.notifier).setActive(null);
+      }
+
+      await FamilyGroupService.leaveGroup(
+        groupId: group.id,
+        userId: user.id,
+      );
+
+      if (!mounted) return;
+      // Refresh slot state + group list + active-group resolution so the
+      // UI everywhere reflects the new membership shape.
+      ref.invalidate(myMembershipSlotsProvider);
+      ref.invalidate(userGroupsProvider(user.id));
+      ref.invalidate(activeFamilyGroupProvider);
+
+      setState(() {
+        _memberSlotFullGroups = null;
+        _leavingGroupId = null;
+      });
+
+      // Continue the original join flow — slot is now free.
+      await _joinGroup();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _leavingGroupId = null);
+      final themeColors = ref.read(themeColorsProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('تعذّر مغادرة المجموعة: ${e.toString()}'),
+          backgroundColor: themeColors.statusError,
+        ),
+      );
+    }
   }
 
   Widget _buildErrorView(ThemeColors themeColors) {

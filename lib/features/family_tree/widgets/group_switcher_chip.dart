@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +11,7 @@ import '../../../core/theme/theme_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../family_groups/models/family_group_model.dart';
 import '../../family_groups/providers/family_group_providers.dart';
+import '../../family_groups/services/family_group_service.dart';
 import '../providers/family_graph_providers.dart';
 
 /// Small chip that surfaces the user's current active family-group context
@@ -143,6 +146,111 @@ class GroupSwitcherChip extends ConsumerWidget {
           Navigator.pop(sheetCtx);
           context.push(AppRoutes.createFamilyGroup);
         },
+        onReplaceAdmin: (adminGroup) {
+          Navigator.pop(sheetCtx);
+          confirmAndReplaceAdminGroup(
+            context: context,
+            ref: ref,
+            adminGroup: adminGroup,
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Shared confirm-and-replace flow for the admin slot.
+///
+/// Surfaced from both the group-switcher chip's bottom sheet and the
+/// profile screen's "create new family group" tile. Shows a destructive
+/// warning, then on confirm:
+///   1. Clears the active-group preference if the active group is the
+///      one being deleted (so the rest of the UI doesn't render against
+///      a stale id during the brief gap before create).
+///   2. Calls `FamilyGroupService.leaveGroup` — which deletes the group
+///      atomically when the user is the sole admin/member.
+///   3. Invalidates slot / group / active-group providers so every
+///      gated UI surface re-evaluates.
+///   4. Navigates to the create-family-group screen.
+Future<void> confirmAndReplaceAdminGroup({
+  required BuildContext context,
+  required WidgetRef ref,
+  required FamilyGroup adminGroup,
+}) async {
+  final themeColors = ref.read(themeColorsProvider);
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogCtx) => AlertDialog(
+      backgroundColor: themeColors.background2,
+      title: Text(
+        'حذف العائلة الحالية',
+        style: AppTypography.titleMedium.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      content: Text(
+        'ستفقد جميع بيانات ${adminGroup.name}. هذا الإجراء لا يمكن التراجع عنه.',
+        style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogCtx).pop(false),
+          child: const Text('إلغاء'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(dialogCtx).pop(true),
+          style: TextButton.styleFrom(
+            foregroundColor: themeColors.statusError,
+          ),
+          child: const Text('حذف وإنشاء جديدة'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
+  if (!context.mounted) return;
+
+  final user = ref.read(currentUserProvider);
+  if (user == null) return;
+
+  // Show a non-dismissible progress dialog so the user can't double-tap
+  // through the delete RPC.
+  unawaited(showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const Center(child: CircularProgressIndicator()),
+  ));
+
+  try {
+    // Clear active-group selection up-front if the group being deleted
+    // is currently active. This avoids a flash of "personal/orphan"
+    // state pointing at the dead group id between the leave and the
+    // create-group screen mount.
+    final activeGroupInfo = ref.read(activeFamilyGroupProvider).valueOrNull;
+    if (activeGroupInfo?.groupId == adminGroup.id) {
+      await ref.read(activeGroupIdProvider.notifier).setActive(null);
+    }
+
+    await FamilyGroupService.leaveGroup(
+      groupId: adminGroup.id,
+      userId: user.id,
+    );
+
+    ref.invalidate(myMembershipSlotsProvider);
+    ref.invalidate(userGroupsProvider(user.id));
+    ref.invalidate(activeFamilyGroupProvider);
+
+    if (!context.mounted) return;
+    Navigator.of(context, rootNavigator: true).pop(); // dismiss spinner
+    context.push(AppRoutes.createFamilyGroup);
+  } catch (e) {
+    if (!context.mounted) return;
+    Navigator.of(context, rootNavigator: true).pop(); // dismiss spinner
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('تعذّر حذف العائلة: ${e.toString()}'),
+        backgroundColor: themeColors.statusError,
       ),
     );
   }
@@ -161,28 +269,32 @@ class _GroupPickerSheet extends ConsumerWidget {
   final String? resolvedActiveGroupId;
   final ValueChanged<String?> onSelect;
   final VoidCallback onCreate;
+  /// Invoked when the user taps the "delete & create new" tile while the
+  /// admin slot is full. The callback receives the user's current admin
+  /// group so the confirm dialog can name it explicitly.
+  final ValueChanged<FamilyGroup> onReplaceAdmin;
 
   const _GroupPickerSheet({
     required this.groups,
     required this.resolvedActiveGroupId,
     required this.onSelect,
     required this.onCreate,
+    required this.onReplaceAdmin,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeColors = ref.watch(themeColorsProvider);
     final bottomPad = MediaQuery.of(context).viewPadding.bottom;
-    // Watch the slot state so the "create" action can be hidden when the
-    // user has already claimed their single admin slot. valueOrNull means
-    // we keep the create tile visible while loading / on error — the
-    // server-side trigger is the source of truth and will surface the cap
-    // as a user-facing error if the user does manage to tap through.
-    final adminSlotFull = ref
-            .watch(myMembershipSlotsProvider)
-            .valueOrNull
-            ?.adminSlotFull ??
-        false;
+    // Watch the slot state so the "create" action can be swapped for a
+    // "delete & create" replace tile when the user has already claimed
+    // their single admin slot. valueOrNull means we keep the regular
+    // create tile visible while loading / on error — the server-side
+    // trigger is the source of truth and will surface the cap as a
+    // user-facing error if the user does manage to tap through.
+    final slots = ref.watch(myMembershipSlotsProvider).valueOrNull;
+    final adminSlotFull = slots?.adminSlotFull ?? false;
+    final adminGroup = slots?.admin;
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -256,34 +368,17 @@ class _GroupPickerSheet extends ConsumerWidget {
                 color: Colors.white.withValues(alpha: 0.15),
                 height: 1,
               ),
-              // Quota gate: hide the "create new group" CTA once the admin
-              // slot is claimed. A muted info row stands in so the cap is
-              // self-explanatory rather than silently absent. Existing
-              // groups remain selectable above.
-              if (adminSlotFull)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                    vertical: AppSpacing.sm,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline_rounded,
-                        size: 18,
-                        color: Colors.white.withValues(alpha: 0.6),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Text(
-                          'وصلت إلى الحد الأقصى للعائلات (1 + 2)',
-                          style: AppTypography.bodySmall.copyWith(
-                            color: Colors.white.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+              // Quota gate: when the admin slot is claimed, swap the
+              // regular "create new group" CTA for an actionable "replace"
+              // tile that triggers the leave-then-create flow via a
+              // destructive-warning confirmation dialog.
+              if (adminSlotFull && adminGroup != null)
+                _PickerTile(
+                  icon: Icons.swap_horizontal_circle_rounded,
+                  label: 'حذف عائلتك وإنشاء جديدة',
+                  subtitle: 'سيتم حذف بيانات ${adminGroup.name} الحالية',
+                  selected: false,
+                  onTap: () => onReplaceAdmin(adminGroup),
                 )
               else
                 _PickerTile(
@@ -304,6 +399,9 @@ class _GroupPickerSheet extends ConsumerWidget {
 class _PickerTile extends StatelessWidget {
   final IconData icon;
   final String label;
+  /// Optional secondary line — used by the admin-replace tile to spell
+  /// out which group will be deleted.
+  final String? subtitle;
   final bool selected;
   final VoidCallback onTap;
 
@@ -312,10 +410,12 @@ class _PickerTile extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.subtitle,
   });
 
   @override
   Widget build(BuildContext context) {
+    final sub = subtitle;
     return ListTile(
       leading: Icon(icon, color: Colors.white),
       title: Text(
@@ -325,6 +425,14 @@ class _PickerTile extends StatelessWidget {
           fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
         ),
       ),
+      subtitle: sub == null
+          ? null
+          : Text(
+              sub,
+              style: AppTypography.bodySmall.copyWith(
+                color: Colors.white.withValues(alpha: 0.7),
+              ),
+            ),
       trailing: selected
           ? const Icon(Icons.check_rounded, color: Colors.white)
           : null,
