@@ -35,6 +35,10 @@ class NodeClaimService {
   /// fields null. For "add me to the tree": pass [proposedFullName] (and
   /// optionals), leave [claimedRelativeId] null. Edge_path must be one of
   /// parent/child/spouse/sibling for the add-me path (RPC enforces).
+  ///
+  /// Pre-member callers (still inside the join wizard, no
+  /// family_group_members row yet) must pass [inviteCode] so the RPC can
+  /// authorize via the pending invitation instead of a membership check.
   Future<NodeClaim> createClaim({
     required String groupId,
     String? claimedRelativeId,
@@ -48,6 +52,7 @@ class NodeClaimService {
     String? proposedCity,
     String? proposedPhotoUrl,
     String? proposedPhoneNumber,
+    String? inviteCode,
   }) async {
     final result = await _supabase.rpc('create_node_claim', params: {
       'p_group_id': groupId,
@@ -62,6 +67,7 @@ class NodeClaimService {
       'p_proposed_city': proposedCity,
       'p_proposed_photo_url': proposedPhotoUrl,
       'p_proposed_phone_number': proposedPhoneNumber,
+      'p_invite_code': inviteCode,
     });
     return NodeClaim.fromJson(result as Map<String, dynamic>);
   }
@@ -100,12 +106,17 @@ class NodeClaimService {
   /// Hard timeout of 12s — if the RPC hangs (network blip, auth issue,
   /// Supabase outage), surface that as a clear TimeoutException instead
   /// of an infinite spinner.
+  ///
+  /// Pre-member callers (still inside the join wizard, no
+  /// family_group_members row yet) must pass [inviteCode] so the RPC can
+  /// authorize via the pending invitation instead of a membership check.
   Future<List<CandidateRelative>> findCandidates({
     required String groupId,
     required String anchorRelativeId,
     required String edgePath,
     String? parentSide,
     required String gender,
+    String? inviteCode,
   }) async {
     debugPrint(
       '[NodeClaimService.findCandidates] → group=$groupId anchor=$anchorRelativeId '
@@ -120,6 +131,7 @@ class NodeClaimService {
           'p_edge_path': edgePath,
           'p_parent_side': parentSide,
           'p_gender': gender,
+          'p_invite_code': inviteCode,
         },
       ).timeout(const Duration(seconds: 12));
 
@@ -142,6 +154,16 @@ class NodeClaimService {
       debugPrint('[NodeClaimService.findCandidates] ✗ $e\n$st');
       rethrow;
     }
+  }
+
+  /// Pre-member wizard bootstrap. Returns group name, admin name,
+  /// and the relative list for the anchor picker — all without
+  /// requiring a family_group_members row. Auth is the invite code.
+  Future<Map<String, dynamic>> getGroupInfoForInvite(String inviteCode) async {
+    final result = await _supabase
+        .rpc('get_group_info_for_invite', params: {'p_invite_code': inviteCode})
+        .timeout(const Duration(seconds: 10));
+    return result as Map<String, dynamic>;
   }
 
   // ----------------------------------------------------------------- Admin
