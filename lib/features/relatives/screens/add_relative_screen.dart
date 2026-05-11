@@ -121,6 +121,37 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
     _nameController.addListener(_onNameChanged);
     _selectedCategory =
         widget.wizardMode?.category ?? RelativeCategory.extended;
+
+    // Default-scope decision: non-admin (or no-group) -> personal,
+    // admin of an active group -> shared. Deferred to post-frame so
+    // `ref` is fully available. Wizard mode keeps personal default since
+    // the wizard is solo-user setup.
+    if (widget.wizardMode == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final isAdmin =
+            ref.read(isAdminOfActiveGroupProvider).valueOrNull ?? false;
+        if (!isAdmin) return;
+        final groupInfo = ref.read(userFamilyGroupProvider).valueOrNull;
+        if (groupInfo == null) return;
+        final user = ref.read(currentUserProvider);
+        if (user == null) return;
+        final groups =
+            ref.read(userGroupsProvider(user.id)).valueOrNull ?? const [];
+        FamilyGroup? activeGroup;
+        for (final g in groups) {
+          if (g.id == groupInfo.groupId) {
+            activeGroup = g;
+            break;
+          }
+        }
+        if (activeGroup == null) return;
+        setState(() {
+          _addToSharedTree = true;
+          _selectedGroup = activeGroup;
+        });
+      });
+    }
   }
 
   /// When the name changes, try to infer gender from the Arabic name.
@@ -1034,9 +1065,17 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
 
 
 
-  /// Builds the shared family tree toggle + group dropdown.
+  /// Builds the scope picker for a new relative: personal vs shared-with-group.
   ///
-  /// Only renders content when the user belongs to at least one family group.
+  /// Visibility:
+  /// - If the user has no family groups, nothing is rendered (relative is
+  ///   personal by default — no choice needed).
+  /// - Otherwise, two cards are shown. The selection drives
+  ///   [_addToSharedTree] (and [_selectedGroup] when the user belongs to
+  ///   exactly one group).
+  ///
+  /// Defaults are seeded in [initState]: admins of the active group default
+  /// to "shared"; non-admins (and no-group users) default to "personal".
   Widget _buildSharedTreeToggle() {
     final user = ref.watch(currentUserProvider);
     if (user == null) return const SizedBox.shrink();
@@ -1050,102 +1089,112 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
         if (groups.isEmpty) return const SizedBox.shrink();
 
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            GlassCard(
-              child: Column(
-                children: [
-                  // Toggle row
-                  Row(
-                    children: [
-                      Icon(Icons.group_rounded,
-                          color: Colors.white.withValues(alpha: 0.7)),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Text(
-                          'ضيفه للعائلة المشتركة؟',
-                          style: AppTypography.titleMedium
-                              .copyWith(color: Colors.white),
-                        ),
-                      ),
-                      Switch(
-                        value: _addToSharedTree,
-                        onChanged: (value) {
-                          setState(() {
-                            _addToSharedTree = value;
-                            if (!value) _selectedGroup = null;
-                            if (value && groups.length == 1) {
-                              _selectedGroup = groups.first;
-                            }
-                            _isFormDirty = true;
-                          });
-                        },
-                        activeTrackColor:
-                            AppColors.islamicGreenPrimary.withValues(alpha: 0.5),
-                        activeThumbColor: AppColors.islamicGreenPrimary,
-                      ),
-                    ],
-                  ),
-                  // Group dropdown (shown when toggle is on)
-                  if (_addToSharedTree) ...[
-                    const SizedBox(height: AppSpacing.sm),
-                    DropdownButtonFormField<FamilyGroup>(
-                      initialValue: _selectedGroup,
-                      decoration: InputDecoration(
-                        labelText: 'اختر المجموعة',
-                        labelStyle: AppTypography.bodyMedium.copyWith(
-                          color: Colors.white.withValues(alpha: 0.8),
-                        ),
-                        filled: true,
-                        fillColor: Colors.white.withValues(alpha: 0.1),
-                        border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.radiusLg),
-                          borderSide: BorderSide.none,
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.radiusLg),
-                          borderSide: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.radiusLg),
-                          borderSide: const BorderSide(
-                            color: AppColors.islamicGreenPrimary,
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                      dropdownColor: const Color(0xFF1B3A2D),
-                      style: AppTypography.bodyMedium
-                          .copyWith(color: Colors.white),
-                      icon: const Icon(Icons.arrow_drop_down,
-                          color: Colors.white70),
-                      items: groups
-                          .map((group) => DropdownMenuItem<FamilyGroup>(
-                                value: group,
-                                child: Text(group.name),
-                              ))
-                          .toList(),
-                      onChanged: (group) {
-                        setState(() {
-                          _selectedGroup = group;
-                          _isFormDirty = true;
-                        });
-                      },
-                      validator: (value) {
-                        if (_addToSharedTree && value == null) {
-                          return 'الرجاء اختيار مجموعة';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                ],
+            Padding(
+              padding: const EdgeInsets.only(
+                  right: AppSpacing.xs, bottom: AppSpacing.sm),
+              child: Text(
+                'نطاق هذا القريب',
+                style: AppTypography.titleMedium.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
+            _ScopeOptionCard(
+              icon: Icons.person_rounded,
+              title: 'خاص بي',
+              subtitle:
+                  'لن يظهر للأعضاء الآخرين. مناسب لزوجتي، عائلتها، أصدقائي.',
+              selected: !_addToSharedTree,
+              onTap: () {
+                if (!_addToSharedTree) return;
+                setState(() {
+                  _addToSharedTree = false;
+                  _selectedGroup = null;
+                  _isFormDirty = true;
+                });
+              },
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _ScopeOptionCard(
+              icon: Icons.group_rounded,
+              title: 'مشترك مع المجموعة',
+              subtitle:
+                  'سيظهر للجميع في الشجرة. مناسب لأقارب الدم في هذه السلالة.',
+              selected: _addToSharedTree,
+              onTap: () {
+                if (_addToSharedTree) return;
+                setState(() {
+                  _addToSharedTree = true;
+                  if (groups.length == 1) {
+                    _selectedGroup = groups.first;
+                  }
+                  _isFormDirty = true;
+                });
+              },
+            ),
+            // Group dropdown — only relevant when user is in 2+ groups and
+            // has chosen the shared scope. With a single group the auto-pick
+            // above is sufficient.
+            if (_addToSharedTree && groups.length > 1) ...[
+              const SizedBox(height: AppSpacing.sm),
+              DropdownButtonFormField<FamilyGroup>(
+                initialValue: _selectedGroup,
+                decoration: InputDecoration(
+                  labelText: 'اختر المجموعة',
+                  labelStyle: AppTypography.bodyMedium.copyWith(
+                    color: Colors.white.withValues(alpha: 0.8),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white.withValues(alpha: 0.1),
+                  border: OutlineInputBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.radiusLg),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.radiusLg),
+                    borderSide: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.radiusLg),
+                    borderSide: const BorderSide(
+                      color: AppColors.islamicGreenPrimary,
+                      width: 2,
+                    ),
+                  ),
+                ),
+                dropdownColor: const Color(0xFF1B3A2D),
+                style: AppTypography.bodyMedium
+                    .copyWith(color: Colors.white),
+                icon: const Icon(Icons.arrow_drop_down,
+                    color: Colors.white70),
+                items: groups
+                    .map((group) => DropdownMenuItem<FamilyGroup>(
+                          value: group,
+                          child: Text(group.name),
+                        ))
+                    .toList(),
+                onChanged: (group) {
+                  setState(() {
+                    _selectedGroup = group;
+                    _isFormDirty = true;
+                  });
+                },
+                validator: (value) {
+                  if (_addToSharedTree && value == null) {
+                    return 'الرجاء اختيار مجموعة';
+                  }
+                  return null;
+                },
+              ),
+            ],
             const SizedBox(height: AppSpacing.md),
           ],
         );
@@ -1153,4 +1202,113 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
     );
   }
 
+}
+
+/// Tappable scope card used by [_AddRelativeScreenState._buildSharedTreeToggle].
+///
+/// Renders a selectable card with an icon, title, and subtitle. The selected
+/// state shows a tinted background and a check icon — matching the glass /
+/// gradient aesthetic of the rest of the form.
+class _ScopeOptionCard extends StatelessWidget {
+  const _ScopeOptionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppColors.islamicGreenPrimary;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: title,
+      hint: subtitle,
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: selected
+                ? accent.withValues(alpha: 0.18)
+                : Colors.white.withValues(alpha: 0.07),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            border: Border.all(
+              color: selected
+                  ? accent.withValues(alpha: 0.6)
+                  : Colors.white.withValues(alpha: 0.15),
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: selected
+                      ? accent.withValues(alpha: 0.3)
+                      : Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: selected
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.7),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTypography.titleSmall.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: AppTypography.bodySmall.copyWith(
+                        color: Colors.white.withValues(alpha: 0.65),
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Icon(
+                selected
+                    ? Icons.check_circle_rounded
+                    : Icons.radio_button_unchecked_rounded,
+                color: selected
+                    ? accent
+                    : Colors.white.withValues(alpha: 0.4),
+                size: 22,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

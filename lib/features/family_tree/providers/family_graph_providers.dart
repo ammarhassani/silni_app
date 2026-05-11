@@ -125,6 +125,40 @@ final userFamilyGroupProvider =
       });
 });
 
+/// Whether the current user is an admin of their active family group.
+///
+/// Returns `false` when the user is not in a group, has not yet loaded
+/// their membership row, or holds a `'member'` role. Returns `true` only
+/// when the membership row exists and `role == 'admin'`.
+///
+/// Drives the default scope for newly-added relatives:
+/// - admin -> defaults to shared lineage (`family_group_id = group_id`)
+/// - member -> defaults to personal (`family_group_id IS NULL`)
+final isAdminOfActiveGroupProvider =
+    StreamProvider.autoDispose<bool>((ref) {
+  final link = ref.keepAlive();
+  Timer? timer;
+
+  ref.onDispose(() => timer?.cancel());
+  ref.onCancel(() {
+    timer = Timer(_cacheTimeout, () => link.close());
+  });
+  ref.onResume(() => timer?.cancel());
+
+  final user = SupabaseConfig.client.auth.currentUser;
+  if (user == null) return Stream.value(false);
+
+  return SupabaseConfig.client
+      .from('family_group_members')
+      .stream(primaryKey: ['id'])
+      .eq('user_id', user.id)
+      .map((rows) {
+        if (rows.isEmpty) return false;
+        final role = rows.first['role'] as String?;
+        return role == 'admin';
+      });
+});
+
 /// Stream provider for the set of node IDs claimed by group members.
 ///
 /// Returns the `relative_id_in_tree` values for all members of [groupId].
