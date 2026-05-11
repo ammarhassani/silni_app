@@ -363,7 +363,17 @@
       "Bash(rm /Users/engammar/Apps/silni_app/silni-landing/app/join/\\\\[\\\\[...code\\\\]\\\\]/page.tsx)",
       "Bash(rmdir /Users/engammar/Apps/silni_app/silni-landing/app/join/\\\\[\\\\[...code\\\\]\\\\])",
       "WebSearch",
-      "WebFetch(domain:uxdesign.cc)"
+      "WebFetch(domain:uxdesign.cc)",
+      "Bash(bash /tmp/check_unused.sh)",
+      "Bash(perl -i -pe ' *)",
+      "mcp__plugin_supabase_supabase__list_tables",
+      "mcp__plugin_supabase_supabase__get_edge_function",
+      "Bash(supabase db *)",
+      "WebFetch(domain:www.geni.com)",
+      "WebFetch(domain:help.geni.com)",
+      "mcp__plugin_supabase_supabase__list_migrations",
+      "Bash(set -e)",
+      "Bash(git rev-list *)"
     ],
     "deny": [],
     "ask": []

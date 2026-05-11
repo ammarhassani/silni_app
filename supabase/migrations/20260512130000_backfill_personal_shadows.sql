@@ -24,7 +24,14 @@ DECLARE
   v_count INT := 0;
 BEGIN
   FOR rec IN
-    SELECT nc.claimant_user_id, nc.declared_anchor_relative_id,
+    -- DISTINCT ON dedupes when a (claimant, anchor) pair has multiple
+    -- approved claims (can happen if the wizard was re-submitted after
+    -- a previous approval). Without this, the cursor returns N rows for
+    -- the same logical relationship and the loop creates N duplicate
+    -- shadows because the NOT EXISTS check is evaluated once at
+    -- cursor-fetch time, before any iteration has inserted.
+    SELECT DISTINCT ON (nc.claimant_user_id, nc.declared_anchor_relative_id)
+           nc.claimant_user_id, nc.declared_anchor_relative_id,
            nc.declared_edge_path,
            r.full_name AS anchor_name,
            r.gender AS anchor_gender
@@ -39,6 +46,7 @@ BEGIN
           AND sh.mirrors_relative_id = nc.declared_anchor_relative_id
           AND sh.family_group_id IS NULL
       )
+    ORDER BY nc.claimant_user_id, nc.declared_anchor_relative_id, nc.decided_at DESC
   LOOP
     -- Claimant's personal self-node (guaranteed by Task 2)
     SELECT id INTO v_claimant_self_id
