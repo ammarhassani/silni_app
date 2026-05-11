@@ -1069,6 +1069,9 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   /// Visibility:
   /// - If the user has no family groups, nothing is rendered (relative is
   ///   personal by default — no choice needed).
+  /// - If the user is NOT the admin of their active group, nothing is
+  ///   rendered (only admins can add to the shared lineage; members are
+  ///   silently constrained to personal scope).
   /// - Otherwise, two cards are shown. The selection drives
   ///   [_addToSharedTree] (and [_selectedGroup] when the user belongs to
   ///   exactly one group).
@@ -1078,6 +1081,12 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
   Widget _buildSharedTreeToggle() {
     final user = ref.watch(currentUserProvider);
     if (user == null) return const SizedBox.shrink();
+
+    // Non-admins never see the scope picker — they can only add personal
+    // relatives. The default value of `_addToSharedTree` (false) handles
+    // the silent "personal scope" behaviour for them.
+    final isAdmin = ref.watch(isAdminOfActiveGroupProvider);
+    if (!isAdmin) return const SizedBox.shrink();
 
     final groupsAsync = ref.watch(userGroupsProvider(user.id));
 

@@ -557,14 +557,21 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                               groupInfo.nodeId == null;
 
                           // Personal-vs-shared explainer banner: shown
-                          // whenever the user is in a group AND hasn't
-                          // dismissed it for that group. Triggers the
+                          // whenever a NON-admin user is in a group AND
+                          // hasn't dismissed it for that group. The banner
+                          // copy talks about "the admin's additions appear
+                          // here" — nonsensical when you ARE the admin, so
+                          // we suppress it for them entirely. Triggers the
                           // SharedPreferences load lazily so the prefs read
-                          // doesn't block the tree from rendering.
-                          if (groupInfo != null) {
+                          // doesn't block the tree from rendering (skipped
+                          // for admins to avoid wasted async work).
+                          final isAdminOfThisGroup = groupInfo != null &&
+                              groupInfo.role == 'admin';
+                          if (groupInfo != null && !isAdminOfThisGroup) {
                             _loadPersonalVsSharedDismissal(groupInfo.groupId);
                           }
                           final showScopeBanner = groupInfo != null &&
+                              !isAdminOfThisGroup &&
                               _personalVsSharedDismissed[groupInfo.groupId] ==
                                   false;
 
