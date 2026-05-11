@@ -7,6 +7,57 @@ import '../services/family_group_service.dart';
 /// Cache duration for group providers (same pattern as familyEdgesStreamProvider).
 const _cacheTimeout = Duration(minutes: 5);
 
+/// Slot-state snapshot from the `get_my_membership_slots` RPC.
+///
+/// The DB enforces per-user quotas:
+///   - 1 admin role across all groups
+///   - 2 member roles across all groups
+///   - personal scope is always available
+///
+/// UI surfaces use these flags to hide/disable CTAs when a slot is full;
+/// the actual "replace" flow (leave + join, or delete + create) is a
+/// separate task.
+class MembershipSlots {
+  final FamilyGroup? admin;
+  final List<FamilyGroup> members;
+  final bool adminSlotFull;
+  final bool memberSlotFull;
+
+  const MembershipSlots({
+    required this.admin,
+    required this.members,
+    required this.adminSlotFull,
+    required this.memberSlotFull,
+  });
+
+  factory MembershipSlots.fromJson(Map<String, dynamic> json) {
+    final adminJson = json['admin'] as Map<String, dynamic>?;
+    final membersJson = (json['members'] as List<dynamic>?) ?? const [];
+    return MembershipSlots(
+      admin: adminJson != null ? FamilyGroup.fromJson(adminJson) : null,
+      members: membersJson
+          .map((m) => FamilyGroup.fromJson(m as Map<String, dynamic>))
+          .toList(),
+      adminSlotFull: json['admin_slot_full'] as bool? ?? false,
+      memberSlotFull: json['member_slot_full'] as bool? ?? false,
+    );
+  }
+}
+
+/// Watches the current user's membership slot state. Invalidate this
+/// after any group create/join/leave/kick to refresh the UI gates.
+///
+/// `autoDispose` so each new screen visit re-fetches; combined with
+/// explicit `ref.invalidate` calls in write paths this keeps the slot
+/// state correct without needing a long-lived stream.
+final myMembershipSlotsProvider =
+    FutureProvider.autoDispose<MembershipSlots>((ref) async {
+  final result = await SupabaseConfig.client
+      .rpc('get_my_membership_slots')
+      .timeout(const Duration(seconds: 10));
+  return MembershipSlots.fromJson(result as Map<String, dynamic>);
+});
+
 /// Provider for the current user's family groups.
 ///
 /// Accepts a userId and returns a list of [FamilyGroup] objects.

@@ -18,6 +18,7 @@ import '../../../shared/widgets/glass_dialog.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../core/services/error_reporter.dart';
 import '../../../shared/widgets/persistent_bottom_nav.dart';
+import '../../family_groups/providers/family_group_providers.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
 import '../widgets/widgets.dart';
 import '../../../shared/utils/ui_helpers.dart';
@@ -173,7 +174,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           );
                         },
                       ),
-                      _buildCreateFamilyGroupTile(context, themeColors),
+                      _buildCreateFamilyGroupTile(context, ref, themeColors),
                       const SizedBox(height: AppSpacing.lg),
                     ],
                   ),
@@ -699,63 +700,85 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   /// shared family section. Always visible so users without a group have
   /// an obvious entry point, and users with a group can spin up another
   /// (e.g. for a different branch of the extended family).
+  ///
+  /// Quota gate: when the user's single admin slot is already filled, the
+  /// tile renders in a disabled/dim style with a "لديك بالفعل عائلتك"
+  /// subtitle and the tap handler is suppressed. We keep the tile visible
+  /// (rather than hiding it) so the explanation lands even for users who
+  /// land here looking for that exact action.
   Widget _buildCreateFamilyGroupTile(
     BuildContext context,
+    WidgetRef ref,
     dynamic themeColors,
   ) {
+    final adminSlotFull = ref
+            .watch(myMembershipSlotsProvider)
+            .valueOrNull
+            ?.adminSlotFull ??
+        false;
+    final disabled = adminSlotFull;
+    final subtitle = disabled ? 'لديك بالفعل عائلتك' : 'ابدأ شجرة عائلة منفصلة';
+    final semanticsLabel = disabled
+        ? 'إنشاء مجموعة عائلية جديدة - معطل - لديك بالفعل عائلتك'
+        : 'إنشاء مجموعة عائلية جديدة - ابدأ شجرة عائلة منفصلة';
+
     return Semantics(
-      label: 'إنشاء مجموعة عائلية جديدة - ابدأ شجرة عائلة منفصلة',
+      label: semanticsLabel,
       button: true,
-      child: GlassCard(
-        onTap: () => context.push(AppRoutes.createFamilyGroup),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: themeColors.accent.withValues(alpha: 0.18),
-                border: Border.all(
-                  color: themeColors.accent.withValues(alpha: 0.45),
-                  width: 1,
+      enabled: !disabled,
+      child: Opacity(
+        opacity: disabled ? 0.5 : 1.0,
+        child: GlassCard(
+          onTap: disabled ? null : () => context.push(AppRoutes.createFamilyGroup),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: themeColors.accent.withValues(alpha: 0.18),
+                  border: Border.all(
+                    color: themeColors.accent.withValues(alpha: 0.45),
+                    width: 1,
+                  ),
+                ),
+                child: Icon(
+                  disabled ? Icons.lock_outline_rounded : Icons.group_add_rounded,
+                  color: themeColors.accent,
+                  size: 22,
                 ),
               ),
-              child: Icon(
-                Icons.group_add_rounded,
-                color: themeColors.accent,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'إنشاء مجموعة عائلية جديدة',
-                    style: AppTypography.titleMedium.copyWith(
-                      color: themeColors.textOnGradient,
-                      fontWeight: FontWeight.w600,
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'إنشاء مجموعة عائلية جديدة',
+                      style: AppTypography.titleMedium.copyWith(
+                        color: themeColors.textOnGradient,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'ابدأ شجرة عائلة منفصلة',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: themeColors.textOnGradient.withValues(alpha: 0.6),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: AppTypography.bodySmall.copyWith(
+                        color: themeColors.textOnGradient.withValues(alpha: 0.6),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: themeColors.textOnGradient.withValues(alpha: 0.5),
-              size: 16,
-            ),
-          ],
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: themeColors.textOnGradient.withValues(alpha: 0.5),
+                size: 16,
+              ),
+            ],
+          ),
         ),
       ),
     );

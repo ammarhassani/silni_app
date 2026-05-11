@@ -99,6 +99,10 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         ref.invalidate(activeFamilyGroupProvider);
         ref.invalidate(userGroupsProvider(user.id));
         ref.invalidate(relativesStreamProvider(user.id));
+        // Slot state changed: the user just consumed their single admin
+        // slot. Invalidate so downstream gates (switcher chip, profile
+        // CTA) re-fetch and hide their create entry points.
+        ref.invalidate(myMembershipSlotsProvider);
         setState(() {
           _createdGroup = group;
           _isLoading = false;

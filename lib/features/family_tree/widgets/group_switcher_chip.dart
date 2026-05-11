@@ -173,6 +173,16 @@ class _GroupPickerSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeColors = ref.watch(themeColorsProvider);
     final bottomPad = MediaQuery.of(context).viewPadding.bottom;
+    // Watch the slot state so the "create" action can be hidden when the
+    // user has already claimed their single admin slot. valueOrNull means
+    // we keep the create tile visible while loading / on error — the
+    // server-side trigger is the source of truth and will surface the cap
+    // as a user-facing error if the user does manage to tap through.
+    final adminSlotFull = ref
+            .watch(myMembershipSlotsProvider)
+            .valueOrNull
+            ?.adminSlotFull ??
+        false;
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -246,12 +256,42 @@ class _GroupPickerSheet extends ConsumerWidget {
                 color: Colors.white.withValues(alpha: 0.15),
                 height: 1,
               ),
-              _PickerTile(
-                icon: Icons.add_rounded,
-                label: 'إنشاء مجموعة جديدة',
-                selected: false,
-                onTap: onCreate,
-              ),
+              // Quota gate: hide the "create new group" CTA once the admin
+              // slot is claimed. A muted info row stands in so the cap is
+              // self-explanatory rather than silently absent. Existing
+              // groups remain selectable above.
+              if (adminSlotFull)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.sm,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        size: 18,
+                        color: Colors.white.withValues(alpha: 0.6),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          'وصلت إلى الحد الأقصى للعائلات (1 + 2)',
+                          style: AppTypography.bodySmall.copyWith(
+                            color: Colors.white.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                _PickerTile(
+                  icon: Icons.add_rounded,
+                  label: 'إنشاء مجموعة جديدة',
+                  selected: false,
+                  onTap: onCreate,
+                ),
               SizedBox(height: bottomPad + AppSpacing.sm),
             ],
           ),

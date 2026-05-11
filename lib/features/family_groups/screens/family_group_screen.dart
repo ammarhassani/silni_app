@@ -389,6 +389,11 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
     ref.invalidate(groupMemberNodeIdsProvider(widget.groupId));
     ref.invalidate(groupTodayInteractionsStreamProvider(widget.groupId));
     ref.invalidate(groupTodayContactedRelativesProvider(widget.groupId));
+    // Membership slot state — leaving (or removing the last admin who
+    // gets auto-promoted-then-leaves) frees the caller's admin/member
+    // slot. The kicked user's UI will pick up their freed slot the next
+    // time they visit a gated surface (autoDispose re-fetch).
+    ref.invalidate(myMembershipSlotsProvider);
     if (userId != null) {
       ref.invalidate(userGroupsProvider(userId));
       ref.invalidate(relativesStreamProvider(userId));

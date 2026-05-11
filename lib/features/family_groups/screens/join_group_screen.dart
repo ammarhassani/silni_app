@@ -13,6 +13,7 @@ import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/family_group_model.dart';
+import '../providers/family_group_providers.dart';
 import '../services/family_group_service.dart';
 import '../services/node_invitation_service.dart';
 
@@ -119,7 +120,27 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
       return;
     }
 
+    // Quota gate: the DB trigger caps member-role rows per user at 2. If
+    // the user is already at the cap, fail fast on this screen rather than
+    // letting them traverse the identity-claim wizard only to hit a server
+    // error at the end. Phase 3 will add a "leave one first" picker — for
+    // now we surface the explanation and stay put.
     setState(() => _isJoining = true);
+    try {
+      final slots = await ref.read(myMembershipSlotsProvider.future);
+      if (slots.memberSlotFull && mounted) {
+        setState(() {
+          _isJoining = false;
+          _errorMessage =
+              'أنت بالفعل في عائلتَين. غادر إحداهما قبل الانضمام لهذه.';
+        });
+        return;
+      }
+    } catch (e) {
+      // Slot fetch failure shouldn't block — the server-side trigger is
+      // the source of truth and will return a friendly error if needed.
+      debugPrint('Slot check failed (pre-join): $e');
+    }
 
     try {
       // Validate the invite code (no DB write yet).

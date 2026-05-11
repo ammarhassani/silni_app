@@ -115,6 +115,11 @@ class _InvitationDetailScreenState
         }
         ref.invalidate(myPendingInvitationsProvider);
         ref.invalidate(pendingInvitationCountProvider);
+        // Membership slot state — accepting an invitation creates a new
+        // member (or admin, if claim → first member) row, consuming one
+        // of the user's slots. Invalidate so the join/create gates on
+        // the next screen reflect the updated cap.
+        ref.invalidate(myMembershipSlotsProvider);
 
         HapticFeedback.heavyImpact();
         context.go(AppRoutes.familyTree);
