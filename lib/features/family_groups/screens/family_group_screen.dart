@@ -401,6 +401,35 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
     final themeColors = ref.watch(themeColorsProvider);
     final membersAsync = ref.watch(groupMembersProvider(widget.groupId));
 
+    // Non-member guard: if the user is not a member of this group (e.g. via
+    // deep link, stale back-stack, or their unlinked-membership row was
+    // pruned by the 2026-05-11 backfill), `_loadGroup` returns null and we
+    // render a graceful fallback with a home button instead of an empty
+    // intermediate state. The loading flag guards the spinner above.
+    if (!_isLoadingGroup && _group == null) {
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: GlassCard(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('لا يمكنك عرض هذه المجموعة'),
+                  const SizedBox(height: AppSpacing.md),
+                  GradientButton(
+                    text: 'العودة للرئيسية',
+                    onPressed: () => context.go(AppRoutes.home),
+                    icon: Icons.home_rounded,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       body: Stack(
         children: [

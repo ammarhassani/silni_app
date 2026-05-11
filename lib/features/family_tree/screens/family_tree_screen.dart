@@ -142,8 +142,22 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
           .eq('user_id', userId)
           .maybeSingle();
 
-      final isAdmin = memberRow?['role'] == 'admin';
-      final hasSelfNode = memberRow?['relative_id_in_tree'] != null;
+      if (memberRow == null) {
+        // User is not (yet) a member of this group — could be because they
+        // tapped a deep link without going through the wizard, or because
+        // their unlinked-membership row was pruned by the 2026-05-11 backfill.
+        // Route them home; they can re-tap the invite link.
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('لست عضواً في هذه المجموعة بعد')),
+          );
+          context.go(AppRoutes.home);
+        }
+        return;
+      }
+
+      final isAdmin = memberRow['role'] == 'admin';
+      final hasSelfNode = memberRow['relative_id_in_tree'] != null;
 
       if (isAdmin) {
         // First-time setup only (no self-node yet) — ask the user before
