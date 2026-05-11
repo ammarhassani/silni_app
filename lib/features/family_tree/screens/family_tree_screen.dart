@@ -461,8 +461,14 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                       return _buildError(e);
                     },
                     data: (groupInfo) {
+                      // In group mode, merge shared group relatives with the
+                      // viewer's OWN personal relatives (family_group_id IS NULL).
+                      // Non-admin members add into personal scope (Task A1/A2),
+                      // so without this merge their own additions are invisible
+                      // from the group tree. RLS keeps the viewer's personal
+                      // rows hidden from other members.
                       final relativesAsync = groupInfo != null
-                          ? ref.watch(groupRelativesStreamProvider(groupInfo.groupId))
+                          ? ref.watch(groupTreeRelativesProvider(groupInfo.groupId))
                           : ref.watch(relativesStreamProvider(userId));
 
                       return relativesAsync.when(

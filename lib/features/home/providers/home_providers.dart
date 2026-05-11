@@ -64,8 +64,13 @@ final viewerFilteredRelativesProvider =
 
   final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
 
+  // In group mode, merge the shared group relatives with the viewer's
+  // OWN personal relatives (family_group_id IS NULL). Non-admin members
+  // add into personal scope (Task A1/A2), so without this merge their
+  // own additions are invisible from the group view. Other members never
+  // see the viewer's personal rows — RLS filters by user_id.
   final rawAsync = groupInfo != null
-      ? ref.watch(groupRelativesStreamProvider(groupInfo.groupId))
+      ? ref.watch(groupTreeRelativesProvider(groupInfo.groupId))
       : ref.watch(relativesStreamProvider(user.id));
 
   final viewerNodeId = groupInfo?.nodeId;

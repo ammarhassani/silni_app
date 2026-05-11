@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../shared/models/relative_model.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../home/providers/home_providers.dart';
 import '../models/family_graph.dart';
 import '../services/family_graph_service.dart';
 
@@ -71,15 +73,64 @@ final sharedFamilyEdgesStreamProvider =
       .map((data) => data.map((json) => FamilyEdge.fromJson(json)).toList());
 });
 
+/// Group-context edges: shared group edges + the viewer's own personal edges
+/// (`family_group_id IS NULL`). Other group members never see the viewer's
+/// personal edges because RLS filters by `user_id`.
+///
+/// This lets the family tree merge a non-admin member's personal additions
+/// (which land in personal scope per Task A1/A2) into their group-tree view.
+final groupTreeEdgesProvider =
+    Provider.autoDispose.family<AsyncValue<List<FamilyEdge>>, String>((ref, groupId) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return const AsyncValue.data([]);
+
+  final groupAsync = ref.watch(sharedFamilyEdgesStreamProvider(groupId));
+  final personalAsync = ref.watch(familyEdgesStreamProvider(user.id));
+
+  if (groupAsync.isLoading && personalAsync.isLoading) {
+    return const AsyncValue.loading();
+  }
+  if (groupAsync.hasError && personalAsync.hasError) {
+    return AsyncValue.error(
+      groupAsync.error!,
+      groupAsync.stackTrace ?? StackTrace.current,
+    );
+  }
+
+  final groupEdges = groupAsync.valueOrNull ?? const <FamilyEdge>[];
+  // Keep ONLY the viewer's personal edges (familyGroupId == null).
+  // The viewer's owned-edges stream also contains rows scoped to this group
+  // (or other groups) — those must NOT be re-included since group edges are
+  // already covered by the shared stream.
+  final personalEdges = (personalAsync.valueOrNull ?? const <FamilyEdge>[])
+      .where((e) => e.familyGroupId == null)
+      .toList();
+
+  // Dedup by id (defensive — scopes are disjoint by design).
+  final byId = <String, FamilyEdge>{};
+  for (final e in groupEdges) {
+    byId[e.id] = e;
+  }
+  for (final e in personalEdges) {
+    byId.putIfAbsent(e.id, () => e);
+  }
+
+  return AsyncValue.data(byId.values.toList());
+});
+
 /// Build a shared graph with a specific viewer as anchor.
 ///
 /// [viewerNodeId] is the relative_id_in_tree of the current viewer,
 /// used as the userId for graph construction so perspective labels
 /// are computed relative to them. If null, uses the first `is_self` node
 /// found, or falls back to an empty string (no perspective).
+///
+/// Sources edges from [groupTreeEdgesProvider] so the viewer's personal
+/// additions (scoped `family_group_id IS NULL`) appear alongside the shared
+/// group edges. Other members are unaffected (RLS hides personal edges).
 final sharedFamilyGraphProvider = Provider.autoDispose
     .family<FamilyGraph?, ({String groupId, String? viewerNodeId})>((ref, params) {
-  final edgesAsync = ref.watch(sharedFamilyEdgesStreamProvider(params.groupId));
+  final edgesAsync = ref.watch(groupTreeEdgesProvider(params.groupId));
   return edgesAsync.whenData((edges) {
     if (edges.isEmpty) return null;
     // Use provided viewerNodeId, or fallback to empty string (observer mode)
@@ -237,4 +288,51 @@ final groupRelativesStreamProvider =
           .map((json) => Relative.fromJson(json))
           .where((r) => !r.isArchived)
           .toList());
+});
+
+/// Group-context relatives: shared group relatives + the viewer's own
+/// personal relatives (`family_group_id IS NULL`).
+///
+/// When a non-admin member adds a relative it lands in personal scope
+/// (Task A1/A2), so the shared-tree stream alone would hide their own
+/// additions. This provider merges both. Other members never see the
+/// viewer's personal rows because the underlying personal stream is
+/// filtered by `user_id` at the RLS layer.
+final groupTreeRelativesProvider =
+    Provider.autoDispose.family<AsyncValue<List<Relative>>, String>((ref, groupId) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return const AsyncValue.data([]);
+
+  final groupAsync = ref.watch(groupRelativesStreamProvider(groupId));
+  final personalAsync = ref.watch(relativesStreamProvider(user.id));
+
+  if (groupAsync.isLoading && personalAsync.isLoading) {
+    return const AsyncValue.loading();
+  }
+  if (groupAsync.hasError && personalAsync.hasError) {
+    return AsyncValue.error(
+      groupAsync.error!,
+      groupAsync.stackTrace ?? StackTrace.current,
+    );
+  }
+
+  final groupList = groupAsync.valueOrNull ?? const <Relative>[];
+  // Keep ONLY the viewer's personal rows. The owned-rows stream also
+  // contains rows the viewer added to this (or another) group; those are
+  // already covered by the shared stream for this group, so we drop any
+  // row with a non-null family_group_id here.
+  final personalList = (personalAsync.valueOrNull ?? const <Relative>[])
+      .where((r) => r.familyGroupId == null)
+      .toList();
+
+  // Dedup by id (defensive — scopes are disjoint by design).
+  final byId = <String, Relative>{};
+  for (final r in groupList) {
+    byId[r.id] = r;
+  }
+  for (final r in personalList) {
+    byId.putIfAbsent(r.id, () => r);
+  }
+
+  return AsyncValue.data(byId.values.toList());
 });
