@@ -111,65 +111,72 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.lg)),
 
-              // Shared family section — only renders when user is in a
-              // group. Group creation now happens implicitly via the share
-              // flow on the family tree screen, so there's no in-profile
-              // CTA here when the user has no group yet.
+              // Shared family section — renders the user's active group
+              // (if any) plus the "create new group" CTA. The CTA always
+              // shows so users with 0 groups have an obvious entry point,
+              // and users with a group can spin up additional ones (e.g.
+              // for an uncle's branch).
               SliverToBoxAdapter(
-                child: Consumer(
-                  builder: (context, ref, _) {
-                    final groupInfo = ref
-                        .watch(activeFamilyGroupProvider)
-                        .valueOrNull;
-                    if (groupInfo == null) return const SizedBox.shrink();
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        '👨‍👩‍👧 العائلة المشتركة',
+                        style: AppTypography.headlineMedium.copyWith(
+                          color: themeColors.textOnGradient,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            '👨‍👩‍👧 العائلة المشتركة',
-                            style: AppTypography.headlineMedium.copyWith(
-                              color: themeColors.textOnGradient,
-                              fontWeight: FontWeight.bold,
+                      const SizedBox(height: AppSpacing.md),
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final groupInfo = ref
+                              .watch(activeFamilyGroupProvider)
+                              .valueOrNull;
+                          if (groupInfo == null) return const SizedBox.shrink();
+                          return Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: AppSpacing.sm,
                             ),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          GlassCard(
-                            child: ListTile(
-                              leading: Icon(
-                                Icons.diversity_3_rounded,
-                                color: themeColors.accent,
-                              ),
-                              title: Text(
-                                'مجموعتي العائلية',
-                                style: AppTypography.titleMedium.copyWith(
-                                  color: Colors.white,
+                            child: GlassCard(
+                              child: ListTile(
+                                leading: Icon(
+                                  Icons.diversity_3_rounded,
+                                  color: themeColors.accent,
+                                ),
+                                title: Text(
+                                  'مجموعتي العائلية',
+                                  style: AppTypography.titleMedium.copyWith(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'إدارة الأعضاء والدعوات',
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.7),
+                                  ),
+                                ),
+                                trailing: Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  color: Colors.white.withValues(alpha: 0.5),
+                                  size: 20,
+                                ),
+                                onTap: () => context.push(
+                                  '${AppRoutes.familyGroupDetail}/${groupInfo.groupId}',
                                 ),
                               ),
-                              subtitle: Text(
-                                'إدارة الأعضاء والدعوات',
-                                style: AppTypography.bodySmall.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.7),
-                                ),
-                              ),
-                              trailing: Icon(
-                                Icons.arrow_forward_ios_rounded,
-                                color: Colors.white.withValues(alpha: 0.5),
-                                size: 20,
-                              ),
-                              onTap: () => context.push(
-                                '${AppRoutes.familyGroupDetail}/${groupInfo.groupId}',
-                              ),
                             ),
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
-                        ],
+                          );
+                        },
                       ),
-                    );
-                  },
+                      _buildCreateFamilyGroupTile(context, themeColors),
+                      const SizedBox(height: AppSpacing.lg),
+                    ],
+                  ),
                 ),
               ),
 
@@ -685,6 +692,72 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       ),
       validator: validator,
+    );
+  }
+
+  /// Create-family-group tile — accent-tinted CTA that lives under the
+  /// shared family section. Always visible so users without a group have
+  /// an obvious entry point, and users with a group can spin up another
+  /// (e.g. for a different branch of the extended family).
+  Widget _buildCreateFamilyGroupTile(
+    BuildContext context,
+    dynamic themeColors,
+  ) {
+    return Semantics(
+      label: 'إنشاء مجموعة عائلية جديدة - ابدأ شجرة عائلة منفصلة',
+      button: true,
+      child: GlassCard(
+        onTap: () => context.push(AppRoutes.createFamilyGroup),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: themeColors.accent.withValues(alpha: 0.18),
+                border: Border.all(
+                  color: themeColors.accent.withValues(alpha: 0.45),
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                Icons.group_add_rounded,
+                color: themeColors.accent,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'إنشاء مجموعة عائلية جديدة',
+                    style: AppTypography.titleMedium.copyWith(
+                      color: themeColors.textOnGradient,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'ابدأ شجرة عائلة منفصلة',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: themeColors.textOnGradient.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: themeColors.textOnGradient.withValues(alpha: 0.5),
+              size: 16,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
