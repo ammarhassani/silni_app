@@ -1,7 +1,5 @@
-import 'package:flutter/foundation.dart';
 import '../../../core/config/supabase_config.dart';
 import '../models/family_group_model.dart';
-import 'family_sharing_service.dart';
 
 /// Static service for family group CRUD operations.
 ///
@@ -66,100 +64,34 @@ class FamilyGroupService {
         .eq('id', groupId);
   }
 
-  /// Join a group by invite code.
-  ///
-  /// Uses the `join_group_by_invite_code` SECURITY DEFINER RPC to validate
-  /// the invite code and insert membership atomically. The new member joins
-  /// as unlinked — node claiming is handled separately by the phone-based
-  /// invitation system.
-  ///
-  /// Throws if the invite code is invalid.
-  static Future<FamilyGroup> joinGroup({
+  /// Validate an invite code and return the group it belongs to.
+  /// **Does NOT create a family_group_members row** — that happens
+  /// atomically inside approve_node_claim when an admin confirms the
+  /// joiner's identity-claim. Callers should follow this with a
+  /// navigation into the identity-claim wizard.
+  static Future<FamilyGroup> acceptInvite({
     required String inviteCode,
-    required String userId,
   }) async {
     final client = SupabaseConfig.client;
-
-    // Step 1: Validate invite code + insert membership via SECURITY DEFINER RPC.
-    // The RPC inserts membership with relative_id_in_tree = NULL.
-    // If already a member, it returns the group without re-inserting.
     final groupData = await client.rpc(
       'join_group_by_invite_code',
       params: {'code': inviteCode},
     );
-
     final results = groupData is List<dynamic>
         ? groupData
         : (groupData != null ? [groupData] : <dynamic>[]);
     if (results.isEmpty) {
       throw Exception('رمز الدعوة غير صالح');
     }
-    final group =
-        FamilyGroup.fromJson(results.first as Map<String, dynamic>);
-
-    // Step 2: Verify and fill any missing edges in the shared graph
-    try {
-      await FamilySharingService.verifySharedEdges(groupId: group.id);
-    } catch (e) {
-      // Best-effort — don't fail the join if edge verification fails.
-      debugPrint('Edge verification failed (post-join): $e');
-    }
-
-    // Step 3: Fire-and-forget join notification to existing members
-    _sendJoinNotification(
-      groupId: group.id,
-      newUserId: userId,
-      familyName: group.name,
-    );
-
-    return group;
+    return FamilyGroup.fromJson(results.first as Map<String, dynamic>);
   }
 
-  /// Fire-and-forget join notification to group members.
-  static Future<void> _sendJoinNotification({
-    required String groupId,
-    required String newUserId,
-    required String familyName,
-  }) async {
-    try {
-      final client = SupabaseConfig.client;
-
-      // Get all OTHER members to notify
-      final members = await client
-          .from('family_group_members')
-          .select('user_id')
-          .eq('group_id', groupId)
-          .neq('user_id', newUserId);
-
-      // Fetch the join notification template from admin panel
-      final template = await client
-          .from('admin_notification_templates')
-          .select()
-          .eq('template_key', 'family_join_1')
-          .eq('is_active', true)
-          .maybeSingle();
-
-      if (template == null) return;
-
-      final body = (template['body_ar'] as String)
-          .replaceAll('{{member_name}}', 'عضو جديد')
-          .replaceAll('{{family_name}}', familyName);
-      final title = template['title_ar'] as String;
-
-      // Send to each member via the existing push function
-      for (final member in members) {
-        await client.functions.invoke('send-push-notification', body: {
-          'userId': member['user_id'],
-          'notificationType': 'system',
-          'title': title,
-          'body': body,
-          'data': {'type': 'family_join', 'group_id': groupId},
-        });
-      }
-    } catch (_) {
-      // Fire-and-forget — don't block join flow on notification failure
-    }
-  }
+  @Deprecated('Use acceptInvite. joinGroup created a phantom membership row '
+              'before identity was verified — fixed 2026-05-11.')
+  static Future<FamilyGroup> joinGroup({
+    required String inviteCode,
+    required String userId,
+  }) => acceptInvite(inviteCode: inviteCode);
 
   // ---------------------------------------------------------------------------
   // Query methods
