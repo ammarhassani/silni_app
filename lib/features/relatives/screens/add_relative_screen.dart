@@ -466,11 +466,17 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
     final themeColors = ref.watch(themeColorsProvider);
 
     // Watch existing relatives for the flat relationship picker
-    // Use shared relatives when adding to shared tree, personal otherwise
     final user = ref.watch(currentUserProvider);
     final groupInfo = ref.watch(activeFamilyGroupProvider).valueOrNull;
-    final relativesAsync = (_addToSharedTree && groupInfo != null)
-        ? ref.watch(groupRelativesStreamProvider(groupInfo.groupId))
+
+    // For singleton-slot detection (mother/father/husband/wife): we need the
+    // FULL visible tree from the viewer's perspective. In group context that's
+    // the merged group + viewer-personal stream; in personal mode that's the
+    // viewer's own relatives. The _addToSharedTree toggle no longer matters
+    // here — the singleton check is about "what's already in your tree",
+    // not where you're adding the new one.
+    final relativesAsync = groupInfo != null
+        ? ref.watch(groupTreeRelativesProvider(groupInfo.groupId))
         : (user != null ? ref.watch(relativesStreamProvider(user.id)) : null);
     // Phase 9.X.D.A.fix Bug 1: exclude self-node from duplicate-detection.
     // The user shouldn't trigger a "duplicate name" warning against themselves.
