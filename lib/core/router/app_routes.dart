@@ -80,6 +80,9 @@ class AppRoutes {
   // Admin's claim review screen
   static const String reviewClaim = '/review-claim';
 
+  // Joiner's pending-claim screen (shown after submit, while admin reviews)
+  static const String claimPending = '/claim-pending';
+
   // Occasion messages
   static const String occasionMessages = '/occasion-messages';
 }

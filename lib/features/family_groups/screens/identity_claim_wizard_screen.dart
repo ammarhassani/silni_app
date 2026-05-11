@@ -33,7 +33,21 @@ import 'package:silni_app/shared/widgets/gradient_button.dart';
 /// with a pending banner until admin acts.
 class IdentityClaimWizardScreen extends ConsumerStatefulWidget {
   final String groupId;
-  const IdentityClaimWizardScreen({super.key, required this.groupId});
+
+  /// Set when the joiner reaches the wizard through the join-by-code flow
+  /// and is NOT yet a member of the group (deferred-membership-on-claim-
+  /// approval). The bootstrap and downstream RPCs (`findCandidates`,
+  /// `createClaim`) forward this so the server can authorize the pre-member
+  /// caller via the pending invitation instead of a membership check.
+  ///
+  /// `null` is the legacy/paranoid path — caller is already a member.
+  final String? inviteCode;
+
+  const IdentityClaimWizardScreen({
+    super.key,
+    required this.groupId,
+    this.inviteCode,
+  });
 
   @override
   ConsumerState<IdentityClaimWizardScreen> createState() =>
@@ -96,13 +110,84 @@ class _IdentityClaimWizardScreenState
 
   Future<void> _bootstrapAdminAndTree() async {
     // Fetch the admin's name + relative_id_in_tree, and the full list of
-    // tree members (for the anchor switcher). One round trip if possible.
+    // tree members (for the anchor switcher).
+    //
+    // Branched on widget.inviteCode:
+    //   - Pre-member path (inviteCode != null) — one round-trip via the
+    //     `get_group_info_for_invite` RPC, which authorizes by invite code
+    //     instead of family_group_members membership. This is the ordinary
+    //     deferred-membership flow.
+    //   - Member path (inviteCode == null) — paranoid fallback for users
+    //     who are already members. Uses the legacy `get_group_anchor_info`
+    //     RPC + direct relatives query (both gated by membership RLS).
     //
     // Wrapped in try/catch so a runtime error here doesn't leave the wizard
     // sitting on the anchor-step spinner forever — surface the failure to
     // the user instead.
-    debugPrint('[IdentityClaimWizard] bootstrap → group=${widget.groupId}');
+    debugPrint(
+      '[IdentityClaimWizard] bootstrap → group=${widget.groupId} '
+      'invite=${widget.inviteCode != null}',
+    );
     try {
+      if (widget.inviteCode != null) {
+        // ----- Pre-member path: single invite-coded RPC. -----
+        final info = await ref
+            .read(nodeClaimServiceProvider)
+            .getGroupInfoForInvite(widget.inviteCode!);
+        if (!mounted) return;
+
+        final relativesData =
+            (info['relatives'] as List<dynamic>?) ?? const [];
+        final treeMembers = relativesData
+            .cast<Map<String, dynamic>>()
+            .map((r) => _TreeMember(
+                  id: r['id'] as String,
+                  name: (r['full_name'] as String?) ?? '',
+                  gender: r['gender'] as String?,
+                  // The invite-bootstrap payload returns `admin_label`
+                  // (admin-perspective relationship) rather than the raw
+                  // `relationship_type`. Wire it through so the anchor
+                  // picker subtitle stays sensible.
+                  relationshipType: r['admin_label'] as String?,
+                  familySide: null,
+                  isSelf: (r['is_self'] as bool?) ?? false,
+                ))
+            .toList();
+
+        // Anchor defaults to the admin's self-node — the one with
+        // is_self=true. There should be exactly one in a well-formed group;
+        // if absent, the anchor stays null and the role step will surface
+        // the bootstrap error.
+        _TreeMember? adminSelfNode;
+        for (final m in treeMembers) {
+          if (m.isSelf) {
+            adminSelfNode = m;
+            break;
+          }
+        }
+
+        final groupName = (info['group_name'] as String?) ?? '';
+        final adminName = (info['admin_name'] as String?) ?? '';
+
+        debugPrint(
+          '[IdentityClaimWizard] bootstrap (invite) ✓ group=$groupName '
+          'admin=$adminName adminTreeId=${adminSelfNode?.id} '
+          'members=${treeMembers.length}',
+        );
+
+        setState(() {
+          _groupName = groupName;
+          _adminName = adminName;
+          _adminRelativeId = adminSelfNode?.id;
+          _anchorRelativeId = adminSelfNode?.id;
+          _anchorName = adminSelfNode?.name ?? adminName;
+          _treeMembers = treeMembers;
+          _bootstrapError = null;
+        });
+        return;
+      }
+
+      // ----- Member path: legacy two-query bootstrap. -----
       final client = SupabaseConfig.client;
 
       // Single SECURITY DEFINER RPC that returns group + admin info.
@@ -213,6 +298,7 @@ class _IdentityClaimWizardScreenState
         edgePath: role.edgePath,
         parentSide: role.parentSide,
         gender: role.gender,
+        inviteCode: widget.inviteCode,
       );
       if (mounted) {
         setState(() {
@@ -238,18 +324,22 @@ class _IdentityClaimWizardScreenState
     if (_role == null || _anchorRelativeId == null) return;
     setState(() => _isSubmitting = true);
     try {
-      await ref.read(nodeClaimServiceProvider).createClaim(
+      final claim = await ref.read(nodeClaimServiceProvider).createClaim(
             groupId: widget.groupId,
             claimedRelativeId: candidate.id,
             anchorRelativeId: _anchorRelativeId!,
             edgePath: _role!.edgePath,
             parentSide: _role!.parentSide,
             gender: _role!.gender,
+            inviteCode: widget.inviteCode,
           );
       if (mounted) {
         ref.invalidate(myPendingClaimsProvider);
         HapticFeedback.heavyImpact();
-        _goToSubmittedScreen();
+        // Deferred-membership flow: joiner has no group membership yet, so
+        // we cannot land them on the family tree. Send them to the
+        // claim-pending screen until the admin acts. (Route added in Task 13.)
+        context.go('${AppRoutes.claimPending}/${claim.id}');
       }
     } catch (e) {
       if (mounted) {
@@ -277,7 +367,7 @@ class _IdentityClaimWizardScreenState
 
     setState(() => _isSubmitting = true);
     try {
-      await ref.read(nodeClaimServiceProvider).createClaim(
+      final claim = await ref.read(nodeClaimServiceProvider).createClaim(
             groupId: widget.groupId,
             anchorRelativeId: _anchorRelativeId!,
             edgePath: _role!.edgePath,
@@ -292,11 +382,15 @@ class _IdentityClaimWizardScreenState
             proposedCity: _proposedCityController.text.trim().isEmpty
                 ? null
                 : _proposedCityController.text.trim(),
+            inviteCode: widget.inviteCode,
           );
       if (mounted) {
         ref.invalidate(myPendingClaimsProvider);
         HapticFeedback.heavyImpact();
-        _goToSubmittedScreen();
+        // Deferred-membership flow: joiner has no group membership yet, so
+        // we cannot land them on the family tree. Send them to the
+        // claim-pending screen until the admin acts. (Route added in Task 13.)
+        context.go('${AppRoutes.claimPending}/${claim.id}');
       }
     } catch (e) {
       if (mounted) {
@@ -304,11 +398,6 @@ class _IdentityClaimWizardScreenState
         UIHelpers.showSnackBar(context, 'تعذّر إرسال الطلب: $e', isError: true);
       }
     }
-  }
-
-  void _goToSubmittedScreen() {
-    // Navigate to family tree; the pending banner will surface there.
-    context.go(AppRoutes.familyTree);
   }
 
   // ----------------------------------------------------------------- Build

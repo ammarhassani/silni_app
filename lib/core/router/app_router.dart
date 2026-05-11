@@ -374,10 +374,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'identityClaim',
         pageBuilder: (context, state) {
           final groupId = state.pathParameters['groupId']!;
+          final inviteCode = state.uri.queryParameters['invite'];
           return _buildPageWithTransition(
             context,
             state,
-            IdentityClaimWizardScreen(groupId: groupId),
+            IdentityClaimWizardScreen(
+              groupId: groupId,
+              inviteCode: inviteCode,
+            ),
           );
         },
       ),
