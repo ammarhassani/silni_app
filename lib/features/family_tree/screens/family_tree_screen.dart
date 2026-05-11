@@ -45,6 +45,7 @@ import '../painters/family_tree_painter.dart';
 import '../models/tree_layout.dart';
 import '../services/family_graph_service.dart';
 import '../services/family_tree_layout_service.dart';
+import '../widgets/group_switcher_chip.dart';
 import '../widgets/placeholder_node_widget.dart';
 import '../widgets/tree_node_widget.dart';
 import '../../../shared/widgets/directional_icon.dart';
@@ -496,6 +497,22 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                     loading: () => _buildHeader(context, themeColors, null),
                     error: (_, _) => _buildHeader(context, themeColors, null),
                     data: (groupInfo) => _buildHeader(context, themeColors, groupInfo),
+                  ),
+                  // Group switcher: surfaces the current active context
+                  // (personal vs. a group name) and opens a picker. Hidden
+                  // entirely when the user belongs to zero groups so it
+                  // doesn't add visual noise in personal-only mode.
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      0,
+                      AppSpacing.md,
+                      AppSpacing.xs,
+                    ),
+                    child: Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: GroupSwitcherChip(),
+                    ),
                   ),
                 Expanded(
                   // Wait for group info to resolve before deciding which tree
