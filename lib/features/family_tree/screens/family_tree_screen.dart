@@ -1085,17 +1085,29 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                 <String>{})
             : <String>{};
 
-        final layout = pendingClaimIds.isEmpty
+        // Hide "add relative" placeholder leaves for non-admin members in
+        // shared groups. They can only add personal relatives, and showing
+        // the shared-tree placeholders implies they'd add to the shared
+        // lineage. Cleaner UX without them — admins keep theirs.
+        final isNonAdminInGroup =
+            groupInfo != null && groupInfo.role != 'admin';
+
+        final enrichedNodes = pendingClaimIds.isEmpty
+            ? rawLayout.nodes
+            : rawLayout.nodes
+                .map((n) => pendingClaimIds.contains(n.id)
+                    ? n.copyWith(hasPendingClaim: true)
+                    : n)
+                .toList();
+
+        final layout = (pendingClaimIds.isEmpty && !isNonAdminInGroup)
             ? rawLayout
             : FamilyTreeLayout(
-                nodes: rawLayout.nodes
-                    .map((n) => pendingClaimIds.contains(n.id)
-                        ? n.copyWith(hasPendingClaim: true)
-                        : n)
-                    .toList(),
+                nodes: enrichedNodes,
                 edges: rawLayout.edges,
                 junctions: rawLayout.junctions,
-                placeholders: rawLayout.placeholders,
+                placeholders:
+                    isNonAdminInGroup ? const [] : rawLayout.placeholders,
                 bounds: rawLayout.bounds,
                 userPosition: rawLayout.userPosition,
               );
