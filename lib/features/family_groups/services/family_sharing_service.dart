@@ -12,12 +12,21 @@ import 'family_group_service.dart';
 class FamilySharingService {
   FamilySharingService._();
 
-  /// Initialize a shared tree from the user's personal relatives.
+  /// Initialize a shared tree for a brand-new family group.
   ///
-  /// 1. Creates family group with [familyName]
-  /// 2. Creates a self-node relative for the user
-  /// 3. Sets family_group_id on all user's personal relatives
-  /// 4. Generates and persists shared edges
+  /// 1. Creates the family group with [familyName].
+  /// 2. INSERTs a fresh in-group self-node for the user. The user's personal
+  ///    NULL-scope self-node (if any) stays untouched — the unique constraint
+  ///    `idx_relatives_self_per_user_group` is partial (WHERE
+  ///    family_group_id IS NOT NULL), so personal + group selfs coexist.
+  /// 3. Links the user's membership row to the new in-group self-node.
+  ///
+  /// We intentionally do NOT migrate personal-scope relatives into the new
+  /// group. In the multi-group + shadow world, personal scope holds shadows
+  /// from other groups' approved claims; sweeping them into a fresh group
+  /// destroys that data. The merge in `groupTreeRelativesProvider` already
+  /// surfaces personal relatives in group context for the viewer (and only
+  /// the viewer — RLS filters by user_id for NULL-scope rows).
   static Future<FamilyGroup> initializeSharedTree({
     required String userId,
     required String familyName,
@@ -32,100 +41,27 @@ class FamilySharingService {
       userId: userId,
     );
 
-    // 2. Find or create the self-node for this group.
-    //
-    // The self_node_on_signup trigger (migration 20260428620000) auto-creates
-    // a personal self-node (is_self=true, family_group_id=NULL) when a user
-    // signs up. If we blindly INSERT a brand-new shared self-node here AND
-    // then migrate all personal relatives into the group in step 5, the
-    // existing personal self-node also gets family_group_id=group.id — and
-    // that collides with the new one on idx_relatives_self_per_user_group
-    // (UNIQUE on (user_id, family_group_id) WHERE is_self=true AND
-    // family_group_id IS NOT NULL).
-    //
-    // Promote the existing personal self-node into the group if one exists.
-    // Fall back to INSERT for legacy accounts that pre-date the trigger.
-    final existingSelfRows = await client
-        .from('relatives')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('is_self', true)
-        .isFilter('family_group_id', null)
-        .limit(1);
+    // 2. INSERT a brand-new in-group self-node.
+    final selfNodeId = const Uuid().v4();
+    await client.from('relatives').insert({
+      'id': selfNodeId,
+      'user_id': userId,
+      'full_name': userDisplayName,
+      'relationship_type': 'other',
+      'gender': userGender?.value ?? 'male',
+      'priority': 1,
+      'avatar_type': userGender == Gender.female ? 'adult_woman' : 'adult_man',
+      'is_self': true,
+      'family_group_id': group.id,
+      'added_by': userId,
+    });
 
-    final String selfNodeId;
-    if (existingSelfRows.isNotEmpty) {
-      selfNodeId = existingSelfRows.first['id'] as String;
-      // Backfill gender on promotion if the trigger left it NULL — the
-      // perspective engine and side-of-family layout rely on it.
-      // Don't touch full_name: the user may have curated it.
-      await client
-          .from('relatives')
-          .update({
-            'family_group_id': group.id,
-            if (userGender != null) 'gender': userGender.value,
-          })
-          .eq('id', selfNodeId);
-    } else {
-      selfNodeId = const Uuid().v4();
-      await client.from('relatives').insert({
-        'id': selfNodeId,
-        'user_id': userId,
-        'full_name': userDisplayName,
-        'relationship_type': 'other',
-        'gender': userGender?.value ?? 'male',
-        'priority': 1,
-        'avatar_type': userGender == Gender.female ? 'adult_woman' : 'adult_man',
-        'is_self': true,
-        'family_group_id': group.id,
-        'added_by': userId,
-      });
-    }
-
-    // 3. Link user to their self node in group membership
+    // 3. Link user to their in-group self-node via membership
     await client
         .from('family_group_members')
         .update({'relative_id_in_tree': selfNodeId})
         .eq('group_id', group.id)
         .eq('user_id', userId);
-
-    // 4. Fetch all personal relatives and migrate to shared
-    final personalRelatives = await client
-        .from('relatives')
-        .select()
-        .eq('user_id', userId)
-        .isFilter('family_group_id', null)
-        .eq('is_archived', false);
-
-    final relatives = personalRelatives
-        .map((json) => Relative.fromJson(json))
-        .toList();
-
-    if (relatives.isNotEmpty) {
-      final ids = relatives.map((r) => r.id).toList();
-      await client
-          .from('relatives')
-          .update({
-            'family_group_id': group.id,
-            'added_by': userId,
-          })
-          .inFilter('id', ids);
-    }
-
-    // 5. Generate and persist shared edges
-    final edges = generateSharedEdges(
-      authUserId: userId,
-      selfNodeId: selfNodeId,
-      relatives: relatives,
-      groupId: group.id,
-    );
-
-    if (edges.isNotEmpty) {
-      await client.from('family_edges').upsert(
-        edges.map((e) => e.toJson()).toList(),
-        onConflict: 'user_id,from_id,to_id,edge_type',
-      );
-    }
 
     return group;
   }
