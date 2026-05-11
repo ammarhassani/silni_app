@@ -70,7 +70,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
               // In group mode, use the shared graph so labels reflect the
               // viewer's perspective, not the relative creator's.
               final groupInfo =
-                  ref.watch(userFamilyGroupProvider).valueOrNull;
+                  ref.watch(activeFamilyGroupProvider).valueOrNull;
               final graph = groupInfo != null
                   ? ref.watch(sharedFamilyGraphProvider((
                       groupId: groupInfo.groupId,
@@ -611,7 +611,7 @@ class _RelativeDetailScreenState extends ConsumerState<RelativeDetailScreen> {
       }
 
       // Invalidate group providers if user is in a group
-      final groupInfo = ref.read(userFamilyGroupProvider).valueOrNull;
+      final groupInfo = ref.read(activeFamilyGroupProvider).valueOrNull;
       if (groupInfo != null) {
         ref.invalidate(groupRelativesStreamProvider(groupInfo.groupId));
         ref.invalidate(sharedFamilyEdgesStreamProvider(groupInfo.groupId));

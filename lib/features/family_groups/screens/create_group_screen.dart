@@ -96,7 +96,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
       if (mounted) {
         HapticFeedback.heavyImpact();
-        ref.invalidate(userFamilyGroupProvider);
+        ref.invalidate(activeFamilyGroupProvider);
         ref.invalidate(userGroupsProvider(user.id));
         ref.invalidate(relativesStreamProvider(user.id));
         setState(() {

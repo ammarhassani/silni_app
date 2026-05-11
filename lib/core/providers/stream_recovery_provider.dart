@@ -88,9 +88,9 @@ void _recoverStreams(Ref ref, AppLoggerService logger) {
       ref.invalidate(familyEdgesStreamProvider(userId));
 
       // Recover group providers
-      final groupInfo = ref.read(userFamilyGroupProvider).valueOrNull;
+      final groupInfo = ref.read(activeFamilyGroupProvider).valueOrNull;
       if (groupInfo != null) {
-        ref.invalidate(userFamilyGroupProvider);
+        ref.invalidate(activeFamilyGroupProvider);
         ref.invalidate(groupMembersProvider(groupInfo.groupId));
         ref.invalidate(groupRelativesStreamProvider(groupInfo.groupId));
         ref.invalidate(sharedFamilyEdgesStreamProvider(groupInfo.groupId));
@@ -159,9 +159,9 @@ extension StreamRecoveryExtension on WidgetRef {
       invalidate(familyEdgesStreamProvider(user.id));
 
       // Recover group providers
-      final groupInfo = read(userFamilyGroupProvider).valueOrNull;
+      final groupInfo = read(activeFamilyGroupProvider).valueOrNull;
       if (groupInfo != null) {
-        invalidate(userFamilyGroupProvider);
+        invalidate(activeFamilyGroupProvider);
         invalidate(groupMembersProvider(groupInfo.groupId));
         invalidate(groupRelativesStreamProvider(groupInfo.groupId));
         invalidate(sharedFamilyEdgesStreamProvider(groupInfo.groupId));

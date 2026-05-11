@@ -474,7 +474,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
 
     // Check if user is in a family group — wait for this to resolve before
     // deciding which tree to show (prevents flicker from personal→shared)
-    final groupInfoAsync = ref.watch(userFamilyGroupProvider);
+    final groupInfoAsync = ref.watch(activeFamilyGroupProvider);
 
     final themeColors = ref.watch(themeColorsProvider);
 
@@ -609,7 +609,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   Widget _buildHeader(
     BuildContext context,
     dynamic themeColors,
-    ({String groupId, String? nodeId})? groupInfo,
+    ({String groupId, String? nodeId, String? role})? groupInfo,
   ) {
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -926,7 +926,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   ) {
     // Check for shared tree context — if user is in a family group,
     // use the group's relatives and edges for the tree.
-    final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+    final groupInfo = ref.watch(activeFamilyGroupProvider).valueOrNull;
     final graph = groupInfo != null
         ? ref.watch(sharedFamilyGraphProvider((
             groupId: groupInfo.groupId,
@@ -1286,7 +1286,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
       final priority = AvatarType.suggestPriority(adjustedType);
 
       // Check if we're in a family group context
-      final groupInfo = ref.read(userFamilyGroupProvider).valueOrNull;
+      final groupInfo = ref.read(activeFamilyGroupProvider).valueOrNull;
       final isGroupMode = groupInfo != null;
 
       final relative = Relative(

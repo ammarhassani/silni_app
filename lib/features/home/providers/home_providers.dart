@@ -62,7 +62,7 @@ final viewerFilteredRelativesProvider =
   final user = SupabaseConfig.client.auth.currentUser;
   if (user == null) return const AsyncValue.data([]);
 
-  final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+  final groupInfo = ref.watch(activeFamilyGroupProvider).valueOrNull;
 
   // In group mode, merge the shared group relatives with the viewer's
   // OWN personal relatives (family_group_id IS NULL). Non-admin members

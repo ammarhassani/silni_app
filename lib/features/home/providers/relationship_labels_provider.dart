@@ -20,7 +20,7 @@ final relationshipLabelsProvider =
   final user = SupabaseConfig.client.auth.currentUser;
   if (user == null) return {};
 
-  final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+  final groupInfo = ref.watch(activeFamilyGroupProvider).valueOrNull;
   final effectiveViewerId = groupInfo?.nodeId ?? user.id;
 
   final graph = groupInfo != null

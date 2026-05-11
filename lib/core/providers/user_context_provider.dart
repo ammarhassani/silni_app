@@ -61,7 +61,7 @@ final userContextProvider = FutureProvider.autoDispose<UserContext?>((ref) async
   if (user == null) return null;
 
   // Watch family group info - this will update when membership changes
-  final groupInfo = await ref.watch(userFamilyGroupProvider.future);
+  final groupInfo = await ref.watch(activeFamilyGroupProvider.future);
 
   return UserContext(
     userId: user.id,

@@ -117,7 +117,7 @@ class _OccasionMessagesScreenState
     }
 
     // Family graph for perspective-aware labels
-    final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+    final groupInfo = ref.watch(activeFamilyGroupProvider).valueOrNull;
     final graph = groupInfo != null
         ? ref.watch(sharedFamilyGraphProvider((
             groupId: groupInfo.groupId,

@@ -105,7 +105,7 @@ class _InvitationDetailScreenState
         final user = ref.read(currentUserProvider);
 
         // Invalidate relevant providers
-        ref.invalidate(userFamilyGroupProvider);
+        ref.invalidate(activeFamilyGroupProvider);
         ref.invalidate(groupRelativesStreamProvider(invitation.groupId));
         ref.invalidate(sharedFamilyEdgesStreamProvider(invitation.groupId));
         ref.invalidate(groupMemberNodeIdsProvider(invitation.groupId));

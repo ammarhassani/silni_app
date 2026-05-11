@@ -40,7 +40,7 @@ final aiRelativesProvider = Provider<AsyncValue<List<Relative>>>((ref) {
 /// Returns empty map in personal mode (arabicName is already correct).
 final perspectiveLabelsProvider = Provider<Map<String, String>>((ref) {
   final relatives = ref.watch(viewerFilteredRelativesProvider).valueOrNull ?? [];
-  final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+  final groupInfo = ref.watch(activeFamilyGroupProvider).valueOrNull;
 
   if (groupInfo == null || groupInfo.nodeId == null || relatives.isEmpty) {
     return {};

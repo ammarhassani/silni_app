@@ -20,7 +20,7 @@ class TodaysActivitySection extends ConsumerWidget {
     if (user == null) return const SizedBox.shrink();
 
     final relativesAsync = ref.watch(viewerFilteredRelativesProvider);
-    final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+    final groupInfo = ref.watch(activeFamilyGroupProvider).valueOrNull;
     final todayInteractionsAsync = groupInfo != null
         ? ref.watch(groupTodayInteractionsStreamProvider(groupInfo.groupId))
         : ref.watch(todayInteractionsStreamProvider(user.id));

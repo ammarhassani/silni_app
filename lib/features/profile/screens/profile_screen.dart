@@ -119,7 +119,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: Consumer(
                   builder: (context, ref, _) {
                     final groupInfo = ref
-                        .watch(userFamilyGroupProvider)
+                        .watch(activeFamilyGroupProvider)
                         .valueOrNull;
                     if (groupInfo == null) return const SizedBox.shrink();
                     return Padding(

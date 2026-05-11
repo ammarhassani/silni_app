@@ -38,7 +38,7 @@ class SendInvitationCard extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+    final groupInfo = ref.watch(activeFamilyGroupProvider).valueOrNull;
     if (groupInfo == null || groupInfo.groupId != relative.familyGroupId) {
       return const SizedBox.shrink();
     }
@@ -162,7 +162,7 @@ class SendInvitationCard extends ConsumerWidget {
   }
 
   Future<void> _sendInvitation(BuildContext context, WidgetRef ref) async {
-    final groupInfo = ref.read(userFamilyGroupProvider).valueOrNull;
+    final groupInfo = ref.read(activeFamilyGroupProvider).valueOrNull;
     if (groupInfo == null) return;
 
     final phone = relative.phoneNumber?.trim() ?? '';
@@ -195,7 +195,7 @@ class SendInvitationCard extends ConsumerWidget {
     try {
       final svc = NodeInvitationService();
       await svc.cancelInvitation(invitationId);
-      final groupInfo = ref.read(userFamilyGroupProvider).valueOrNull;
+      final groupInfo = ref.read(activeFamilyGroupProvider).valueOrNull;
       if (groupInfo != null) {
         ref.invalidate(relativeInvitationProvider(
           (groupId: groupInfo.groupId, relativeId: relative.id),

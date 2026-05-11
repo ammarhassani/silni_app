@@ -129,10 +129,9 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
     if (widget.wizardMode == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        final isAdmin =
-            ref.read(isAdminOfActiveGroupProvider).valueOrNull ?? false;
+        final isAdmin = ref.read(isAdminOfActiveGroupProvider);
         if (!isAdmin) return;
-        final groupInfo = ref.read(userFamilyGroupProvider).valueOrNull;
+        final groupInfo = ref.read(activeFamilyGroupProvider).valueOrNull;
         if (groupInfo == null) return;
         final user = ref.read(currentUserProvider);
         if (user == null) return;
@@ -310,7 +309,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
       // Infer and persist family graph edges so the tree intelligence
       // (perspective-shifting labels, generation layout) activates.
       // In group mode, use the shared graph data for correct inference.
-      final groupInfo = ref.read(userFamilyGroupProvider).valueOrNull;
+      final groupInfo = ref.read(activeFamilyGroupProvider).valueOrNull;
       final isShared = _addToSharedTree && _selectedGroup != null;
 
       final List<FamilyEdge> existingEdges;
@@ -469,7 +468,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
     // Watch existing relatives for the flat relationship picker
     // Use shared relatives when adding to shared tree, personal otherwise
     final user = ref.watch(currentUserProvider);
-    final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+    final groupInfo = ref.watch(activeFamilyGroupProvider).valueOrNull;
     final relativesAsync = (_addToSharedTree && groupInfo != null)
         ? ref.watch(groupRelativesStreamProvider(groupInfo.groupId))
         : (user != null ? ref.watch(relativesStreamProvider(user.id)) : null);

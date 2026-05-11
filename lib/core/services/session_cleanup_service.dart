@@ -138,7 +138,7 @@ void clearUserSession(Ref ref, {String? previousUserId}) {
 
   // ── AutoDispose + keepAlive providers (stale for up to 5 min) ──
 
-  ref.invalidate(userFamilyGroupProvider);
+  ref.invalidate(activeFamilyGroupProvider);
 
   if (previousUserId != null) {
     ref.invalidate(relativesStreamProvider(previousUserId));
@@ -185,7 +185,7 @@ void clearUserSessionFromWidget(WidgetRef ref, {String? previousUserId}) {
     ref.invalidate(endangeredStreaksProvider(previousUserId));
   }
 
-  ref.invalidate(userFamilyGroupProvider);
+  ref.invalidate(activeFamilyGroupProvider);
 
   if (previousUserId != null) {
     ref.invalidate(relativesStreamProvider(previousUserId));

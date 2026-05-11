@@ -914,7 +914,7 @@ class _SharePage extends ConsumerWidget {
     final themeColors = ref.watch(themeColorsProvider);
 
     // Check if user is in a family group
-    final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+    final groupInfo = ref.watch(activeFamilyGroupProvider).valueOrNull;
     final familyStatsAsync = groupInfo != null
         ? ref.watch(familyMonthlyWrappedProvider((
             month: wrapped.month,

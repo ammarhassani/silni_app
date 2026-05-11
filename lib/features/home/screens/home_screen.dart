@@ -219,7 +219,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     });
 
     // Family group info (for activity feed + celebration card)
-    final groupId = ref.watch(userFamilyGroupProvider).valueOrNull?.groupId;
+    final groupId = ref.watch(activeFamilyGroupProvider).valueOrNull?.groupId;
 
     return Scaffold(
       backgroundColor: Colors.transparent,

@@ -382,7 +382,7 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
 
   void _invalidateAllProviders() {
     final userId = ref.read(currentUserProvider)?.id;
-    ref.invalidate(userFamilyGroupProvider);
+    ref.invalidate(activeFamilyGroupProvider);
     ref.invalidate(groupRelativesStreamProvider(widget.groupId));
     ref.invalidate(sharedFamilyEdgesStreamProvider(widget.groupId));
     ref.invalidate(groupMembersProvider(widget.groupId));

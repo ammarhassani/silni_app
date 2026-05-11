@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../shared/models/relative_model.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -142,14 +143,70 @@ final sharedFamilyGraphProvider = Provider.autoDispose
   }).valueOrNull;
 });
 
-/// Provider that returns the user's family group membership info.
+/// SharedPreferences key for the persistent active-group selection.
+const _kActiveGroupIdPrefKey = 'active_group_id';
+
+/// Persistent user-selected active group. Null = personal-only view
+/// (or "no explicit selection yet" — see [activeFamilyGroupProvider] for
+/// fallback behaviour).
 ///
-/// Watches the `family_group_members` table so it reactively updates
-/// when the user joins or leaves a group — no manual invalidation needed.
-/// Returns the group ID and optionally the `relative_id_in_tree` if linked.
-final userFamilyGroupProvider =
-    StreamProvider.autoDispose<({String groupId, String? nodeId})?>(
-      (ref) {
+/// Persists across app restarts via shared_preferences.
+final activeGroupIdProvider =
+    StateNotifierProvider<ActiveGroupNotifier, String?>((ref) {
+  return ActiveGroupNotifier();
+});
+
+/// Notifier for [activeGroupIdProvider].
+///
+/// Reads the persisted active-group id from [SharedPreferences] on
+/// construction. While the async read is pending, [state] is `null`; the
+/// downstream [activeFamilyGroupProvider] uses a "first membership row"
+/// fallback so behaviour matches the legacy single-group assumption until
+/// the user explicitly picks a different group.
+class ActiveGroupNotifier extends StateNotifier<String?> {
+  ActiveGroupNotifier() : super(null) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    // Guard against the notifier being disposed before the async load
+    // completes (e.g. fast sign-out during cold start).
+    if (!mounted) return;
+    state = prefs.getString(_kActiveGroupIdPrefKey);
+  }
+
+  /// Set the active group id (or clear it with `null` for personal-only view).
+  /// Updates state synchronously and persists asynchronously.
+  Future<void> setActive(String? groupId) async {
+    state = groupId;
+    final prefs = await SharedPreferences.getInstance();
+    if (groupId == null) {
+      await prefs.remove(_kActiveGroupIdPrefKey);
+    } else {
+      await prefs.setString(_kActiveGroupIdPrefKey, groupId);
+    }
+  }
+}
+
+/// Provider that returns the user's currently-active family group membership
+/// row.
+///
+/// Watches the `family_group_members` table so it reactively updates when the
+/// user joins or leaves a group — no manual invalidation needed.
+///
+/// Selection logic:
+/// 1. If [activeGroupIdProvider] holds a non-null id AND a membership row
+///    exists for that group, return that row.
+/// 2. Otherwise, fall back to `rows.first` (preserves the legacy single-group
+///    behaviour for users who haven't explicitly picked a group yet — e.g.
+///    on first app launch before [ActiveGroupNotifier._load] resolves).
+/// 3. If the user has no memberships at all, returns `null`.
+///
+/// Returns the group id, the linked `relative_id_in_tree` (if any), and the
+/// membership `role` ('admin' or 'member').
+final activeFamilyGroupProvider = StreamProvider.autoDispose<
+    ({String groupId, String? nodeId, String? role})?>((ref) {
   final link = ref.keepAlive();
   Timer? timer;
 
@@ -162,17 +219,35 @@ final userFamilyGroupProvider =
   final user = SupabaseConfig.client.auth.currentUser;
   if (user == null) return Stream.value(null);
 
+  final activeId = ref.watch(activeGroupIdProvider);
+
   return SupabaseConfig.client
       .from('family_group_members')
       .stream(primaryKey: ['id'])
       .eq('user_id', user.id)
       .map((rows) {
         if (rows.isEmpty) return null;
-        final data = rows.first;
+
+        // Try to find a row matching the user's selected active group id.
+        // If activeId is null (no selection yet, or personal mode), or the
+        // user no longer belongs to the selected group, fall back to the
+        // first available membership row.
+        Map<String, dynamic>? data;
+        if (activeId != null) {
+          for (final row in rows) {
+            if (row['group_id'] == activeId) {
+              data = row;
+              break;
+            }
+          }
+        }
+        data ??= rows.first;
+
         final groupId = data['group_id'] as String?;
         if (groupId == null) return null;
         final nodeId = data['relative_id_in_tree'] as String?;
-        return (groupId: groupId, nodeId: nodeId);
+        final role = data['role'] as String?;
+        return (groupId: groupId, nodeId: nodeId, role: role);
       });
 });
 
@@ -185,29 +260,9 @@ final userFamilyGroupProvider =
 /// Drives the default scope for newly-added relatives:
 /// - admin -> defaults to shared lineage (`family_group_id = group_id`)
 /// - member -> defaults to personal (`family_group_id IS NULL`)
-final isAdminOfActiveGroupProvider =
-    StreamProvider.autoDispose<bool>((ref) {
-  final link = ref.keepAlive();
-  Timer? timer;
-
-  ref.onDispose(() => timer?.cancel());
-  ref.onCancel(() {
-    timer = Timer(_cacheTimeout, () => link.close());
-  });
-  ref.onResume(() => timer?.cancel());
-
-  final user = SupabaseConfig.client.auth.currentUser;
-  if (user == null) return Stream.value(false);
-
-  return SupabaseConfig.client
-      .from('family_group_members')
-      .stream(primaryKey: ['id'])
-      .eq('user_id', user.id)
-      .map((rows) {
-        if (rows.isEmpty) return false;
-        final role = rows.first['role'] as String?;
-        return role == 'admin';
-      });
+final isAdminOfActiveGroupProvider = Provider.autoDispose<bool>((ref) {
+  final groupInfo = ref.watch(activeFamilyGroupProvider).valueOrNull;
+  return groupInfo?.role == 'admin';
 });
 
 /// Stream provider for the set of node IDs claimed by group members.
@@ -248,7 +303,7 @@ final groupMemberNodeIdsProvider =
 /// instead of computing the scope independently.
 final rahimVisibleRelativeIdsProvider =
     Provider.autoDispose<Set<String>?>((ref) {
-  final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+  final groupInfo = ref.watch(activeFamilyGroupProvider).valueOrNull;
   if (groupInfo == null || groupInfo.nodeId == null) return null;
 
   final graph = ref.watch(sharedFamilyGraphProvider((

@@ -86,7 +86,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
     ref.watch(autoRealtimeSubscriptionsProvider);
 
     // Rahim-scoped + self-node-filtered relatives via central provider
-    final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+    final groupInfo = ref.watch(activeFamilyGroupProvider).valueOrNull;
     final relativesAsync = ref.watch(viewerFilteredRelativesProvider);
 
     return Scaffold(
@@ -325,7 +325,7 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
 
     // Watch family graph for perspective-shifting labels (null if no edges yet).
     // In group mode, use the shared graph so labels are relative to the viewer.
-    final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+    final groupInfo = ref.watch(activeFamilyGroupProvider).valueOrNull;
     final graph = groupInfo != null
         ? ref.watch(sharedFamilyGraphProvider((
             groupId: groupInfo.groupId,

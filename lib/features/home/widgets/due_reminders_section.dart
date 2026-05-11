@@ -23,7 +23,7 @@ class DueRemindersSection extends ConsumerWidget {
 
     final relativesAsync = ref.watch(viewerFilteredRelativesProvider);
     final schedulesAsync = ref.watch(reminderSchedulesStreamProvider(user.id));
-    final groupInfo = ref.watch(userFamilyGroupProvider).valueOrNull;
+    final groupInfo = ref.watch(activeFamilyGroupProvider).valueOrNull;
     final todayContactedAsync = groupInfo != null
         ? ref.watch(groupTodayContactedRelativesProvider(groupInfo.groupId))
         : ref.watch(todayContactedRelativesProvider(user.id));

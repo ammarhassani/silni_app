@@ -189,7 +189,7 @@ class _EditRelativeScreenState extends ConsumerState<EditRelativeScreen> {
 
           if (isShared) {
             final groupInfo =
-                ref.read(userFamilyGroupProvider).valueOrNull;
+                ref.read(activeFamilyGroupProvider).valueOrNull;
             if (groupInfo != null) {
               existingEdges = ref
                       .read(sharedFamilyEdgesStreamProvider(
