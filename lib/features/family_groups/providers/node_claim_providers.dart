@@ -86,3 +86,47 @@ final myPendingClaimsCountProvider = FutureProvider<int>((ref) async {
   final claims = await ref.watch(myPendingClaimsProvider.future);
   return claims.length;
 });
+
+/// Streams a single claim's row in realtime. Re-fetches via getClaimById
+/// on every postgres-changes event for the claim's id. Used by
+/// ClaimPendingReviewScreen so the joiner sees approval/rejection
+/// without pulling-to-refresh.
+final claimByIdRealtimeProvider = StreamProvider.autoDispose
+    .family<NodeClaim, String>((ref, claimId) async* {
+  final service = ref.watch(nodeClaimServiceProvider);
+
+  // Initial fetch.
+  yield await service.getClaimById(claimId);
+
+  // Realtime subscription: re-fetch on any UPDATE for this row.
+  final controller = StreamController<NodeClaim>();
+  final channel = SupabaseConfig.client
+      .channel('node_claim_$claimId')
+      .onPostgresChanges(
+        event: PostgresChangeEvent.update,
+        schema: 'public',
+        table: 'node_claims',
+        filter: PostgresChangeFilter(
+          type: PostgresChangeFilterType.eq,
+          column: 'id',
+          value: claimId,
+        ),
+        callback: (_) async {
+          try {
+            final fresh = await service.getClaimById(claimId);
+            if (!controller.isClosed) controller.add(fresh);
+          } catch (_) {
+            // Swallow — next event will retry.
+          }
+        },
+      )
+      .subscribe();
+
+  ref.onDispose(() {
+    debugPrint('[node_claim realtime] disposing channel for claim=$claimId');
+    channel.unsubscribe();
+    controller.close();
+  });
+
+  yield* controller.stream;
+});

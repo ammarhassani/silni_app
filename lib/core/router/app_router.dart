@@ -34,6 +34,7 @@ import '../../features/family_groups/screens/family_group_screen.dart';
 import '../../features/family_groups/screens/join_group_screen.dart';
 import '../../features/family_groups/screens/identity_claim_wizard_screen.dart';
 import '../../features/family_groups/screens/admin_review_claim_screen.dart';
+import '../../features/family_groups/screens/claim_pending_review_screen.dart';
 import '../../features/wrapped/screens/monthly_wrapped_screen.dart';
 import '../../features/ai_assistant/screens/ai_chat_screen.dart';
 import '../../features/ai_assistant/screens/communication_scripts_screen.dart';
@@ -394,6 +395,21 @@ final routerProvider = Provider<GoRouter>((ref) {
             context,
             state,
             AdminReviewClaimScreen(claimId: claimId),
+          );
+        },
+      ),
+      // Claim-pending review screen — joiner lands here after submitting
+      // an identity claim. Watches the claim row in realtime and renders
+      // pending / approved / rejected / cancelled views.
+      GoRoute(
+        path: '${AppRoutes.claimPending}/:claimId',
+        name: 'claimPending',
+        pageBuilder: (context, state) {
+          final claimId = state.pathParameters['claimId']!;
+          return _buildPageWithTransition(
+            context,
+            state,
+            ClaimPendingReviewScreen(claimId: claimId),
           );
         },
       ),
