@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/config/supabase_config.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/theme/theme_provider.dart';
@@ -25,11 +26,72 @@ import '../../../shared/utils/relationship_label_helper.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
 import '../../family_groups/widgets/send_invitation_card.dart';
 
-/// Provider for watching a single relative (cache-first)
+/// Provider for watching a single relative (cache-first), with the viewer's
+/// personal shadow merged in for relationship perspective.
+///
+/// Reciprocity flow context: when a user joins a tree via the claim flow,
+/// they end up with TWO rows per relative they have a personal relationship
+/// with — the canonical (admin-owned, in the shared group, e.g.
+/// `relationship_type='other'` from admin's perspective) and a personal
+/// shadow in NULL scope (`mirrors_relative_id = canonical.id`,
+/// `relationship_type='husband'` from the viewer's perspective).
+///
+/// Detail screens are reached via the canonical id (the address book
+/// dedups to canonical — see `addressBookRelativesProvider`). Without this
+/// merge, the detail screen would render the canonical's
+/// `relationship_type` ("other"), not the viewer's ("husband"). We layer
+/// the shadow's relationship fields on top so the label is correct from
+/// the viewer's perspective.
+///
+/// No-op for users without a shadow for this relative — the canonical
+/// streams through unchanged.
 final relativeDetailProvider =
-    StreamProvider.autoDispose.family<Relative?, String>((ref, relativeId) {
+    StreamProvider.autoDispose.family<Relative?, String>((ref, relativeId) async* {
   final repository = ref.watch(relativesRepositoryProvider);
-  return repository.watchRelative(relativeId);
+  final user = SupabaseConfig.client.auth.currentUser;
+
+  await for (final canonical in repository.watchRelative(relativeId)) {
+    if (canonical == null || user == null) {
+      yield canonical;
+      continue;
+    }
+
+    // Canonical rows have mirrors_relative_id == null. If this fetch IS a
+    // shadow (e.g. the user navigated to a shadow id directly), leave it
+    // alone — its relationship_type is already the viewer's perspective.
+    if (canonical.mirrorsRelativeId != null) {
+      yield canonical;
+      continue;
+    }
+
+    // Look for a shadow owned by the current user that mirrors this id.
+    try {
+      final shadowRow = await SupabaseConfig.client
+          .from('relatives')
+          .select()
+          .eq('user_id', user.id)
+          .eq('mirrors_relative_id', relativeId)
+          .isFilter('family_group_id', null)
+          .maybeSingle();
+
+      if (shadowRow == null) {
+        yield canonical;
+        continue;
+      }
+
+      final shadow = Relative.fromJson(shadowRow);
+      yield canonical.copyWith(
+        relationshipType: shadow.relationshipType,
+        familySide: shadow.familySide ?? canonical.familySide,
+        gender: shadow.gender ?? canonical.gender,
+      );
+    } catch (_) {
+      // If the shadow lookup fails (transient network / RLS), fall back
+      // to the canonical — better to show the "other" label than to
+      // break the screen.
+      yield canonical;
+    }
+  }
 });
 
 class RelativeDetailScreen extends ConsumerStatefulWidget {

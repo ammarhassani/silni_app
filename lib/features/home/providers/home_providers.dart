@@ -87,19 +87,47 @@ final addressBookRelativesProvider =
         // `mirrorsRelativeId` points at the canonical. Without dedup the
         // address book lists the same person twice.
         //
-        // Rule: prefer the canonical when both are visible; fall back to
-        // the shadow when only it is reachable (e.g. the user left the
-        // group, so RLS hides the canonical — the relationship still
-        // persists via the shadow).
-        final visibleIds = all.map((r) => r.id).toSet();
-        return all.where((r) {
-          if (r.mirrorsRelativeId == null) {
-            // Canonical row — always include
-            return true;
+        // Rule: when BOTH are visible, return ONE merged row — canonical's
+        // identity (stable id, photo, phone, fullName) but the shadow's
+        // `relationship_type` (and side/gender) so the viewer sees the
+        // relationship from THEIR perspective (e.g. "زوج" for husband, not
+        // the canonical-owner's "other"). When only the shadow is reachable
+        // (e.g. user left the group → RLS hides canonical), surface the
+        // shadow on its own so the relationship still appears.
+        final shadowsByCanonicalId = <String, Relative>{};
+        for (final r in all) {
+          if (r.mirrorsRelativeId != null) {
+            shadowsByCanonicalId[r.mirrorsRelativeId!] = r;
           }
-          // Shadow — include only if its canonical is NOT visible
-          return !visibleIds.contains(r.mirrorsRelativeId);
-        }).toList();
+        }
+        final visibleIds = all.map((r) => r.id).toSet();
+
+        return all
+            .where((r) {
+              // Drop shadow rows whose canonical is also visible —
+              // we'll merge their relationship_type into the canonical below.
+              if (r.mirrorsRelativeId == null) return true;
+              return !visibleIds.contains(r.mirrorsRelativeId);
+            })
+            .map((r) {
+              // For canonical rows that have a shadow, merge the
+              // shadow's relationship_type (the viewer's perspective)
+              // into the canonical's full identity (id, photo, phone, etc.)
+              if (r.mirrorsRelativeId == null) {
+                final shadow = shadowsByCanonicalId[r.id];
+                if (shadow != null) {
+                  return r.copyWith(
+                    relationshipType: shadow.relationshipType,
+                    // Keep canonical's familySide/gender if shadow doesn't
+                    // have them set, override otherwise.
+                    familySide: shadow.familySide ?? r.familySide,
+                    gender: shadow.gender ?? r.gender,
+                  );
+                }
+              }
+              return r;
+            })
+            .toList();
       });
 });
 
