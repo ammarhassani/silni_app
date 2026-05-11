@@ -12,10 +12,7 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../home/providers/home_providers.dart';
 import '../models/family_group_model.dart';
-import '../../family_tree/providers/family_graph_providers.dart';
-import '../providers/family_group_providers.dart';
 import '../services/family_group_service.dart';
 import '../services/node_invitation_service.dart';
 
@@ -125,53 +122,49 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
     setState(() => _isJoining = true);
 
     try {
-      final joinedGroup = await FamilyGroupService.joinGroup(
+      // Validate the invite code (no DB write yet).
+      final group = await FamilyGroupService.acceptInvite(
         inviteCode: widget.inviteCode,
-        userId: user.id,
       );
 
-      if (mounted) {
-        ref.invalidate(userFamilyGroupProvider);
-        ref.invalidate(groupRelativesStreamProvider(joinedGroup.id));
-        ref.invalidate(sharedFamilyEdgesStreamProvider(joinedGroup.id));
-        ref.invalidate(groupMemberNodeIdsProvider(joinedGroup.id));
-        ref.invalidate(userGroupsProvider(user.id));
-        ref.invalidate(relativesStreamProvider(user.id));
-        ref.invalidate(todayInteractionsStreamProvider(user.id));
-        HapticFeedback.heavyImpact();
+      if (!mounted) return;
+      HapticFeedback.heavyImpact();
 
-        // Check if user has a pending phone-based invitation for this group
-        try {
-          final invitationService = NodeInvitationService();
-          final pending = await invitationService.getMyPendingInvitations();
-          final matchingInvitation = pending.where(
-            (inv) => inv.groupId == joinedGroup.id,
+      // Check for a phone-based invitation — it's a fast-path that
+      // skips the wizard because the admin already pre-identified the
+      // joiner. This branch still creates the membership through the
+      // invitation-accept RPC (not this refactor's concern).
+      try {
+        final invitationService = NodeInvitationService();
+        final pending = await invitationService.getMyPendingInvitations();
+        final matchingInvitation = pending.where(
+          (inv) => inv.groupId == group.id,
+        );
+        if (matchingInvitation.isNotEmpty && mounted) {
+          context.go(
+            '${AppRoutes.invitationDetail}/${matchingInvitation.first.id}',
           );
-          if (matchingInvitation.isNotEmpty && mounted) {
-            context.go(
-              '${AppRoutes.invitationDetail}/${matchingInvitation.first.id}',
-            );
-            return;
-          }
-        } catch (e) {
-          debugPrint('Failed to check pending invitations: $e');
+          return;
         }
+      } catch (e) {
+        debugPrint('Failed to check pending invitations: $e');
+      }
 
-        // No matching phone-invitation → drop the joiner into the
-        // identity-claim wizard so they can self-identify against the tree.
-        // (Was: context.go(AppRoutes.familyTree) which left the joiner
-        // unlinked. See 2026-05-08-family-sharing-identity-claim-design.md.)
-        if (mounted) {
-          context.go('${AppRoutes.identityClaim}/${joinedGroup.id}');
-        }
+      // Drop the joiner into the identity-claim wizard, passing the
+      // invite code as the auth token for pre-member RPCs.
+      if (mounted) {
+        context.go(
+          '${AppRoutes.identityClaim}/${group.id}?invite=${Uri.encodeQueryComponent(widget.inviteCode)}',
+        );
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isJoining = false;
-          _errorMessage = e.toString().contains('invite') || e.toString().contains('دعوة')
+          _errorMessage = e.toString().contains('invite') ||
+                  e.toString().contains('دعوة')
               ? 'رمز الدعوة غير صالح أو منتهي الصلاحية'
-              : 'حدث خطأ أثناء الانضمام للمجموعة. يرجى المحاولة مرة أخرى';
+              : 'حدث خطأ أثناء التحقق من المجموعة. يرجى المحاولة مرة أخرى';
         });
       }
     }
@@ -367,7 +360,7 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
           ),
         ] else ...[
           GradientButton(
-            text: 'انضم للمجموعة',
+            text: 'متابعة للتعرّف عليك',
             onPressed: _joinGroup,
             isLoading: _isJoining,
             icon: Icons.group_add_rounded,
