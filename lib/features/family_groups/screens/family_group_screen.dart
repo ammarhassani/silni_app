@@ -536,7 +536,9 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Group info card
+            // Group info card — name + the personal-vs-shared scope
+            // explainer so members understand what's shared and what stays
+            // personal when they add relatives from within this group.
             GlassCard(
               padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(
@@ -552,6 +554,26 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
                     style: AppTypography.titleLarge.copyWith(
                       color: themeColors.onSurface,
                     ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'أنت داخل عائلة مشتركة',
+                    style: AppTypography.titleSmall.copyWith(
+                      color: themeColors.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'الإضافات الجديدة من المسؤول ستظهر هنا. أضف '
+                    'أقاربك الخاصين بحرية — لن يظهروا للأعضاء الآخرين '
+                    'لأن أقاربك قد لا يكونون أقاربهم.',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: themeColors.onSurface.withValues(alpha: 0.78),
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),

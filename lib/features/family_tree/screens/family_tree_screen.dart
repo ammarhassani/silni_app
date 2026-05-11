@@ -116,6 +116,54 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   /// Stored globally — once chosen, we don't ask again on subsequent groups.
   static const String _migrationChoiceKey = 'family_migration_choice';
 
+  /// SharedPreferences key prefix for the per-group "personal vs shared"
+  /// explainer-banner dismissal flag. Keyed by groupId so joining a new
+  /// group re-shows the banner (new context).
+  static const String _personalVsSharedBannerKeyPrefix =
+      'banner_dismissed_personal_vs_shared_';
+
+  /// In-memory cache of per-group dismissal state for the personal-vs-shared
+  /// banner. `null` = not yet loaded from prefs (banner hidden until then to
+  /// avoid a flash); `true` = previously dismissed; `false` = should show.
+  final Map<String, bool> _personalVsSharedDismissed = {};
+
+  /// Tracks which groupIds have an in-flight prefs load so we don't fire
+  /// duplicate reads on every build.
+  final Set<String> _personalVsSharedLoading = {};
+
+  /// Kick off an async load of the dismissal flag for [groupId] if we
+  /// haven't already. Idempotent.
+  void _loadPersonalVsSharedDismissal(String groupId) {
+    if (_personalVsSharedDismissed.containsKey(groupId)) return;
+    if (_personalVsSharedLoading.contains(groupId)) return;
+    _personalVsSharedLoading.add(groupId);
+    SharedPreferences.getInstance().then((prefs) {
+      final dismissed = prefs.getBool(
+            '$_personalVsSharedBannerKeyPrefix$groupId',
+          ) ??
+          false;
+      if (!mounted) return;
+      setState(() {
+        _personalVsSharedDismissed[groupId] = dismissed;
+        _personalVsSharedLoading.remove(groupId);
+      });
+    });
+  }
+
+  /// Persist the dismissal for [groupId] and update local state immediately.
+  Future<void> _dismissPersonalVsSharedBanner(String groupId) async {
+    if (mounted) {
+      setState(() {
+        _personalVsSharedDismissed[groupId] = true;
+      });
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(
+      '$_personalVsSharedBannerKeyPrefix$groupId',
+      true,
+    );
+  }
+
   /// Ensure the group admin's relatives are migrated to their group.
   ///
   /// Called once per session when we detect the user is in a group.
@@ -490,8 +538,24 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                           // join link again.
                           final isUnlinkedMember = groupInfo != null &&
                               groupInfo.nodeId == null;
+
+                          // Personal-vs-shared explainer banner: shown
+                          // whenever the user is in a group AND hasn't
+                          // dismissed it for that group. Triggers the
+                          // SharedPreferences load lazily so the prefs read
+                          // doesn't block the tree from rendering.
+                          if (groupInfo != null) {
+                            _loadPersonalVsSharedDismissal(groupInfo.groupId);
+                          }
+                          final showScopeBanner = groupInfo != null &&
+                              _personalVsSharedDismissed[groupInfo.groupId] ==
+                                  false;
+
                           return Column(
                             children: [
+                              if (showScopeBanner)
+                                _buildPersonalVsSharedBanner(
+                                    context, groupInfo.groupId),
                               if (isUnlinkedMember)
                                 _buildUnlinkedMemberBanner(
                                     context, groupInfo.groupId),
@@ -1573,6 +1637,96 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   // ---------------------------------------------------------------------------
   // Empty / Error states
   // ---------------------------------------------------------------------------
+
+  /// Dismissible explainer surfaced at the top of the family-tree screen
+  /// whenever the user is viewing a group's tree. Explains the
+  /// personal-vs-shared scope model so users understand:
+  ///   - admin's additions appear in the shared tree
+  ///   - their personal additions stay personal (only they see them)
+  ///
+  /// Dismissal is persisted per-group in [SharedPreferences] so it doesn't
+  /// re-appear on every visit, but a fresh context (new group) re-shows it.
+  Widget _buildPersonalVsSharedBanner(BuildContext context, String groupId) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppSpacing.md),
+          onTap: () => _dismissPersonalVsSharedBanner(groupId),
+          child: Ink(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppSpacing.md),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.30),
+                width: 1.2,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.groups_rounded,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'أنت داخل عائلة مشتركة',
+                          style: AppTypography.titleSmall.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'الإضافات الجديدة من المسؤول ستظهر هنا. أضف '
+                          'أقاربك الخاصين بحرية — لن يظهروا للأعضاء الآخرين '
+                          'لأن أقاربك قد لا يكونون أقاربهم.',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: Colors.white.withValues(alpha: 0.78),
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Semantics(
+                    label: 'إخفاء',
+                    button: true,
+                    child: InkResponse(
+                      onTap: () => _dismissPersonalVsSharedBanner(groupId),
+                      radius: 20,
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.close_rounded,
+                          color: Colors.white.withValues(alpha: 0.85),
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   /// Banner surfaced at the top of the family-tree screen when the user
   /// is a group member but their `relative_id_in_tree` is null. Two
