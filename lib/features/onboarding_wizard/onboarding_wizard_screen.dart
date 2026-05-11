@@ -89,6 +89,11 @@ class _OnboardingWizardScreenState
 
   // ── User-input state ───────────────────────────────────────────────
   String? _confirmedName;
+  /// 'male' | 'female' — set by the confirm_gender step. Persisted to
+  /// auth metadata + the user's personal NULL-scope self-node so
+  /// downstream features (cross-group personal shadows, relationship
+  /// inference) can resolve gender-dependent labels.
+  String? _selectedGender;
   // IDs (not just counts) — needed to build the reminder_schedules row
   // at finish-time so the user actually receives reminders. Counts derive
   // from list length.
@@ -312,6 +317,63 @@ class _OnboardingWizardScreenState
     _next();
   }
 
+  /// Persist the user's gender to BOTH auth metadata and their personal
+  /// NULL-scope self-node, then advance. Throws on failure so the calling
+  /// step widget can surface the error and stay put (mandatory step — no
+  /// silent advance on error). The two writes happen sequentially; if the
+  /// auth update succeeds but the relatives update fails, we still throw
+  /// — onboarding_metadata only mattered for downstream consumers if both
+  /// landed.
+  Future<void> _saveGenderAndAdvance(String gender) async {
+    final logger = AppLoggerService();
+    try {
+      final client = SupabaseConfig.client;
+      final user = client.auth.currentUser;
+      if (user == null) throw Exception('No authenticated user');
+
+      // 1. Auth metadata — merge into existing so we don't clobber other
+      // keys (full_name, display_name, etc. set by _saveNameAndAdvance).
+      final existingMeta =
+          Map<String, dynamic>.from(user.userMetadata ?? const {});
+      await client.auth.updateUser(
+        UserAttributes(data: {
+          ...existingMeta,
+          'gender': gender,
+        }),
+      );
+
+      // 2. Personal NULL-scope self-node — the row created by handle_new_user
+      // when the user signed up. Filtering on (user_id, is_self, family_group
+      // IS NULL) uniquely identifies it.
+      await client
+          .from('relatives')
+          .update({'gender': gender})
+          .eq('user_id', user.id)
+          .eq('is_self', true)
+          .isFilter('family_group_id', null);
+
+      if (!mounted) return;
+      setState(() => _selectedGender = gender);
+      _next();
+    } catch (e, stack) {
+      logger.error(
+        'Wizard gender save failed',
+        category: LogCategory.service,
+        tag: 'OnboardingWizard',
+        metadata: {'error': e.toString(), 'gender': gender},
+        stackTrace: stack,
+      );
+      if (mounted) {
+        UIHelpers.showSnackBar(
+          context,
+          'تعذّر حفظ الجنس: ${e.toString()}',
+          isError: true,
+        );
+      }
+      rethrow;
+    }
+  }
+
   Future<void> _pushAddRelative(WizardMode mode) async {
     final result = await context.push<String>(
       '${AppRoutes.addRelative}?wizard=${mode.name}',
@@ -461,6 +523,9 @@ class _OnboardingWizardScreenState
         // Satisfied when the user has either typed-and-saved a name or
         // arrived with a usable name in auth metadata (init populates it).
         return _confirmedName != null && _confirmedName!.trim().isNotEmpty;
+      case 'confirm_gender':
+        // Mandatory — no advance until the user picks male or female.
+        return _selectedGender != null;
       case 'add_relative_household':
         final minCount = (screen.metadata['min_count'] as int?) ?? 0;
         return _householdAddedCount >= minCount;
@@ -616,6 +681,12 @@ class _OnboardingWizardScreenState
           screen: screen,
           initialName: _confirmedName ?? '',
           onContinue: _saveNameAndAdvance,
+        );
+      case 'confirm_gender':
+        return _ConfirmGenderStep(
+          screen: screen,
+          initialGender: _selectedGender,
+          onContinue: _saveGenderAndAdvance,
         );
       case 'add_relative_household':
         return _AddRelativeStep(
@@ -1234,11 +1305,182 @@ class _StepShell extends ConsumerWidget {
   IconData _iconFor(String action) {
     return switch (action) {
       'confirm_name' => Icons.waving_hand_rounded,
+      'confirm_gender' => Icons.wc_rounded,
       'add_relative_household' => Icons.home_rounded,
       'add_relative_extended' => Icons.people_alt_rounded,
       'set_reminder_pref_and_permission' => Icons.notifications_active_rounded,
       'finish' => Icons.auto_awesome_rounded,
       _ => Icons.arrow_forward_rounded,
     };
+  }
+}
+
+// =============================================================================
+// Step 2 — Confirm gender (mandatory)
+//
+// Two large tappable cards (ذكر / أنثى). Selection is required; the CTA
+// stays disabled until the user picks one. On submit the parent's
+// _saveGenderAndAdvance runs the dual write (auth metadata + personal
+// self-node) and advances. If that throws, _saving resets so the user
+// can retry.
+// =============================================================================
+
+class _ConfirmGenderStep extends ConsumerStatefulWidget {
+  const _ConfirmGenderStep({
+    required this.screen,
+    required this.initialGender,
+    required this.onContinue,
+  });
+  final OnboardingScreenConfig screen;
+  final String? initialGender;
+  final Future<void> Function(String gender) onContinue;
+
+  @override
+  ConsumerState<_ConfirmGenderStep> createState() =>
+      _ConfirmGenderStepState();
+}
+
+class _ConfirmGenderStepState extends ConsumerState<_ConfirmGenderStep> {
+  String? _selected;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.initialGender;
+  }
+
+  Future<void> _submit() async {
+    if (_saving) return;
+    if (_selected == null) {
+      // Mirror _ConfirmNameStep's UX: show a snackbar instead of silently
+      // ignoring the tap. The visible CTA stays so the user has something
+      // to interact with from the start.
+      UIHelpers.showSnackBar(
+        context,
+        'الرجاء اختيار الجنس قبل المتابعة',
+        isError: true,
+      );
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      await widget.onContinue(_selected!);
+    } catch (_) {
+      // Parent already surfaced the error via snackbar. Just unlock the
+      // CTA so the user can retry without remounting the step.
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _StepShell(
+      screen: widget.screen,
+      reassuranceText: 'يمكنك تغيير هذا لاحقاً من إعدادات حسابك',
+      bodyExtra: Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.lg),
+        child: Row(
+          children: [
+            Expanded(
+              child: _GenderCard(
+                emoji: '👨',
+                label: 'ذكر',
+                selected: _selected == 'male',
+                onTap: _saving
+                    ? null
+                    : () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _selected = 'male');
+                      },
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: _GenderCard(
+                emoji: '👩',
+                label: 'أنثى',
+                selected: _selected == 'female',
+                onTap: _saving
+                    ? null
+                    : () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _selected = 'female');
+                      },
+              ),
+            ),
+          ],
+        ),
+      ),
+      // Always show the CTA so the user has a clear next-step affordance;
+      // _submit() itself gates on _selected != null and surfaces a snackbar
+      // when the user taps before picking. _saving short-circuits to
+      // prevent double-submit during the in-flight save.
+      onContinue: _submit,
+      continueLabel:
+          _saving ? 'جارٍ الحفظ...' : widget.screen.buttonTextAr,
+    );
+  }
+}
+
+class _GenderCard extends ConsumerWidget {
+  const _GenderCard({
+    required this.emoji,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+  final String emoji;
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = ref.watch(themeColorsProvider);
+    final onGradient = colors.textOnGradient;
+    final fillAlpha = selected ? 0.22 : 0.08;
+    final borderAlpha = selected ? 1.0 : 0.30;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.xl,
+              horizontal: AppSpacing.md,
+            ),
+            decoration: BoxDecoration(
+              color: onGradient.withValues(alpha: fillAlpha),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              border: Border.all(
+                color: onGradient.withValues(alpha: borderAlpha),
+                width: selected ? 2 : 1,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(emoji, style: const TextStyle(fontSize: 48)),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  label,
+                  style: AppTypography.titleMedium.copyWith(
+                    color: onGradient,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
