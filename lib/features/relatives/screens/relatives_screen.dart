@@ -85,9 +85,12 @@ class _RelativesScreenState extends ConsumerState<RelativesScreen> {
     // Initialize real-time subscriptions for this user
     ref.watch(autoRealtimeSubscriptionsProvider);
 
-    // Rahim-scoped + self-node-filtered relatives via central provider
+    // Address-book view: all relatives the user can see across every group
+    // they belong to + personal additions. Independent of the active-group
+    // switcher so e.g. a wife in a shared group still sees her husband here
+    // even when she switches the tree view to personal mode.
     final groupInfo = ref.watch(activeFamilyGroupProvider).valueOrNull;
-    final relativesAsync = ref.watch(viewerFilteredRelativesProvider);
+    final relativesAsync = ref.watch(addressBookRelativesProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,

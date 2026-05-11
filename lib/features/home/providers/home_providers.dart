@@ -48,15 +48,45 @@ final relativesStreamProvider =
   return repository.watchRelatives(userId);
 });
 
+/// Address-book style: ALL relatives the user can RLS-see across every
+/// group they belong to PLUS their personal additions. Unlike
+/// [viewerFilteredRelativesProvider], this does NOT respect the active
+/// group switcher and does NOT apply rahim scope.
+///
+/// Used by the relatives list page so a user can find anyone they're
+/// connected to regardless of which group view is currently active.
+/// Example: testprodjoiner switches to personal mode but her husband
+/// testprod (admin-owned in a shared group) should still appear in her
+/// relatives "contacts" list — `viewerFilteredRelativesProvider` would
+/// hide him in personal mode because she doesn't own him.
+final addressBookRelativesProvider =
+    StreamProvider.autoDispose<List<Relative>>((ref) {
+  final link = ref.keepAlive();
+  Timer? timer;
+  ref.onDispose(() => timer?.cancel());
+  ref.onCancel(() {
+    timer = Timer(_cacheTimeout, () => link.close());
+  });
+  ref.onResume(() => timer?.cancel());
+
+  // No .eq() filter — RLS already enforces "what this user can read".
+  return SupabaseConfig.client
+      .from('relatives')
+      .stream(primaryKey: ['id'])
+      .map((rows) => rows
+          .map((json) => Relative.fromJson(json))
+          .where((r) => !r.isSelf && !r.isArchived)
+          .toList());
+});
+
 /// Provider that returns relatives appropriate for the current user context.
 ///
 /// - **Group mode**: shared group relatives filtered by rahim scope
 ///   (only blood-connected relatives visible) with viewer's self-node excluded.
 /// - **Personal mode**: all personal relatives (no rahim filtering needed).
 ///
-/// This is the **single gateway** for relatives display across the app.
-/// Every screen / widget that shows a list of relatives should consume this
-/// provider rather than watching [groupRelativesStreamProvider] directly.
+/// Used by the **family tree screen** (scope-aware).
+/// For the relatives list page, use [addressBookRelativesProvider] instead.
 final viewerFilteredRelativesProvider =
     Provider.autoDispose<AsyncValue<List<Relative>>>((ref) {
   final user = SupabaseConfig.client.auth.currentUser;
