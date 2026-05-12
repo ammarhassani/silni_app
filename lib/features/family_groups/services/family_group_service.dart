@@ -279,11 +279,12 @@ class FamilyGroupService {
     });
   }
 
-  /// Delete a group (admin only — enforced by RLS).
+  /// Delete a group atomically. Admin only. Purges each member's
+  /// group-scoped data + personal shadows that mirrored group canonicals,
+  /// then removes member rows in safe order (non-admins first, admin last
+  /// to satisfy trg_prevent_last_admin), then deletes the group row.
   static Future<void> deleteGroup(String groupId) async {
     await SupabaseConfig.client
-        .from('family_groups')
-        .delete()
-        .eq('id', groupId);
+        .rpc('delete_group_atomic', params: {'p_group_id': groupId});
   }
 }
