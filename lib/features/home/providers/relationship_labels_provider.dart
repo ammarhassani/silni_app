@@ -21,7 +21,24 @@ final relationshipLabelsProvider =
   if (user == null) return {};
 
   final groupInfo = ref.watch(activeFamilyGroupProvider).valueOrNull;
-  final effectiveViewerId = groupInfo?.nodeId ?? user.id;
+
+  // Personal mode: the viewer in the bridged graph is the user's personal
+  // NULL-scope self-node relative_id, NOT their auth UUID. If we pass the
+  // auth uid here, BFS from the viewer finds nothing and getLabelForViewer
+  // falls back to target.fullName for every relative — labels render as
+  // names ("Dad❤️" instead of "أبي", "testprodjoiner" instead of "زوجتي").
+  String? personalSelfId;
+  if (groupInfo == null) {
+    final ownedRelatives =
+        ref.watch(relativesStreamProvider(user.id)).valueOrNull ?? const [];
+    for (final r in ownedRelatives) {
+      if (r.isSelf && r.familyGroupId == null && r.userId == user.id) {
+        personalSelfId = r.id;
+        break;
+      }
+    }
+  }
+  final effectiveViewerId = groupInfo?.nodeId ?? personalSelfId ?? user.id;
 
   final graph = groupInfo != null
       ? ref.watch(sharedFamilyGraphProvider((
