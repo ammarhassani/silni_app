@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -95,6 +96,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     horizontal: AppSpacing.md,
                   ),
                   child: _buildChangePasswordTile(context, themeColors),
+                ),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.sm)),
+
+              // Gender editor — lets users fix a wrong wizard choice without
+              // re-running setup. Persists to BOTH auth metadata and the
+              // personal NULL-scope self-node (same dual write as the wizard).
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                  ),
+                  child: _buildGenderTile(context, themeColors),
                 ),
               ),
 
@@ -392,6 +407,195 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Gender editor tile — siblings the change-password tile in look but uses
+  /// the primaryLight accent so the two read as distinct account-level
+  /// utilities. Subtitle reactively shows the current value by watching
+  /// `currentUserProvider` (Supabase pushes updated User to listeners after
+  /// `auth.updateUser`, so the row refreshes immediately on save).
+  Widget _buildGenderTile(BuildContext context, dynamic themeColors) {
+    final user = ref.watch(currentUserProvider);
+    final gender = user?.userMetadata?['gender'] as String?;
+    final genderLabel = switch (gender) {
+      'male' => 'ذكر',
+      'female' => 'أنثى',
+      _ => 'غير محدد',
+    };
+
+    return Semantics(
+      label: 'الجنس - $genderLabel',
+      button: true,
+      child: GlassCard(
+        onTap: () => _showGenderEditDialog(context, ref, gender),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: themeColors.primaryLight.withValues(alpha: 0.18),
+                border: Border.all(
+                  color: themeColors.primaryLight.withValues(alpha: 0.45),
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                Icons.wc_rounded,
+                color: themeColors.primaryLight,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'الجنس',
+                    style: AppTypography.titleMedium.copyWith(
+                      color: themeColors.textOnGradient,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    genderLabel,
+                    style: AppTypography.bodySmall.copyWith(
+                      color: themeColors.textOnGradient.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: themeColors.textOnGradient.withValues(alpha: 0.5),
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Dual-write gender update — mirrors `_saveGenderAndAdvance` in the
+  /// onboarding wizard. Updates auth metadata (merged into existing keys
+  /// so we don't clobber full_name etc.) AND the personal NULL-scope
+  /// self-node's `gender` column. The dialog disables both option cards
+  /// while saving to prevent double-submit.
+  Future<void> _showGenderEditDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String? currentGender,
+  ) async {
+    String? selected = currentGender;
+    bool isSaving = false;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) {
+          Future<void> save(String picked) async {
+            if (isSaving) return;
+            setState(() {
+              selected = picked;
+              isSaving = true;
+            });
+            try {
+              final client = SupabaseConfig.client;
+              final user = client.auth.currentUser;
+              if (user == null) throw Exception('No authenticated user');
+
+              final existingMeta =
+                  Map<String, dynamic>.from(user.userMetadata ?? const {});
+              await client.auth.updateUser(
+                UserAttributes(data: {
+                  ...existingMeta,
+                  'gender': picked,
+                }),
+              );
+
+              await client
+                  .from('relatives')
+                  .update({'gender': picked})
+                  .eq('user_id', user.id)
+                  .eq('is_self', true)
+                  .isFilter('family_group_id', null);
+
+              if (dialogContext.mounted) {
+                Navigator.of(dialogContext).pop();
+              }
+              if (context.mounted) {
+                UIHelpers.showSnackBar(context, 'تم تحديث الجنس');
+              }
+            } catch (e, stack) {
+              errorHandler.reportError(
+                e,
+                stackTrace: stack,
+                tag: 'ProfileGenderSave',
+              );
+              if (mounted) setState(() => isSaving = false);
+              if (context.mounted) {
+                UIHelpers.showSnackBar(
+                  context,
+                  'تعذّر حفظ الجنس: ${errorHandler.getArabicMessage(e)}',
+                  isError: true,
+                );
+              }
+            }
+          }
+
+          return GlassDialog(
+            icon: Icons.wc_rounded,
+            title: 'الجنس',
+            subtitle: 'اختر الجنس لتحديث ملفك الشخصي',
+            content: Row(
+              children: [
+                Expanded(
+                  child: _GenderOptionCard(
+                    emoji: '👨',
+                    label: 'ذكر',
+                    selected: selected == 'male',
+                    onTap: isSaving
+                        ? null
+                        : () {
+                            HapticFeedback.selectionClick();
+                            save('male');
+                          },
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: _GenderOptionCard(
+                    emoji: '👩',
+                    label: 'أنثى',
+                    selected: selected == 'female',
+                    onTap: isSaving
+                        ? null
+                        : () {
+                            HapticFeedback.selectionClick();
+                            save('female');
+                          },
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              GlassActionButton(
+                text: 'إلغاء',
+                onPressed: isSaving
+                    ? () {}
+                    : () => Navigator.of(dialogContext).pop(),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -866,6 +1070,72 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               size: 22,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Tappable gender option card used inside the gender-edit dialog. Mirrors
+/// the wizard's `_GenderCard` (emoji + Arabic label, theme-aware glass fill)
+/// so the two screens feel like the same control. `onTap == null` disables
+/// the card while a save is in flight.
+class _GenderOptionCard extends ConsumerWidget {
+  const _GenderOptionCard({
+    required this.emoji,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+  final String emoji;
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = ref.watch(themeColorsProvider);
+    final onGradient = colors.textOnGradient;
+    final fillAlpha = selected ? 0.22 : 0.08;
+    final borderAlpha = selected ? 1.0 : 0.30;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.lg,
+              horizontal: AppSpacing.md,
+            ),
+            decoration: BoxDecoration(
+              color: onGradient.withValues(alpha: fillAlpha),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              border: Border.all(
+                color: onGradient.withValues(alpha: borderAlpha),
+                width: selected ? 2 : 1,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(emoji, style: const TextStyle(fontSize: 40)),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  label,
+                  style: AppTypography.titleMedium.copyWith(
+                    color: onGradient,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
