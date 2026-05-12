@@ -34,7 +34,95 @@ final familyEdgesStreamProvider =
       .map((data) => data.map((json) => FamilyEdge.fromJson(json)).toList());
 });
 
-/// Provider that builds a [FamilyGraph] from the user's edges.
+/// Personal-mode bridged edges: rewrites any edge endpoint that references
+/// one of the user's self-nodes (or their auth UUID via legacy dangling
+/// data) to point at their personal NULL-scope self-node. This unifies
+/// all the user's "selves" into one logical anchor for graph traversal
+/// and tree layout. Without this, edges from group-scoped parents (admin
+/// group's mom -> admin-self) don't connect to the personal-self anchor
+/// and the tree fragments into disconnected components.
+///
+/// Falls back to raw edges when:
+/// - The user has no personal NULL-scope self-node yet (no bridging anchor).
+/// - Only one self-node exists and no dangling auth-uid endpoints (passthrough).
+///
+/// Mirrors the bridging logic of [groupTreeEdgesProvider] but inverted:
+/// group mode collapses personal-self into in-group-self; personal mode
+/// collapses every in-group-self (plus dangling auth-uid refs) into
+/// personal-self.
+final personalBridgedEdgesProvider = Provider.autoDispose
+    .family<AsyncValue<List<FamilyEdge>>, String>((ref, userId) {
+  final edgesAsync = ref.watch(familyEdgesStreamProvider(userId));
+  final relativesAsync = ref.watch(relativesStreamProvider(userId));
+
+  if (edgesAsync.isLoading || relativesAsync.isLoading) {
+    return const AsyncValue.loading();
+  }
+  if (edgesAsync.hasError) {
+    return AsyncValue.error(
+      edgesAsync.error!,
+      edgesAsync.stackTrace ?? StackTrace.current,
+    );
+  }
+
+  final edges = edgesAsync.valueOrNull ?? const <FamilyEdge>[];
+  final relatives = relativesAsync.valueOrNull ?? const <Relative>[];
+
+  String? personalSelfId;
+  final allSelfIds = <String>{};
+  for (final r in relatives) {
+    if (r.isSelf && r.userId == userId) {
+      allSelfIds.add(r.id);
+      if (r.familyGroupId == null) {
+        personalSelfId = r.id;
+      }
+    }
+  }
+
+  // Defensive: without a personal anchor we can't bridge. Pass through raw.
+  if (personalSelfId == null) {
+    return AsyncValue.data(edges);
+  }
+
+  // Rewrite endpoints that reference the auth uid OR any non-personal
+  // self-id to point at the personal self.
+  String rewrite(String endpointId) {
+    if (endpointId == userId) return personalSelfId!;
+    if (endpointId != personalSelfId && allSelfIds.contains(endpointId)) {
+      return personalSelfId!;
+    }
+    return endpointId;
+  }
+
+  final rewritten = <FamilyEdge>[];
+  for (final e in edges) {
+    final newFrom = rewrite(e.fromId);
+    final newTo = rewrite(e.toId);
+    if (newFrom == e.fromId && newTo == e.toId) {
+      rewritten.add(e);
+    } else {
+      rewritten.add(FamilyEdge(
+        id: e.id,
+        userId: e.userId,
+        fromId: newFrom,
+        toId: newTo,
+        type: e.type,
+        createdAt: e.createdAt,
+        familyGroupId: e.familyGroupId,
+      ));
+    }
+  }
+
+  return AsyncValue.data(rewritten);
+});
+
+/// Provider that builds a [FamilyGraph] from the user's bridged edges.
+///
+/// Consumes [personalBridgedEdgesProvider] so all of the user's self-nodes
+/// (personal + every in-group self) and any legacy dangling auth-uid edge
+/// endpoints collapse onto the personal NULL-scope self-node. This keeps
+/// the tree connected even when the user is admin of a group whose edges
+/// reference the in-group self rather than the personal self.
 ///
 /// Returns `null` when:
 /// - Edges are still loading
@@ -45,7 +133,7 @@ final familyEdgesStreamProvider =
 /// [RelationshipType.arabicName] for display labels.
 final familyGraphProvider =
     Provider.autoDispose.family<FamilyGraph?, String>((ref, userId) {
-  final edgesAsync = ref.watch(familyEdgesStreamProvider(userId));
+  final edgesAsync = ref.watch(personalBridgedEdgesProvider(userId));
   return edgesAsync.whenData((edges) {
     if (edges.isEmpty) return null;
     return FamilyGraphService.buildGraph(userId: userId, edges: edges);
