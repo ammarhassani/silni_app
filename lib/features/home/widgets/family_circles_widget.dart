@@ -184,7 +184,7 @@ class FamilyCirclesWidget extends ConsumerWidget {
           const SizedBox(height: AppSpacing.xs),
           // Horizontal scroll of avatars
           SizedBox(
-            height: _avatarSize + 38, // avatar stack (54+6) + gap + name + label
+            height: _avatarSize + 42, // avatar stack (54+6) + gap + name (fontSize 11) + label (fontSize 9); +4 padding so default line-height doesn't 1px-overflow
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
