@@ -195,7 +195,7 @@ Future<void> confirmAndReplaceAdminGroup({
           onPressed: () => Navigator.of(dialogCtx).pop(false),
         ),
         GradientButton(
-          text: 'حذف وإنشاء جديدة',
+          text: 'حذف',
           icon: Icons.delete_forever_rounded,
           onPressed: () => Navigator.of(dialogCtx).pop(true),
           gradient: LinearGradient(
