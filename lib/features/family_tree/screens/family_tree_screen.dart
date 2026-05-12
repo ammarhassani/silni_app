@@ -638,15 +638,37 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                   ),
           ),
           if (groupInfo == null)
-            Semantics(
-              label: 'إنشاء مجموعة عائلية',
-              button: true,
-              child: IconButton(
-                onPressed: () => context.push(AppRoutes.createFamilyGroup),
-                icon: Icon(Icons.group_add_rounded, color: themeColors.textOnGradient),
-                tooltip: 'إنشاء مجموعة عائلية ✨',
-              ),
-            ),
+            Builder(builder: (_) {
+              // Gate the header create button on the admin slot quota. If the
+              // user already holds an admin group elsewhere, swap the action
+              // for the same destructive replace flow surfaced by the group
+              // switcher's bottom sheet — keeps the UX consistent and avoids
+              // letting the DB trigger be the only line of defense.
+              final slots = ref.watch(myMembershipSlotsProvider).valueOrNull;
+              final adminSlotFull = slots?.adminSlotFull ?? false;
+              final adminGroup = slots?.admin;
+              final atCap = adminSlotFull && adminGroup != null;
+              return Semantics(
+                label: atCap
+                    ? 'حذف عائلتك وإنشاء جديدة'
+                    : 'إنشاء مجموعة عائلية',
+                button: true,
+                child: IconButton(
+                  onPressed: atCap
+                      ? () => confirmAndReplaceAdminGroup(
+                            context: context,
+                            ref: ref,
+                            adminGroup: adminGroup,
+                          )
+                      : () => context.push(AppRoutes.createFamilyGroup),
+                  icon: Icon(Icons.group_add_rounded,
+                      color: themeColors.textOnGradient),
+                  tooltip: atCap
+                      ? 'حذف عائلتك وإنشاء جديدة'
+                      : 'إنشاء مجموعة عائلية ✨',
+                ),
+              );
+            }),
         ],
       ),
     );

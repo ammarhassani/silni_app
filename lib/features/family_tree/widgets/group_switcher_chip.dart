@@ -8,6 +8,8 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../../shared/widgets/glass_dialog.dart';
+import '../../../shared/widgets/gradient_button.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../family_groups/models/family_group_model.dart';
 import '../../family_groups/providers/family_group_providers.dart';
@@ -180,30 +182,28 @@ Future<void> confirmAndReplaceAdminGroup({
   final themeColors = ref.read(themeColorsProvider);
   final confirmed = await showDialog<bool>(
     context: context,
-    builder: (dialogCtx) => AlertDialog(
-      backgroundColor: themeColors.background2,
-      title: Text(
-        'حذف العائلة الحالية',
-        style: AppTypography.titleMedium.copyWith(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      content: Text(
-        'ستفقد جميع بيانات ${adminGroup.name}. هذا الإجراء لا يمكن التراجع عنه.',
-        style: AppTypography.bodyMedium.copyWith(color: Colors.white),
-      ),
+    builder: (dialogCtx) => GlassDialog(
+      icon: Icons.warning_amber_rounded,
+      iconAccent: themeColors.statusError,
+      title: 'حذف العائلة الحالية',
+      subtitle:
+          'ستفقد جميع بيانات ${adminGroup.name}. هذا الإجراء لا يمكن التراجع عنه.',
+      content: const SizedBox.shrink(),
       actions: [
-        TextButton(
+        GlassActionButton(
+          text: 'إلغاء',
           onPressed: () => Navigator.of(dialogCtx).pop(false),
-          child: const Text('إلغاء'),
         ),
-        TextButton(
+        GradientButton(
+          text: 'حذف وإنشاء جديدة',
+          icon: Icons.delete_forever_rounded,
           onPressed: () => Navigator.of(dialogCtx).pop(true),
-          style: TextButton.styleFrom(
-            foregroundColor: themeColors.statusError,
+          gradient: LinearGradient(
+            colors: [
+              themeColors.statusError,
+              themeColors.statusError.withValues(alpha: 0.7),
+            ],
           ),
-          child: const Text('حذف وإنشاء جديدة'),
         ),
       ],
     ),
