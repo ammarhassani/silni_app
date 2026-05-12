@@ -48,17 +48,20 @@ final relativesStreamProvider =
   return repository.watchRelatives(userId);
 });
 
-/// Address-book style: ALL relatives the user can RLS-see across every
-/// group they belong to PLUS their personal additions. Unlike
-/// [viewerFilteredRelativesProvider], this does NOT respect the active
-/// group switcher and does NOT apply rahim scope.
+/// Address-book style: every relative the CURRENT USER owns — their
+/// personal additions PLUS any personal-scope shadows projecting
+/// relationships across groups. Filtered to `user_id = me` so a wife
+/// who's a member of her husband's family group doesn't see her
+/// admin-husband's extended kin in HER contact list — those are HIS
+/// relatives, not hers.
 ///
-/// Used by the relatives list page so a user can find anyone they're
-/// connected to regardless of which group view is currently active.
-/// Example: testprodjoiner switches to personal mode but her husband
-/// testprod (admin-owned in a shared group) should still appear in her
-/// relatives "contacts" list — `viewerFilteredRelativesProvider` would
-/// hide him in personal mode because she doesn't own him.
+/// Shadows (created by `approve_node_claim`) are owned by the claimant,
+/// so they survive this filter. testprodjoiner sees her personal
+/// shadow of testprod (full_name='testprod', relationship_type='husband')
+/// — she gets her husband in her address book without inheriting his
+/// entire family.
+///
+/// Used by the relatives list page and the home "عائلتك" carousel.
 final addressBookRelativesProvider =
     StreamProvider.autoDispose<List<Relative>>((ref) {
   final link = ref.keepAlive();
@@ -69,66 +72,23 @@ final addressBookRelativesProvider =
   });
   ref.onResume(() => timer?.cancel());
 
-  // No .eq() filter — RLS already enforces "what this user can read".
+  final user = SupabaseConfig.client.auth.currentUser;
+  if (user == null) {
+    return Stream.value(const <Relative>[]);
+  }
+
+  // Filter to relatives the current user OWNS. Admin-owned rows in shared
+  // groups are RLS-visible to members but not theirs to claim — they're
+  // the admin's lineage. The user's view of those people comes through
+  // their personal shadows (which they own) instead.
   return SupabaseConfig.client
       .from('relatives')
       .stream(primaryKey: ['id'])
-      .map((rows) {
-        final all = rows
-            .map((json) => Relative.fromJson(json))
-            .where((r) => !r.isSelf && !r.isArchived)
-            .toList();
-
-        // Dedup canonical vs personal shadow (Task 5).
-        //
-        // After `approve_node_claim` runs, the joiner sees TWO rows for the
-        // same person: (1) the canonical row in the admin's group (visible
-        // via RLS), and (2) a personal shadow in NULL scope whose
-        // `mirrorsRelativeId` points at the canonical. Without dedup the
-        // address book lists the same person twice.
-        //
-        // Rule: when BOTH are visible, return ONE merged row — canonical's
-        // identity (stable id, photo, phone, fullName) but the shadow's
-        // `relationship_type` (and side/gender) so the viewer sees the
-        // relationship from THEIR perspective (e.g. "زوج" for husband, not
-        // the canonical-owner's "other"). When only the shadow is reachable
-        // (e.g. user left the group → RLS hides canonical), surface the
-        // shadow on its own so the relationship still appears.
-        final shadowsByCanonicalId = <String, Relative>{};
-        for (final r in all) {
-          if (r.mirrorsRelativeId != null) {
-            shadowsByCanonicalId[r.mirrorsRelativeId!] = r;
-          }
-        }
-        final visibleIds = all.map((r) => r.id).toSet();
-
-        return all
-            .where((r) {
-              // Drop shadow rows whose canonical is also visible —
-              // we'll merge their relationship_type into the canonical below.
-              if (r.mirrorsRelativeId == null) return true;
-              return !visibleIds.contains(r.mirrorsRelativeId);
-            })
-            .map((r) {
-              // For canonical rows that have a shadow, merge the
-              // shadow's relationship_type (the viewer's perspective)
-              // into the canonical's full identity (id, photo, phone, etc.)
-              if (r.mirrorsRelativeId == null) {
-                final shadow = shadowsByCanonicalId[r.id];
-                if (shadow != null) {
-                  return r.copyWith(
-                    relationshipType: shadow.relationshipType,
-                    // Keep canonical's familySide/gender if shadow doesn't
-                    // have them set, override otherwise.
-                    familySide: shadow.familySide ?? r.familySide,
-                    gender: shadow.gender ?? r.gender,
-                  );
-                }
-              }
-              return r;
-            })
-            .toList();
-      });
+      .eq('user_id', user.id)
+      .map((rows) => rows
+          .map((json) => Relative.fromJson(json))
+          .where((r) => !r.isSelf && !r.isArchived)
+          .toList());
 });
 
 /// Provider that returns relatives appropriate for the current user context.
