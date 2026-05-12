@@ -1,12 +1,8 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -63,10 +59,7 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
   final TransformationController _transformationController =
       TransformationController();
   final ScreenshotCallback _screenshotCallback = ScreenshotCallback();
-  final GlobalKey _treeBoundaryKey = GlobalKey();
   double _currentScale = 1.0;
-  bool _showWatermark = false;
-  bool _showPlaceholders = true;
   bool _hasCenteredOnUser = false;
 
   /// IDs of nodes that were just created (placeholder → filled).
@@ -357,88 +350,6 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _shareTree() async {
-    HapticFeedback.lightImpact();
-
-    // Compute share position origin BEFORE async gap (required for iPad).
-    final box = context.findRenderObject() as RenderBox?;
-    final sharePositionOrigin = box != null
-        ? box.localToGlobal(Offset.zero) & box.size
-        : null;
-
-    try {
-      final renderObject = _treeBoundaryKey.currentContext
-          ?.findRenderObject() as RenderRepaintBoundary?;
-      if (renderObject == null) {
-        if (mounted) {
-          UIHelpers.showSnackBar(
-            context,
-            'لا يمكن التقاط صورة الشجرة حالياً',
-            isError: true,
-          );
-        }
-        return;
-      }
-
-      // Show watermark during capture
-      setState(() {
-        _showWatermark = true;
-        _showPlaceholders = false;
-      });
-      // Wait a frame for the watermark to render
-      await Future.delayed(const Duration(milliseconds: 150));
-
-      final image = await renderObject.toImage(pixelRatio: 2.0);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      image.dispose();
-
-      // Hide watermark after capture
-      if (mounted) {
-        setState(() {
-          _showWatermark = false;
-          _showPlaceholders = true;
-        });
-      }
-
-      if (byteData == null) return;
-
-      final tempDir = await getTemporaryDirectory();
-      final tempFile = File(
-        '${tempDir.path}/silni_tree_${DateTime.now().millisecondsSinceEpoch}.png',
-      );
-      await tempFile.writeAsBytes(byteData.buffer.asUint8List());
-
-      await Share.shareXFiles(
-        [XFile(tempFile.path)],
-        text: 'شجرة عائلتي من صِلْني 🌳',
-        sharePositionOrigin: sharePositionOrigin,
-      );
-
-      // Clean up temp file after delay
-      Future.delayed(const Duration(seconds: 5), () async {
-        try {
-          if (await tempFile.exists()) {
-            await tempFile.delete();
-          }
-        } catch (_) {}
-      });
-    } catch (e) {
-      // Ensure watermark is hidden even on error
-      if (mounted) {
-        setState(() {
-          _showWatermark = false;
-          _showPlaceholders = true;
-        });
-        UIHelpers.showSnackBar(
-          context,
-          'حدث خطأ أثناء المشاركة',
-          isError: true,
-        );
-      }
-      debugPrint('Share tree failed: $e');
-    }
   }
 
   @override
@@ -736,14 +647,6 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                 tooltip: 'إنشاء مجموعة عائلية ✨',
               ),
             ),
-          Semantics(
-            label: 'مشاركة الشجرة',
-            button: true,
-            child: IconButton(
-              onPressed: _shareTree,
-              icon: Icon(Icons.share_rounded, color: themeColors.textOnGradient),
-            ),
-          ),
         ],
       ),
     );
@@ -1153,7 +1056,6 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
         }
 
         return RepaintBoundary(
-          key: _treeBoundaryKey,
           child: Stack(
           children: [
             // Main tree with InteractiveViewer for pan/zoom
@@ -1182,14 +1084,13 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                         painter: FamilyTreeEdgePainter(
                           layout: layout,
                           boundsOrigin: boundsOrigin,
-                          showPlaceholders: _showPlaceholders,
+                          showPlaceholders: true,
                         ),
                       ),
                     ),
                     // Layer 2: Placeholder widgets (below filled nodes)
-                    if (_showPlaceholders)
-                      for (var i = 0; i < layout.placeholders.length; i++)
-                        Builder(builder: (context) {
+                    for (var i = 0; i < layout.placeholders.length; i++)
+                      Builder(builder: (context) {
                           final ph = layout.placeholders[i];
                           return Positioned(
                             left: ph.position.dx -
@@ -1233,13 +1134,8 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
             ),
             // Persistent corner brand — small enough to be unobtrusive,
             // present on every screenshot so the user can't accidentally
-            // share an unbranded image. Lives inside the RepaintBoundary so
-            // share-captures pick it up too.
+            // share an unbranded image.
             _buildCornerBrand(),
-            // Loud share-time banner (logo + name + tagline). Only renders
-            // during the share-capture window. Combined with the corner
-            // brand, this gives layered branding that's hard to crop out.
-            if (_showWatermark) _buildShareBanner(),
           ],
         ),
         );
@@ -1605,114 +1501,6 @@ class _FamilyTreeScreenState extends ConsumerState<FamilyTreeScreen> {
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Loud share-time banner. Bigger logo + app name + tagline. Only shown
-  /// during the share-capture window so the resulting image leads with the
-  /// brand. Combined with the persistent [_buildCornerBrand], this gives
-  /// layered branding that's hard to crop entirely.
-  Widget _buildShareBanner() {
-    return Positioned(
-      top: AppSpacing.lg,
-      left: 0,
-      right: 0,
-      child: Center(
-        child: IgnorePointer(
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md,
-            ),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-                colors: [
-                  AppColors.islamicGreenDark.withValues(alpha: 0.95),
-                  AppColors.islamicGreenPrimary.withValues(alpha: 0.92),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-              border: Border.all(
-                color: AppColors.premiumGold.withValues(alpha: 0.5),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  blurRadius: 14,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.premiumGold.withValues(alpha: 0.45),
-                        blurRadius: 14,
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/images/app_icon.png',
-                      width: 52,
-                      height: 52,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'شجرة عائلتي',
-                      style: AppTypography.headlineSmall.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'من ',
-                          style: AppTypography.labelSmall.copyWith(
-                            color: Colors.white.withValues(alpha: 0.85),
-                          ),
-                        ),
-                        Text(
-                          'صِلْني',
-                          style: AppTypography.labelMedium.copyWith(
-                            color: AppColors.premiumGoldLight,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                        Text(
-                          ' • صِلْ رحمك',
-                          style: AppTypography.labelSmall.copyWith(
-                            color: Colors.white.withValues(alpha: 0.85),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
           ),
         ),
       ),
