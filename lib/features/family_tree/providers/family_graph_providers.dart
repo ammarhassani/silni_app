@@ -134,9 +134,33 @@ final personalBridgedEdgesProvider = Provider.autoDispose
 final familyGraphProvider =
     Provider.autoDispose.family<FamilyGraph?, String>((ref, userId) {
   final edgesAsync = ref.watch(personalBridgedEdgesProvider(userId));
+  final relativesAsync = ref.watch(relativesStreamProvider(userId));
+
   return edgesAsync.whenData((edges) {
     if (edges.isEmpty) return null;
-    return FamilyGraphService.buildGraph(userId: userId, edges: edges);
+
+    // FamilyGraph.getGeneration does BFS from `graph.userId`. After
+    // personalBridgedEdgesProvider rewrites edge endpoints to the user's
+    // personal NULL-scope self-node relative_id, the graph no longer
+    // contains the auth UUID as a node. Anchoring the BFS on auth-uid
+    // would never reach any node — every relative would resolve to
+    // generation 0 and squish into one row. Use personal-self as the
+    // anchor so generations compute correctly.
+    String? personalSelfId;
+    final ownedRelatives = relativesAsync.valueOrNull;
+    if (ownedRelatives != null) {
+      for (final r in ownedRelatives) {
+        if (r.isSelf && r.familyGroupId == null && r.userId == userId) {
+          personalSelfId = r.id;
+          break;
+        }
+      }
+    }
+
+    return FamilyGraphService.buildGraph(
+      userId: personalSelfId ?? userId,
+      edges: edges,
+    );
   }).valueOrNull;
 });
 
