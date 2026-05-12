@@ -24,11 +24,15 @@ abstract class AIService {
     int? timeoutSeconds,
   });
 
-  /// Generate communication script for a scenario
+  /// Generate communication script for a scenario.
+  ///
+  /// [scenarioKey] is the stable identifier (e.g. `condolence`) used by the
+  /// prompt builder to apply scenario-specific role clarifications.
   Future<CommunicationScript> getCommunicationScript({
     required String scenario,
     required Relative? relative,
     String? additionalContext,
+    String? scenarioKey,
   });
 
   /// Generate a personalized message

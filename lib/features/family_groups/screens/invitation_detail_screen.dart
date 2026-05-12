@@ -12,6 +12,7 @@ import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
+import '../../../shared/utils/family_name_formatter.dart';
 import '../../../shared/widgets/glass_dialog.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -306,7 +307,9 @@ class _InvitationDetailScreenState
           child: Column(
             children: [
               Text(
-                invitation.groupName ?? 'مجموعة عائلية',
+                invitation.groupName != null
+                    ? formatFamilyGroupDisplayName(invitation.groupName!)
+                    : 'مجموعة عائلية',
                 style: AppTypography.headlineSmall.copyWith(
                   color: themeColors.onSurface,
                   fontWeight: FontWeight.w600,

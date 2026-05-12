@@ -7,6 +7,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../../shared/utils/family_name_formatter.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -89,7 +90,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
       final group = await FamilySharingService.initializeSharedTree(
         userId: user.id,
-        familyName: _nameController.text.trim(),
+        familyName: normalizeFamilyGroupName(_nameController.text),
         userDisplayName: displayName,
         userGender: userGender,
       );
@@ -280,7 +281,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                   color: Colors.white,
                 ),
                 decoration: InputDecoration(
-                  hintText: 'مثال: عائلة الأحمد',
+                  hintText: 'مثال: الأحمد',
                   hintStyle: AppTypography.bodyMedium.copyWith(
                     color: Colors.white.withValues(alpha: 0.5),
                   ),
@@ -524,7 +525,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           // Group name
           if (group != null)
             Text(
-              group.name,
+              formatFamilyGroupDisplayName(group.name),
               style: AppTypography.titleLarge.copyWith(
                 color: themeColors.onSurface,
                 fontWeight: FontWeight.w600,

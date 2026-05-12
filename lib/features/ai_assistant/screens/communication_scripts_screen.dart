@@ -142,6 +142,7 @@ class CommunicationScriptsNotifier extends StateNotifier<CommunicationScriptsSta
         scenario: state.selectedScenario!.title,
         relative: state.selectedRelative,
         additionalContext: additionalContext,
+        scenarioKey: state.selectedScenario!.id,
       );
 
       if (!mounted) return;

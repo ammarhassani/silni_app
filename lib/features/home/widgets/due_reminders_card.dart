@@ -13,6 +13,7 @@ import '../../../shared/models/reminder_schedule_model.dart';
 import '../../../shared/utils/relationship_label_helper.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../providers/home_providers.dart';
+import 'due_reminders_card_state.dart';
 
 /// Card showing today's due reminders as a task list
 class DueRemindersCard extends ConsumerWidget {
@@ -38,57 +39,119 @@ class DueRemindersCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeColors = ref.watch(themeColorsProvider);
 
-    // Get today's due relatives
     final dueRelatives = ref.watch(todayDueRelativesProvider((
       schedules: schedules,
       relatives: relatives,
     )));
 
-    // If no reminders exist at all, show "add reminders" prompt
-    if (schedules.isEmpty) {
-      return _buildNoRemindersState(context, themeColors);
-    }
+    // Household relatives are never candidates for reminders — the
+    // onboarding wizard promises "we won't disturb you about people you
+    // see daily." Excluding them here keeps the home nudge consistent.
+    final scheduledIds = schedules.expand((s) => s.relativeIds).toSet();
+    final unscheduledCount = relatives
+        .where((r) =>
+            r.relativeCategory != RelativeCategory.household &&
+            !scheduledIds.contains(r.id))
+        .length;
 
-    // If no due reminders today
-    if (dueRelatives.isEmpty) {
-      // Check if there are relatives not assigned to any schedule
-      // Household relatives are never candidates for reminders — the
-      // onboarding wizard promises "we won't disturb you about people
-      // you see daily." Excluding them here keeps the home nudge
-      // consistent with that promise.
-      final scheduledIds = schedules.expand((s) => s.relativeIds).toSet();
-      final unscheduledCount = relatives
-          .where((r) =>
-              r.relativeCategory != RelativeCategory.household &&
-              !scheduledIds.contains(r.id))
-          .length;
+    final contactedCount =
+        dueRelatives.where((r) => contactedSet.contains(r.relative.id)).length;
 
-      if (unscheduledCount > 0) {
-        return _buildUnscheduledNudge(context, themeColors, unscheduledCount);
-      }
-      return _buildAllDoneState(themeColors);
-    }
-
-    // Count contacted vs total
-    final contactedCount = dueRelatives.where(
-      (r) => contactedSet.contains(r.relative.id)
-    ).length;
-    final totalCount = dueRelatives.length;
-    final allContacted = contactedCount == totalCount;
-
-    // All relatives contacted - show celebration
-    if (allContacted) {
-      return _buildCelebrationState(themeColors);
-    }
-
-    // Show due reminders as tasks
-    return _buildTaskList(
-      context,
-      dueRelatives,
-      contactedCount,
-      totalCount,
-      themeColors,
+    final state = decideDueRemindersCardState(
+      totalRelatives: relatives.length,
+      totalSchedules: schedules.length,
+      totalDueToday: dueRelatives.length,
+      contactedToday: contactedCount,
+      unscheduledCount: unscheduledCount,
     );
+
+    switch (state) {
+      case DueRemindersCardState.noRelatives:
+        return _buildNoRelativesState(context, themeColors);
+      case DueRemindersCardState.noReminders:
+        return _buildNoRemindersState(context, themeColors);
+      case DueRemindersCardState.unscheduledNudge:
+        return _buildUnscheduledNudge(context, themeColors, unscheduledCount);
+      case DueRemindersCardState.allDone:
+        return _buildAllDoneState(themeColors);
+      case DueRemindersCardState.celebration:
+        return _buildCelebrationState(themeColors);
+      case DueRemindersCardState.taskList:
+        return _buildTaskList(
+          context,
+          dueRelatives,
+          contactedCount,
+          dueRelatives.length,
+          themeColors,
+        );
+    }
+  }
+
+  Widget _buildNoRelativesState(BuildContext context, dynamic themeColors) {
+    return Semantics(
+      label: 'لا يوجد أقارب - أضف أقارب لتحصل على التنبيهات',
+      child: GlassCard(
+        gradient: LinearGradient(
+          colors: [
+            themeColors.disabled.withValues(alpha: 0.3),
+            themeColors.disabled.withValues(alpha: 0.1),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.people_outline,
+              size: 48,
+              color: themeColors.textSecondary,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'أضف أقاربك',
+              style: AppTypography.titleMedium.copyWith(
+                color: themeColors.textPrimary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'أضف أقارب لتحصل على التنبيهات',
+              style: AppTypography.bodySmall.copyWith(
+                color: themeColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Center(
+              child: Semantics(
+                label: 'إضافة قريب',
+                button: true,
+                child: GestureDetector(
+                  onTap: () => context.push(AppRoutes.addRelative),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
+                    decoration: BoxDecoration(
+                      color: themeColors.primary.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    ),
+                    child: Text(
+                      'إضافة قريب',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: themeColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn(duration: AppAnimations.normal);
   }
 
   Widget _buildNoRemindersState(BuildContext context, dynamic themeColors) {

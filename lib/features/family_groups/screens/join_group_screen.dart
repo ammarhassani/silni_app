@@ -10,6 +10,7 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../shared/widgets/gradient_background.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
+import '../../../shared/utils/family_name_formatter.dart';
 import '../../../shared/widgets/premium_loading_indicator.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
@@ -312,7 +313,7 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
-                        group.name,
+                        formatFamilyGroupDisplayName(group.name),
                         style: AppTypography.titleMedium.copyWith(
                           color: themeColors.onSurface,
                           fontWeight: FontWeight.w600,
@@ -347,7 +348,7 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
       builder: (dialogCtx) => AlertDialog(
         backgroundColor: themeColors.background2,
         title: Text(
-          'مغادرة ${group.name}',
+          'مغادرة ${formatFamilyGroupDisplayName(group.name)}',
           style: AppTypography.titleMedium.copyWith(
             color: themeColors.onSurface,
           ),
@@ -483,7 +484,7 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
         GlassCard(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Text(
-            group.name,
+            formatFamilyGroupDisplayName(group.name),
             style: AppTypography.headlineSmall.copyWith(
               color: themeColors.onSurface,
               fontWeight: FontWeight.w600,

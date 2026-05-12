@@ -267,10 +267,16 @@ class DeepSeekAIService implements AIService {
     required String scenario,
     required Relative? relative,
     String? additionalContext,
+    String? scenarioKey,
   }) async {
     try {
       final params = AIConfigService.instance.getParametersFor('communication_script');
-      final prompt = AIPrompts.communicationScriptPrompt(scenario, relative, additionalContext);
+      final prompt = AIPrompts.communicationScriptPrompt(
+        scenario,
+        relative,
+        additionalContext,
+        scenarioKey: scenarioKey,
+      );
       final response = await getChatCompletion(
         messages: [
           ChatMessage(
@@ -775,6 +781,7 @@ class MockAIService implements AIService {
     required String scenario,
     required Relative? relative,
     String? additionalContext,
+    String? scenarioKey,
   }) async {
     await Future.delayed(const Duration(milliseconds: 500));
     return CommunicationScript(

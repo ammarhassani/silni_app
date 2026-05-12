@@ -20,6 +20,7 @@ import '../../../shared/utils/ui_helpers.dart';
 import '../../premium_onboarding/providers/onboarding_provider.dart';
 import '../../premium_onboarding/screens/premium_onboarding_screen.dart';
 import '../widgets/subscription_congrats_dialog.dart';
+import 'paywall_headline.dart';
 
 /// Price info from RevenueCat
 class _PriceInfo {
@@ -62,10 +63,17 @@ class PaywallScreen extends ConsumerStatefulWidget {
   /// Contextual headline shown in the app bar based on trigger source
   final String? contextHeadline;
 
+  /// True when this paywall is being shown immediately after the
+  /// onboarding wizard finishes. Suppresses the loss-framed
+  /// "ميزات كنت تستخدمها" headline that the natural post-trial paywall
+  /// uses — brand-new users haven't used anything yet.
+  final bool isFromOnboarding;
+
   const PaywallScreen({
     super.key,
     this.featureToUnlock,
     this.contextHeadline,
+    this.isFromOnboarding = false,
   });
 
   @override
@@ -148,9 +156,11 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   }
 
   Widget _buildHeader(dynamic themeColors, {required bool isPostTrial}) {
-    // For post-trial users without explicit contextHeadline, use loss-framed headline
-    final headline = widget.contextHeadline ??
-        (isPostTrial ? 'ميزات كنت تستخدمها' : 'الاشتراك المميز');
+    final headline = selectPaywallHeadline(
+      contextHeadline: widget.contextHeadline,
+      isFromOnboarding: widget.isFromOnboarding,
+      isPostTrial: isPostTrial,
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),

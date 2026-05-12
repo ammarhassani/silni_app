@@ -5,6 +5,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/services/error_reporter.dart';
+import '../../../shared/utils/family_name_formatter.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../../../core/theme/app_themes.dart';
 import '../../../core/theme/theme_provider.dart';
@@ -555,7 +556,7 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    group.name,
+                    formatFamilyGroupDisplayName(group.name),
                     style: AppTypography.titleLarge.copyWith(
                       color: themeColors.onSurface,
                     ),
@@ -588,7 +589,7 @@ class _FamilyGroupScreenState extends ConsumerState<FamilyGroupScreen> {
             // Family activity stats
             FamilyActivityCard(
               groupId: widget.groupId,
-              familyName: group.name,
+              familyName: formatFamilyGroupDisplayName(group.name),
             ),
             const SizedBox(height: AppSpacing.md),
 

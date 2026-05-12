@@ -40,6 +40,7 @@ import '../../family_tree/models/family_graph.dart';
 import '../../family_tree/providers/family_graph_providers.dart';
 import '../../family_tree/services/family_graph_service.dart';
 import '../../home/providers/home_providers.dart';
+import '../../../shared/utils/family_name_formatter.dart';
 import '../../../shared/utils/ui_helpers.dart';
 import '../services/relationship_inference_service.dart';
 import '../../../shared/widgets/flat_relationship_picker.dart';
@@ -1192,7 +1193,7 @@ class _AddRelativeScreenState extends ConsumerState<AddRelativeScreen> {
                 items: groups
                     .map((group) => DropdownMenuItem<FamilyGroup>(
                           value: group,
-                          child: Text(group.name),
+                          child: Text(formatFamilyGroupDisplayName(group.name)),
                         ))
                     .toList(),
                 onChanged: (group) {

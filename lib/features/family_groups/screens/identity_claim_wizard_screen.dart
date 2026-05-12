@@ -12,6 +12,7 @@ import 'package:silni_app/core/theme/theme_provider.dart';
 import 'package:silni_app/features/family_groups/models/candidate_relative_model.dart';
 import 'package:silni_app/features/family_groups/providers/node_claim_providers.dart';
 import 'package:silni_app/features/family_groups/services/node_claim_service.dart';
+import 'package:silni_app/shared/utils/family_name_formatter.dart';
 import 'package:silni_app/shared/utils/ui_helpers.dart';
 import 'package:silni_app/shared/widgets/glass_card.dart';
 import 'package:silni_app/shared/widgets/gradient_background.dart';
@@ -577,7 +578,7 @@ class _IdentityClaimWizardScreenState
                   const SizedBox(width: AppSpacing.sm),
                   Flexible(
                     child: Text(
-                      _groupName!,
+                      formatFamilyGroupDisplayName(_groupName!),
                       style: AppTypography.titleSmall.copyWith(
                         color: themeColors.onSurface,
                         fontWeight: FontWeight.w600,

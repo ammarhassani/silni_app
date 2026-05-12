@@ -287,7 +287,7 @@ class _OnboardingWizardScreenState
       if (!mounted) return;
       await Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute<void>(
-          builder: (_) => const PaywallScreen(),
+          builder: (_) => const PaywallScreen(isFromOnboarding: true),
           fullscreenDialog: true,
         ),
       );

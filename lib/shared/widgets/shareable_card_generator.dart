@@ -1,3 +1,5 @@
+import '../utils/family_name_formatter.dart';
+
 /// Data model for shareable celebration cards.
 ///
 /// Contains the text content and visual data needed to generate
@@ -89,7 +91,8 @@ class ShareableCardData {
     String? familyName,
     String? relativeName,
   }) {
-    final target = relativeName ?? (familyName != null ? 'عائلة $familyName' : null);
+    final target = relativeName ??
+        (familyName != null ? formatFamilyGroupDisplayName(familyName) : null);
     final subtitle = target != null
         ? '$occasionName مبارك يا $target!'
         : '$occasionName مبارك!';

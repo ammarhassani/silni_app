@@ -17,6 +17,22 @@ class AIPrompts {
   /// Uses [AIIdentity.personality] as single source of truth.
   static String get dynamicPersonality => AIIdentity.personality;
 
+  /// Strict scope rule appended to every chat system prompt.
+  ///
+  /// Defect 2 fix: the AI was conceding "out of scope" then answering
+  /// anyway (history, programming, fatwa, etc.). This rule is injected at
+  /// the code layer so admin-config drift cannot reopen the loophole.
+  static const String strictScopeRule = '''
+
+## حدود التخصص الصارمة ⚠️
+أنت متخصص حصراً في صلة الرحم والعلاقات الأسرية والتواصل مع الأقارب.
+إذا كان السؤال خارج نطاق هذا التخصص (مثل التاريخ العام، البرمجة، الطب، السياسة، الفتاوى المعقدة، الرياضة، الترفيه):
+- اعتذر بأدب: "هذا الموضوع خارج تخصصي. أنا متخصص في صلة الرحم والعلاقات الأسرية. هل لديك سؤال عن عائلتك أو أقاربك؟"
+- **لا تجيب** على السؤال الأصلي حتى لو تعرف الإجابة.
+- لا تذكر إجابة مختصرة، ولا أسماء، ولا تواريخ، ولا مصادر بديلة، ولا روابط، ولا اقتراحات للتعلم خارج التطبيق.
+- الرفض يعني الرفض الكامل، لا اعتذاراً متبوعاً بإجابة.
+''';
+
   /// Get mode instructions from admin config (with fallback)
   static String getDynamicModeInstructions(String modeKey) {
     final config = AIConfigService.instance;
@@ -102,10 +118,9 @@ ${mode.modeInstructions}
       case CounselingMode.general:
         return '''
 ## وضع المحادثة العامة:
-- ساعد المستخدم في أي موضوع يخص العائلة
+- ساعد المستخدم في المواضيع التي تخص العائلة وصلة الرحم فقط
 - اقترح طرقاً للتواصل مع الأقارب
 - قدّم تشجيعاً مستمراً على صلة الرحم
-- كن مرناً في المواضيع المطروحة
 ''';
       case CounselingMode.relationship:
         return '''
@@ -258,6 +273,10 @@ ${mode.modeInstructions}
     final buffer = StringBuffer(dynamicPersonality);
     buffer.writeln();
     buffer.writeln(getDynamicModeInstructions(mode.name));
+    // Defect 2: code-injected scope rule. Belt-and-suspenders against
+    // admin config drift that previously let the AI answer off-topic
+    // questions after a "this is out of scope" disclaimer.
+    buffer.writeln(strictScopeRule);
 
     // Add user context — including the user's name so the assistant can
     // address them naturally in conversation. Address-by-name should feel
@@ -841,11 +860,33 @@ $relativesBlock
 ''';
   }
 
-  /// System prompt for communication scripts
-  /// Uses dynamic personality from admin config
-  static String communicationScriptPrompt(String scenario, Relative? relative, String? context) {
-    // Use dynamic personality from admin config (includes dialect/style)
+  /// System prompt for communication scripts.
+  ///
+  /// [scenarioKey] is the stable identifier from `AICommunicationScenario`
+  /// (e.g. `condolence`, `congratulation`). When provided, the prompt
+  /// adds scenario-specific role clarifications — most importantly that
+  /// in `condolence` the relative is the *bereaved*, not the deceased.
+  static String communicationScriptPrompt(
+    String scenario,
+    Relative? relative,
+    String? context, {
+    String? scenarioKey,
+  }) {
     final personality = dynamicPersonality;
+
+    final genderArabic = relative?.gender?.arabicName
+        ?? 'غير محدد (استنتج من الاسم/العلاقة)';
+    final genderInstruction = relative == null
+        ? ''
+        : relative.gender == Gender.female
+            ? '\n## لغة المخاطبة:\nاستخدم صيغة المؤنث في الخطاب (أنتِ، كيفِك، صفات مؤنثة).\n'
+            : relative.gender == Gender.male
+                ? '\n## لغة المخاطبة:\nاستخدم صيغة المذكر في الخطاب (أنتَ، كيفك، صفات مذكرة).\n'
+                : '\n## لغة المخاطبة:\nاستنتج جنس القريب من العلاقة والاسم، ثم خاطبه بالصيغة المناسبة (مذكر/مؤنث) واتسق فيها.\n';
+
+    final condolenceRoleNote = (scenarioKey == 'condolence' && relative != null)
+        ? '\n## دورك في هذه الرسالة:\nتكتب رسالة إلى ${relative.fullName} لمواساته/مواساتها على فقد شخص عزيز عليه/عليها — هو/هي ليس المتوفى، بل المُعزَّى. لا تخاطبه/ها وكأنه/ها متوفى/متوفاة.\n'
+        : '';
 
     return '''
 أنت مستشار تواصل عائلي خبير متخصص في المحادثات الصعبة والحساسة.
@@ -857,13 +898,14 @@ ${relative != null ? '''
 ## معلومات القريب:
 - الاسم: ${relative.fullName}
 - العلاقة: ${relative.relationshipType.arabicName}
+- النوع: $genderArabic
 ${relative.personalityType != null ? '- نوع الشخصية: ${relative.personalityType} (تعامل معه حسب شخصيته)' : ''}
 ${relative.communicationStyle != null ? '- أسلوب التواصل المفضل: ${relative.communicationStyle}' : ''}
 ${relative.sensitiveTopics != null && relative.sensitiveTopics!.isNotEmpty ? '- ⚠️ مواضيع حساسة يجب تجنبها تماماً: ${relative.sensitiveTopics!.join("، ")}' : ''}
 ${relative.conflictHistory != null ? '- تاريخ الخلافات السابقة: ${relative.conflictHistory}' : ''}
 ${relative.relationshipChallenges != null ? '- تحديات العلاقة الحالية: ${relative.relationshipChallenges}' : ''}
 ${relative.relationshipStrengths != null ? '- نقاط قوة يمكن البناء عليها: ${relative.relationshipStrengths}' : ''}
-''' : ''}
+''' : ''}$condolenceRoleNote$genderInstruction
 ${context != null ? '## سياق إضافي: $context' : ''}
 
 ## مهمتك:

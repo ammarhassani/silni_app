@@ -52,6 +52,9 @@ class SessionPersistenceService {
   Future<void> markUserLoggedOut() async {
     try {
       await _clearSessionData();
+      // The cached profile picture is the previous user's face — never
+      // show it to whoever signs in next.
+      await saveProfilePictureUrl(null);
     } catch (e) {
       _logger.warning(
         'Failed to mark user logged out',
